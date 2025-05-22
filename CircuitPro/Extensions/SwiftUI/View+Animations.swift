@@ -1,15 +1,11 @@
-import SwiftUI
+//
+//  View+Animations.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 22.05.25.
+//
 
-extension View {
-    @ViewBuilder
-    func `if`<Content: View>(_ condition: @autoclosure () -> Bool, transform: (Self) -> Content) -> some View {
-        if condition() {
-            transform(self)
-        } else {
-            self
-        }
-    }
-}
+import SwiftUI
 
 extension View {
     func disableAnimations() -> some View {
@@ -26,5 +22,3 @@ extension View {
         }
     }
 }
-
-

@@ -24,7 +24,6 @@ enum RecentProjectsStore {
             )
         }
 
-
         static func == (lhs: BookmarkEntry, rhs: BookmarkEntry) -> Bool {
             lhs.urlPath == rhs.urlPath
         }
@@ -45,7 +44,11 @@ enum RecentProjectsStore {
     /// Saves its bookmark and moves it to the front.
     static func documentOpened(at url: URL) {
         do {
-            let bookmark = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+            let bookmark = try url.bookmarkData(
+                options: .withSecurityScope,
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
             var bookmarks = loadBookmarks()
 
             // Remove duplicates

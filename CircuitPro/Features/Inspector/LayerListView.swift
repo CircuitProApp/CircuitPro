@@ -10,22 +10,20 @@ import SwiftData
 
 struct LayerListView: View {
 
-
     let layers: [Layer]
-    
+
     var body: some View {
         VStack(alignment: .leading) {
             Text("Layers")
                 .font(.headline)
                 .padding(.horizontal)
-            
+
             List(layers) { layer in
                 HStack(alignment: .firstTextBaseline) {
                     Image(systemName: "circle.fill")
                         .foregroundStyle(layer.color.color)
-                   
                         .colorPickerPopover(selection: layer.colorBinding)
-                    
+
                     Button {
                         layer.isHidden.toggle()
                         print(layer.isHidden)
@@ -35,7 +33,7 @@ struct LayerListView: View {
                     }
                     .contentTransition(.symbolEffect(.replace))
                     .buttonStyle(.plain)
-                    
+
                     Text(layer.type.rawValue)
                         .padding(.bottom, 8)
                         .padding(.top, 4)
@@ -45,7 +43,6 @@ struct LayerListView: View {
         }
     }
 }
-
 
 #Preview {
     LayerListView(layers: [])

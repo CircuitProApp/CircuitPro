@@ -7,7 +7,7 @@ enum GridSpacing: CGFloat, Displayable {
     case mm0_5  = 0.5
     case mm0_25 = 0.25
     case mm0_1  = 0.1
-    
+
     var label: String {
         switch self {
         case .mm5:    return "5 mm"
@@ -18,5 +18,4 @@ enum GridSpacing: CGFloat, Displayable {
         case .mm0_1:  return "0.1 mm"
         }
     }
-    
 }

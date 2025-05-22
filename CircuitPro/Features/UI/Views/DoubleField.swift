@@ -4,7 +4,7 @@ struct DoubleField: View {
     let title: String
     @Binding var value: Double
     var placeholder: String = ""
-    var range: ClosedRange<Double>? = nil
+    var range: ClosedRange<Double>?
     var allowNegative: Bool = true
     var maxDecimalPlaces: Int = 3
 

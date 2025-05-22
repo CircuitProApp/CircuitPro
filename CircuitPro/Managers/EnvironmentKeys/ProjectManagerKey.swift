@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 4/8/25.
 //
 
-
 import SwiftUI
 
 private struct ProjectManagerKey: EnvironmentKey {

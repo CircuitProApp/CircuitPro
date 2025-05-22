@@ -10,10 +10,7 @@ import Observation
 
 @Observable
 final class AppManager {
-    
-    var path = NavigationPath()
-    
 
-    
-    
+    var path = NavigationPath()
+
 }

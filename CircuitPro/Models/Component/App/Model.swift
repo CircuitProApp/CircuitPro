@@ -10,7 +10,7 @@ import SwiftData
 
 @Model
 class Model {
-    
+
     @Attribute(.unique)
     var uuid: UUID
     var name: String

@@ -1,17 +1,16 @@
 disabled_rules:
-  - todo            # Allow TODOs during development
-  - trailing_comma  # Modern Swift supports trailing commas
-  - nesting         # Avoid overly aggressive nesting warnings
+  - todo
+  - trailing_comma
+  - nesting
 
 type_name:
   excluded:
-    - ID            # Prevent complaints about common types like ID
+    - ID
 
 identifier_name:
   allowed_symbols: ["$", "_"]
   excluded:
     - id
-    - vc
     - x
     - y
     - rf
@@ -21,15 +20,13 @@ identifier_name:
 excluded:           # Paths SwiftLint should ignore
   - DerivedData
   - .build
-  - Pods            # CocoaPods folder, if used
-  - Carthage        # Optional: if using Carthage
-  - swiftlint.yml   # Avoid self-linting
 
 opt_in_rules:
   - attributes
   - empty_count
   - closure_spacing
   - contains_over_first_not_nil
+  - missing_docs
   - modifier_order
   - convenience_type
   - pattern_matching_keywords

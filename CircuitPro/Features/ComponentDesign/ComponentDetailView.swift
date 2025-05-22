@@ -8,12 +8,13 @@
 import SwiftUI
 
 struct ComponentDetailView: View {
-    
-    @Environment(\.componentDesignManager) private var componentDesignManager
+
+    @Environment(\.componentDesignManager)
+    private var componentDesignManager
 
     var body: some View {
         @Bindable var manager = componentDesignManager
-        
+
         VStack(alignment: .leading) {
             HStack {
                 SectionView("Name") {
@@ -23,7 +24,6 @@ struct ComponentDetailView: View {
                         .padding(10)
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
-                    
                 }
                 SectionView("Abbreviation") {
                     TextField("e.g. LED", text: $manager.componentAbbreviation)
@@ -33,16 +33,14 @@ struct ComponentDetailView: View {
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
                         .frame(width: 200)
-                    
                 }
             }
-            
-            
+
             HStack {
                 SectionView("Category") {
                     Picker("Category", selection: $manager.selectedCategory) {
                         Text("Select a Category").tag(nil as ComponentCategory?)
-                        
+
                         ForEach(ComponentCategory.allCases) { category in
                             Text(category.label).tag(Optional(category))
                         }
@@ -50,12 +48,11 @@ struct ComponentDetailView: View {
                     .pickerStyle(.menu)
                     .labelsHidden()
                     .frame(width: 300)
-                    
                 }
                 SectionView("Package Type") {
                     Picker("Package Type", selection: $manager.selectedPackageType) {
                         Text("Select a Package Type").tag(nil as PackageType?)
-                        
+
                         ForEach(PackageType.allCases) { packageType in
                             Text(packageType.label).tag(Optional(packageType))
                         }
@@ -63,13 +60,11 @@ struct ComponentDetailView: View {
                     .pickerStyle(.menu)
                     .labelsHidden()
                     .frame(width: 300)
-                    
                 }
             }
             SectionView("Properties") {
                 ComponentPropertiesView(componentProperties: $manager.componentProperties)
             }
-            
         }
     }
 }

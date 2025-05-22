@@ -4,12 +4,8 @@
 //
 //  Created by Giorgi Tchelidze on 21.05.25.
 //
-
-
 import SwiftUI
 import UniformTypeIdentifiers
-
-
 
 class CircuitProjectDocument: NSDocument {
 
@@ -25,14 +21,13 @@ class CircuitProjectDocument: NSDocument {
             backing: .buffered,
             defer: false
         )
-    
+
         window.center()
         window.titlebarAppearsTransparent = false
         window.contentView = NSHostingView(rootView: contentView)
         let controller = NSWindowController(window: window)
         addWindowController(controller)
     }
-
 
     // ────────────────────────────────────────────────
     // 1️⃣  READ an existing .circuitproj  (URL-based)
@@ -53,7 +48,4 @@ class CircuitProjectDocument: NSDocument {
     override func writableTypes(for _: NSDocument.SaveOperationType) -> [String] {
         [UTType.circuitProject.identifier]  // ✅ Must match Info.plist
     }
-    
-    
-
 }

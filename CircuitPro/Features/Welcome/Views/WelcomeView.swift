@@ -53,17 +53,14 @@ struct WelcomeView: View {
 
     private var appVersion: String {
         Bundle.versionString ?? ""
-
     }
 
     private var appBuild: String {
         Bundle.buildString ?? ""
-
     }
 
     private var appVersionPostfix: String {
         Bundle.versionPostfix ?? ""
-    
     }
 
     /// Get the macOS version & build

@@ -9,7 +9,7 @@ import SwiftUI
 enum LayerType: String, Codable, CaseIterable {
     case frontCopper = "Front Copper"
     case backCopper = "Back Copper"
-    
+
     case frontSolderMask = "Front Solder Mask"
     case backSolderMask = "Back Solder Mask"
     case frontSilkscreen = "Front Silkscreen"
@@ -23,10 +23,10 @@ enum LayerType: String, Codable, CaseIterable {
     case backCourtyard = "Back Courtyard"
     case frontFabrication = "Front Fabrication"
     case backFabrication = "Back Fabrication"
-    
-    //MARK: Inner Layers
-        case innerCopper1 = "Inner Copper 1"
-        case innerCopper2 = "Inner Copper 2"
+
+    // MARK: Inner Layers
+    case innerCopper1 = "Inner Copper 1"
+    case innerCopper2 = "Inner Copper 2"
 }
 
 extension LayerType {
@@ -34,13 +34,11 @@ extension LayerType {
         switch self {
         case .frontCopper: return .red
         case .backCopper: return .blue
-
         case .boardOutline: return .gray
         default: return .gray
         }
     }
 }
-
 
 extension LayerType {
     // Define the default (non-inner) layers

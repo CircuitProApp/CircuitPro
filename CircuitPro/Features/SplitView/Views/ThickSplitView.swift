@@ -1,5 +1,6 @@
 // ThickSplitView.swift
 import AppKit
+import SwiftUI
 
 /// A split view with a 32-pt thick, “line-space-line” divider.
 class ThickSplitView: NSSplitView {
@@ -8,24 +9,16 @@ class ThickSplitView: NSSplitView {
     override func drawDivider(in rect: NSRect) {
         NSColor.separatorColor.setFill()
         // Top 1-pt line
-        NSBezierPath(rect: NSRect(x: rect.minX,
-                                  y: rect.maxY - 1,
-                                  width: rect.width,
-                                  height: 1)).fill()
+        NSBezierPath(
+            rect: NSRect(x: rect.minX, y: rect.maxY - 1, width: rect.width, height: 1)
+        ).fill()
         // Bottom 1-pt line
-        NSBezierPath(rect: NSRect(x: rect.minX,
-                                  y: rect.minY,
-                                  width: rect.width,
-                                  height: 1)).fill()
+        NSBezierPath(
+            rect: NSRect(x: rect.minX, y: rect.minY, width: rect.width, height: 1)
+        ).fill()
         // Middle transparent
     }
-    
 }
-
-
-// ThickSplitViewController.swift
-import AppKit
-import SwiftUI
 
 /// Hosts a `ThickSplitView` and applies horizontal/vertical orientation.
 class ThickSplitViewController: NSSplitViewController {
@@ -53,12 +46,6 @@ class ThickSplitViewController: NSSplitViewController {
         self.view = customSplitView
     }
 }
-
-
-
-// SplitView.swift
-import SwiftUI
-import AppKit
 
 /// SwiftUI wrapper around `ThickSplitViewController`.
 /// Collapses/uncollapses the **second** pane based on the binding.

@@ -3,10 +3,22 @@ import AppKit
 class BaseGridLayer: CATiledLayer {
 
     // MARK: – Public knobs
-    var unitSpacing: CGFloat = 10          { didSet { setNeedsDisplay() } }   // logical, in canvas units
-    var majorEvery: Int      = 10
-    var showAxes:  Bool      = true        { didSet { setNeedsDisplay() } }
-    var axisLineWidth: CGFloat = 1         { didSet { setNeedsDisplay() } }
+    var unitSpacing: CGFloat = 10 {
+        didSet {
+            setNeedsDisplay()
+        }
+    }   // logical, in canvas units
+    var majorEvery: Int = 10
+    var showAxes: Bool = true {
+        didSet {
+            setNeedsDisplay()
+        }
+    }
+    var axisLineWidth: CGFloat = 1 {
+        didSet {
+            setNeedsDisplay()
+        }
+    }
 
     var magnification: CGFloat = 1.0 {      // current zoom factor (1 = 100 %)
         didSet {
@@ -22,13 +34,20 @@ class BaseGridLayer: CATiledLayer {
 
     // MARK: – Init boiler-plate
     override class func fadeDuration() -> CFTimeInterval { 0 }
+
     private func commonInit() {
-        tileSize           = .init(width: 512, height: 512)
-        levelsOfDetail     = 4
+        tileSize = .init(width: 512, height: 512)
+        levelsOfDetail = 4
         levelsOfDetailBias = 4
     }
-    override init()                 { super.init();      commonInit() }
-    required init?(coder: NSCoder)  { super.init(coder: coder); commonInit() }
+    override init() {
+        super.init()
+        commonInit()
+    }
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        commonInit()
+    }
 
     // MARK: – Zoom hook
     func updateForMagnification() { axisLineWidth = baseAxisLineWidth / magnification }
@@ -38,14 +57,23 @@ class BaseGridLayer: CATiledLayer {
         switch unitSpacing {
         case 5:   return magnification < 2.0  ? 10 : 5               // 0.5 mm grid
         case 2.5: // 0.25 mm grid
-            if      magnification < 2.0 { return 10 }
-            else if magnification < 3.0 { return 5  }
-            else                        { return 2.5 }
+            if magnification < 2.0 {
+                return 10
+            } else if magnification < 3.0 {
+                return 5
+            } else {
+                return 2.5
+            }
         case 1:   // 0.1 mm grid
-            if      magnification < 2.5 { return 8 }
-            else if magnification < 5.0 { return 4 }
-            else if magnification < 10  { return 2 }
-            else                        { return 1 }
+            if magnification < 2.5 {
+                return 8
+            } else if magnification < 5.0 {
+                return 4
+            } else if magnification < 10 {
+                return 2
+            } else {
+                return 1
+            }
         default: return unitSpacing
         }
     }
@@ -58,22 +86,24 @@ class BaseGridLayer: CATiledLayer {
         let half = axisLineWidth / 2
 
         // Y
-        if tileRect.intersects(.init(x:centerX-half, y:tileRect.minY,
-                                     width:axisLineWidth, height:tileRect.height)) {
+        if tileRect.intersects(
+            .init(x: centerX-half, y: tileRect.minY, width: axisLineWidth, height: tileRect.height)
+        ) {
             ctx.setStrokeColor(NSColor.systemGreen.withAlphaComponent(0.75).cgColor)
             ctx.beginPath()
-            ctx.move(to: .init(x:centerX, y:tileRect.minY))
-            ctx.addLine(to: .init(x:centerX, y:tileRect.maxY))
+            ctx.move(to: .init(x: centerX, y: tileRect.minY))
+            ctx.addLine(to: .init(x: centerX, y: tileRect.maxY))
             ctx.strokePath()
         }
 
         // X
-        if tileRect.intersects(.init(x:tileRect.minX, y:centerY-half,
-                                     width:tileRect.width, height:axisLineWidth)) {
+        if tileRect.intersects(
+            .init(x: tileRect.minX, y: centerY-half, width: tileRect.width, height: axisLineWidth)
+        ) {
             ctx.setStrokeColor(NSColor.systemRed.withAlphaComponent(0.75).cgColor)
             ctx.beginPath()
-            ctx.move(to: .init(x:tileRect.minX, y:centerY))
-            ctx.addLine(to: .init(x:tileRect.maxX, y:centerY))
+            ctx.move(to: .init(x: tileRect.minX, y: centerY))
+            ctx.addLine(to: .init(x: tileRect.maxX, y: centerY))
             ctx.strokePath()
         }
     }

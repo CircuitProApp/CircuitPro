@@ -1,7 +1,7 @@
 import Foundation
 
 enum PaperSize {
-    case a0, a1, a2, a3, a4, a5, a6
+    case a0, a1, a2, a3, a4, a5, a6 // swiftlint:disable:this identifier_name
     case letter, legal
 
     var dimensions: (width: Double, height: Double) {

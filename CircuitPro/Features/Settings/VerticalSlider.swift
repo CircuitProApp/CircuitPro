@@ -15,12 +15,13 @@ struct VerticalSlider: NSViewRepresentable {
 
     class Coordinator: NSObject {
         var value: Binding<Double>
-        
+
         init(value: Binding<Double>) {
             self.value = value
         }
-        
-        @objc func valueChanged(_ sender: NSSlider) {
+
+        @objc
+        func valueChanged(_ sender: NSSlider) {
             self.value.wrappedValue = sender.doubleValue
         }
     }
@@ -35,7 +36,6 @@ struct VerticalSlider: NSViewRepresentable {
         slider.minValue = bounds.lowerBound
         slider.maxValue = bounds.upperBound
         slider.doubleValue = value
-        
         // ✅ Tick mark setup
         slider.numberOfTickMarks = tickMarks
         slider.allowsTickMarkValuesOnly = onlyAllowTickValues

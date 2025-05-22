@@ -9,23 +9,21 @@ import SwiftUI
 
 struct NetListView: View {
 
-    
     let nets: [Net]
-    
+
     var body: some View {
         VStack(alignment: .leading) {
             Text("Nets")
                 .font(.headline)
                 .padding(.horizontal)
-            
+
             List(nets) { net in
                 HStack(alignment: .firstTextBaseline) {
-           
+
                     Image(systemName: "circle.fill")
                         .foregroundStyle(net.color.color)
                         .colorPickerPopover(selection: net.colorBinding)
 
-                    
                     Button {
                         net.isHidden.toggle()
                     } label: {
@@ -34,7 +32,7 @@ struct NetListView: View {
                     }
                     .contentTransition(.symbolEffect(.replace))
                     .buttonStyle(.plain)
-                    
+
                     Text(net.name)
                         .padding(.bottom, 8)
                         .padding(.top, 4)

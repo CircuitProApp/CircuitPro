@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-//import Sparkle
+// import Sparkle
 
 struct MainCommands: Commands {
     @Environment(\.openWindow)

@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct ZoomControlView: View {
-    
-    @Environment(CanvasManager.self) private var canvasManager
-    
+
+    @Environment(CanvasManager.self)
+    private var canvasManager
+
     var currentZoom: CGFloat {
         canvasManager.magnification
     }
@@ -23,7 +24,8 @@ struct ZoomControlView: View {
 
     private func zoomIn() {
         let current = currentZoom
-        if let currentIndex = ZoomStep.allCases.firstIndex(where: { $0.rawValue > current }), currentIndex < ZoomStep.allCases.count {
+        if let currentIndex = ZoomStep.allCases.firstIndex(where: { $0.rawValue > current }),
+           currentIndex < ZoomStep.allCases.count {
             let newZoom = ZoomStep.allCases[currentIndex].rawValue
             canvasManager.magnification = newZoom
         }

@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 4/21/25.
 //
 
-
 import SwiftUI
 
 struct EdgeBorder<S: ShapeStyle>: ViewModifier {
@@ -16,8 +15,10 @@ struct EdgeBorder<S: ShapeStyle>: ViewModifier {
     func body(content: Content) -> some View {
         content.overlay(alignment: alignment(for: edge)) {
             Rectangle()
-                .frame(width: edge.isVertical ? thickness : nil,
-                       height: edge.isHorizontal ? thickness : nil)
+                .frame(
+                    width: edge.isVertical ? thickness : nil,
+                    height: edge.isHorizontal ? thickness : nil
+                )
                 .foregroundStyle(style)
         }
     }

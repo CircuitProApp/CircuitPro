@@ -6,11 +6,11 @@
 //
 import SwiftUI
 
-
 struct CanvasOverlayView<Toolbar: View>: View {
 
-    @Environment(CanvasManager.self) private var canvasManager
-    
+    @Environment(CanvasManager.self)
+    private var canvasManager
+
     let enableComponentDrawer: Bool
     private let toolbarBuilder: () -> Toolbar
 
@@ -56,8 +56,6 @@ extension CanvasOverlayView where Toolbar == EmptyView {
         }
     }
 }
-
-
 
 #Preview {
     CanvasOverlayView()

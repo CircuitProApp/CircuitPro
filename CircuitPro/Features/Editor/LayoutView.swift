@@ -9,4 +9,3 @@ struct LayoutView: View {
 #Preview {
     LayoutView()
 }
-

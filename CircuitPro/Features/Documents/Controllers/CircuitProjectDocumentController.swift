@@ -33,7 +33,7 @@ final class CircuitProjectDocumentController: NSDocumentController {
                     try FileManager.default.createDirectory(at: subfolder, withIntermediateDirectories: true)
                 }
 
-                self.openDocument(withContentsOf: descriptorURL, display: true) { document, _, error in
+                self.openDocument(withContentsOf: descriptorURL, display: true) { _, _, error in
                     if let error = error {
                         NSAlert(error: error).runModal()
                     }

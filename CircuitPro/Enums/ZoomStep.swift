@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum ZoomStep: CGFloat, Displayable, Comparable {
+    // swiftlint:disable identifier_name
     case x0_5 = 0.5
     case x0_75 = 0.75
     case x1 = 1.0
@@ -12,11 +13,12 @@ enum ZoomStep: CGFloat, Displayable, Comparable {
     case x5 = 5.0
     case x10 = 10.0
     case x25 = 25.0
-    
+    // swiftlint:enable identifier_name
+
     static func < (lhs: ZoomStep, rhs: ZoomStep) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
-    
+
     var label: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal

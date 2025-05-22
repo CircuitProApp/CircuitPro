@@ -11,13 +11,12 @@ enum SettingsTab: String, CaseIterable {
     case board
     case schematic
     case layout
-    
-    
+
     var icon: String {
         switch self {
         case .board:
             return AppIcons.board
-            case .schematic:
+        case .schematic:
             return AppIcons.schematic
         case .layout:
             return AppIcons.layout
@@ -26,12 +25,12 @@ enum SettingsTab: String, CaseIterable {
 }
 
 struct SettingsView: View {
-    
+
     @State private var selectedTab: SettingsTab = .board
-    
+
     var body: some View {
         VStack {
-           switch selectedTab {
+            switch selectedTab {
             case .board:
                 BoardSettingsView()
             case .schematic:
@@ -41,11 +40,9 @@ struct SettingsView: View {
             }
         }
         .toolbar {
-  
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 40) {
                     ForEach(SettingsTab.allCases, id: \.self) { tab in
-                        
                         Button {
                             selectedTab = tab
                         } label: {
@@ -54,14 +51,12 @@ struct SettingsView: View {
                                 Text(tab.rawValue.capitalized)
                                     .font(.subheadline)
                             }
-                            
                         }
                         .buttonStyle(.plain)
                         .font(.title2)
                     }
                 }
             }
-            
         }
     }
 }

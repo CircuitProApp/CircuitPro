@@ -9,21 +9,25 @@ import SwiftData
 import SwiftUI
 
 @Model
-final class ComponentInstance  {
-    
+final class ComponentInstance {
+
     @Attribute(.unique)
     var uuid: UUID
-    
+
     var componentUUID: UUID
-    
     var properties: [ComponentProperty]
-    
     var symbolInstance: SymbolInstance
     var footprintInstance: FootprintInstance?
-    
     var design: Design?
-    
-    init(uuid: UUID = UUID(), componentId: UUID, properties: [ComponentProperty] = [], symbolInstance: SymbolInstance, footprintInstance: FootprintInstance? = nil, design: Design? = nil) {
+
+    init(
+        uuid: UUID = UUID(),
+        componentId: UUID,
+        properties: [ComponentProperty] = [],
+        symbolInstance: SymbolInstance,
+        footprintInstance: FootprintInstance? = nil,
+        design: Design? = nil
+    ) {
         self.uuid = uuid
         self.componentUUID = componentId
         self.properties = properties
@@ -31,5 +35,4 @@ final class ComponentInstance  {
         self.footprintInstance = footprintInstance
         self.design = design
     }
-    
 }

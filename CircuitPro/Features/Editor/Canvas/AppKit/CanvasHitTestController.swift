@@ -6,7 +6,6 @@
 //
 import AppKit
 
-
 // MARK: - CanvasHitTestController.swift
 final class CanvasHitTestController {
     unowned let canvas: CoreGraphicsCanvasView
@@ -30,10 +29,9 @@ final class CanvasHitTestController {
         for (id, rect) in pinNumberRects where rect.contains(point) {
             return id
         }
-        for element in canvas.elements.reversed() {
-            if element.primitives.contains(where: { $0.systemHitTest(at: point) }) {
-                return element.id
-            }
+        for element in canvas.elements.reversed()
+        where element.primitives.contains(where: { $0.systemHitTest(at: point) }) {
+            return element.id
         }
         return nil
     }

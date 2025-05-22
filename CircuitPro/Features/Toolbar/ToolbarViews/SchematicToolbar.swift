@@ -12,11 +12,10 @@ enum SchematicTool: String, CaseIterable {
     case cursor = "cursorarrow"
     case wire = "line.diagonal"
     case noconnect = "xmark"
-    
+
     // Conform to ToolbarTool by specifying the default cursor.
     static var cursorCase: SchematicTool { .cursor }
 }
-
 
 struct SchematicToolbarView: View {
 
@@ -37,7 +36,6 @@ struct SchematicToolbarView: View {
         Text("Hello, World!")
     }
 }
-
 
 #Preview {
     SchematicToolbarView()

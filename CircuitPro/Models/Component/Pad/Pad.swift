@@ -13,13 +13,13 @@ struct Pad: Identifiable, Codable, Hashable {
     var rotation: CardinalRotation = .deg0
     var shape: PadShape = .rect(width: 5, height: 10)
     var type: PadType = .surfaceMount
-    var drillDiameter: Double? = nil
+    var drillDiameter: Double?
 }
 
 extension Pad {
     var shapePrimitives: [AnyPrimitive] {
         switch shape {
-        case .rect(let width, let height):
+        case let .rect(width, height):
             let rect = RectanglePrimitive(
                 uuid: UUID(),
                 position: position,
@@ -30,7 +30,6 @@ extension Pad {
                 filled: true
             )
             return [.rectangle(rect)]
-            
         case .circle(let radius):
             let circle = CirclePrimitive(
                 uuid: UUID(),
@@ -40,12 +39,11 @@ extension Pad {
                 strokeWidth: 0.2,
                 color: SDColor(color: .blue),
                 filled: true
-                
             )
             return [.circle(circle)]
         }
     }
-    
+
     var maskPrimitives: [AnyPrimitive] {
         guard type == .throughHole, let drill = drillDiameter else { return [] }
         let mask = CirclePrimitive(
@@ -56,11 +54,10 @@ extension Pad {
             strokeWidth: 0,
             color: SDColor(color: .black),
             filled: true
-            
         )
         return [.circle(mask)]
     }
-    
+
     func systemHitTest(at point: CGPoint) -> Bool {
         shapePrimitives.contains { $0.systemHitTest(at: point) }
     }
@@ -71,7 +68,7 @@ extension Pad {
         if case .circle = shape { return true }
         return false
     }
-    
+
     var radius: Double {
         get {
             if case let .circle(radius) = shape {
@@ -83,7 +80,7 @@ extension Pad {
             shape = .circle(radius: newValue)
         }
     }
-    
+
     var width: Double {
         get {
             if case let .rect(width, _) = shape {
@@ -97,7 +94,7 @@ extension Pad {
             }
         }
     }
-    
+
     var height: Double {
         get {
             if case let .rect(_, height) = shape {

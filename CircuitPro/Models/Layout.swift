@@ -1,5 +1,3 @@
-
-
 import SwiftUI
 import SwiftData
 
@@ -7,13 +5,12 @@ import SwiftData
 final class Layout {
     var title: String
     var timestamps: Timestamps
-    
+
     @Relationship(deleteRule: .cascade, inverse: \Layer.layout)
     var layers: [Layer] = []
-    
+
     @Relationship(deleteRule: .cascade, inverse: \Via.layout)
     var vias: [Via] = []
-
 
     var design: Design?
 

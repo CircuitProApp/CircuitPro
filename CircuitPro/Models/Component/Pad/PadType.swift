@@ -19,4 +19,3 @@ enum PadType: String, Displayable {
         }
     }
 }
-

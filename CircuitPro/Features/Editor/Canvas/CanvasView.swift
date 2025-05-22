@@ -21,7 +21,6 @@ struct CanvasView: NSViewRepresentable {
         }
     }
 
-
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
@@ -35,13 +34,10 @@ struct CanvasView: NSViewRepresentable {
         let crosshairs = context.coordinator.crosshairs
 
         canvas.crosshairsView = crosshairs
-        
+
         background.frame = boardRect
         canvas.frame = boardRect
         crosshairs.frame = boardRect
-
-  
-
 
         background.currentStyle = manager.backgroundStyle
 
@@ -75,7 +71,11 @@ struct CanvasView: NSViewRepresentable {
         centerScrollView(scrollView, container: container)
 
         scrollView.postsBoundsChangedNotifications = true
-        NotificationCenter.default.addObserver(forName: NSView.boundsDidChangeNotification, object: scrollView.contentView, queue: .main) { _ in
+        NotificationCenter.default.addObserver(
+            forName: NSView.boundsDidChangeNotification,
+            object: scrollView.contentView,
+            queue: .main
+        ) { _ in
             self.manager.magnification = scrollView.magnification
         }
 
@@ -94,14 +94,13 @@ struct CanvasView: NSViewRepresentable {
         canvas.isSnappingEnabled = manager.enableSnapping  // 🔄 Snap toggle here!
         canvas.snapGridSize = manager.gridSpacing.rawValue * 10.0
         canvas.selectedLayer = selectedLayer ?? .copper
-        
+
         canvas.onPrimitiveAdded = { id, layer in
             self.layerAssignments[id] = layer
         }
 
         crosshairs.magnification = manager.magnification
         crosshairs.crosshairsStyle = manager.crosshairsStyle
-
 
         if scrollView.magnification != manager.magnification {
             scrollView.magnification = manager.magnification
@@ -110,17 +109,11 @@ struct CanvasView: NSViewRepresentable {
         if background.currentStyle != manager.backgroundStyle {
             background.currentStyle = manager.backgroundStyle
         }
-        
+
         background.showAxes = manager.enableAxesBackground
         background.magnification = manager.magnification
-
         background.gridSpacing = manager.gridSpacing.rawValue * 10.0
-
-
-
     }
-
-
 
     private func centerScrollView(_ scrollView: NSScrollView, container: NSView) {
         DispatchQueue.main.async {
@@ -135,5 +128,3 @@ struct CanvasView: NSViewRepresentable {
         }
     }
 }
-
-

@@ -12,7 +12,7 @@ struct BoardSettingsView: View {
         .init(name: "Bottom Solder paste", color: .gray, thickness: 0.4),
         .init(name: "Bottom Silkscreen", color: .white, thickness: 0.4),
     ]
-    
+
     @State var visibleLayers: Double = 4
 
     var body: some View {
@@ -25,7 +25,7 @@ struct BoardSettingsView: View {
                             .offset(x: 0, y: CGFloat(index - 2) * 15)
                             .zIndex(Double(layers.count - index))
                             .transition(.opacity)
-                        
+
                     }
                 }
             }
@@ -38,29 +38,25 @@ struct BoardSettingsView: View {
                 tickMarks: layers.count,
                 onlyAllowTickValues: true
             )
-            .frame(width:50, height: 200)
+            .frame(width: 50, height: 200)
         }
 
     }
 }
 
-
 struct LayerView: View {
     var layer: BoardLayer
 
     var body: some View {
-  
+
             Rectangle()
             .fill(layer.color)
             .stroke(layer.color.gradient)
             .frame(width: 200, height: 200)
-         
+
             .rotationEffect(Angle(degrees: 45), anchor: .center)
             .scaleEffect(y: 0.4)
-            
 
-      
- 
     }
 }
 

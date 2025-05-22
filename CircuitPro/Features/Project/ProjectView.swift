@@ -9,25 +9,28 @@ import SwiftUI
 import SwiftData
 
 public struct ProjectView: View {
-    
-    @Environment(\.projectManager) private var projectManager
 
-    @Environment(\.openWindow) private var openWindow
-    @Environment(\.modelContext) private var modelContext
-    
+    @Environment(\.projectManager)
+    private var projectManager
+
+    @Environment(\.openWindow)
+    private var openWindow
+
+    @Environment(\.modelContext)
+    private var modelContext
+
     let project: Project
-    
+
     @State private var selectedEditor: EditorType = .schematic
     @State private var isShowingInspector: Bool = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .detailOnly
-    
+
     public var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             if project.designs.isNotEmpty {
                 List {
                     Section {
                         ForEach(project.designs) { design in
-                       
                                 Text(design.name)
                                 .directionalPadding(vertical: 5, horizontal: 7.5)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -37,7 +40,6 @@ public struct ProjectView: View {
                                     .onTapGesture {
                                         projectManager.selectedDesign = design
                                     }
-                            
                         }
                     } header: {
                         HStack {
@@ -50,9 +52,6 @@ public struct ProjectView: View {
 //                            }
                         }
                     }
-                    
-
-                   
                 }
             } else {
                 Button("Add a new Design") {
@@ -62,9 +61,6 @@ public struct ProjectView: View {
         } detail: {
             projectDetail
         }
-
-        
-        
     }
     var projectDetail: some View {
         VStack {
@@ -72,10 +68,8 @@ public struct ProjectView: View {
                 switch selectedEditor {
                 case .schematic:
                     SchematicView()
-                
                 case .layout:
                     LayoutView()
-                 
                 }
             } else {
                 if project.designs.isNotEmpty {
@@ -87,14 +81,11 @@ public struct ProjectView: View {
                     }
                 } else {
                     Button {
-                        
                     } label: {
                         Text("Add a new Design")
                     }
                 }
-                
             }
-            
         }
         .inspector(isPresented: $isShowingInspector) {
             InspectorView(selectedEditor: $selectedEditor)
@@ -110,20 +101,10 @@ public struct ProjectView: View {
                 )
             }
         }
-
         .navigationTitle("")
     }
-    
-  
 }
-
-
-
-
 
 #Preview {
-    
     ProjectView(project: Project(name: "Test Project", designs: []))
-    
 }
-

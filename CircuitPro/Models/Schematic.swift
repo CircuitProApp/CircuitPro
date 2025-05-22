@@ -1,16 +1,13 @@
-
 import SwiftUI
 import SwiftData
 
 @Model
 final class Schematic {
-    
-    var title: String
-    
-    var timestamps: Timestamps
 
+    var title: String
+    var timestamps: Timestamps
     var design: Design?
-    
+
     @Relationship(deleteRule: .cascade, inverse: \Net.schematic)
     var nets: [Net] = []
 

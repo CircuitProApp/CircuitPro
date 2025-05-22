@@ -5,37 +5,30 @@
 //  Created by Giorgi Tchelidze on 4/19/25.
 //
 
-
 import SwiftUI
 import Observation
 
 @Observable
 final class ComponentDesignManager {
-    
+
     var componentName: String = ""
     var componentAbbreviation: String = ""
     var selectedCategory: ComponentCategory?
     var selectedPackageType: PackageType?
     var componentProperties: [ComponentProperty] = [ComponentProperty(key: nil, value: .single(nil), unit: .init())]
-    
-    
+
     // MARK: - Symbol
     var symbolElements: [CanvasElement] = []
     var selectedSymbolElementIDs: Set<UUID> = []
     var selectedSymbolTool: AnyCanvasTool = AnyCanvasTool(CursorTool())
-    
-    
-    
+
     // MARK: - Footprint
     var footprintElements: [CanvasElement] = []
     var selectedFootprintElementIDs: Set<UUID> = []
     var selectedFootprintTool: AnyCanvasTool = AnyCanvasTool(CursorTool())
-    
-    var selectedFootprintLayer: LayerKind? = .copper
-    
-    var layerAssignments: [UUID: LayerKind] = [:]
 
-    
+    var selectedFootprintLayer: LayerKind? = .copper
+    var layerAssignments: [UUID: LayerKind] = [:]
 }
 
 extension ComponentDesignManager {
@@ -47,7 +40,7 @@ extension ComponentDesignManager {
             return nil
         }
     }
-    
+
     var selectedPins: [Pin] {
         symbolElements.compactMap {
             if case .pin(let pin) = $0, selectedSymbolElementIDs.contains(pin.id) {
@@ -56,7 +49,7 @@ extension ComponentDesignManager {
             return nil
         }
     }
-    
+
     func bindingForPin(with id: UUID) -> Binding<Pin>? {
         guard let index = symbolElements.firstIndex(where: {
             if case .pin(let pin) = $0 { return pin.id == id }
@@ -84,11 +77,7 @@ extension ComponentDesignManager {
             }
         )
     }
-
-    
 }
-
-
 
 extension ComponentDesignManager {
     var pads: [Pad] {
@@ -136,5 +125,4 @@ extension ComponentDesignManager {
             }
         )
     }
-
 }

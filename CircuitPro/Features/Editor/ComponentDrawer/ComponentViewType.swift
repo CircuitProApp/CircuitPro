@@ -27,7 +27,7 @@ enum ComponentViewType: CaseIterable {
         func isAvailable(in component: Component) -> Bool {
             switch self {
             case .symbol:
-                return component.symbol != nil 
+                return component.symbol != nil
             case .footprint:
                 return component.footprints.isNotEmpty
             }

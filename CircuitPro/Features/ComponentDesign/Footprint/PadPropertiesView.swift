@@ -8,13 +8,13 @@
 import SwiftUI
 
 struct PadPropertiesView: View {
-    
+
     @Binding var pad: Pad
-    
+
     var body: some View {
         Group {
             IntegerField(title: "Number", value: $pad.number)
-            
+
             Picker("Pad Type", selection: $pad.type) {
                 ForEach(PadType.allCases) { padType in
                     Text(padType.label).tag(padType)

@@ -18,13 +18,13 @@ enum LayoutTool: String, CaseIterable {
     case rectangle = "rectangle"
     case circle = "circle"
     case polygon = "hexagon"
-    
+
     // Conform to ToolbarTool by specifying the default cursor.
     static var cursorCase: LayoutTool { .cursor }
 }
 
 struct LayoutToolbarView: View {
-    
+
     var body: some View {
 //        ToolbarView<LayoutTool>(
 //            tools: LayoutTool.allCases,

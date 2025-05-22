@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 4/14/25.
 //
 
-
 import SwiftUI
 import SwiftData
 
@@ -58,8 +57,6 @@ struct ProjectToolbar: ToolbarContent {
                             position: .zero,
                             size: .init(width: 40, height: 20),
                             rotation: .zero,
-                     
-                       
                             strokeWidth: 1,
                             color: .init(color: .red),
                             filled: false

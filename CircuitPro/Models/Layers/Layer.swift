@@ -13,9 +13,8 @@ final class Layer {
     var type: LayerType
     var layout: Layout?
     var color: SDColor
-    
     var isHidden: Bool = false
-    
+
     init(type: LayerType, layout: Layout, color: SDColor = SDColor(color: .red)) {
         self.type = type
         self.layout = layout
@@ -33,5 +32,3 @@ extension Layer {
         )
     }
 }
-
-

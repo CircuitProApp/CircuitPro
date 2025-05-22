@@ -33,5 +33,3 @@ enum PinType: Displayable {
         }
     }
 }
-
-

@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 4/4/25.
 //
 
-
 import SwiftUI
 
 struct SimpleColorPicker: View {
@@ -30,7 +29,6 @@ struct SimpleColorPicker: View {
                         .labelStyle(.iconOnly)
                 }
                 .buttonStyle(.plain)
-             
             }
             .padding(.bottom, 10)
 
@@ -49,17 +47,11 @@ struct SimpleColorPicker: View {
                         }
                 }
             }
-
-           
         }
         .padding(10)
         .frame(width: 200)
     }
 }
-
-
-
-import SwiftUI
 
 struct ColorPickerPopoverModifier: ViewModifier {
     @Binding var selection: Color

@@ -12,7 +12,6 @@ enum FootprintType: String, Displayable {
     case surfaceMount
     case socketed
 
-
     var label: String {
         switch self {
         case .throughHole: return "Through-Hole"
@@ -21,4 +20,3 @@ enum FootprintType: String, Displayable {
         }
     }
 }
-

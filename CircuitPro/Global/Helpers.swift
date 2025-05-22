@@ -1,14 +1,13 @@
 import SwiftUI
 
-
 func rotate(point: CGPoint, around center: CGPoint, by angle: CGFloat) -> CGPoint {
-    let dx = point.x - center.x
-    let dy = point.y - center.y
+    let deltaX = point.x - center.x
+    let deltaY = point.y - center.y
     let cosA = cos(angle)
     let sinA = sin(angle)
     return CGPoint(
-        x: center.x + dx * cosA - dy * sinA,
-        y: center.y + dx * sinA + dy * cosA
+        x: center.x + deltaX * cosA - deltaY * sinA,
+        y: center.y + deltaX * sinA + deltaY * cosA
     )
 }
 

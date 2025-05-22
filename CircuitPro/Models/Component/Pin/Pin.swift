@@ -25,49 +25,47 @@ extension Pin {
         case .long:  return 60
         }
     }
-    
+
     var label: String {
         name == "" ? "Pin \(number)" : name
     }
-    
+
     var dir: CGPoint {
         rotation.direction
     }
 
-
-        /// World-space start of the pin’s “leg”.
-        var legStart: CGPoint {
-            CGPoint(x: position.x + dir.x * length,
-                    y: position.y + dir.y * length)
-        }
-
+    /// World-space start of the pin’s “leg”.
+    var legStart: CGPoint {
+        CGPoint(
+            x: position.x + dir.x * length,
+            y: position.y + dir.y * length
+        )
+    }
 
     var primitives: [AnyPrimitive] {
-            let line = LinePrimitive(
-                uuid:        .init(),
-                start:       legStart,
-                end:         position,
-                rotation:    0,          // geometry is already rotated
-                strokeWidth: 1,
-                color:       .init(color: .blue)
-            )
+        let line = LinePrimitive(
+            uuid: .init(),
+            start: legStart,
+            end: position,
+            rotation: 0,          // geometry is already rotated
+            strokeWidth: 1,
+            color: .init(color: .blue)
+        )
 
-            let circle = CirclePrimitive(
-                uuid:        .init(),
-                position:    position,
-                radius:      4,
-                rotation:    0,
-                strokeWidth: 1,
-                color:       .init(color: .blue),
-                filled:      false
-            )
+        let circle = CirclePrimitive(
+            uuid: .init(),
+            position: position,
+            radius: 4,
+            rotation: 0,
+            strokeWidth: 1,
+            color: .init(color: .blue),
+            filled: false
+        )
 
-            return [.line(line), .circle(circle)]
-        }
+        return [.line(line), .circle(circle)]
+    }
 
     func systemHitTest(at pt: CGPoint) -> Bool {
         primitives.contains { $0.systemHitTest(at: pt) }
     }
 }
-
-

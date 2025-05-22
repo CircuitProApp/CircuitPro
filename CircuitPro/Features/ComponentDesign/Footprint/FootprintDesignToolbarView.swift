@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct FootprintDesignToolbarView: View {
-    @Environment(\.componentDesignManager) private var componentDesignManager
+    @Environment(\.componentDesignManager)
+    private var componentDesignManager
 
     var body: some View {
         ToolbarView<AnyCanvasTool>(

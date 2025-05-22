@@ -7,7 +7,7 @@
 import SwiftUI
 
 enum PackageType: String, Displayable {
-    
+
     case qfn
     case tqfp
     case soic
@@ -25,7 +25,6 @@ enum PackageType: String, Displayable {
     case module
     case devBoard
     case systemOnModule
-
 
     var label: String {
         switch self {
@@ -46,7 +45,6 @@ enum PackageType: String, Displayable {
         case .module: return "Module"
         case .devBoard: return "Development Board"
         case .systemOnModule: return "System-on-Module"
-
         }
     }
 }

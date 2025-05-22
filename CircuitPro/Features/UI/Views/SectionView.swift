@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 5/6/25.
 //
 
-
 import SwiftUI
 
 struct SectionView<Content: View>: View {

@@ -55,9 +55,9 @@ struct AnyCanvasTool: CanvasTool {
          }
 
          // ----- drawPreview ---------------------------------------------------
-         _drawPreview = { cg, mouse, ctx in
+         _drawPreview = { cgCTX, mouse, ctx in
              var inner = storage.tool             // 1
-             inner.drawPreview(in: cg, mouse: mouse, context: ctx) // 2
+             inner.drawPreview(in: cgCTX, mouse: mouse, context: ctx) // 2
              storage.tool = inner                 // 3
          }
      }
@@ -66,8 +66,8 @@ struct AnyCanvasTool: CanvasTool {
      mutating func handleTap(at point: CGPoint, context: CanvasToolContext) -> CanvasElement? {
          _handleTap(point, context)
      }
-     mutating func drawPreview(in cg: CGContext, mouse: CGPoint, context: CanvasToolContext) {
-         _drawPreview(cg, mouse, context)
+     mutating func drawPreview(in cgCTX: CGContext, mouse: CGPoint, context: CanvasToolContext) {
+         _drawPreview(cgCTX, mouse, context)
      }
 
     static func == (lhs: AnyCanvasTool, rhs: AnyCanvasTool) -> Bool { lhs.id == rhs.id }

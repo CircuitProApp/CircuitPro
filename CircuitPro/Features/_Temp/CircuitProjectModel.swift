@@ -4,8 +4,6 @@
 //
 //  Created by Giorgi Tchelidze on 21.05.25.
 //
-
-
 import SwiftUI
 import UniformTypeIdentifiers
 import Observation
@@ -22,7 +20,6 @@ class CircuitProjectModel: Codable {
 }
 
 // MARK: - Custom UTI
-
 extension UTType {
     /// Descriptor file users double‑click (a single JSON file)
     static let circuitProject = UTType(exportedAs: "app.circuitpro.project")

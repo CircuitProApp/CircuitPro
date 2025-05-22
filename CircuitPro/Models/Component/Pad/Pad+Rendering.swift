@@ -14,16 +14,16 @@ extension Pad {
     /// Draws the pad using its geometric primitives and optional halo.
     func draw(in ctx: CGContext, highlight: Bool = false) {
         ctx.saveGState()
-        
         // ───────────────────────────────────── 1. unified halo (drawn *behind* the pad)
         if highlight {
             let haloPath = CGMutablePath()
             for prim in shapePrimitives {
-                let stroked = prim.makePath()
-                    .copy(strokingWithWidth: padHaloThickness,
-                          lineCap: .round,
-                          lineJoin: .round,
-                          miterLimit: 10)
+                let stroked = prim.makePath().copy(
+                    strokingWithWidth: padHaloThickness,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    miterLimit: 10
+                )
                 haloPath.addPath(stroked)
             }
 
@@ -53,8 +53,6 @@ extension Pad {
             ctx.fillPath()
             ctx.restoreGState()
         }
-
         ctx.restoreGState()
     }
-
 }

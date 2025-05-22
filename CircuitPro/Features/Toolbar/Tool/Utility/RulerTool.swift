@@ -10,8 +10,8 @@ struct RulerTool: CanvasTool {
     var symbolName: String = AppIcons.ruler
     var label: String = "Ruler"
 
-    private var start: CGPoint? = nil
-    private var end: CGPoint? = nil
+    private var start: CGPoint?
+    private var end: CGPoint?
     private var clicks: Int = 0
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
@@ -35,6 +35,7 @@ struct RulerTool: CanvasTool {
         return nil
     }
 
+    // swiftlint:disable:next function_body_length
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
         guard let start = start else { return }
         let magnificationScale = 1.0 / context.magnification
@@ -49,25 +50,22 @@ struct RulerTool: CanvasTool {
         ctx.addLine(to: currentEnd)
         ctx.strokePath()
 
-        let dx = currentEnd.x - start.x
-        let dy = currentEnd.y - start.y
-        let distance = hypot(dx, dy)
+        let deltaX = currentEnd.x - start.x
+        let deltaY = currentEnd.y - start.y
+        let distance = hypot(deltaX, deltaY)
         let distanceMM = distance / 10.0
 
-        let mid = CGPoint(x: (start.x + currentEnd.x) / 2,
-                          y: (start.y + currentEnd.y) / 2)
+        let mid = CGPoint(x: (start.x + currentEnd.x) / 2, y: (start.y + currentEnd.y) / 2)
 
-        let rawPerp = CGPoint(x: -dy, y: dx)
+        let rawPerp = CGPoint(x: -deltaY, y: deltaX)
         let length = hypot(rawPerp.x, rawPerp.y)
         guard length > 0 else { return }
         let unitPerp = CGPoint(x: rawPerp.x / length, y: rawPerp.y / length)
 
         let tickLength: CGFloat = 4 * magnificationScale // 🔧 scale tick length
         let drawTick: (CGPoint) -> Void = { center in
-            let tickStart = CGPoint(x: center.x - unitPerp.x * tickLength,
-                                    y: center.y - unitPerp.y * tickLength)
-            let tickEnd = CGPoint(x: center.x + unitPerp.x * tickLength,
-                                  y: center.y + unitPerp.y * tickLength)
+            let tickStart = CGPoint(x: center.x - unitPerp.x * tickLength, y: center.y - unitPerp.y * tickLength)
+            let tickEnd = CGPoint(x: center.x + unitPerp.x * tickLength, y: center.y + unitPerp.y * tickLength)
             ctx.move(to: tickStart)
             ctx.addLine(to: tickEnd)
             ctx.strokePath()
@@ -91,6 +89,7 @@ struct RulerTool: CanvasTool {
         let textSize = text.size()
 
         var labelOffsetDir = unitPerp
+
         if labelOffsetDir.y > 0 {
             labelOffsetDir = CGPoint(x: -labelOffsetDir.x, y: -labelOffsetDir.y)
         }

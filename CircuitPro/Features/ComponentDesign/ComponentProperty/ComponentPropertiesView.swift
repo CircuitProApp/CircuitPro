@@ -8,13 +8,11 @@
 import SwiftUI
 
 struct ComponentPropertiesView: View {
-    
-    @Binding var componentProperties: [ComponentProperty]
-    
-    @State private var selectedProperties: Set<ComponentProperty.ID> = []
 
+    @Binding var componentProperties: [ComponentProperty]
+    @State private var selectedProperties: Set<ComponentProperty.ID> = []
     @State private var selectedValueType: PropertyValueType = .single
-    
+
     var body: some View {
         VStack(spacing: 0) {
             Table($componentProperties, selection: $selectedProperties) {
@@ -31,21 +29,14 @@ struct ComponentPropertiesView: View {
                     WarnOnEditColumn(property: $property)
                 }
             }
-
             .textFieldStyle(.roundedBorder)
             addOrRemoveProperty
         }
-       
-      
-
-        
         .clipShape(.rect(cornerRadius: 10))
     }
-    
-    
+
     var addOrRemoveProperty: some View {
         HStack {
-   
             Button {
                 let newProperty = ComponentProperty(key: nil, value: .single(nil), unit: .init())
                 componentProperties.append(newProperty)
@@ -62,7 +53,6 @@ struct ComponentPropertiesView: View {
                 Image(systemName: AppIcons.minus)
             }
             .disabled(selectedProperties.isEmpty)
-          
 
             Spacer()
         }
@@ -74,5 +64,14 @@ struct ComponentPropertiesView: View {
 }
 
 #Preview {
-    ComponentPropertiesView(componentProperties: .constant([ComponentProperty(key: .basic(.capacitance), value: .single(10), unit: .init(prefix: .giga, base: .farad), warnsOnEdit: true)]))
+    ComponentPropertiesView(
+        componentProperties: .constant(
+            [ComponentProperty(
+                key: .basic(.capacitance),
+                value: .single(10),
+                unit: .init(prefix: .giga, base: .farad),
+                warnsOnEdit: true
+            )]
+        )
+    )
 }

@@ -8,16 +8,15 @@
 import SwiftUI
 import SwiftData
 
-
 @Model
 final class Net {
 
     var name: String
     var schematic: Schematic?
     var color: SDColor
-    
+
     var isHidden: Bool = false
-    
+
     init(name: String, schematic: Schematic, color: SDColor = SDColor(color: .red)) {
         self.name = name
         self.schematic = schematic

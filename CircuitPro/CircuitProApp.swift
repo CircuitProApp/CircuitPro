@@ -4,18 +4,20 @@ import SwiftData
 @main
 struct CircuitProApp: App {
 
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
-    
+    @NSApplicationDelegateAdaptor(AppDelegate.self)
+    var delegate
+
     var container: ModelContainer
 
     @State var appManager = AppManager()
-    @State var projectManager = ProjectManager()    
+    @State var projectManager = ProjectManager()
     @State var componentDesignManager = ComponentDesignManager()
     // MARK: - Initialization
-    
+
     init() {
-        
+
         _ = CircuitProjectDocumentController.shared
+
         do {
             // Create the workspace configuration (writable, instance types).
             let workspaceConfig = ModelConfiguration(
@@ -34,7 +36,6 @@ struct CircuitProApp: App {
                 ]),
                 allowsSave: true
             )
-            
             // Create the appLibrary configuration (read-only, default types).
             let appLibraryConfig = ModelConfiguration(
                 "appLibrary",
@@ -46,7 +47,6 @@ struct CircuitProApp: App {
                 ]),
                 allowsSave: true
             )
-            
             // Create one unified ModelContainer that handles both configurations.
             container = try ModelContainer(
                 for: Project.self,
@@ -69,9 +69,9 @@ struct CircuitProApp: App {
             fatalError("Failed to initialize container: \(error)")
         }
     }
-    
+
     // MARK: - App Body
-    
+
     var body: some Scene {
         Group {
             WelcomeWindow()
@@ -79,7 +79,6 @@ struct CircuitProApp: App {
                 .commands {
                     CircuitProCommands()
                 }
-                
         }
         // Attach the container to the scene.
         .modelContainer(container)
@@ -87,7 +86,6 @@ struct CircuitProApp: App {
         // Inject additional environment objects.
         .environment(\.appManager, appManager)
         .environment(\.projectManager, projectManager)
-        
         .environment(\.componentDesignManager, componentDesignManager)
 
         WindowGroup(id: "SecondWindow") {
@@ -98,4 +96,3 @@ struct CircuitProApp: App {
         .windowToolbarStyle(.expanded)
     }
 }
-

@@ -7,9 +7,10 @@
 import SwiftUI
 
 struct CanvasControlView: View {
-    
-    @Environment(CanvasManager.self) private var canvasManager
-    
+
+    @Environment(CanvasManager.self)
+    private var canvasManager
+
     var body: some View {
         HStack {
             Menu {
@@ -18,27 +19,22 @@ struct CanvasControlView: View {
                         canvasManager.crosshairsStyle = style
                     } label: {
                         Text(style.label)
-                           
                     }
-
                 }
             } label: {
                 Image(systemName: AppIcons.crosshairs)
                     .foregroundStyle(canvasManager.crosshairsStyle != .hidden ? .blue : .secondary)
             }
-
-          
             Divider()
                 .frame(height: 10)
-            
+
             Button {
                 canvasManager.enableSnapping.toggle()
             } label: {
                 Image(systemName: AppIcons.snapping)
-                
                     .foregroundStyle(canvasManager.enableSnapping ? .blue : .secondary)
             }
-            
+
             Divider()
                 .frame(height: 10)
             Button {
@@ -48,12 +44,10 @@ struct CanvasControlView: View {
                     .foregroundStyle(canvasManager.enableAxesBackground ? .blue : .secondary)
             }
 
-           
             Divider()
                 .frame(height: 10)
-            
+
             Menu {
-                
                 Button {
                     canvasManager.backgroundStyle = .dotted
                 } label: {
@@ -69,7 +63,6 @@ struct CanvasControlView: View {
             } label: {
                 Image(systemName: AppIcons.backgroundType)
             }
-            
         }
         .buttonStyle(.plain)
         .font(.callout)
@@ -77,7 +70,5 @@ struct CanvasControlView: View {
         .directionalPadding(vertical: 7.5, horizontal: 10)
         .background(.ultraThinMaterial)
         .clipAndStroke(with: .capsule, strokeColor: .gray.opacity(0.3), lineWidth: 1)
-        
-        
     }
 }

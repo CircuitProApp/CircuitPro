@@ -10,7 +10,7 @@ import SwiftUI
         case component
         case symbol
         case footprint
-        
+
         var label: String {
             switch self {
             case .component:

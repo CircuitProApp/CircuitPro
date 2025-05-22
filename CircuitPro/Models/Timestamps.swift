@@ -6,9 +6,8 @@
 //
 import SwiftUI
 
-
 struct Timestamps: Codable, Sendable {
     var dateCreated: Date = Date()
     var dateModified: Date = Date()
-    var dateDeleted: Date? = nil
+    var dateDeleted: Date?
 }

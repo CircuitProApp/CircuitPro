@@ -8,7 +8,9 @@
 import SwiftUI
 
 struct AdjustedForMagnification: ViewModifier {
-    @Environment(CanvasManager.self) private var canvasManager
+    @Environment(CanvasManager.self)
+    private var canvasManager
+
     var bounds: ClosedRange<Double> = 1.0...Double.infinity
 
     func body(content: Content) -> some View {
@@ -25,10 +27,3 @@ extension View {
         self.modifier(AdjustedForMagnification(bounds: bounds))
     }
 }
-
-
-
-
-
-
-

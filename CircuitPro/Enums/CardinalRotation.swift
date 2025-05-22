@@ -9,22 +9,19 @@ enum CardinalRotation: CGFloat, CaseIterable, Codable, Hashable {
     var radians: CGFloat {
         CGFloat(rawValue) * .pi / 180
     }
-
-
 }
 
 extension CardinalRotation {
     /// Unit vector in the direction of this rotation.
     var direction: CGPoint {
         switch self {
-        case .deg0:   return CGPoint(x: -1, y:  0) // West
-        case .deg90:  return CGPoint(x:  0, y:  1) // North
-        case .deg180: return CGPoint(x:  1, y:  0) // East
-        case .deg270: return CGPoint(x:  0, y: -1) // South
+        case .deg0:   return CGPoint(x: -1, y: 0) // West
+        case .deg90:  return CGPoint(x: 0, y: 1) // North
+        case .deg180: return CGPoint(x: 1, y: 0) // East
+        case .deg270: return CGPoint(x: 0, y: -1) // South
         }
     }
 }
-
 
 extension CardinalRotation {
     /// Snaps an arbitrary angle (radians, math coords) to the

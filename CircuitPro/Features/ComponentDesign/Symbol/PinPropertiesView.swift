@@ -7,29 +7,23 @@
 import SwiftUI
 
 struct PinPropertiesView: View {
-    
+
     @Binding var pin: Pin
-    
+
     var body: some View {
-        
         Group {
             TextField("Name", text: $pin.name, prompt: Text("e.g SCL"))
             if pin.name.isNotEmpty {
                 Toggle("Show Name", isOn: $pin.showLabel)
             }
-          
-            
+
             IntegerField(title: "Number", value: $pin.number)
+
             Toggle("Show Number", isOn: $pin.showNumber)
-            
-            
-            
+
             Picker("Function", selection: $pin.type) {
                 ForEach(PinType.allCases) { pinType in
-                    
                     Text(pinType.label).tag(pinType)
-                    
-                    
                 }
             }
             Picker("Length", selection: $pin.lengthType) {
@@ -37,11 +31,6 @@ struct PinPropertiesView: View {
                     Text(pinLengthType.label).tag(pinLengthType)
                 }
             }
-
         }
-        
-        
     }
-    
-    
 }

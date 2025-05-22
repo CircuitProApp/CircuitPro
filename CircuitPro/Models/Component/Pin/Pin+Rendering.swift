@@ -5,7 +5,7 @@ private let haloThickness: CGFloat = 4 // keep all magic numbers in one place
 
 extension Pin {
 
-    // swiftlint:disable:next function_body_length
+    // swiftlint:disable:next function_body_length cyclomatic_complexity
     func draw(
         in ctx: CGContext,
         showText: Bool = true,
@@ -137,6 +137,7 @@ extension Pin {
 }
 
 // MARK: - Tiny helper used for both number & label
+// swiftlint:disable:next function_parameter_count
 private func drawAttributedText(
     _ string: String,
     font: NSFont,
@@ -165,6 +166,7 @@ private func drawAttributedText(
 
 extension Pin {
 
+    // swiftlint:disable:next function_body_length
     func textHitRects(font: NSFont = .systemFont(ofSize: 10)) -> (number: CGRect?, label: CGRect?) {
         let legStart = CGPoint(
             x: position.x + dir.x * length,
@@ -174,8 +176,8 @@ extension Pin {
             x: (legStart.x + position.x) / 2,
             y: (legStart.y + position.y) / 2
         )
-        var numberRect: CGRect? = nil
-        var labelRect: CGRect? = nil
+        var numberRect: CGRect?
+        var labelRect: CGRect?
 
         // ── Number hit‐rect ────────────────────────────────────────────────
         if showNumber {

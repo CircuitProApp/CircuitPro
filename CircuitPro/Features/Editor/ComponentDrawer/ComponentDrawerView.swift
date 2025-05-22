@@ -10,28 +10,29 @@ import RealityKit
 import SwiftData
 
 struct ComponentDrawerView: View {
-    
+
     enum LibraryType: String, CaseIterable {
         case design = "Design Library"
         case app = "App Library"
         case user = "User Library"
     }
-    
-    @Environment(\.appManager) private var appManager
-    @Environment(\.projectManager) private var projectManager
-    @Environment(\.modelContext) private var modelContext
-    
+
+    @Environment(\.appManager)
+    private var appManager
+    @Environment(\.projectManager)
+    private var projectManager
+    @Environment(\.modelContext)
+    private var modelContext
+
     @Query private var components: [Component]
     @Query private var componentInstances: [ComponentInstance]
-    
+
     @State private var selectedLibraryType: LibraryType = .design
-    
+
     @State private var searchText: String = ""
-    
+
     var body: some View {
         VStack(alignment: .leading) {
-            
-            
             librarySelector
             switch selectedLibraryType {
             case .design:
@@ -44,50 +45,37 @@ struct ComponentDrawerView: View {
                     .background(.gray.opacity(0.1))
                     .clipAndStroke(with: .rect(cornerRadius: 15))
                 }
-                
             case .app:
                 ComponentGridView(components) { component in
                     ComponentCardView(component: component)
                 }
-                
             default:
                 Text("Library")
             }
-            
-            
-            
-            
         }
         .padding(10)
         .frame(height: 250)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(.ultraThinMaterial)
-        
         .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3), lineWidth: 1)
-        
         .transition(.move(edge: .bottom).combined(with: .blurReplace))
         .onAppear {
             if componentInstances.isEmpty {
                 selectedLibraryType = .app
             }
         }
-        
-        
     }
-    
-    
+
     var librarySearchField: some View {
         HStack {
             TextField("Search Components", text: $searchText)
                 .textFieldStyle(.plain)
                 .directionalPadding(vertical: 7.5, horizontal: 10)
-            
-            
                 .background(.gray.opacity(0.2))
                 .clipShape(RoundedRectangle(cornerRadius: 5))
         }
     }
-    
+
     var librarySelector: some View {
         HStack {
             ForEach(LibraryType.allCases.dropLast(), id: \.self) { libraryType in
@@ -95,24 +83,19 @@ struct ComponentDrawerView: View {
                     withAnimation {
                         selectedLibraryType = libraryType
                     }
-                    
-                    
                 } label: {
                     Text(libraryType.rawValue)
-                    
-                    
                 }
                 .buttonStyle(.plain)
                 .directionalPadding(vertical: 5, horizontal: 7.5)
                 .background(selectedLibraryType == libraryType ? .gray.opacity(0.2) : .clear)
                 .clipShape(RoundedRectangle(cornerRadius: 5))
-                
-                
+
                 if libraryType == .design {
                     Divider()
                         .frame(height: 15)
                 }
-                
+
             }
             Spacer()
             Button {
@@ -120,26 +103,21 @@ struct ComponentDrawerView: View {
             } label: {
                 Text("Create a Component")
             }
-            
+
         }
         .font(.subheadline)
     }
-    
-    
-    
-    
-    
 }
-
+// swiftlint:disable:next line_length
 private struct ComponentGridView<Data: RandomAccessCollection, Content: View>: View where Data.Element: PersistentModel {
     let data: Data
     let content: (Data.Element) -> Content
-    
+
     init(_ data: Data, @ViewBuilder content: @escaping (Data.Element) -> Content) {
         self.data = data
         self.content = content
     }
-    
+
     var body: some View {
         if data.isEmpty {
             Text("No Components")
@@ -159,11 +137,9 @@ private struct ComponentGridView<Data: RandomAccessCollection, Content: View>: V
                 }
                 .disableAnimations()
             }
-            
         }
     }
 }
-
 
 #Preview {
     ComponentDrawerView()

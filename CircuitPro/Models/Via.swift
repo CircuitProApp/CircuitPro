@@ -8,7 +8,6 @@
 import SwiftUI
 import SwiftData
 
-
 @Model
 final class Via {
 
@@ -17,17 +16,12 @@ final class Via {
     var layout: Layout?
     var startLayer: Layer?
     var endLayer: Layer?
-    
 
-    
     init(position: SDPoint, net: Net? = nil, layout: Layout? = nil, startLayer: Layer? = nil, endLayer: Layer? = nil) {
         self.position = position
         self.net = net
         self.layout = layout
         self.startLayer = startLayer
         self.endLayer = endLayer
-   
     }
 }
-
-

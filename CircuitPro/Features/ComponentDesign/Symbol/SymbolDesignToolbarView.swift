@@ -7,7 +7,8 @@
 import SwiftUI
 
 struct SymbolDesignToolbarView: View {
-    @Environment(\.componentDesignManager) private var componentDesignManager
+    @Environment(\.componentDesignManager)
+    private var componentDesignManager
 
     var body: some View {
         ToolbarView<AnyCanvasTool>(
@@ -18,7 +19,6 @@ struct SymbolDesignToolbarView: View {
             dividerAfter: { tool in
                 tool.id == "cursor" || tool.id == "circle"
             },
-         
             imageName: { $0.symbolName },
             onToolSelected: { tool in
                 componentDesignManager.selectedSymbolTool = tool
