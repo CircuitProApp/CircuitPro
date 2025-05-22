@@ -17,7 +17,6 @@ protocol CanvasTool: Hashable {
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext)
 }
 
-
 extension CanvasTool {
     mutating func handleTap(at location: CGPoint) -> CanvasElement? {
         handleTap(at: location, context: CanvasToolContext())
@@ -27,17 +26,16 @@ extension CanvasTool {
 private protocol ToolBoxBase: AnyObject {}
 final class ToolBox<T: CanvasTool>: ToolBoxBase {
     var tool: T
-    init(_ t: T) { tool = t }
+    init(_ canvasTool: T) { tool = canvasTool }
 }
-
 
 struct AnyCanvasTool: CanvasTool {
     let id: String
     let symbolName: String
     let label: String
 
-    private let _handleTap   : (CGPoint, CanvasToolContext) -> CanvasElement?
-     private let _drawPreview : (CGContext, CGPoint, CanvasToolContext) -> Void
+    private let _handleTap: (CGPoint, CanvasToolContext) -> CanvasElement?
+     private let _drawPreview: (CGContext, CGPoint, CanvasToolContext) -> Void
      private let box: ToolBoxBase          // <— keeps the ToolBox alive
 
      init<T: CanvasTool>(_ tool: T) {
@@ -65,21 +63,16 @@ struct AnyCanvasTool: CanvasTool {
      }
 
      // simple forwarders -------------------------------------------------------
-     mutating func handleTap(at p: CGPoint,
-                             context: CanvasToolContext) -> CanvasElement? {
-         _handleTap(p, context)
+     mutating func handleTap(at point: CGPoint, context: CanvasToolContext) -> CanvasElement? {
+         _handleTap(point, context)
      }
-     mutating func drawPreview(in cg: CGContext,
-                               mouse: CGPoint,
-                               context: CanvasToolContext) {
+     mutating func drawPreview(in cg: CGContext, mouse: CGPoint, context: CanvasToolContext) {
          _drawPreview(cg, mouse, context)
      }
 
-    static func == (a: AnyCanvasTool, b: AnyCanvasTool) -> Bool { a.id == b.id }
+    static func == (lhs: AnyCanvasTool, rhs: AnyCanvasTool) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
-
-
 
 struct CanvasToolContext {
     var existingPinCount: Int = 0
@@ -87,6 +80,3 @@ struct CanvasToolContext {
     var selectedLayer: LayerKind = .copper
     var magnification: CGFloat = 1.0// <-- add this
 }
-
-
-

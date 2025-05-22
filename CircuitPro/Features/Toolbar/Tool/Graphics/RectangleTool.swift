@@ -8,8 +8,8 @@ struct RectangleTool: CanvasTool {
     private var start: CGPoint?
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
-        if let s = start {
-            let rect = CGRect(origin: s, size: .zero).union(CGRect(origin: location, size: .zero))
+        if let start {
+            let rect = CGRect(origin: start, size: .zero).union(CGRect(origin: location, size: .zero))
             let center = CGPoint(x: rect.midX, y: rect.midY)
             let size = CGSize(width: rect.width, height: rect.height)
 
@@ -22,17 +22,17 @@ struct RectangleTool: CanvasTool {
                 color: .init(color: context.selectedLayer.defaultColor),
                 filled: false
             )
-            start = nil
+            self.start = nil
             return .primitive(.rectangle(prim))
         } else {
-            start = location
+            self.start = location
             return nil
         }
     }
 
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
-        guard let s = start else { return }
-        let rect = CGRect(origin: s, size: .zero).union(CGRect(origin: mouse, size: .zero))
+        guard let start else { return }
+        let rect = CGRect(origin: start, size: .zero).union(CGRect(origin: mouse, size: .zero))
 
         ctx.saveGState()
         ctx.setStrokeColor(NSColor(context.selectedLayer.defaultColor).cgColor)

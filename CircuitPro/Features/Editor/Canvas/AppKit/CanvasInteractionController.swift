@@ -31,33 +31,31 @@ final class CanvasInteractionController {
     func updateRotation(to cursor: CGPoint) {
         guard isRotatingViaMouse, let origin = rotationOrigin else { return }
 
-        let dx = cursor.x - origin.x
-        let dy = cursor.y - origin.y
-        let rawAngle = atan2(dy, dx)
+        let deltaX = cursor.x - origin.x
+        let deltaY = cursor.y - origin.y
+        let rawAngle = atan2(deltaY, deltaX)
 
         var updated = canvas.elements
-        for i in updated.indices where canvas.selectedIDs.contains(updated[i].id) {
-            switch updated[i] {
-
-            case .primitive(var prim):
+        for index in updated.indices where canvas.selectedIDs.contains(updated[index].id) {
+            switch updated[index] {
+            case .primitive(var primitive):
                 var angle = rawAngle
                 if !NSEvent.modifierFlags.contains(.shift) {
-                    // Snap to 15° increments
                     let snapIncrement: CGFloat = .pi / 12
                     angle = round(angle / snapIncrement) * snapIncrement
                 }
-                prim.rotation = angle
-                updated[i] = .primitive(prim)
+                primitive.rotation = angle
+                updated[index] = .primitive(primitive)
 
             case .pin(var pin):
                 let snapped = CardinalRotation.closest(to: rawAngle)
                 pin.rotation = snapped
-                updated[i] = .pin(pin)
+                updated[index] = .pin(pin)
 
             case .pad(var pad):
                 let snapped = CardinalRotation.closest(to: rawAngle)
                 pad.rotation = snapped
-                updated[i] = .pad(pad)
+                updated[index] = .pad(pad)
             }
         }
 
@@ -65,12 +63,6 @@ final class CanvasInteractionController {
         canvas.onUpdate?(updated)
         canvas.needsDisplay = true
     }
-
-
-
-
-
-
     func mouseDown(at loc: CGPoint, event: NSEvent) {
         if isRotatingViaMouse {
             isRotatingViaMouse = false
@@ -131,20 +123,33 @@ final class CanvasInteractionController {
         frozenOppositeWorld = nil
         activeHandle = nil
 
-        if canvas.selectedIDs.count == 1 {
-            let tolerance = 8.0 / canvas.magnification
-            for element in canvas.elements where canvas.selectedIDs.contains(element.id) && element.isPrimitiveEditable {
-                for h in element.handles() where hypot(loc.x - h.position.x, loc.y - h.position.y) < tolerance {
-                    activeHandle = (element.id, h.kind)
-                    if let oppKind = oppositeKind(of: h.kind),
-                       let opp = element.handles().first(where: { $0.kind == oppKind }) {
-                        frozenOppositeWorld = opp.position
-                    }
-                    return
+        if tryBeginHandleInteraction(at: loc) {
+            return
+        }
+
+        tryUpdateTentativeSelection(at: loc, with: event)
+    }
+
+    private func tryBeginHandleInteraction(at loc: CGPoint) -> Bool {
+        guard canvas.selectedIDs.count == 1 else { return false }
+
+        let tolerance = 8.0 / canvas.magnification
+        for element in canvas.elements where canvas.selectedIDs.contains(element.id) && element.isPrimitiveEditable {
+            for handle in element.handles()
+            where hypot(loc.x - handle.position.x, loc.y - handle.position.y) < tolerance {
+                activeHandle = (element.id, handle.kind)
+                if let oppositeKind = oppositeKind(of: handle.kind),
+                   let opposite = element.handles().first(where: { $0.kind == oppositeKind }) {
+                    frozenOppositeWorld = opposite.position
                 }
+                return true
             }
         }
 
+        return false
+    }
+
+    private func tryUpdateTentativeSelection(at loc: CGPoint, with event: NSEvent) {
         let shift = event.modifierFlags.contains(.shift)
         let hitID = canvas.hitRects.hitTest(at: loc)
 
@@ -205,8 +210,10 @@ final class CanvasInteractionController {
             let id = updated[i].id
             guard let original = originalPositions[id] else { continue }
 
-            let newPos = CGPoint(x: original.x + snappedDX,
-                                 y: original.y + snappedDY)
+            let newPos = CGPoint(
+                x: original.x + snappedDX,
+                y: original.y + snappedDY
+            )
 
             let current = updated[i].primitives.first?.position ?? original
             let delta = CGPoint(x: newPos.x - current.x, y: newPos.y - current.y)

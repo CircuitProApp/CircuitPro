@@ -9,6 +9,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+
+
 class CircuitProjectDocument: NSDocument {
 
     // MARK: model in memory
@@ -16,9 +18,21 @@ class CircuitProjectDocument: NSDocument {
 
     // MARK: SwiftUI window
     override func makeWindowControllers() {
-        let hosting = NSHostingController(rootView: ContentView(project: model))
-        addWindowController(NSWindowController(window: NSWindow(contentViewController: hosting)))
+        let contentView = ContentView(project: model)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1000, height: 700),
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+    
+        window.center()
+        window.titlebarAppearsTransparent = false
+        window.contentView = NSHostingView(rootView: contentView)
+        let controller = NSWindowController(window: window)
+        addWindowController(controller)
     }
+
 
     // ────────────────────────────────────────────────
     // 1️⃣  READ an existing .circuitproj  (URL-based)

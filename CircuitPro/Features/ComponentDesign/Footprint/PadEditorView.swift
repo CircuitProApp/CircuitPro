@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct PadEditorView: View {
-    @Environment(\.componentDesignManager) private var componentDesignManager
-
+    @Environment(\.componentDesignManager)
+    private var componentDesignManager
     var body: some View {
         let pads = componentDesignManager.pads
         let selectedIDs = componentDesignManager.selectedFootprintElementIDs
@@ -53,7 +53,11 @@ struct PadEditorView: View {
 
     private func togglePadSelection(pad: Pad) {
         if let element = componentDesignManager.footprintElements.first(where: {
-            if case .pad(let p) = $0 { return p.id == pad.id } else { return false }
+            if case .pad(let padElement) = $0 {
+                return padElement.id == pad.id
+            } else {
+                return false
+            }
         }) {
             let id = element.id
             if componentDesignManager.selectedFootprintElementIDs.contains(id) {

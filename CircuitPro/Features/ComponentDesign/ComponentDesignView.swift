@@ -1,15 +1,13 @@
 import SwiftUI
 
 struct ComponentDesignView: View {
-    
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.componentDesignManager) private var componentDesignManager
-    
+    @Environment(\.modelContext)
+    private var modelContext
+    @Environment(\.componentDesignManager)
+    private var componentDesignManager
     @State private var currentStage: ComponentDesignStage = .component
-
     @State private var symbolCanvasManager = CanvasManager()
     @State private var footprintCanvasManager = CanvasManager()
-    
     var body: some View {
         VStack {
             stageIndicator
@@ -20,31 +18,22 @@ struct ComponentDesignView: View {
                     case .symbol:
                         if componentDesignManager.pins.isNotEmpty {
                             PinEditorView()
-                           
-                            .transition(.move(edge: .trailing).combined(with: .blurReplace))
-                            
-                           
-                            .padding()
+                                .transition(.move(edge: .trailing).combined(with: .blurReplace))
+                                .padding()
                         } else {
                             Color.clear
                         }
-                 
                     case .footprint:
                         if componentDesignManager.pads.isNotEmpty {
                             PadEditorView()
-                           
-                            .transition(.move(edge: .trailing).combined(with: .blurReplace))
-                            
-                           
-                            .padding()
+                                .transition(.move(edge: .trailing).combined(with: .blurReplace))
+                                .padding()
                         } else {
                             Color.clear
                         }
-              
                     default:
                         Color.clear
                     }
-            
                 },
                 center: {
                     switch currentStage {
@@ -53,7 +42,6 @@ struct ComponentDesignView: View {
                     case .symbol:
                         SymbolDesignView()
                             .environment(symbolCanvasManager)
-                  
                     case .footprint:
                         FootprintDesignView()
                             .environment(footprintCanvasManager)
@@ -63,21 +51,16 @@ struct ComponentDesignView: View {
                     switch currentStage {
                     case .footprint:
                         LayerTypeListView()
-  
-                        .transition(.move(edge: .leading).combined(with: .blurReplace))
-                       
-                       
-                        .padding()
+                            .transition(.move(edge: .leading).combined(with: .blurReplace))
+                            .padding()
                     default:
                         Color.clear
                     }
-               
                 }
             )
             Spacer()
         }
         .padding()
-        
         .navigationTitle("Component Designer")
         .toolbar {
             ToolbarItem {
@@ -91,14 +74,11 @@ struct ComponentDesignView: View {
                 .foregroundStyle(.white)
                 .background(Color.blue)
                 .clipAndStroke(with: RoundedRectangle(cornerRadius: 5))
-
             }
         }
     }
-    
     var stageIndicator: some View {
         HStack {
-        
             ForEach(ComponentDesignStage.allCases) { stage in
                 Text(stage.label)
                     .padding(10)
@@ -106,35 +86,38 @@ struct ComponentDesignView: View {
                     .foregroundStyle(currentStage == stage ? .white : .secondary)
                     .clipShape(.capsule)
                     .onTapGesture {
-           
-                            currentStage = stage
-                        
+                        currentStage = stage
                     }
                 if stage == .component || stage == .symbol {
                     Image(systemName: "chevron.right")
                         .foregroundStyle(.secondary)
                 }
             }
-        
         }
         .font(.headline)
         .padding()
     }
-    
-    
     private func createComponent() {
-        let newComponent = Component(name: componentDesignManager.componentName, abbreviation: componentDesignManager.componentAbbreviation, symbol: nil, footprints: [], category: componentDesignManager.selectedCategory, package: componentDesignManager.selectedPackageType, properties: componentDesignManager.componentProperties)
-        
+        let newComponent = Component(
+            name: componentDesignManager.componentName,
+            abbreviation: componentDesignManager.componentAbbreviation,
+            symbol: nil,
+            footprints: [],
+            category: componentDesignManager.selectedCategory,
+            package: componentDesignManager.selectedPackageType,
+            properties: componentDesignManager.componentProperties
+        )
         let graphicPrimitives: [AnyPrimitive] = componentDesignManager.symbolElements.compactMap {
-            if case .primitive(let p) = $0 { return p }
+            if case .primitive(let prim) = $0 { return prim }
             return nil
         }
-
-        
-        let newComponentSymbol = Symbol(name: componentDesignManager.componentName, component: newComponent, primitives: graphicPrimitives, pins: componentDesignManager.pins)
-        
+        let newComponentSymbol = Symbol(
+            name: componentDesignManager.componentName,
+            component: newComponent,
+            primitives: graphicPrimitives,
+            pins: componentDesignManager.pins
+        )
         newComponent.symbol = newComponentSymbol
-        
         modelContext.insert(newComponent)
     }
 }
@@ -146,11 +129,14 @@ private struct StageContentView<Left: View, Center: View, Right: View>: View {
     let width: CGFloat
     let height: CGFloat
     let sidebarWidth: CGFloat
-    
-    init(width: CGFloat = 800, height: CGFloat = 500, sidebarWidth: CGFloat = 325,
-         @ViewBuilder left: () -> Left,
-         @ViewBuilder center: () -> Center,
-         @ViewBuilder right: () -> Right) {
+    init(
+        width: CGFloat = 800,
+        height: CGFloat = 500,
+        sidebarWidth: CGFloat = 325,
+        @ViewBuilder left: () -> Left,
+        @ViewBuilder center: () -> Center,
+        @ViewBuilder right: () -> Right
+    ) {
         self.left = left()
         self.center = center()
         self.right = right()
@@ -158,7 +144,6 @@ private struct StageContentView<Left: View, Center: View, Right: View>: View {
         self.height = height
         self.sidebarWidth = sidebarWidth
     }
-    
     var body: some View {
         HStack(spacing: 0) {
             left.frame(width: sidebarWidth, height: height)
@@ -171,14 +156,9 @@ private struct StageContentView<Left: View, Center: View, Right: View>: View {
     }
 }
 
-
 struct StageSidebarView<Header: View, Content: View>: View {
-    
-    @ViewBuilder
-    let header: Header
-    @ViewBuilder
-    let content: Content
-
+    @ViewBuilder let header: Header
+    @ViewBuilder let content: Content
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
@@ -186,26 +166,10 @@ struct StageSidebarView<Header: View, Content: View>: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
-            .border(edge: .bottom, color: .gray.opacity(0.3))
-            
-            
-    
-                content
-        
-   
-            
-               
-       
-         
-         
-            
+            .border(edge: .bottom, style: .gray.opacity(0.3))
+            content
         }
-        
         .frame(maxHeight: .infinity)
         .clipAndStroke(with: RoundedRectangle(cornerRadius: 15))
-
-   
     }
-    
 }
-

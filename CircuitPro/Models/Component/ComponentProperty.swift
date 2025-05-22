@@ -22,7 +22,6 @@ enum PropertyKey: Hashable, Codable, Identifiable {
     case battery(BatteryType)
     case sensor(SensorType)
 
-
     var id: String {
         switch self {
         case .basic(let type): return "basic.\(type.rawValue)"
@@ -37,12 +36,12 @@ enum PropertyKey: Hashable, Codable, Identifiable {
 
     var label: String {
         switch self {
-        case .basic(let t): return t.label
-        case .rating(let t): return t.label
-        case .temperature(let t): return t.label
-        case .rf(let t): return t.label
-        case .battery(let t): return t.label
-        case .sensor(let t): return t.label
+        case .basic(let type): return type.label
+        case .rating(let type): return type.label
+        case .temperature(let type): return type.label
+        case .rf(let type): return type.label
+        case .battery(let type): return type.label
+        case .sensor(let type): return type.label
         }
     }
 
@@ -182,9 +181,6 @@ extension PropertyKey {
     }
 }
 
-
-
-
 enum PropertyValue: Codable {
     case single(Double?)
     case range(min: Double?, max: Double?)
@@ -199,9 +195,8 @@ enum PropertyValue: Codable {
     var description: String {
         switch self {
         case .single(let value):
-            if let v = value { return "\(v)" }
-            else { return "" }
-        case .range(let min, let max):
+            if let value { return "\(value)" } else { return "" }
+        case let .range(min, max):
             return "\(min ?? 0) to \(max ?? 0)"
         }
     }
@@ -237,14 +232,13 @@ enum PropertyValue: Codable {
         case .single(let value):
             try container.encode(ValueType.single, forKey: .type)
             try container.encodeIfPresent(value, forKey: .value)
-        case .range(let min, let max):
+        case let .range(min, max):
             try container.encode(ValueType.range, forKey: .type)
             try container.encodeIfPresent(min, forKey: .min)
             try container.encodeIfPresent(max, forKey: .max)
         }
     }
 }
-
 
 enum PropertyValueType: String, CaseIterable, Identifiable, Codable {
     case single

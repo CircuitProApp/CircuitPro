@@ -40,7 +40,6 @@ enum BaseUnit: String, CaseIterable, Codable {
     case wattHour   = "Wh"
     case decibel    = "dB"
 
-
     var symbol: String { rawValue }
 
     var name: String {
@@ -81,8 +80,8 @@ struct Unit: CustomStringConvertible, Codable {
 
     var name: String {
         guard let base = base else { return prefix.name }
-        let p = prefix == .none ? "" : prefix.name
-        return [p, base.name].filter { !$0.isEmpty }.joined(separator: " ")
+        let prefixString = prefix == .none ? "" : prefix.name
+        return [prefixString, base.name].filter { !$0.isEmpty }.joined(separator: " ")
     }
 
     var description: String { symbol }

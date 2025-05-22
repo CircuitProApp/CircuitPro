@@ -56,7 +56,7 @@ struct IntegerField: View {
     }
 
     private func clamp(_ x: Int, to bounds: ClosedRange<Int>?) -> Int {
-        guard let b = bounds else { return x }
-        return min(max(x, b.lowerBound), b.upperBound)
+        guard let bounds else { return x }
+        return min(max(x, bounds.lowerBound), bounds.upperBound)
     }
 }

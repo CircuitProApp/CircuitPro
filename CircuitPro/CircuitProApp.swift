@@ -4,6 +4,8 @@ import SwiftData
 @main
 struct CircuitProApp: App {
 
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    
     var container: ModelContainer
 
     @State var appManager = AppManager()
@@ -73,10 +75,15 @@ struct CircuitProApp: App {
     var body: some Scene {
         Group {
             WelcomeWindow()
+            AboutWindow()
+                .commands {
+                    CircuitProCommands()
+                }
                 
         }
         // Attach the container to the scene.
         .modelContainer(container)
+
         // Inject additional environment objects.
         .environment(\.appManager, appManager)
         .environment(\.projectManager, projectManager)
@@ -91,3 +98,4 @@ struct CircuitProApp: App {
         .windowToolbarStyle(.expanded)
     }
 }
+

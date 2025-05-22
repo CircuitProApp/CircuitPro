@@ -1,0 +1,45 @@
+disabled_rules:
+  - todo            # Allow TODOs during development
+  - trailing_comma  # Modern Swift supports trailing commas
+  - nesting         # Avoid overly aggressive nesting warnings
+
+type_name:
+  excluded:
+    - ID            # Prevent complaints about common types like ID
+
+identifier_name:
+  allowed_symbols: ["$", "_"]
+  excluded:
+    - id
+    - vc
+    - x
+    - y
+    - rf
+    - i
+    - j
+
+excluded:           # Paths SwiftLint should ignore
+  - DerivedData
+  - .build
+  - Pods            # CocoaPods folder, if used
+  - Carthage        # Optional: if using Carthage
+  - swiftlint.yml   # Avoid self-linting
+
+opt_in_rules:
+  - attributes
+  - empty_count
+  - closure_spacing
+  - contains_over_first_not_nil
+  - modifier_order
+  - convenience_type
+  - pattern_matching_keywords
+  - multiline_parameters_brackets
+  - multiline_arguments_brackets
+
+custom_rules:
+  spaces_over_tabs:
+    included: ".*\\.swift"
+    name: "Spaces over Tabs"
+    regex: "\t"
+    message: "Prefer spaces for indents over tabs. See Xcode setting: 'Text Editing' -> 'Indentation'"
+    severity: warning

@@ -72,16 +72,16 @@ final class CoreGraphicsCanvasView: NSView {
 
     func snap(_ point: CGPoint) -> CGPoint {
         guard isSnappingEnabled else { return point }
-        func snapValue(_ v: CGFloat) -> CGFloat {
-            round(v / snapGridSize) * snapGridSize
+        func snapValue(_ value: CGFloat) -> CGFloat {
+            round(value / snapGridSize) * snapGridSize
         }
         return CGPoint(x: snapValue(point.x), y: snapValue(point.y))
     }
 
     func snapDelta(_ value: CGFloat) -> CGFloat {
         guard isSnappingEnabled else { return value }
-        let g = snapGridSize
-        return round(value / g) * g
+        let gridSize = snapGridSize
+        return round(value / gridSize) * gridSize
     }
 
     override func updateTrackingAreas() {
@@ -118,7 +118,6 @@ final class CoreGraphicsCanvasView: NSView {
         }
     }
 
-    
     private func deleteSelectedElements() {
         guard !selectedIDs.isEmpty else { return }
 
@@ -130,10 +129,6 @@ final class CoreGraphicsCanvasView: NSView {
 
         needsDisplay = true
     }
-
-
-
-
     // MARK: Internal Accessors for Controllers
     var hitRects: CanvasHitTestController { hitTesting }
     var marqueeRect: CGRect? { interaction.marqueeRect }

@@ -11,19 +11,20 @@ struct LinePrimitive: GraphicPrimitive {
 
     var position: CGPoint {
         get {
-            CGPoint(x: (start.x + end.x) / 2,
-                    y: (start.y + end.y) / 2)
+            CGPoint(
+                x: (start.x + end.x) / 2,
+                y: (start.y + end.y) / 2
+            )
         }
         set {
-            let dx = newValue.x - position.x
-            let dy = newValue.y - position.y
-            start.x += dx
-            start.y += dy
-            end.x += dx
-            end.y += dy
+            let deltaX = newValue.x - position.x
+            let deltaY = newValue.y - position.y
+            start.x += deltaX
+            start.y += deltaY
+            end.x += deltaX
+            end.y += deltaY
         }
     }
-    
     func handles() -> [Handle] {
         let mid = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
         let rotatedStart = rotate(point: start, around: mid, by: rotation)
@@ -34,22 +35,22 @@ struct LinePrimitive: GraphicPrimitive {
         ]
     }
 
-
     mutating func updateHandle(
         _ kind: Handle.Kind,
         to dragWorld: CGPoint,
         opposite oppWorld: CGPoint?
     ) {
         guard let oppWorld = oppWorld else { return }
-
         // Calculate new rotation based on dragged and opposite points
-        let dx = dragWorld.x - oppWorld.x
-        let dy = dragWorld.y - oppWorld.y
-        rotation = atan2(dy, dx)
+        let deltaX = dragWorld.x - oppWorld.x
+        let deltaY = dragWorld.y - oppWorld.y
+        rotation = atan2(deltaY, deltaX)
 
         // Reset line to unrotated state using new direction
-        let mid = CGPoint(x: (dragWorld.x + oppWorld.x) / 2,
-                          y: (dragWorld.y + oppWorld.y) / 2)
+        let mid = CGPoint(
+            x: (dragWorld.x + oppWorld.x) / 2,
+            y: (dragWorld.y + oppWorld.y) / 2
+        )
         let dragLocal = unrotate(point: dragWorld, around: mid, by: rotation)
         let oppLocal  = unrotate(point: oppWorld, around: mid, by: rotation)
 
@@ -60,31 +61,33 @@ struct LinePrimitive: GraphicPrimitive {
         }
     }
 
-
     func makePath(offset: CGPoint = .zero) -> CGPath {
 
            // 1. build an unrotated line, *including* any offset
-           let s = CGPoint(x: offset.x + start.x,
-                           y: offset.y + start.y)
-           let e = CGPoint(x: offset.x + end.x,
-                           y: offset.y + end.y)
+           let start = CGPoint(
+            x: offset.x + start.x,
+            y: offset.y + start.y
+           )
+           let end = CGPoint(
+            x: offset.x + end.x,
+            y: offset.y + end.y
+           )
 
-           let p = CGMutablePath()
-           p.move(to: s)
-           p.addLine(to: e)
+           let path = CGMutablePath()
+           path.move(to: start)
+           path.addLine(to: end)
 
            // 2. rotate about its midpoint
-           let mid = CGPoint(x: (s.x + e.x) * 0.5,
-                             y: (s.y + e.y) * 0.5)
+           let mid = CGPoint(
+            x: (start.x + end.x) * 0.5,
+            y: (start.y + end.y) * 0.5
+           )
 
-           var t = CGAffineTransform.identity
+           var transform = CGAffineTransform.identity
                   .translatedBy(x: mid.x, y: mid.y)
                   .rotated(by: rotation)
                   .translatedBy(x: -mid.x, y: -mid.y)
 
-           return p.copy(using: &t) ?? p
+           return path.copy(using: &transform) ?? path
        }
-
-
-
 }

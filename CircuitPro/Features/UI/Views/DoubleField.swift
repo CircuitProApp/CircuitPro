@@ -72,8 +72,8 @@ struct DoubleField: View {
     }
 
     private func clamp(_ x: Double, to bounds: ClosedRange<Double>?) -> Double {
-        guard let b = bounds else { return x }
-        return min(max(x, b.lowerBound), b.upperBound)
+        guard let bounds else { return x }
+        return min(max(x, bounds.lowerBound), bounds.upperBound)
     }
 
     private func formatted(_ value: Double) -> String {

@@ -52,18 +52,18 @@ struct WelcomeView: View {
     }
 
     private var appVersion: String {
-//        Bundle.versionString ?? ""
-        ""
+        Bundle.versionString ?? ""
+
     }
 
     private var appBuild: String {
-//        Bundle.buildString ?? ""
-        ""
+        Bundle.buildString ?? ""
+
     }
 
     private var appVersionPostfix: String {
-//        Bundle.versionPostfix ?? ""
-        ""
+        Bundle.versionPostfix ?? ""
+    
     }
 
     /// Get the macOS version & build

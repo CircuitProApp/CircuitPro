@@ -13,36 +13,39 @@ enum PadShape: Codable, Hashable {
     private enum CodingKeys: String, CodingKey {
         case type, width, height, radius
     }
+
     private enum ShapeType: String, Codable {
         case rect, circle
     }
 
     // Decoding
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        let type = try c.decode(ShapeType.self, forKey: .type)
-        switch type {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let shapeType = try container.decode(ShapeType.self, forKey: .type)
+
+        switch shapeType {
         case .rect:
-            let w = try c.decode(Double.self, forKey: .width)
-            let h = try c.decode(Double.self, forKey: .height)
-            self = .rect(width: w, height: h)
+            let width = try container.decode(Double.self, forKey: .width)
+            let height = try container.decode(Double.self, forKey: .height)
+            self = .rect(width: width, height: height)
         case .circle:
-            let r = try c.decode(Double.self, forKey: .radius)
-            self = .circle(radius: r)
+            let radius = try container.decode(Double.self, forKey: .radius)
+            self = .circle(radius: radius)
         }
     }
 
     // Encoding
     func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
         switch self {
-        case .rect(let width, let height):
-            try c.encode(ShapeType.rect, forKey: .type)
-            try c.encode(width,  forKey: .width)
-            try c.encode(height, forKey: .height)
+        case let .rect(width, height):
+            try container.encode(ShapeType.rect, forKey: .type)
+            try container.encode(width, forKey: .width)
+            try container.encode(height, forKey: .height)
         case .circle(let radius):
-            try c.encode(ShapeType.circle, forKey: .type)
-            try c.encode(radius, forKey: .radius)
+            try container.encode(ShapeType.circle, forKey: .type)
+            try container.encode(radius, forKey: .radius)
         }
     }
 }

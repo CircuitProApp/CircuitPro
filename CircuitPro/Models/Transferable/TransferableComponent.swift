@@ -12,29 +12,24 @@ struct TransferableComponent: Transferable, Codable {
     let componentUUID: UUID
     let symbolUUID: UUID
     let properties: [ComponentProperty]
-    
     init?(component: Component) {
-         guard let s = component.symbol?.uuid else { return nil }
+         guard let symbol = component.symbol else { return nil }
          componentUUID = component.uuid
-         symbolUUID    = s
+         symbolUUID    = symbol.uuid
          properties    = component.properties
      }
 
-    
     static var transferRepresentation: some TransferRepresentation {
         CodableRepresentation(contentType: .transferableComponent)
     }
 }
 
-
 extension UTType {
     static let transferableComponent = UTType(exportedAs: "app.circuitpro.transferable-component-data")
 }
 
-
 struct DraggableModifier: ViewModifier {
     let component: Component
-    
     func body(content: Content) -> some View {
         if let transferable = TransferableComponent(component: component) {
             content

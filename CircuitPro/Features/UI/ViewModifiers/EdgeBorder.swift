@@ -8,9 +8,9 @@
 
 import SwiftUI
 
-struct EdgeBorder: ViewModifier {
+struct EdgeBorder<S: ShapeStyle>: ViewModifier {
     var edge: Edge
-    var color: Color
+    var style: S
     var thickness: CGFloat
 
     func body(content: Content) -> some View {
@@ -18,7 +18,7 @@ struct EdgeBorder: ViewModifier {
             Rectangle()
                 .frame(width: edge.isVertical ? thickness : nil,
                        height: edge.isHorizontal ? thickness : nil)
-                .foregroundColor(color)
+                .foregroundStyle(style)
         }
     }
 
@@ -38,7 +38,7 @@ private extension Edge {
 }
 
 extension View {
-    func border(edge: Edge, color: Color, thickness: CGFloat = 1) -> some View {
-        self.modifier(EdgeBorder(edge: edge, color: color, thickness: thickness))
+    func border<S: ShapeStyle>(edge: Edge, style: S, thickness: CGFloat = 1) -> some View {
+        self.modifier(EdgeBorder(edge: edge, style: style, thickness: thickness))
     }
 }

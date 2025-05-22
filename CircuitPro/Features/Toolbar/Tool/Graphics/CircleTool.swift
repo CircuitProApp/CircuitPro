@@ -8,29 +8,29 @@ struct CircleTool: CanvasTool {
     private var center: CGPoint?
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
-        if let c = center {
-            let r = hypot(location.x - c.x, location.y - c.y)
+        if let center {
+            let radius = hypot(location.x - center.x, location.y - center.y)
             let circle = CirclePrimitive(
                 uuid: UUID(),
-                position: c,
-                radius: r,
+                position: center,
+                radius: radius,
                 rotation: 0,
                 strokeWidth: 1,
                 color: .init(color: context.selectedLayer.defaultColor),
                 filled: false
             )
-            center = nil
+            self.center = nil
             return .primitive(.circle(circle))
         } else {
-            center = location
+            self.center = location
             return nil
         }
     }
 
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
-        guard let c = center else { return }
-        let r = hypot(mouse.x - c.x, mouse.y - c.y)
-        let rect = CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)
+        guard let center else { return }
+        let radius = hypot(mouse.x - center.x, mouse.y - center.y)
+        let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
 
         ctx.saveGState()
         ctx.setStrokeColor(NSColor(context.selectedLayer.defaultColor).cgColor)

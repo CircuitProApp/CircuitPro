@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct PinEditorView: View {
-    @Environment(\.componentDesignManager) private var componentDesignManager
-
+    @Environment(\.componentDesignManager)
+    private var componentDesignManager
     var body: some View {
         let pins = componentDesignManager.pins
         let selectedIDs = componentDesignManager.selectedSymbolElementIDs
@@ -60,7 +60,11 @@ struct PinEditorView: View {
 
     private func togglePinSelection(pin: Pin) {
         if let element = componentDesignManager.symbolElements.first(where: {
-            if case .pin(let p) = $0 { return p.id == pin.id } else { return false }
+            if case .pin(let pinElement) = $0 {
+                return pinElement.id == pin.id
+            } else {
+                return false
+            }
         }) {
             let id = element.id
             if componentDesignManager.selectedSymbolElementIDs.contains(id) {

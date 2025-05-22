@@ -1,23 +1,25 @@
 // Pin+Rendering.swift
-// Pin+Rendering.swift
 import AppKit
 
 private let haloThickness: CGFloat = 4 // keep all magic numbers in one place
 
 extension Pin {
 
-    /// Draws the pin: primitives → optional halo → optional text.
-    func draw(in ctx: CGContext,
-              showText: Bool = true,
-              highlight: Bool = false)
-    {
-
+    // swiftlint:disable:next function_body_length
+    func draw(
+        in ctx: CGContext,
+        showText: Bool = true,
+        highlight: Bool = false
+    ) {
         // 2. world-space geometry
-        let legStart = CGPoint(x: position.x + dir.x * length,
-                               y: position.y + dir.y * length)
-        let legMid   = CGPoint(x: (legStart.x + position.x) / 2,
-                               y: (legStart.y + position.y) / 2)
-
+        let legStart = CGPoint(
+            x: position.x + dir.x * length,
+            y: position.y + dir.y * length
+        )
+        let legMid = CGPoint(
+            x: (legStart.x + position.x) / 2,
+            y: (legStart.y + position.y) / 2
+        )
         // ───────────────────────────────────────────── 1. primitives
         for prim in primitives {
             prim.draw(in: ctx, selected: false)
@@ -28,10 +30,12 @@ extension Pin {
             let haloPath = CGMutablePath()
             for prim in primitives {
                 let stroked = prim.makePath()
-                    .copy(strokingWithWidth: haloThickness,
-                          lineCap: .round,
-                          lineJoin: .round,
-                          miterLimit: 10)
+                    .copy(
+                        strokingWithWidth: haloThickness,
+                        lineCap: .round,
+                        lineJoin: .round,
+                        miterLimit: 10
+                    )
                 haloPath.addPath(stroked)
             }
             ctx.saveGState()
@@ -50,22 +54,30 @@ extension Pin {
         // number always horizontal
         let numOff: CGPoint = {
             switch rotation {
-            case .deg0:   return CGPoint(x: -numW/2,           y: -font.pointSize - 3)
-            case .deg90:  return CGPoint(x:  3,                y: -font.pointSize/2)
-            case .deg180: return CGPoint(x: -numW/2,           y: 3)
-            case .deg270: return CGPoint(x: -numW - 3,         y: -font.pointSize/2)
+            case .deg0:
+                return CGPoint(x: -numW/2, y: -font.pointSize - 3)
+            case .deg90:
+                return CGPoint(x: 3, y: -font.pointSize/2)
+            case .deg180:
+                return CGPoint(x: -numW/2, y: 3)
+            case .deg270:
+                return CGPoint(x: -numW - 3, y: -font.pointSize/2)
             }
         }()
 
         if showNumber {
-            let pos = CGPoint(x: legMid.x + numOff.x,
-                              y: legMid.y + numOff.y)
-            drawAttributedText(numString,
-                               font: font,
-                               color: .systemBlue,
-                               isSelected: highlight,
-                               at: pos,
-                               context: ctx)
+            let pos = CGPoint(
+                x: legMid.x + numOff.x,
+                y: legMid.y + numOff.y
+            )
+            drawAttributedText(
+                numString,
+                font: font,
+                color: .systemBlue,
+                isSelected: highlight,
+                at: pos,
+                context: ctx
+            )
         }
 
         // label
@@ -80,14 +92,15 @@ extension Pin {
                     ? -length - 6 - lblW
                     :  length + 6
                 let lblOffY: CGFloat = -font.pointSize/2
-                let pos = CGPoint(x: position.x + lblOffX,
-                                  y: position.y + lblOffY)
-                drawAttributedText(name,
-                                   font: font,
-                                   color: .systemBlue,
-                                   isSelected: highlight,
-                                   at: pos,
-                                   context: ctx)
+                let pos = CGPoint(x: position.x + lblOffX, y: position.y + lblOffY)
+                drawAttributedText(
+                    name,
+                    font: font,
+                    color: .systemBlue,
+                    isSelected: highlight,
+                    at: pos,
+                    context: ctx
+                )
 
             case .deg90:
                 // vertical up: rotate CCW, draw at legStart
@@ -95,26 +108,28 @@ extension Pin {
                 ctx.translateBy(x: pos.x, y: pos.y)
                 ctx.rotate(by: .pi/2)
                 // after rotate, draw text offset along y
-                drawAttributedText(name,
-                                   font: font,
-                                   color: .systemBlue,
-                                   isSelected: highlight,
-                                   at: CGPoint(x: -font.pointSize/2,
-                                              y: 6),
-                                   context: ctx)
+                drawAttributedText(
+                    name,
+                    font: font,
+                    color: .systemBlue,
+                    isSelected: highlight,
+                    at: CGPoint(x: -font.pointSize/2, y: 6),
+                    context: ctx
+                )
 
             case .deg270:
                 // vertical down: rotate CW, draw at legStart
                 let pos = legStart
                 ctx.translateBy(x: pos.x, y: pos.y)
                 ctx.rotate(by: -.pi/2)
-                drawAttributedText(name,
-                                   font: font,
-                                   color: .systemBlue,
-                                   isSelected: highlight,
-                                   at: CGPoint(x: font.pointSize/2,
-                                              y: -6),
-                                   context: ctx)
+                drawAttributedText(
+                    name,
+                    font: font,
+                    color: .systemBlue,
+                    isSelected: highlight,
+                    at: CGPoint(x: font.pointSize/2, y: -6),
+                    context: ctx
+                )
             }
             ctx.restoreGState()
         }
@@ -122,47 +137,43 @@ extension Pin {
 }
 
 // MARK: - Tiny helper used for both number & label
-private func drawAttributedText(_ string: String,
-                                font: NSFont,
-                                color: NSColor,
-                                isSelected: Bool,
-                                at origin: CGPoint,
-                                context ctx: CGContext)
-{
+private func drawAttributedText(
+    _ string: String,
+    font: NSFont,
+    color: NSColor,
+    isSelected: Bool,
+    at origin: CGPoint,
+    context ctx: CGContext
+) {
     let paragraph = NSMutableParagraphStyle()
     paragraph.alignment = .center
 
     var attrs: [NSAttributedString.Key: Any] = [
-        .font:            font,
+        .font: font,
         .foregroundColor: color,
-        .paragraphStyle:  paragraph
+        .paragraphStyle: paragraph
     ]
     if isSelected {
         attrs[.strokeColor] = NSColor(.blue.opacity(0.4)).cgColor
         attrs[.strokeWidth] = -10 // negative → stroke *and* fill
     }
-
     let str = NSAttributedString(string: string, attributes: attrs)
     ctx.saveGState()
     str.draw(at: origin)
     ctx.restoreGState()
 }
 
-// Pin+HitRects.swift
-// Pin+HitRects.swift
-
-import AppKit
-
 extension Pin {
 
     func textHitRects(font: NSFont = .systemFont(ofSize: 10)) -> (number: CGRect?, label: CGRect?) {
-
-
-        let legStart = CGPoint(x: position.x + dir.x * length,
-                               y: position.y + dir.y * length)
-        let legMid = CGPoint(x: (legStart.x + position.x) / 2,
-                             y: (legStart.y + position.y) / 2)
-
+        let legStart = CGPoint(
+            x: position.x + dir.x * length,
+            y: position.y + dir.y * length
+        )
+        let legMid = CGPoint(
+            x: (legStart.x + position.x) / 2,
+            y: (legStart.y + position.y) / 2
+        )
         var numberRect: CGRect? = nil
         var labelRect: CGRect? = nil
 
@@ -174,15 +185,21 @@ extension Pin {
             // exactly the same offset logic you use in draw(in:)
             let numOff: CGPoint = {
                 switch rotation {
-                case .deg0:   return CGPoint(x: -numSize.width/2,           y: -font.pointSize - 3)
-                case .deg90:  return CGPoint(x:  3,                          y: -numSize.height/2)
-                case .deg180: return CGPoint(x: -numSize.width/2,           y: 3)
-                case .deg270: return CGPoint(x: -numSize.width - 3,         y: -numSize.height/2)
+                case .deg0:
+                    return CGPoint(x: -numSize.width/2, y: -font.pointSize - 3)
+                case .deg90:
+                    return CGPoint(x: 3, y: -numSize.height/2)
+                case .deg180:
+                    return CGPoint(x: -numSize.width/2, y: 3)
+                case .deg270:
+                    return CGPoint(x: -numSize.width - 3, y: -numSize.height/2)
                 }
             }()
 
-            let origin = CGPoint(x: legMid.x + numOff.x,
-                                 y: legMid.y + numOff.y)
+            let origin = CGPoint(
+                x: legMid.x + numOff.x,
+                y: legMid.y + numOff.y
+            )
             numberRect = CGRect(origin: origin, size: numSize)
         }
 
@@ -198,8 +215,10 @@ extension Pin {
                     :   length + 6
                 let lblOffY: CGFloat = -font.pointSize / 2
 
-                let origin = CGPoint(x: position.x + lblOffX,
-                                     y: position.y + lblOffY)
+                let origin = CGPoint(
+                    x: position.x + lblOffX,
+                    y: position.y + lblOffY
+                )
                 labelRect = CGRect(origin: origin, size: lblSize)
 
             case .deg90, .deg270:
@@ -208,18 +227,18 @@ extension Pin {
                 // the same per-axis offset you use when drawing
                 let localOffset = (rotation == .deg90)
                     ? CGPoint(x: -font.pointSize/2, y: 6)
-                    : CGPoint(x:  font.pointSize/2, y: -6)
+                    : CGPoint(x: font.pointSize/2, y: -6)
 
                 // build a local rect at that offset
                 let unrotatedRect = CGRect(origin: localOffset, size: lblSize)
 
                 // apply translate → rotate exactly as in draw(in:)
-                var t = CGAffineTransform(translationX: pos.x, y: pos.y)
-                t = t.rotated(by: (rotation == .deg90) ? .pi/2 : -.pi/2)
+                var transform = CGAffineTransform(translationX: pos.x, y: pos.y)
+                transform = transform.rotated(by: (rotation == .deg90) ? .pi/2 : -.pi/2)
 
                 // transform and take bounding box
                 if let transformed = CGPath(rect: unrotatedRect, transform: nil)
-                                    .copy(using: &t) {
+                                    .copy(using: &transform) {
                     labelRect = transformed.boundingBox
                 }
             }

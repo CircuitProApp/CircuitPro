@@ -30,7 +30,8 @@ struct SDColor: Codable, Equatable, Hashable {
             return
         }
 
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0 // swiftlint:disable:this identifier_name
+
         rgbColor.getRed(&r, green: &g, blue: &b, alpha: &a)
 
         self.red = Double(r)

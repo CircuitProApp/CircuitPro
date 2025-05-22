@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 4/12/25.
 //
 
-
 import SwiftData
 import Foundation
 
@@ -18,17 +17,23 @@ class Component {
     var name: String
     @Attribute(.unique)
     var abbreviation: String?
-
     @Relationship(deleteRule: .cascade, inverse: \Symbol.component)
     var symbol: Symbol?
-    
     var footprints: [Footprint]
-
     var category: ComponentCategory?
     var package: PackageType?
     var properties: [ComponentProperty]
 
-    init(uuid: UUID = UUID(), name: String, abbreviation: String? = nil, symbol: Symbol? = nil, footprints: [Footprint] = [], category: ComponentCategory? = nil, package: PackageType? = nil, properties: [ComponentProperty] = []) {
+    init(
+        uuid: UUID = UUID(),
+        name: String,
+        abbreviation: String? = nil,
+        symbol: Symbol? = nil,
+        footprints: [Footprint] = [],
+        category: ComponentCategory? = nil,
+        package: PackageType? = nil,
+        properties: [ComponentProperty] = []
+    ) {
         self.uuid = uuid
         self.name = name
         self.abbreviation = abbreviation
@@ -38,8 +43,4 @@ class Component {
         self.package = package
         self.properties = properties
     }
- 
 }
-
-
-
