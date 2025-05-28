@@ -17,7 +17,7 @@
 ![image](https://github.com/user-attachments/assets/0bbcd111-92c0-4ff7-a100-2284c1681802)
 
 > [!IMPORTANT]
-> Circuit Pro is in early development. Many features are still in progress — but your feedback can help shape what comes next. [Submit an issue](https://github.com/x33025/Electron/issues) and let us know what you’d like to see.
+> Circuit Pro is in early development. Many features are still in progress — but your feedback can help shape what comes next. [Submit an issue](https://github.com/CircuitProApp/CircuitPro/issues) and let us know what you’d like to see.
 
 ## Motivation
 
@@ -31,4 +31,8 @@ Be part of the next revolution in PCB design by contributing to the project. Thi
 
 ## Community
 
-Join our growing community on [Discord](https://discord.gg/DS89GgqA8G) and [GitHub Discussions](https://github.com/orgs/CircuitProApp/discussions) where we discuss and collaborate on all things CodeEdit. Don't be shy, jump right in and be part of the discussion!
+Join our growing community on [Discord](https://discord.gg/DS89GgqA8G) and [GitHub Discussions](https://github.com/orgs/CircuitProApp/discussions) where we discuss and collaborate on all things Circuit Pro. Don't be shy, jump right in and be part of the discussion!
+
+## License
+
+Licensed under the [MIT license](https://github.com/CircuitProApp/CircuitPro/blob/main/LICENSE.md).
