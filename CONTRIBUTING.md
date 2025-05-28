@@ -15,7 +15,7 @@ Click the **"Fork"** button at the top right of the repository page. Once forked
 
 ## Explore Issues
 
-Check out the [Issues tab](https://github.com/x33025/Circuit Pro/issues) or visit our [project board](https://github.com/users/x33025/projects/5) to see what needs work.
+Check out the [Issues tab](https://github.com/CircuitProApp/CircuitPro/issues) or visit our [project board](https://github.com/users/x33025/projects/5) to see what needs work.
 
 > [!IMPORTANT]
 > Comment on an issue or ask a maintainer to assign it to you **before starting work**, to avoid duplicated efforts. Some issues may be reserved for contributors familiar with specific areas of the code.
