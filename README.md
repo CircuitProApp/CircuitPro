@@ -12,8 +12,7 @@
   </a>
 </p>
 
-<p><b>Welcome to Circuit Pro</b> <i>the Mac-native PCB design tool.</i></p>
-<p>Built from the ground up for macOS, Circuit Pro delivers a seamless, intuitive circuit design experience — with schematic and layout editor, component builder and native performance. Beautiful, powerful, and made for hardware designers who think different.</p>
+<p><b>Introducing Circuit Pro</b> <i>the Mac-native PCB design tool</i>. Built from the ground up for macOS, Circuit Pro delivers a seamless, intuitive circuit design experience — with schematic and layout editor, component builder and native performance. Beautiful, powerful, and made for hardware designers who think different.</p>
 
 ![image](https://github.com/user-attachments/assets/0bbcd111-92c0-4ff7-a100-2284c1681802)
 
