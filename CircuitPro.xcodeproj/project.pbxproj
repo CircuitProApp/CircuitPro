@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		5E0B73472DDF50C70061123B /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5E0B73462DDF50C70061123B /* Sparkle */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		5E5AB35A2D9C60330069B623 /* CircuitPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CircuitPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -40,7 +36,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5E0B73472DDF50C70061123B /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,7 +79,6 @@
 			);
 			name = CircuitPro;
 			packageProductDependencies = (
-				5E0B73462DDF50C70061123B /* Sparkle */,
 			);
 			productName = Electron;
 			productReference = 5E5AB35A2D9C60330069B623 /* CircuitPro.app */;
@@ -115,7 +109,6 @@
 			mainGroup = 5E5AB3512D9C60330069B623;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				5E0B73452DDF50C70061123B /* XCRemoteSwiftPackageReference "Sparkle" */,
 				5E0B73522DDF58BE0061123B /* XCRemoteSwiftPackageReference "SwiftLintPlugin" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -366,14 +359,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		5E0B73452DDF50C70061123B /* XCRemoteSwiftPackageReference "Sparkle" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sparkle-project/Sparkle";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.7.0;
-			};
-		};
 		5E0B73522DDF58BE0061123B /* XCRemoteSwiftPackageReference "SwiftLintPlugin" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/lukepistrol/SwiftLintPlugin";
@@ -385,11 +370,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		5E0B73462DDF50C70061123B /* Sparkle */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 5E0B73452DDF50C70061123B /* XCRemoteSwiftPackageReference "Sparkle" */;
-			productName = Sparkle;
-		};
 		5E0B73532DDF58D40061123B /* SwiftLint */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 5E0B73522DDF58BE0061123B /* XCRemoteSwiftPackageReference "SwiftLintPlugin" */;

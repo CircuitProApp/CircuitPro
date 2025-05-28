@@ -65,7 +65,7 @@ extension Pin {
         return [.line(line), .circle(circle)]
     }
 
-    func systemHitTest(at pt: CGPoint) -> Bool {
-        primitives.contains { $0.systemHitTest(at: pt) }
+    func systemHitTest(at point: CGPoint) -> Bool {
+        primitives.contains { $0.systemHitTest(at: point) }
     }
 }
