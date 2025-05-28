@@ -75,7 +75,7 @@ struct CircuitProApp: App {
     var body: some Scene {
         Group {
             WelcomeWindow()
-            AboutWindow()
+
                 .commands {
                     CircuitProCommands()
                 }
