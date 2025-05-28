@@ -96,3 +96,6 @@ iOSInjectionProject/
 .codeedit
 .idea
 .vscode
+
+*.xcuserstate
+
