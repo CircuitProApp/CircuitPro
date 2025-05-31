@@ -5,7 +5,7 @@
 
     <key>UTExportedTypeDeclarations</key>
     <array>
-        <!-- Exported project file type -->
+        <!-- CircuitPro Project File -->
         <dict>
             <key>UTTypeIdentifier</key>
             <string>app.circuitpro.project</string>
@@ -26,7 +26,7 @@
             </dict>
         </dict>
 
-        <!-- Existing transferable component data type -->
+        <!-- Transferable Component Data -->
         <dict>
             <key>UTTypeIdentifier</key>
             <string>app.circuitpro.transferable-component-data</string>
@@ -39,11 +39,53 @@
             <key>UTTypeTagSpecification</key>
             <dict/>
         </dict>
+
+        <!-- Schematic File -->
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>app.circuitpro.schematic</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>CircuitPro Schematic File</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>sch</string>
+                </array>
+                <key>public.mime-type</key>
+                <string>application/x-circuitpro-schematic</string>
+            </dict>
+        </dict>
+
+        <!-- PCB Layout File -->
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>app.circuitpro.pcb-layout</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>CircuitPro PCB Layout File</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>pcb</string>
+                </array>
+                <key>public.mime-type</key>
+                <string>application/x-circuitpro-pcb</string>
+            </dict>
+        </dict>
     </array>
 
     <key>CFBundleDocumentTypes</key>
     <array>
-        <!-- Declare support for the project file -->
+        <!-- Project File -->
         <dict>
             <key>CFBundleTypeName</key>
             <string>CircuitPro Project File</string>
@@ -55,6 +97,34 @@
             <string>Editor</string>
             <key>LSHandlerRank</key>
             <string>Owner</string>
+        </dict>
+
+        <!-- Schematic File -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>CircuitPro Schematic File</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>app.circuitpro.schematic</string>
+            </array>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+        </dict>
+
+        <!-- PCB Layout File -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>CircuitPro PCB Layout File</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>app.circuitpro.pcb-layout</string>
+            </array>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
         </dict>
     </array>
 

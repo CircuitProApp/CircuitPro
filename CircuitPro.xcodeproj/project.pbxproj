@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		5E5AB35A2D9C60330069B623 /* CircuitPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CircuitPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,13 +77,13 @@
 			buildRules = (
 			);
 			dependencies = (
-				5E0B73542DDF58D40061123B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				5E5AB35C2D9C60330069B623 /* CircuitPro */,
 			);
 			name = CircuitPro;
 			packageProductDependencies = (
+				5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */,
 			);
 			productName = Electron;
 			productReference = 5E5AB35A2D9C60330069B623 /* CircuitPro.app */;
@@ -110,6 +115,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				5E0B73522DDF58BE0061123B /* XCRemoteSwiftPackageReference "SwiftLintPlugin" */,
+				5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5E5AB35B2D9C60330069B623 /* Products */;
@@ -140,13 +146,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		5E0B73542DDF58D40061123B /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			productRef = 5E0B73532DDF58D40061123B /* SwiftLint */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		5E5AB3692D9C60340069B623 /* Debug */ = {
@@ -367,13 +366,21 @@
 				minimumVersion = 0.59.1;
 			};
 		};
+		5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CodeEditApp/CodeEditWelcomeWindow";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		5E0B73532DDF58D40061123B /* SwiftLint */ = {
+		5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 5E0B73522DDF58BE0061123B /* XCRemoteSwiftPackageReference "SwiftLintPlugin" */;
-			productName = "plugin:SwiftLint";
+			package = 5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */;
+			productName = WelcomeWindow;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

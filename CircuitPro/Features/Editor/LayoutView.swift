@@ -1,8 +1,13 @@
 import SwiftUI
 
 struct LayoutView: View {
+    var canvasManager: CanvasManager = CanvasManager()
     var body: some View {
-        Text("Layout View")
+        VStack {
+            Text("Layout View")
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: .infinity)
+        }
     }
 }
 

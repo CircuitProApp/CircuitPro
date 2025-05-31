@@ -1,6 +1,15 @@
 {
-  "originHash" : "f23bfcf9a9ba15fad7000bb7c533c80d700daf4b8147c24567a6b7275c64803a",
+  "originHash" : "c745175095d2f60fa01fb9e31cc1c2d29b80a3e73b0814396329fc699226b640",
   "pins" : [
+    {
+      "identity" : "codeeditwelcomewindow",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/CodeEditApp/CodeEditWelcomeWindow",
+      "state" : {
+        "branch" : "main",
+        "revision" : "a6a0f0406fc8d9b62c7713d927f7c58ecb889df4"
+      }
+    },
     {
       "identity" : "swiftlintplugin",
       "kind" : "remoteSourceControl",

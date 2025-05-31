@@ -29,10 +29,10 @@ struct GridSpacingControlView: View {
             }
         }
         .buttonStyle(.plain)
-        .font(.callout)
-        .fontWeight(.semibold)
-        .directionalPadding(vertical: 7.5, horizontal: 10)
-        .background(.ultraThinMaterial)
-        .clipAndStroke(with: .capsule, strokeColor: .gray.opacity(0.3), lineWidth: 1)
+//        .font(.callout)
+//        .fontWeight(.semibold)
+//        .directionalPadding(vertical: 7.5, horizontal: 10)
+//        .background(.ultraThinMaterial)
+//        .clipAndStroke(with: .capsule, strokeColor: .gray.opacity(0.3), lineWidth: 1)
     }
 }

@@ -35,7 +35,7 @@ struct ZoomControlView: View {
         HStack {
             zoomButton(action: zoomOut, systemImage: AppIcons.minus)
 
-            Divider().frame(height: 10)
+//            Divider().frame(height: 10)
 
             Menu {
                 ForEach(ZoomStep.allCases) { step in
@@ -46,29 +46,33 @@ struct ZoomControlView: View {
                     }
                 }
             } label: {
-                HStack {
+                HStack(spacing: 2.5) {
                     Text(clampedZoomText)
+                        .font(.system(size: 12))
                     Image(systemName: AppIcons.chevronDown)
-                        .imageScale(.small)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 6, height: 6)
                 }
             }
 
-            Divider().frame(height: 10)
+//            Divider().frame(height: 10)
 
             zoomButton(action: zoomIn, systemImage: AppIcons.plus)
         }
         .buttonStyle(.plain)
-        .font(.callout)
-        .fontWeight(.semibold)
-        .directionalPadding(vertical: 7.5, horizontal: 10)
-        .background(.ultraThinMaterial)
-        .clipAndStroke(with: .capsule, strokeColor: .gray.opacity(0.3), lineWidth: 1)
+//        .font(.callout)
+//        .fontWeight(.semibold)
+//        .directionalPadding(vertical: 7.5, horizontal: 10)
+//        .background(.ultraThinMaterial)
+//        .clipAndStroke(with: .capsule, strokeColor: .gray.opacity(0.3), lineWidth: 1)
     }
 
     private func zoomButton(action: @escaping () -> Void, systemImage: String) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .frame(width: 15, height: 15)
+                .frame(width: 13, height: 13)
+                .fontWeight(.light)
                 .contentShape(Rectangle())
         }
     }

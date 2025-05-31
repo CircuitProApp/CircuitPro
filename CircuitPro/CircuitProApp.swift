@@ -1,23 +1,24 @@
 import SwiftUI
 import SwiftData
+import WelcomeWindow
 
 @main
 struct CircuitProApp: App {
-
+    
     @NSApplicationDelegateAdaptor(AppDelegate.self)
     var delegate
-
+    
     var container: ModelContainer
-
+    
     @State var appManager = AppManager()
     @State var projectManager = ProjectManager()
     @State var componentDesignManager = ComponentDesignManager()
     // MARK: - Initialization
-
+    
     init() {
-
+        
         _ = CircuitProjectDocumentController.shared
-
+        
         do {
             // Create the workspace configuration (writable, instance types).
             let workspaceConfig = ModelConfiguration(
@@ -69,25 +70,37 @@ struct CircuitProApp: App {
             fatalError("Failed to initialize container: \(error)")
         }
     }
-
+    
     // MARK: - App Body
-
+    
     var body: some Scene {
         Group {
-            WelcomeWindow()
-
-                .commands {
-                    CircuitProCommands()
+            WelcomeWindow(actions: { dismiss in
+                WelcomeActionView(iconName: AppIcons.plusApp, title: "Create New Project...") {
+                    CircuitProjectDocumentController.shared.createFolderDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject))
                 }
+                WelcomeActionView(iconName: AppIcons.folder, title: "Open Existing Project...") {
+                    CircuitProjectDocumentController.shared.openDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject]))
+                }
+            },
+                          onDrop: { url, dismiss in
+                Task {
+                    CircuitProjectDocumentController.shared.openDocument(at: url, onCompletion: { dismiss() })
+                }
+            })
+            
+            .commands {
+                CircuitProCommands()
+            }
         }
         // Attach the container to the scene.
         .modelContainer(container)
-
+        
         // Inject additional environment objects.
         .environment(\.appManager, appManager)
         .environment(\.projectManager, projectManager)
         .environment(\.componentDesignManager, componentDesignManager)
-
+        
         WindowGroup(id: "SecondWindow") {
             SettingsView()
                 .frame(minWidth: 800, minHeight: 600)

@@ -23,29 +23,39 @@ struct CanvasControlView: View {
                 }
             } label: {
                 Image(systemName: AppIcons.crosshairs)
+          
+           
+                    .frame(width: 13, height: 13)
                     .foregroundStyle(canvasManager.crosshairsStyle != .hidden ? .blue : .secondary)
+                
             }
-            Divider()
-                .frame(height: 10)
+//            Divider()
+//                .frame(height: 10)
 
             Button {
                 canvasManager.enableSnapping.toggle()
             } label: {
                 Image(systemName: AppIcons.snapping)
+         
+         
+                    .frame(width: 13, height: 13)
                     .foregroundStyle(canvasManager.enableSnapping ? .blue : .secondary)
             }
 
-            Divider()
-                .frame(height: 10)
+//            Divider()
+//                .frame(height: 10)
             Button {
                 canvasManager.enableAxesBackground.toggle()
             } label: {
                 Image(systemName: AppIcons.axesBackground)
+                  
+              
+                    .frame(width: 13, height: 13)
                     .foregroundStyle(canvasManager.enableAxesBackground ? .blue : .secondary)
             }
 
-            Divider()
-                .frame(height: 10)
+//            Divider()
+//                .frame(height: 10)
 
             Menu {
                 Button {
@@ -62,13 +72,16 @@ struct CanvasControlView: View {
                 }
             } label: {
                 Image(systemName: AppIcons.backgroundType)
+        
+        
+                    .frame(width: 13, height: 13)
             }
         }
         .buttonStyle(.plain)
-        .font(.callout)
-        .fontWeight(.semibold)
-        .directionalPadding(vertical: 7.5, horizontal: 10)
-        .background(.ultraThinMaterial)
-        .clipAndStroke(with: .capsule, strokeColor: .gray.opacity(0.3), lineWidth: 1)
+//        .font(.callout)
+//        .fontWeight(.semibold)
+//        .directionalPadding(vertical: 7.5, horizontal: 10)
+//        .background(.ultraThinMaterial)
+//        .clipAndStroke(with: .capsule, strokeColor: .gray.opacity(0.3), lineWidth: 1)
     }
 }

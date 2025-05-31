@@ -24,8 +24,15 @@ enum AppIcons {
     static let checkmark = "checkmark"
     static let questionMarkCircle = "questionmark.circle"
     static let trash = "trash"
+    static let plusApp = "plus.app"
+    static let folder = "folder"
+    static let sidebarLeading = "sidebar.leading"
+    static let sidebarTrailing = "sidebar.trailing"
 
     // MARK: - App Specific Icons
+    // MARK: - Workspace
+    static let toggleUtilityArea = "inset.filled.bottomthird.square"
+    
     // MARK: Canvas
     static let crosshairs = "dot.scope"
     static let snapping = "dot.squareshape.split.2x2"
@@ -47,6 +54,9 @@ enum AppIcons {
 
     static let cursor = "cursorarrow"
     static let ruler = "ruler"
+    
+    // MARK: Design
+    static let design = "book.pages.fill"
 
     // MARK: Symbol
     static let pin = "point.topleft.down.to.point.bottomright.curvepath"
