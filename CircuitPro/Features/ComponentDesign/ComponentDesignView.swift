@@ -15,6 +15,29 @@ struct ComponentDesignView: View {
             StageContentView(
                 left: {
                     switch currentStage {
+                    case .footprint:
+                        LayerTypeListView()
+                            .transition(.move(edge: .leading).combined(with: .blurReplace))
+                            .padding()
+                    default:
+                        Color.clear
+                    }
+  
+                },
+                center: {
+                    switch currentStage {
+                    case .component:
+                        ComponentDetailView()
+                    case .symbol:
+                        SymbolDesignView()
+                            .environment(symbolCanvasManager)
+                    case .footprint:
+                        FootprintDesignView()
+                            .environment(footprintCanvasManager)
+                    }
+                },
+                right: {
+                    switch currentStage {
                     case .symbol:
                         if componentDesignManager.pins.isNotEmpty {
                             PinEditorView()
@@ -31,28 +54,6 @@ struct ComponentDesignView: View {
                         } else {
                             Color.clear
                         }
-                    default:
-                        Color.clear
-                    }
-                },
-                center: {
-                    switch currentStage {
-                    case .component:
-                        ComponentDetailView()
-                    case .symbol:
-                        SymbolDesignView()
-                            .environment(symbolCanvasManager)
-                    case .footprint:
-                        FootprintDesignView()
-                            .environment(footprintCanvasManager)
-                    }
-                },
-                right: {
-                    switch currentStage {
-                    case .footprint:
-                        LayerTypeListView()
-                            .transition(.move(edge: .leading).combined(with: .blurReplace))
-                            .padding()
                     default:
                         Color.clear
                     }

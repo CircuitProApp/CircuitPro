@@ -98,6 +98,11 @@ struct CanvasView: NSViewRepresentable {
         canvas.onPrimitiveAdded = { id, layer in
             self.layerAssignments[id] = layer
         }
+        
+        canvas.onMouseMoved = { point in
+            self.manager.mouseLocation = point
+        }
+
 
         crosshairs.magnification = manager.magnification
         crosshairs.crosshairsStyle = manager.crosshairsStyle

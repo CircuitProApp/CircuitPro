@@ -21,6 +21,8 @@ final class CoreGraphicsCanvasView: NSView {
     var onUpdate: (([CanvasElement]) -> Void)?
     var onSelectionChange: ((Set<UUID>) -> Void)?
     var onPrimitiveAdded: ((UUID, LayerKind) -> Void)?
+    var onMouseMoved: ((CGPoint) -> Void)?
+
 
     // MARK: Private Controllers
     private lazy var interaction = CanvasInteractionController(canvas: self)
@@ -50,6 +52,8 @@ final class CoreGraphicsCanvasView: NSView {
     override func mouseMoved(with event: NSEvent) {
         let location = convert(event.locationInWindow, from: nil)
         crosshairsView?.location = snap(location)
+        
+        onMouseMoved?(snap(location))
 
         if interaction.isRotating {
             interaction.updateRotation(to: location)

@@ -22,17 +22,17 @@ struct GridSpacingControlView: View {
                 }
             }
         } label: {
-            HStack {
+            HStack(spacing: 2.5) {
                 Text(canvasManager.gridSpacing.label)
+                    .font(.system(size: 12))
                 Image(systemName: AppIcons.chevronDown)
-                    .imageScale(.small)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 7, height: 7)
+                    .fontWeight(.medium)
             }
         }
         .buttonStyle(.plain)
-//        .font(.callout)
-//        .fontWeight(.semibold)
-//        .directionalPadding(vertical: 7.5, horizontal: 10)
-//        .background(.ultraThinMaterial)
-//        .clipAndStroke(with: .capsule, strokeColor: .gray.opacity(0.3), lineWidth: 1)
+        .foregroundStyle(.secondary)
     }
 }

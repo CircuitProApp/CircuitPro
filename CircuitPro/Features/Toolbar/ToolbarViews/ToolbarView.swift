@@ -41,24 +41,27 @@ struct ToolbarView<Tool: CanvasTool>: View {
             }
             .scrollIndicators(.never)
         }
+     
         .background(.thinMaterial)
         .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3), lineWidth: 1)
         .buttonStyle(.borderless)
     }
 
     private var toolbarContent: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 8) {
             ForEach(tools, id: \.self) { tool in
                 if let dividerBefore = dividerBefore, dividerBefore(tool) {
-                    Divider().frame(width: 15)
+                    Divider().frame(width: 22)
                 }
                 toolbarButton(tool)
                 if let dividerAfter = dividerAfter, dividerAfter(tool) {
-                    Divider().frame(width: 15)
+                    Divider().frame(width: 22)
                 }
             }
         }
-        .padding(5)
+        .padding(8)
+        .frame(width: 38)
+  
     }
 
     private func toolbarButton(_ tool: Tool) -> some View {
@@ -67,16 +70,13 @@ struct ToolbarView<Tool: CanvasTool>: View {
             onToolSelected(tool)
         } label: {
             Image(systemName: imageName(tool))
-                .font(.title2)
-                .frame(width: 20, height: 20)
-                .aspectRatio(contentMode: .fit)
+                .font(.system(size: 16))
+                .frame(width: 22, height: 22)
                 .foregroundStyle(selectedTool == tool ? .blue : .secondary)
         }
-        .padding(10)
-        .contentShape(RoundedRectangle(cornerRadius: 5))
-        .background(hoveredTool == tool ? Color.gray.opacity(0.1) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 5))
-        .onHover { hover in hoveredTool = hover ? tool : nil }
+        // TODO: Add shortcuts
         .help("\(tool.label) Tool\nShortcut:")
+    
+ 
     }
 }

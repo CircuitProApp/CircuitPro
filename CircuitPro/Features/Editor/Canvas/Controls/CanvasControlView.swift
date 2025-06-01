@@ -12,7 +12,7 @@ struct CanvasControlView: View {
     private var canvasManager
 
     var body: some View {
-        HStack {
+        HStack(spacing: 15) {
             Menu {
                 ForEach(CrosshairsStyle.allCases) { style in
                     Button {
@@ -29,9 +29,6 @@ struct CanvasControlView: View {
                     .foregroundStyle(canvasManager.crosshairsStyle != .hidden ? .blue : .secondary)
                 
             }
-//            Divider()
-//                .frame(height: 10)
-
             Button {
                 canvasManager.enableSnapping.toggle()
             } label: {
@@ -42,8 +39,6 @@ struct CanvasControlView: View {
                     .foregroundStyle(canvasManager.enableSnapping ? .blue : .secondary)
             }
 
-//            Divider()
-//                .frame(height: 10)
             Button {
                 canvasManager.enableAxesBackground.toggle()
             } label: {
@@ -53,9 +48,6 @@ struct CanvasControlView: View {
                     .frame(width: 13, height: 13)
                     .foregroundStyle(canvasManager.enableAxesBackground ? .blue : .secondary)
             }
-
-//            Divider()
-//                .frame(height: 10)
 
             Menu {
                 Button {
@@ -78,10 +70,5 @@ struct CanvasControlView: View {
             }
         }
         .buttonStyle(.plain)
-//        .font(.callout)
-//        .fontWeight(.semibold)
-//        .directionalPadding(vertical: 7.5, horizontal: 10)
-//        .background(.ultraThinMaterial)
-//        .clipAndStroke(with: .capsule, strokeColor: .gray.opacity(0.3), lineWidth: 1)
     }
 }

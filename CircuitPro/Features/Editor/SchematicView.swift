@@ -3,12 +3,24 @@ import SwiftData
 
 struct SchematicView: View {
     var canvasManager: CanvasManager = CanvasManager()
+    
+    @State private var canvasElements: [CanvasElement] = []
+    @State private var selectedIDs: Set<UUID> = []
+    @State private var selectedTool: AnyCanvasTool = .init(CursorTool())
+    
+    @State private var selectedLayer: LayerKind?
+    @State private var layerAssignments: [UUID: LayerKind] = [:]
     var body: some View {
-        VStack {
-            Text("Schematic View")
-                .frame(maxWidth: .infinity)
-                .frame(maxHeight: .infinity)
-        }
+//        VStack {
+//            Text("Schematic View")
+//                .frame(maxWidth: .infinity)
+//                .frame(maxHeight: .infinity)
+//        }
+        CanvasView(manager: canvasManager, elements: $canvasElements, selectedIDs: $selectedIDs, selectedTool: $selectedTool, selectedLayer: $selectedLayer, layerAssignments: $layerAssignments)
+            .overlay(alignment: .leading) {
+                SymbolDesignToolbarView()
+                    .padding(16)
+            }
     }
 }
 

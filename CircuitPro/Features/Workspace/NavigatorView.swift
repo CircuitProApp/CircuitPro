@@ -7,108 +7,83 @@
 
 import SwiftUI
 
-struct NavigatorView: View {
-    @State private var selectedDesign: CircuitDesign?
+enum NavigatorViewTab: Displayable {
+    case projectNavigator
+    case directoryExplorer
+    case ruleChecks
     
+    var label: String {
+        switch self {
+        case .projectNavigator:
+            return "Project Navigator"
+        case .directoryExplorer:
+            return "Directory Explorer"
+        case .ruleChecks:
+            return "Rule Checks"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .projectNavigator:
+            return AppIcons.projectNavigator
+        case .directoryExplorer:
+            return AppIcons.directoryExplorer
+        case .ruleChecks:
+            return AppIcons.ruleChecks
+        }
+    }
+}
+
+struct NavigatorView: View {
+  
+    
+    @State private var selectedTab: NavigatorViewTab = .projectNavigator
     var document: CircuitProjectDocument
     @Bindable var project: CircuitProject
     
     
-    struct ComponentSymbolInstance: Identifiable, Hashable {
-        var id: UUID = UUID()
-        var name: String
-        var label: String
-        var icon: String
-
-        static func == (lhs: ComponentSymbolInstance, rhs: ComponentSymbolInstance) -> Bool {
-            lhs.id == rhs.id
-        }
-
-        func hash(into hasher: inout Hasher) {
-            hasher.combine(id)
-        }
-    }
-
-    
-    @State private var selectedComponentSymbolInstance: ComponentSymbolInstance?
-    @State private var componentSymbolInstances: [ComponentSymbolInstance] = [
-        .init(name: "Switch", label: "S1", icon: "cpu"),
-        .init(name: "Switch", label: "S2", icon: "cpu"),
-        .init(name: "Resistor", label: "R1", icon: "poweroutlet.type.f"),
-        .init(name: "Resistor", label: "R2", icon: "poweroutlet.type.f"),
-        .init(name: "Resistor", label: "R3", icon: "poweroutlet.type.f"),
-        .init(name: "Resistor", label: "R4", icon: "poweroutlet.type.f")
-    ]
 
     var body: some View {
         
         VStack(spacing: 0) {
             Divider().foregroundStyle(.quaternary)
 
-            HStack {
-                Image(systemName: AppIcons.layoutLayers)
-                Image(systemName: AppIcons.board)
-                Image(systemName: AppIcons.rectangle)
+            HStack(spacing: 17) {
+                ForEach(NavigatorViewTab.allCases.dropLast()) { tab in
+                    Button {
+                        selectedTab = tab
+                    } label: {
+                        Image(systemName: tab.icon)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 13, height: 13)
+                            .foregroundStyle(selectedTab == tab ? .blue : .secondary)
+
+                    }
+                    .buttonStyle(.plain)
+                    .help(tab.label)
+                }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 5)
+            .frame(height: 28)
             .foregroundStyle(.secondary)
 
             Divider().foregroundStyle(.quaternary)
 
             
-            List($project.designs, id: \.self, selection: $selectedDesign) { $design in
-                HStack {
-                    Image(systemName: AppIcons.design)
-                    TextField("Design Name", text: $design.name)
-                        .textFieldStyle(.plain)
-                        .onSubmit {
-                            do {
-                                try document.renameDesign(for: design)
-                            } catch {
-                                print("⚠️ Rename failed: \(error)")
-                            }
-                        }
-                }
-                .frame(height: 14)
-                .listRowSeparator(.hidden)
-              
-            }
-            .frame(height: 180)
-            .listStyle(.inset)
-            .scrollContentBackground(.hidden)
-      
-            .environment(\.defaultMinListRowHeight, 14)
-        
-            
-
-            Divider().foregroundStyle(.quaternary)
-
-            List($componentSymbolInstances, id: \.self, selection: $selectedComponentSymbolInstance) { $componentSymbolInstance in
-                HStack {
-                    Image(systemName: componentSymbolInstance.icon)
-                    TextField("Symbol Name", text: $componentSymbolInstance.name)
-                        .textFieldStyle(.plain)
-                        .onSubmit {
-                
-                                print("Rename")
-                           
-                        }
-                            
+            switch selectedTab {
+            case .projectNavigator:
+                ProjectNavigatorView(document: document, project: project)
+            default:
+                Group {
+                    Text("Default")
                     Spacer()
-                    Text(componentSymbolInstance.label)
-                        .foregroundStyle(.secondary)
-                    
                 }
-                .frame(height: 14)
-                .listRowSeparator(.hidden)
             }
-            .listStyle(.inset)
-            .scrollContentBackground(.hidden)
-      
-            .environment(\.defaultMinListRowHeight, 14)
-    
+         
         }
+        
       
     }
 }

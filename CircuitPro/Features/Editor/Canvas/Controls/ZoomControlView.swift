@@ -34,9 +34,6 @@ struct ZoomControlView: View {
     var body: some View {
         HStack {
             zoomButton(action: zoomOut, systemImage: AppIcons.minus)
-
-//            Divider().frame(height: 10)
-
             Menu {
                 ForEach(ZoomStep.allCases) { step in
                     Button {
@@ -52,20 +49,15 @@ struct ZoomControlView: View {
                     Image(systemName: AppIcons.chevronDown)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 6, height: 6)
+                        .frame(width: 7, height: 7)
+                        .fontWeight(.medium)
                 }
             }
-
-//            Divider().frame(height: 10)
-
+            
             zoomButton(action: zoomIn, systemImage: AppIcons.plus)
         }
         .buttonStyle(.plain)
-//        .font(.callout)
-//        .fontWeight(.semibold)
-//        .directionalPadding(vertical: 7.5, horizontal: 10)
-//        .background(.ultraThinMaterial)
-//        .clipAndStroke(with: .capsule, strokeColor: .gray.opacity(0.3), lineWidth: 1)
+        .foregroundStyle(.secondary)
     }
 
     private func zoomButton(action: @escaping () -> Void, systemImage: String) -> some View {

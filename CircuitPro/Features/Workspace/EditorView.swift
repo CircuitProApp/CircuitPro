@@ -46,7 +46,7 @@ struct EditorView: View {
           
                 Spacer()
             }
-            .frame(height: 27.25)
+            .frame(height: 29)
             .frame(maxWidth: .infinity)
             .font(.system(size: 11))
         

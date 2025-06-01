@@ -10,6 +10,7 @@ import Observation
 @Observable
 final class ProjectManager {
 
+    var path = NavigationPath()
     var project: Project?
     var selectedDesign: Design?
 

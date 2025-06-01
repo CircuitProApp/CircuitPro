@@ -32,6 +32,10 @@ enum AppIcons {
     // MARK: - App Specific Icons
     // MARK: - Workspace
     static let toggleUtilityArea = "inset.filled.bottomthird.square"
+    static let projectNavigator = "list.bullet"
+    static let directoryExplorer = "folder"
+    static let ruleChecks = "exclamationmark.triangle"
+    
     
     // MARK: Canvas
     static let crosshairs = "dot.scope"

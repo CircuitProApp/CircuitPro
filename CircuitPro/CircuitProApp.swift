@@ -8,6 +8,9 @@ struct CircuitProApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self)
     var delegate
     
+    @Environment(\.openWindow)
+    private var openWindow
+    
     var container: ModelContainer
     
     @State var appManager = AppManager()
@@ -82,6 +85,9 @@ struct CircuitProApp: App {
                 WelcomeActionView(iconName: AppIcons.folder, title: "Open Existing Project...") {
                     CircuitProjectDocumentController.shared.openDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject]))
                 }
+                WelcomeActionView(iconName: AppIcons.plusApp, title: "Create New Component...") {
+                    openWindow(id: "componentDesignerWindow")
+                }
             },
                           onDrop: { url, dismiss in
                 Task {
@@ -107,5 +113,9 @@ struct CircuitProApp: App {
         }
         .windowStyle(.automatic)
         .windowToolbarStyle(.expanded)
+        
+        WindowGroup(id: "componentDesignerWindow") {
+            ComponentDesignView()
+        }
     }
 }

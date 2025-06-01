@@ -25,7 +25,7 @@ struct FootprintDesignView: View {
         )
         .clipAndStroke(with: .rect(cornerRadius: 20))
         .overlay {
-            CanvasOverlayView(enableComponentDrawer: false) {
+            CanvasOverlayView {
                 FootprintDesignToolbarView()
             }
             .padding(10)

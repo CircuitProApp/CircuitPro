@@ -22,11 +22,18 @@ struct StatusBarView: View {
                 .frame(height: 12)
                 .padding(.leading, 4)
             Spacer()
+            HStack {
+                Text(String(format: "x: %.1f", canvasManager.relativeMousePosition.x))
+                Text(String(format: "y: %.1f", canvasManager.relativeMousePosition.y))
+            }
+            .font(.system(size: 12))
+            .foregroundStyle(.secondary)
+            
+            Spacer()
             GridSpacingControlView()
             Divider()
                 .foregroundStyle(.quinary)
                 .frame(height: 12)
-//                .padding(.trailing, 4)
             ZoomControlView()
             Divider()
                 .foregroundStyle(.quinary)

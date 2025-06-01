@@ -17,7 +17,7 @@ struct SymbolDesignView: View {
         )
         .clipAndStroke(with: .rect(cornerRadius: 20))
         .overlay {
-            CanvasOverlayView(enableComponentDrawer: false) {
+            CanvasOverlayView {
                 SymbolDesignToolbarView()
             }
             .padding(10)
