@@ -28,10 +28,10 @@ struct EditorView: View {
                     Text("Schematic")
                         .directionalPadding(vertical: 3, horizontal: 7.5)
                         .background(selectedEditor == .schematic ? AnyShapeStyle(Color.blue.quaternary) : AnyShapeStyle(Color.clear))
-                        .foregroundStyle(selectedEditor == .schematic ? .white : .secondary)
+                        .foregroundStyle(selectedEditor == .schematic ? .primary : .secondary)
                         .clipShape(.rect(cornerRadius: 4))
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
 
                 Button {
                     selectedEditor = .layout
@@ -39,10 +39,10 @@ struct EditorView: View {
                     Text("Layout")
                         .directionalPadding(vertical: 3, horizontal: 7.5)
                         .background(selectedEditor == .layout ? AnyShapeStyle(Color.blue.quaternary) : AnyShapeStyle(Color.clear))
-                        .foregroundStyle(selectedEditor == .layout ? .white : .secondary)
+                        .foregroundStyle(selectedEditor == .layout ? .primary : .secondary)
                         .clipShape(.rect(cornerRadius: 4))
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
           
                 Spacer()
             }

@@ -1,5 +1,5 @@
 //
-//  SidebarView.swift
+//  NavigatorView.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 30.05.25.
@@ -7,20 +7,28 @@
 
 import SwiftUI
 
-struct SidebarView: View {
+struct NavigatorView: View {
     @State private var selectedDesign: CircuitDesign?
     
     var document: CircuitProjectDocument
     @Bindable var project: CircuitProject
     
     
-    struct ComponentSymbolInstance: Identifiable, Equatable, Hashable {
+    struct ComponentSymbolInstance: Identifiable, Hashable {
         var id: UUID = UUID()
         var name: String
         var label: String
         var icon: String
-        
+
+        static func == (lhs: ComponentSymbolInstance, rhs: ComponentSymbolInstance) -> Bool {
+            lhs.id == rhs.id
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(id)
+        }
     }
+
     
     @State private var selectedComponentSymbolInstance: ComponentSymbolInstance?
     @State private var componentSymbolInstances: [ComponentSymbolInstance] = [
@@ -62,24 +70,45 @@ struct SidebarView: View {
                             }
                         }
                 }
-         
+                .frame(height: 14)
+                .listRowSeparator(.hidden)
               
             }
             .frame(height: 180)
+            .listStyle(.inset)
+            .scrollContentBackground(.hidden)
+      
+            .environment(\.defaultMinListRowHeight, 14)
         
             
 
             Divider().foregroundStyle(.quaternary)
 
-            List($componentSymbolInstances, id: \.self, selection: $selectedComponentSymbolInstance) { $componentSymbolInstances in
+            List($componentSymbolInstances, id: \.self, selection: $selectedComponentSymbolInstance) { $componentSymbolInstance in
                 HStack {
-                    Image(systemName: componentSymbolInstances.icon)
-                    Text(componentSymbolInstances.name)
+                    Image(systemName: componentSymbolInstance.icon)
+                    TextField("Symbol Name", text: $componentSymbolInstance.name)
+                        .textFieldStyle(.plain)
+                        .onSubmit {
+                
+                                print("Rename")
+                           
+                        }
+                            
                     Spacer()
-                    Text(componentSymbolInstances.label)
+                    Text(componentSymbolInstance.label)
                         .foregroundStyle(.secondary)
+                    
                 }
+                .frame(height: 14)
+                .listRowSeparator(.hidden)
             }
+            .listStyle(.inset)
+            .scrollContentBackground(.hidden)
+      
+            .environment(\.defaultMinListRowHeight, 14)
+    
         }
+      
     }
 }

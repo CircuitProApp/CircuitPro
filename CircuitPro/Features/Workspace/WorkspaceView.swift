@@ -19,7 +19,7 @@ struct WorkspaceView: View {
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView(document: document, project: document.model)
+            NavigatorView(document: document, project: document.model)
             .toolbar(removing: .sidebarToggle)
             .navigationSplitViewColumnWidth(min: 240, ideal: 240, max: 1000)
 
