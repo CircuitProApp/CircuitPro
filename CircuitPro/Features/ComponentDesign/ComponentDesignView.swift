@@ -98,6 +98,7 @@ struct ComponentDesignView: View {
         .font(.headline)
         .padding()
     }
+
     private func createComponent() {
         let newComponent = Component(
             name: componentDesignManager.componentName,
@@ -120,6 +121,7 @@ struct ComponentDesignView: View {
         )
         newComponent.symbol = newComponentSymbol
         modelContext.insert(newComponent)
+        print("Inserted new component: \(newComponent)")
     }
 }
 

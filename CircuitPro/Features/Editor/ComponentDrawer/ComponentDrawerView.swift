@@ -109,7 +109,7 @@ struct ComponentDrawerView: View {
     }
 }
 // swiftlint:disable:next line_length
-private struct ComponentGridView<Data: RandomAccessCollection, Content: View>: View where Data.Element: PersistentModel {
+struct ComponentGridView<Data: RandomAccessCollection, Content: View>: View where Data.Element: PersistentModel {
     let data: Data
     let content: (Data.Element) -> Content
 

@@ -48,10 +48,14 @@ class CircuitProjectDocument: NSDocument {
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false
         )
+        
+        let container = ModelContainerManager.shared.container
         window.center()
         window.title         = "CircuitPro Project"
         window.toolbarStyle  = .unifiedCompact
-        window.contentView   = NSHostingView(rootView: WorkspaceView(document: self))
+        let rootView = WorkspaceView(document: self)
+            .modelContainer(container)
+        window.contentView   = NSHostingView(rootView: rootView)
         window.toolbar       = NSToolbar(identifier: "CustomToolbar").apply {
             $0.displayMode = .iconOnly
             $0.allowsUserCustomization = false

@@ -10,9 +10,7 @@ struct CircuitProApp: App {
     
     @Environment(\.openWindow)
     private var openWindow
-    
-    var container: ModelContainer
-    
+
     @State var appManager = AppManager()
     @State var projectManager = ProjectManager()
     @State var componentDesignManager = ComponentDesignManager()
@@ -21,57 +19,7 @@ struct CircuitProApp: App {
     init() {
         
         _ = CircuitProjectDocumentController.shared
-        
-        do {
-            // Create the workspace configuration (writable, instance types).
-            let workspaceConfig = ModelConfiguration(
-                "workspace",
-                schema: Schema([
-                    Project.self,
-                    Design.self,
-                    Schematic.self,
-                    Layout.self,
-                    Layer.self,
-                    Net.self,
-                    Via.self,
-                    ComponentInstance.self,
-                    SymbolInstance.self,
-                    FootprintInstance.self
-                ]),
-                allowsSave: true
-            )
-            // Create the appLibrary configuration (read-only, default types).
-            let appLibraryConfig = ModelConfiguration(
-                "appLibrary",
-                schema: Schema([
-                    Component.self,
-                    Symbol.self,
-                    Footprint.self,
-                    Model.self
-                ]),
-                allowsSave: true
-            )
-            // Create one unified ModelContainer that handles both configurations.
-            container = try ModelContainer(
-                for: Project.self,
-                Design.self,
-                Schematic.self,
-                Layout.self,
-                Layer.self,
-                Net.self,
-                Via.self,
-                ComponentInstance.self,
-                SymbolInstance.self,
-                FootprintInstance.self,
-                Component.self,
-                Symbol.self,
-                Footprint.self,
-                Model.self,
-                configurations: workspaceConfig, appLibraryConfig
-            )
-        } catch {
-            fatalError("Failed to initialize container: \(error)")
-        }
+
     }
     
     // MARK: - App Body
@@ -99,13 +47,9 @@ struct CircuitProApp: App {
                 CircuitProCommands()
             }
         }
-        // Attach the container to the scene.
-        .modelContainer(container)
-        
-        // Inject additional environment objects.
         .environment(\.appManager, appManager)
         .environment(\.projectManager, projectManager)
-        .environment(\.componentDesignManager, componentDesignManager)
+      
         
         WindowGroup(id: "SecondWindow") {
             SettingsView()
@@ -116,6 +60,63 @@ struct CircuitProApp: App {
         
         WindowGroup(id: "componentDesignerWindow") {
             ComponentDesignView()
+                .modelContainer(ModelContainerManager.shared.container)
+                .environment(\.componentDesignManager, componentDesignManager)
+        }
+    }
+}
+
+final class ModelContainerManager {
+    static let shared = ModelContainerManager()
+    let container: ModelContainer
+
+    private init() {
+        do {
+            let workspaceConfig = ModelConfiguration(
+                "workspace",
+                schema: Schema([
+                    Project.self,
+                    Design.self,
+                    Schematic.self,
+                    Layout.self,
+                    Layer.self,
+                    Net.self,
+                    Via.self,
+                    ComponentInstance.self,
+                    SymbolInstance.self,
+                    FootprintInstance.self
+                ]),
+                allowsSave: true
+            )
+            let appLibraryConfig = ModelConfiguration(
+                "appLibrary",
+                schema: Schema([
+                    Component.self,
+                    Symbol.self,
+                    Footprint.self,
+                    Model.self
+                ]),
+                allowsSave: true
+            )
+            container = try ModelContainer(
+                for: Project.self,
+                Design.self,
+                Schematic.self,
+                Layout.self,
+                Layer.self,
+                Net.self,
+                Via.self,
+                ComponentInstance.self,
+                SymbolInstance.self,
+                FootprintInstance.self,
+                Component.self,
+                Symbol.self,
+                Footprint.self,
+                Model.self,
+                configurations: workspaceConfig, appLibraryConfig
+            )
+        } catch {
+            fatalError("Failed to initialize ModelContainer: \(error)")
         }
     }
 }

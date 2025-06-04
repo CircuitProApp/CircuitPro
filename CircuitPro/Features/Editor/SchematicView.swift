@@ -11,12 +11,11 @@ struct SchematicView: View {
     @State private var selectedLayer: LayerKind?
     @State private var layerAssignments: [UUID: LayerKind] = [:]
     var body: some View {
-//        VStack {
-//            Text("Schematic View")
-//                .frame(maxWidth: .infinity)
-//                .frame(maxHeight: .infinity)
-//        }
         CanvasView(manager: canvasManager, elements: $canvasElements, selectedIDs: $selectedIDs, selectedTool: $selectedTool, selectedLayer: $selectedLayer, layerAssignments: $layerAssignments)
+            .dropDestination(for: TransferableComponent.self) { component, location  in
+                print(component.count, location)
+                return true
+            }
             .overlay(alignment: .leading) {
                 SymbolDesignToolbarView()
                     .padding(16)

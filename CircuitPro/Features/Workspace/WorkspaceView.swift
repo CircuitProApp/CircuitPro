@@ -60,7 +60,7 @@ struct WorkspaceView: View {
         .frame(minWidth: 800, minHeight: 600)
         .inspector(isPresented: $showInspector) {
             VStack {
-                Text("JEllo")
+                Text("Jello")
             }
                 .inspectorColumnWidth(min: 260, ideal: 260, max: 1000)
         }
