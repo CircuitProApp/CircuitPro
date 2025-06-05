@@ -1,20 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 
+    <!-- ───────────────────  UTIs your app owns  ─────────────────── -->
     <key>UTExportedTypeDeclarations</key>
     <array>
-        <!-- CircuitPro Project File -->
+
+        <!-- CircuitPro Project – NOW A PACKAGE -->
         <dict>
             <key>UTTypeIdentifier</key>
             <string>app.circuitpro.project</string>
+
+            <!-- MUST include public.package so the system knows it's a folder-based doc -->
             <key>UTTypeConformsTo</key>
             <array>
+                <string>com.apple.package</string> 
                 <string>public.data</string>
             </array>
+
             <key>UTTypeDescription</key>
-            <string>CircuitPro Project File</string>
+            <string>CircuitPro Project</string>
+
             <key>UTTypeTagSpecification</key>
             <dict>
                 <key>public.filename-extension</key>
@@ -26,7 +34,7 @@
             </dict>
         </dict>
 
-        <!-- Transferable Component Data -->
+        <!-- Transferable Component Data (unchanged) -->
         <dict>
             <key>UTTypeIdentifier</key>
             <string>app.circuitpro.transferable-component-data</string>
@@ -40,7 +48,7 @@
             <dict/>
         </dict>
 
-        <!-- Schematic File -->
+        <!-- Schematic File (unchanged) -->
         <dict>
             <key>UTTypeIdentifier</key>
             <string>app.circuitpro.schematic</string>
@@ -61,7 +69,7 @@
             </dict>
         </dict>
 
-        <!-- PCB Layout File -->
+        <!-- PCB Layout File (unchanged) -->
         <dict>
             <key>UTTypeIdentifier</key>
             <string>app.circuitpro.pcb-layout</string>
@@ -83,23 +91,34 @@
         </dict>
     </array>
 
+
+    <!-- ───────────────────  Document types  ─────────────────── -->
     <key>CFBundleDocumentTypes</key>
     <array>
-        <!-- Project File -->
+
+        <!-- PROJECT PACKAGE -->
         <dict>
             <key>CFBundleTypeName</key>
-            <string>CircuitPro Project File</string>
+            <string>CircuitPro Project</string>
+
+            <!-- must reference the UTI declared above -->
             <key>LSItemContentTypes</key>
             <array>
                 <string>app.circuitpro.project</string>
             </array>
+
             <key>CFBundleTypeRole</key>
             <string>Editor</string>
+
             <key>LSHandlerRank</key>
             <string>Owner</string>
+
+            <!-- THIS FLAG makes Finder treat *.circuitproj as a package -->
+            <key>LSTypeIsPackage</key>
+            <true/>
         </dict>
 
-        <!-- Schematic File -->
+        <!-- Schematic file (viewer, unchanged) -->
         <dict>
             <key>CFBundleTypeName</key>
             <string>CircuitPro Schematic File</string>
@@ -113,7 +132,7 @@
             <string>Alternate</string>
         </dict>
 
-        <!-- PCB Layout File -->
+        <!-- PCB file (viewer, unchanged) -->
         <dict>
             <key>CFBundleTypeName</key>
             <string>CircuitPro PCB Layout File</string>
@@ -127,6 +146,5 @@
             <string>Alternate</string>
         </dict>
     </array>
-
 </dict>
 </plist>

@@ -57,7 +57,7 @@ class CircuitDesign: Codable, Identifiable, Hashable {
 // MARK: - Custom UTI
 extension UTType {
     /// Descriptor file users double‑click (a single JSON file)
-    static let circuitProject = UTType(exportedAs: "app.circuitpro.project")
+    static let circuitProject = UTType(exportedAs: "app.circuitpro.project", conformingTo: .package)
     static let schematic = UTType(exportedAs: "app.circuitpro.schematic")
     static let pcbLayout = UTType(exportedAs: "app.circuitpro.pcb-layout")
 }

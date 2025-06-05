@@ -51,11 +51,11 @@ struct ProjectNavigatorView: View {
                     TextField("Design Name", text: $design.name)
                         .textFieldStyle(.plain)
                         .onSubmit {
-                            do {
-                                try document.renameDesign(for: design)
-                            } catch {
-                                print("⚠️ Rename failed: \(error)")
-                            }
+//                            do {
+//                                try document.renameDesign(for: design)
+//                            } catch {
+//                                print("⚠️ Rename failed: \(error)")
+//                            }
                         }
                 }
                 .frame(height: 14)
@@ -67,6 +67,19 @@ struct ProjectNavigatorView: View {
             .scrollContentBackground(.hidden)
       
             .environment(\.defaultMinListRowHeight, 14)
+            .overlay {
+                Button {
+                    do {
+                            try document.addNewDesign()
+                        } catch {
+                            // You might use an alert/toast here for real apps
+                            print("Failed to create new design: \(error)")
+                        }
+                } label: {
+                    Text("Add")
+                }
+
+            }
         
             
 

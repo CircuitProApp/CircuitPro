@@ -28,7 +28,7 @@ struct CircuitProApp: App {
         Group {
             WelcomeWindow(actions: { dismiss in
                 WelcomeActionView(iconName: AppIcons.plusApp, title: "Create New Project...") {
-                    CircuitProjectDocumentController.shared.createFolderDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject))
+                    CircuitProjectDocumentController.shared.createFileDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject))
                 }
                 WelcomeActionView(iconName: AppIcons.folder, title: "Open Existing Project...") {
                     CircuitProjectDocumentController.shared.openDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject]))
