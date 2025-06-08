@@ -30,17 +30,17 @@ public struct ProjectView: View {
             if project.designs.isNotEmpty {
                 List {
                     Section {
-                        ForEach(project.designs) { design in
-                                Text(design.name)
-                                .directionalPadding(vertical: 5, horizontal: 7.5)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(projectManager.selectedDesign == design ? .blue : .clear)
-                                .foregroundStyle(projectManager.selectedDesign == design ? .white : .primary)
-                                .clipShape(.rect(cornerRadius: 5))
-                                    .onTapGesture {
-                                        projectManager.selectedDesign = design
-                                    }
-                        }
+//                        ForEach(project.designs) { design in
+//                                Text(design.name)
+//                                .directionalPadding(vertical: 5, horizontal: 7.5)
+//                                .frame(maxWidth: .infinity, alignment: .leading)
+//                                .background(projectManager.selectedDesign == design ? .blue : .clear)
+//                                .foregroundStyle(projectManager.selectedDesign == design ? .white : .primary)
+//                                .clipShape(.rect(cornerRadius: 5))
+//                                    .onTapGesture {
+//                                        projectManager.selectedDesign = design
+//                                    }
+//                        }
                     } header: {
                         HStack {
                             Text("Designs")
@@ -64,41 +64,42 @@ public struct ProjectView: View {
     }
     var projectDetail: some View {
         VStack {
-            if projectManager.selectedDesign != nil {
-                switch selectedEditor {
-                case .schematic:
-                    SchematicView()
-                case .layout:
-                    LayoutView()
-                }
-            } else {
-                if project.designs.isNotEmpty {
-                    ForEach(project.designs) { design in
-                        Text("Design \(design.name)")
-                            .onTapGesture {
-                                projectManager.selectedDesign = design
-                            }
-                    }
-                } else {
-                    Button {
-                    } label: {
-                        Text("Add a new Design")
-                    }
-                }
-            }
+//            if projectManager.selectedDesign != nil {
+//                switch selectedEditor {
+//                case .schematic:
+////                    SchematicView()
+//                    Text("Hewwo")
+//                case .layout:
+//                    LayoutView()
+//                }
+//            } else {
+//                if project.designs.isNotEmpty {
+//                    ForEach(project.designs) { design in
+//                        Text("Design \(design.name)")
+//                            .onTapGesture {
+////                                projectManager.selectedDesign = design
+//                            }
+//                    }
+//                } else {
+//                    Button {
+//                    } label: {
+//                        Text("Add a new Design")
+//                    }
+//                }
+//            }
         }
         .inspector(isPresented: $isShowingInspector) {
             InspectorView(selectedEditor: $selectedEditor)
         }
         .toolbar {
             if let selectedDesign = projectManager.selectedDesign {
-                ProjectToolbar(
-                    design: selectedDesign,
-                    selectedEditor: $selectedEditor,
-                    isShowingInspector: $isShowingInspector,
-                    openWindow: openWindow,
-                    modelContext: modelContext
-                )
+//                ProjectToolbar(
+//                    design: selectedDesign,
+//                    selectedEditor: $selectedEditor,
+//                    isShowingInspector: $isShowingInspector,
+//                    openWindow: openWindow,
+//                    modelContext: modelContext
+//                )
             }
         }
         .navigationTitle("")

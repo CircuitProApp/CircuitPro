@@ -9,8 +9,9 @@ import SwiftUI
 import SwiftData
 
 struct WorkspaceView: View {
-    @Environment(\.openWindow)
-    private var openWindow
+    
+    @Environment(\.projectManager)
+    private var projectManager
 
     var document: CircuitProjectDocument
     
@@ -19,7 +20,7 @@ struct WorkspaceView: View {
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            NavigatorView(document: document, project: document.model)
+            NavigatorView(document: document)
             .toolbar(removing: .sidebarToggle)
             .navigationSplitViewColumnWidth(min: 240, ideal: 240, max: 1000)
 
@@ -43,7 +44,7 @@ struct WorkspaceView: View {
                 }
             }
         } detail: {
-            EditorView()
+            EditorView(document: document)
           
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
@@ -63,6 +64,11 @@ struct WorkspaceView: View {
                 Text("Jello")
             }
                 .inspectorColumnWidth(min: 260, ideal: 260, max: 1000)
+        }
+        .onAppear {
+         
+            projectManager.selectedDesign = projectManager.project.designs.first!
+       
         }
     }
 }

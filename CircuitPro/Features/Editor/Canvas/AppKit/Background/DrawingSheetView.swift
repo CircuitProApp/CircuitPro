@@ -81,11 +81,11 @@ struct DrawingSheetView: View {
             HStack(spacing: 0) {
                 // Overlay cell views.
                 cellView(cellTitle: "Title", text: "Test Layout/Sheet")
-                cellView(cellTitle: "Project", text: projectManager.project?.name ?? "N/A")
-                cellView(
-                    cellTitle: "Last Updated",
-                    text: projectManager.selectedDesign?.timestamps.dateModified.formatted() ?? "N/A"
-                )
+//                cellView(cellTitle: "Project", text: projectManager.project?.name ?? "N/A")
+//                cellView(
+//                    cellTitle: "Last Updated",
+//                    text: projectManager.selectedDesign?.timestamps.dateModified.formatted() ?? "N/A"
+//                )
                 cellView(cellTitle: "Units", text: "mm")
                 cellView(cellTitle: "Size", text: sheetSize.name.uppercased())
             }

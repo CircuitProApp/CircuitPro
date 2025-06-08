@@ -40,7 +40,6 @@ struct NavigatorView: View {
     
     @State private var selectedTab: NavigatorViewTab = .projectNavigator
     var document: CircuitProjectDocument
-    @Bindable var project: CircuitProject
     
     
 
@@ -74,7 +73,7 @@ struct NavigatorView: View {
             
             switch selectedTab {
             case .projectNavigator:
-                ProjectNavigatorView(document: document, project: project)
+                ProjectNavigatorView(document: document)
             default:
                 Group {
                     Text("Default")

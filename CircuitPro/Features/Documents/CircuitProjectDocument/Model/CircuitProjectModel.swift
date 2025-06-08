@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 21.05.25.
 //
 import SwiftUI
-import UniformTypeIdentifiers
 import Observation
 
 @Observable
@@ -28,12 +27,17 @@ class CircuitProject: Codable {
 class CircuitDesign: Codable, Identifiable, Hashable {
     var id: UUID
     var name: String
-    var folderPath: String
+    
+    var componentInstances: [ComponentInstance]
+    
+    var directoryName: String {
+        id.uuidString
+    }
 
-    init(id: UUID = UUID(), name: String, folderPath: String) {
+    init(id: UUID = UUID(), name: String, componentInstances: [ComponentInstance] = []) {
         self.id = id
-        self.name = name
-        self.folderPath = folderPath
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.componentInstances = componentInstances
     }
 
     // MARK: - Hashable
@@ -48,16 +52,9 @@ class CircuitDesign: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case _id = "id"
         case _name = "name"
-        case _folderPath = "folderPath"
+        case _componentInstances = "componentInstances"
     }
 }
 
 
 
-// MARK: - Custom UTI
-extension UTType {
-    /// Descriptor file users double‑click (a single JSON file)
-    static let circuitProject = UTType(exportedAs: "app.circuitpro.project", conformingTo: .package)
-    static let schematic = UTType(exportedAs: "app.circuitpro.schematic")
-    static let pcbLayout = UTType(exportedAs: "app.circuitpro.pcb-layout")
-}

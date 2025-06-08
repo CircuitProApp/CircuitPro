@@ -62,6 +62,9 @@ enum ComponentCategoryFilter: Identifiable, Hashable {
 
 struct UtilityAreaView: View {
     
+    @Environment(\.projectManager)
+    private var projectManager
+    
     @Query private var components: [Component]
     
     @State private var selectedCategory: ComponentCategoryFilter = .all
@@ -146,7 +149,13 @@ struct UtilityAreaView: View {
         Group {
             switch selectedTab {
             case .design:
-                Text("Design library")
+                VStack {
+                    ScrollView {
+                        ForEach(projectManager.selectedDesign?.componentInstances ?? []) { componentInstance in
+                            Text(componentInstance.componentUUID.uuidString)
+                        }
+                    }
+                }
             case .appLibrary:
                 ComponentGridView(filteredComponents) { component in
                     ComponentCardView(component: component)

@@ -15,7 +15,7 @@ struct MainCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
             Button("About \(Bundle.displayName)") {
-                openWindow(sceneID: .about)
+                openWindow(id: "about")
             }
 
 //            Button("Check for updates...") {

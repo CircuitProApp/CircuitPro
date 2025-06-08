@@ -6,6 +6,10 @@ final class CircuitProjectDocument: NSDocument {
 
     // MARK: – Model ---------------------------------------------------
     var model = CircuitProject(name: "Untitled", designs: [])
+    
+    lazy var projectManager: ProjectManager = {
+        return ProjectManager(project: model)
+    }()
 
     override class var autosavesInPlace: Bool { true }
 
@@ -28,6 +32,7 @@ final class CircuitProjectDocument: NSDocument {
 
         let rootView = WorkspaceView(document: self)
             .modelContainer(ModelContainerManager.shared.container)
+            .environment(\.projectManager, projectManager)
 
         window.contentView = NSHostingView(rootView: rootView)
         window.toolbar = NSToolbar(identifier: "CustomToolbar").apply {
@@ -38,35 +43,70 @@ final class CircuitProjectDocument: NSDocument {
         addWindowController(NSWindowController(window: window))
     }
 
-    // MARK: – Reading -------------------------------------------------
+    // MARK: – Reading -----------------------------------------------------
     //
-    // The project package arrives as a FileWrapper tree.  We only need
-    // the JSON file that contains the model.
+    // 1.  URL-based reader (normal open/save cycle)
     //
     override func read(from url: URL, ofType typeName: String) throws {
-        let jsonURL = url.appendingPathComponent("project.json")
-        guard FileManager.default.fileExists(atPath: jsonURL.path) else {
+
+        // — project.json --------------------------------------------------
+        let headerURL = url.appendingPathComponent("project.json")
+        guard FileManager.default.fileExists(atPath: headerURL.path) else {
             throw CocoaError(.fileReadNoSuchFile)
         }
 
-        let data = try Data(contentsOf: jsonURL)
-        model = try JSONDecoder().decode(CircuitProject.self, from: data)
+        let headerData = try Data(contentsOf: headerURL)
+        model = try JSONDecoder().decode(CircuitProject.self, from: headerData)
+        
+
+        // — components.json of every design ------------------------------
+        for index in model.designs.indices {
+            let design       = model.designs[index]
+            let compsURL = url
+                .appendingPathComponent("Designs")
+                .appendingPathComponent(design.directoryName)
+                .appendingPathComponent("components.json")
+
+            if FileManager.default.fileExists(atPath: compsURL.path),
+               let data = try? Data(contentsOf: compsURL),
+               let instances = try? JSONDecoder()
+                                    .decode([ComponentInstance].self, from: data) {
+                model.designs[index].componentInstances = instances
+            }
+        }
+        
     }
 
-    // 2. When the document is restored by state-restoration the system
-    //    may pass a FileWrapper instead.  Keep the wrapper-based reader
-    //    as well (harmless duplication).
+    //
+    // 2.  FileWrapper-based reader (state restoration, hand-off, …)
+    //
     override func read(from fileWrapper: FileWrapper,
                        ofType typeName: String) throws {
 
+        // — project.json --------------------------------------------------
         guard
-            let jsonWrapper = fileWrapper.fileWrappers?["project.json"],
-            let jsonData    = jsonWrapper.regularFileContents
+            let headerWrapper = fileWrapper.fileWrappers?["project.json"],
+            let headerData    = headerWrapper.regularFileContents
         else {
             throw CocoaError(.fileReadCorruptFile)
         }
+        model = try JSONDecoder().decode(CircuitProject.self, from: headerData)
 
-        model = try JSONDecoder().decode(CircuitProject.self, from: jsonData)
+        // — components.json of every design ------------------------------
+        guard let designsDir = fileWrapper.fileWrappers?["Designs"] else { return }
+
+        for index in model.designs.indices {
+            let design = model.designs[index]
+
+            if  let designDir   = designsDir.fileWrappers?[design.directoryName],
+                let compsWrapper = designDir.fileWrappers?["components.json"],
+                let data         = compsWrapper.regularFileContents,
+                let instances    = try? JSONDecoder()
+                                       .decode([ComponentInstance].self, from: data) {
+
+                model.designs[index].componentInstances = instances
+            }
+        }
     }
 
     // MARK: – Writing -------------------------------------------------
@@ -78,8 +118,7 @@ final class CircuitProjectDocument: NSDocument {
 
         // Always make sure we have at least one design
         if model.designs.isEmpty {
-            model.designs = [CircuitDesign(name: "Design 1",
-                                           folderPath: "Design 1")]
+            model.designs = [CircuitDesign(name: "Design 1")]
         }
 
         // Root directory of the *.circuitproj package
@@ -97,19 +136,22 @@ final class CircuitProjectDocument: NSDocument {
 
         for design in model.designs {
             let designDir = FileWrapper(directoryWithFileWrappers: [:])
-            designDir.preferredFilename = design.folderPath
+            designDir.preferredFilename = design.directoryName
 
-            // empty placeholders – replace with real contents if/when you have them
+            // 2.1 schematic.sch & layout.pcb stay unchanged
             designDir.addRegularFile(withContents: Data(),
                                      preferredFilename: "schematic.sch")
             designDir.addRegularFile(withContents: Data(),
                                      preferredFilename: "layout.pcb")
-            let componentsJSON = try JSONSerialization.data(withJSONObject: [])
-            designDir.addRegularFile(withContents: componentsJSON,
+
+            // 2.2     REAL DATA  ← here is the new part
+            let compsData = try JSONEncoder().encode(design.componentInstances)
+            designDir.addRegularFile(withContents: compsData,
                                      preferredFilename: "components.json")
 
             designsDir.addFileWrapper(designDir)
         }
+
 
         root.addFileWrapper(designsDir)
         return root
@@ -117,36 +159,6 @@ final class CircuitProjectDocument: NSDocument {
 
     override func writableTypes(for saveOperation: NSDocument.SaveOperationType) -> [String] {
         [UTType.circuitProject.identifier]
-    }
-
-
-    // MARK: – Editing helpers ----------------------------------------
-    //
-    // These now only mutate the *model*; the actual directories are
-    // created on the next save by `fileWrapper(ofType:)`.
-    //
-    func addNewDesign() {
-        let base = "Design"
-        var idx  = model.designs.count + 1
-        var name = "\(base) \(idx)"
-
-        let used = Set(model.designs.map(\.name))
-        while used.contains(name) {
-            idx += 1
-            name = "\(base) \(idx)"
-        }
-
-        model.designs.append(.init(name: name, folderPath: name))
-        updateChangeCount(.changeDone)
-    }
-
-    func renameDesign(_ design: CircuitDesign, to newName: String) {
-        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed != design.folderPath else { return }
-
-        design.folderPath = trimmed
-        design.name       = trimmed       // keep model consistent
-        updateChangeCount(.changeDone)
     }
 }
 

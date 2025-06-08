@@ -19,7 +19,8 @@ struct InspectorView: View {
         VStack {
             switch selectedEditor {
             case .schematic:
-                NetListView(nets: projectManager.selectedDesign?.schematic?.nets ?? [])
+//                NetListView(nets: projectManager.selectedDesign?.schematic?.nets ?? [])
+                Text("Jelo")
             case .layout:
                 VStack {
                     HStack {
@@ -43,9 +44,11 @@ struct InspectorView: View {
                     .buttonStyle(.accessoryBar)
                     switch selectedLayoutInspector {
                     case .layers:
-                        LayerListView(layers: projectManager.selectedDesign?.layout?.layers ?? [])
+//                        LayerListView(layers: projectManager.selectedDesign?.layout?.layers ?? [])
+                        Text("Jelo")
                     case .nets:
-                        NetListView(nets: projectManager.selectedDesign?.schematic?.nets ?? [])
+//                        NetListView(nets: projectManager.selectedDesign?.schematic?.nets ?? [])
+                        Text("melo")
                     }
                 }
             }

@@ -25,7 +25,7 @@ struct ComponentDrawerView: View {
     private var modelContext
 
     @Query private var components: [Component]
-    @Query private var componentInstances: [ComponentInstance]
+//    @Query private var componentInstances: [ComponentInstance]
 
     @State private var selectedLibraryType: LibraryType = .design
 
@@ -36,15 +36,16 @@ struct ComponentDrawerView: View {
             librarySelector
             switch selectedLibraryType {
             case .design:
-                ComponentGridView(projectManager.activeComponentInstances) { instance in
-                    VStack {
-                        Text(components.first(where: { $0.uuid == instance.componentUUID })?.name ?? "")
-                    }
-                    .padding(10)
-                    .frame(width: 150, height: 50, alignment: .leading)
-                    .background(.gray.opacity(0.1))
-                    .clipAndStroke(with: .rect(cornerRadius: 15))
-                }
+//                ComponentGridView(projectManager.activeComponentInstances) { instance in
+//                    VStack {
+//                        Text(components.first(where: { $0.uuid == instance.componentUUID })?.name ?? "")
+//                    }
+//                    .padding(10)
+//                    .frame(width: 150, height: 50, alignment: .leading)
+//                    .background(.gray.opacity(0.1))
+//                    .clipAndStroke(with: .rect(cornerRadius: 15))
+//                }
+                Text("Pending")
             case .app:
                 ComponentGridView(components) { component in
                     ComponentCardView(component: component)
@@ -60,9 +61,9 @@ struct ComponentDrawerView: View {
         .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3), lineWidth: 1)
         .transition(.move(edge: .bottom).combined(with: .blurReplace))
         .onAppear {
-            if componentInstances.isEmpty {
-                selectedLibraryType = .app
-            }
+//            if componentInstances.isEmpty {
+//                selectedLibraryType = .app
+//            }
         }
     }
 

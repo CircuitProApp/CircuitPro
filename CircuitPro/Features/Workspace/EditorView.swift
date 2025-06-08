@@ -2,6 +2,12 @@ import SwiftUI
 import AppKit
 
 struct EditorView: View {
+    
+    @Environment(\.projectManager)
+    private var projectManager
+    
+    var document: CircuitProjectDocument
+    
     @State private var showUtilityArea: Bool = true
     
     @State private var selectedEditor: EditorType = .schematic
@@ -20,47 +26,23 @@ struct EditorView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                Button {
-                    selectedEditor = .schematic
-                } label: {
-                    Text("Schematic")
-                        .directionalPadding(vertical: 3, horizontal: 7.5)
-                        .background(selectedEditor == .schematic ? AnyShapeStyle(Color.blue.quaternary) : AnyShapeStyle(Color.clear))
-                        .foregroundStyle(selectedEditor == .schematic ? .primary : .secondary)
-                        .clipShape(.rect(cornerRadius: 4))
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    selectedEditor = .layout
-                } label: {
-                    Text("Layout")
-                        .directionalPadding(vertical: 3, horizontal: 7.5)
-                        .background(selectedEditor == .layout ? AnyShapeStyle(Color.blue.quaternary) : AnyShapeStyle(Color.clear))
-                        .foregroundStyle(selectedEditor == .layout ? .primary : .secondary)
-                        .clipShape(.rect(cornerRadius: 4))
-                }
-                .buttonStyle(.plain)
-          
-                Spacer()
+            if projectManager.selectedDesign != nil {
+                editorSelection
             }
-            .frame(height: 29)
-            .frame(maxWidth: .infinity)
-            .font(.system(size: 11))
-        
-            
-            Divider()
-                .foregroundStyle(.quaternary)
             
             SplitView(showBottomView: $showUtilityArea) {
-                switch selectedEditor {
-                   case .schematic:
-                    SchematicView(canvasManager: selectedCanvasManager)
-                case .layout:
-                    LayoutView()
+                if projectManager.selectedDesign == nil {
+                    Text("Select a design")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    switch selectedEditor {
+                       case .schematic:
+                        SchematicView(document: document, canvasManager: selectedCanvasManager)
+                    case .layout:
+                        LayoutView()
+                    }
                 }
+                
             } dividerView: {
                 StatusBarView(canvasManager: selectedCanvasManager, showUtilityArea: $showUtilityArea)
          
@@ -73,9 +55,47 @@ struct EditorView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(selectedCanvasManager)
     }
+    
+    private var editorSelection: some View {
+        Group {
+            HStack {
+                Spacer()
+                Button {
+                    selectedEditor = .schematic
+                } label: {
+                    Text("Schematic")
+                        .directionalPadding(vertical: 3, horizontal: 7.5)
+                        .background(selectedEditor == .schematic ? AnyShapeStyle(Color.blue.quaternary) : AnyShapeStyle(Color.clear))
+                        .foregroundStyle(selectedEditor == .schematic ? .primary : .secondary)
+                        .clipShape(.rect(cornerRadius: 4))
+                }
+                .buttonStyle(.plain)
+                
+                Button {
+                    selectedEditor = .layout
+                } label: {
+                    Text("Layout")
+                        .directionalPadding(vertical: 3, horizontal: 7.5)
+                        .background(selectedEditor == .layout ? AnyShapeStyle(Color.blue.quaternary) : AnyShapeStyle(Color.clear))
+                        .foregroundStyle(selectedEditor == .layout ? .primary : .secondary)
+                        .clipShape(.rect(cornerRadius: 4))
+                }
+                .buttonStyle(.plain)
+                
+                Spacer()
+            }
+            .frame(height: 29)
+            .frame(maxWidth: .infinity)
+            .font(.system(size: 11))
+            
+            
+            Divider()
+                .foregroundStyle(.quaternary)
+        }
+    }
 }
 
-#Preview {
-    EditorView()
-}
+//#Preview {
+//    EditorView()
+//}
 

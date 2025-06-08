@@ -13,8 +13,8 @@ final class Design {
     @Relationship(deleteRule: .cascade, inverse: \Layout.design)
     var layout: Layout?
 
-    @Relationship(deleteRule: .cascade, inverse: \ComponentInstance.design)
-    var componentInstances: [ComponentInstance]
+//    @Relationship(deleteRule: .cascade, inverse: \ComponentInstance.design)
+//    var componentInstances: [ComponentInstance]
 
     var project: Project
 
@@ -23,13 +23,13 @@ final class Design {
         schematic: Schematic? = nil,
         layout: Layout? = nil,
         project: Project,
-        componentInstances: [ComponentInstance] = []
+//        componentInstances: [ComponentInstance] = []
     ) {
         self.name = name
         self.schematic = schematic
         self.layout = layout
         self.project = project
-        self.componentInstances = componentInstances
+//        self.componentInstances = componentInstances
         self.timestamps = Timestamps()
     }
 }

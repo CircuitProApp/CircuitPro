@@ -10,11 +10,11 @@ import Observation
 @Observable
 final class ProjectManager {
 
-    var path = NavigationPath()
-    var project: Project?
-    var selectedDesign: Design?
+    var project: CircuitProject
+    var selectedDesign: CircuitDesign?
 
-    var activeComponentInstances: [ComponentInstance] {
-        selectedDesign?.componentInstances ?? []
+init(project: CircuitProject, selectedDesign: CircuitDesign? = nil) {
+        self.project = project
+        self.selectedDesign = selectedDesign
     }
 }

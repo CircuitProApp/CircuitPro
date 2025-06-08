@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import WelcomeWindow
+import AboutWindow
 
 @main
 struct CircuitProApp: App {
@@ -12,7 +13,6 @@ struct CircuitProApp: App {
     private var openWindow
 
     @State var appManager = AppManager()
-    @State var projectManager = ProjectManager()
     @State var componentDesignManager = ComponentDesignManager()
     // MARK: - Initialization
     
@@ -26,29 +26,31 @@ struct CircuitProApp: App {
     
     var body: some Scene {
         Group {
-            WelcomeWindow(actions: { dismiss in
-                WelcomeActionView(iconName: AppIcons.plusApp, title: "Create New Project...") {
-                    CircuitProjectDocumentController.shared.createFileDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject))
+            WelcomeWindow(
+                actions: { dismiss in
+                    WelcomeActionView(iconName: AppIcons.plusApp, title: "Create New Project...") {
+                        CircuitProjectDocumentController.shared.createFileDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject))
+                    }
+                    WelcomeActionView(iconName: AppIcons.folder, title: "Open Existing Project...") {
+                        CircuitProjectDocumentController.shared.openDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject]))
+                    }
+                    WelcomeActionView(iconName: AppIcons.plusApp, title: "Create New Component...") {
+                        openWindow(id: "componentDesignerWindow")
+                    }
+                },
+                onDrop: { url, dismiss in
+                    Task {
+                        CircuitProjectDocumentController.shared.openDocument(at: url, onCompletion: { dismiss() })
+                    }
                 }
-                WelcomeActionView(iconName: AppIcons.folder, title: "Open Existing Project...") {
-                    CircuitProjectDocumentController.shared.openDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject]))
-                }
-                WelcomeActionView(iconName: AppIcons.plusApp, title: "Create New Component...") {
-                    openWindow(id: "componentDesignerWindow")
-                }
-            },
-                          onDrop: { url, dismiss in
-                Task {
-                    CircuitProjectDocumentController.shared.openDocument(at: url, onCompletion: { dismiss() })
-                }
-            })
+            )
             
+            AboutWindow(actions: {}, footer: { AboutFooterView() })
             .commands {
                 CircuitProCommands()
             }
         }
         .environment(\.appManager, appManager)
-        .environment(\.projectManager, projectManager)
       
         
         WindowGroup(id: "SecondWindow") {
@@ -82,9 +84,9 @@ final class ModelContainerManager {
                     Layer.self,
                     Net.self,
                     Via.self,
-                    ComponentInstance.self,
-                    SymbolInstance.self,
-                    FootprintInstance.self
+//                    ComponentInstance.self,
+//                    SymbolInstance.self,
+//                    FootprintInstance.self
                 ]),
                 allowsSave: true
             )
@@ -106,9 +108,9 @@ final class ModelContainerManager {
                 Layer.self,
                 Net.self,
                 Via.self,
-                ComponentInstance.self,
-                SymbolInstance.self,
-                FootprintInstance.self,
+//                ComponentInstance.self,
+//                SymbolInstance.self,
+//                FootprintInstance.self,
                 Component.self,
                 Symbol.self,
                 Footprint.self,
