@@ -28,13 +28,13 @@ struct CircuitProApp: App {
         Group {
             WelcomeWindow(
                 actions: { dismiss in
-                    WelcomeActionView(iconName: AppIcons.plusApp, title: "Create New Project...") {
+                    WelcomeButton(iconName: AppIcons.plusApp, title: "Create New Project...") {
                         CircuitProjectDocumentController.shared.createFileDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject))
                     }
-                    WelcomeActionView(iconName: AppIcons.folder, title: "Open Existing Project...") {
+                    WelcomeButton(iconName: AppIcons.folder, title: "Open Existing Project...") {
                         CircuitProjectDocumentController.shared.openDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject]))
                     }
-                    WelcomeActionView(iconName: AppIcons.plusApp, title: "Create New Component...") {
+                    WelcomeButton(iconName: AppIcons.plusApp, title: "Create New Component...") {
                         openWindow(id: "componentDesignerWindow")
                     }
                 },

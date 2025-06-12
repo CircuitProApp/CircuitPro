@@ -1,5 +1,5 @@
 {
-  "originHash" : "f4936f915f7ab2017e889210bf83b19b958c484ef117033237eb6faf125662ba",
+  "originHash" : "7cea466af50b7627e244e6a4581ad586750aa30db49b2c7832883c263f683863",
   "pins" : [
     {
       "identity" : "aboutwindow",
@@ -16,7 +16,7 @@
       "location" : "https://github.com/CodeEditApp/CodeEditWelcomeWindow",
       "state" : {
         "branch" : "main",
-        "revision" : "a6a0f0406fc8d9b62c7713d927f7c58ecb889df4"
+        "revision" : "ee40e75bb064fc4207724e6d9b4abd579e9b3939"
       }
     },
     {
