@@ -15,13 +15,10 @@ struct ComponentCardView: View {
     @State private var selectedViewType: ComponentViewType = .symbol
 
     var body: some View {
-        HStack {
+        VStack(spacing: 5) {
             VStack {
                 VStack {
-                    Text(component.name)
-                        .lineLimit(1)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+
                     Spacer()
                     selectedView
                     Spacer()
@@ -30,10 +27,14 @@ struct ComponentCardView: View {
                 componentViewTypeSwitcher
             }
             .padding(5)
-            .frame(width: 150, height: 150)
+            .frame(width: 110, height: 110)
             .background(.gray.opacity(0.1))
             .clipAndStroke(with: .rect(cornerRadius: 15))
             .draggableIfPresent(TransferableComponent(component: component))
+            Text(component.name)
+                .lineLimit(1)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 

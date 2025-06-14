@@ -2,7 +2,6 @@ import AppKit
 
 final class CrosshairsView: NSView {
 
-    /// which style to draw?
     var crosshairsStyle: CrosshairsStyle = .centeredCross {
         didSet { needsDisplay = true }
     }
@@ -16,11 +15,14 @@ final class CrosshairsView: NSView {
     }
 
     override var isFlipped: Bool { true }
+
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
     }
+
     required init?(coder: NSCoder) { fatalError() }
 
     override func draw(_ dirtyRect: NSRect) {

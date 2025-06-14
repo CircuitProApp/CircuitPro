@@ -116,11 +116,6 @@ final class CircuitProjectDocument: NSDocument {
     //
     override func fileWrapper(ofType typeName: String) throws -> FileWrapper {
 
-        // Always make sure we have at least one design
-        if model.designs.isEmpty {
-            model.designs = [CircuitDesign(name: "Design 1")]
-        }
-
         // Root directory of the *.circuitproj package
         let root = FileWrapper(directoryWithFileWrappers: [:])
 

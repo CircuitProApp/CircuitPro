@@ -26,6 +26,7 @@ struct NavigatorDisclosureGroupStyle: DisclosureGroupStyle {
                         .rotationEffect(.degrees(configuration.isExpanded ? 90 : 0))
                         .animation(.default, value: configuration.isExpanded)
                         .imageScale(.small)
+                        .foregroundStyle(.secondary)
                 }
                 .contentShape(Rectangle())
             }

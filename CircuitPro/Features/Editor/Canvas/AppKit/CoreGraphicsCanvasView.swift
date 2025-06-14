@@ -35,6 +35,7 @@ final class CoreGraphicsCanvasView: NSView {
     override var isFlipped: Bool { true }
 
     weak var crosshairsView: CrosshairsView?
+    weak var marqueeView: MarqueeView?
 
     override init(frame: NSRect) {
         super.init(frame: .init(origin: .zero, size: .init(width: 5000, height: 5000)))

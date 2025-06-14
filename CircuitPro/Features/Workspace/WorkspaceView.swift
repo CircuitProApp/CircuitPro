@@ -66,8 +66,9 @@ struct WorkspaceView: View {
                 .inspectorColumnWidth(min: 260, ideal: 260, max: 1000)
         }
         .onAppear {
-         
-            projectManager.selectedDesign = projectManager.project.designs.first!
+            if projectManager.project.designs.isNotEmpty {
+                projectManager.selectedDesign = projectManager.project.designs.first!
+            }
        
         }
     }

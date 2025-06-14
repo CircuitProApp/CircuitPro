@@ -1,12 +1,17 @@
 import SwiftUI
 
 struct SymbolDesignView: View {
+
     @Environment(CanvasManager.self)
     private var canvasManager
+
     @Environment(\.componentDesignManager)
     private var componentDesignManager
+
     var body: some View {
+
         @Bindable var bindableComponentDesignManager = componentDesignManager
+
         CanvasView(
             manager: canvasManager,
             elements: $bindableComponentDesignManager.symbolElements,

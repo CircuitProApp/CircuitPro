@@ -12,12 +12,18 @@ final class CanvasInteractionController {
     private let dragThreshold: CGFloat = 4.0
 
     private(set) var marqueeOrigin: CGPoint?
-    private(set) var marqueeRect: CGRect?
+    private(set) var marqueeRect: CGRect? {
+        didSet {
+            // Tell the overlay view to redraw (may be nil → clears it)
+            canvas.marqueeView?.rect = marqueeRect
+        }
+    }
 
     private var isRotatingViaMouse = false
     private var rotationOrigin: CGPoint?
 
     var isRotating: Bool { isRotatingViaMouse }
+    
 
     init(canvas: CoreGraphicsCanvasView) {
         self.canvas = canvas

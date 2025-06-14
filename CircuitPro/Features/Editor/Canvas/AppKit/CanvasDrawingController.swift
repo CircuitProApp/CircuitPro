@@ -14,7 +14,6 @@ final class CanvasDrawingController {
         // Overlay — screen space
         ctx.saveGState()
         drawHandles(in: ctx)
-        drawMarquee(in: ctx)
         ctx.restoreGState()
     }
     // MARK: - 1 elements + hit rects
@@ -76,21 +75,5 @@ final class CanvasDrawingController {
                 ctx.strokeEllipse(in: radius)
             }
         }
-    }
-    // MARK: - 4 marquee box
-    private func drawMarquee(in ctx: CGContext) {
-        guard let rect = canvas.marqueeRect else { return }
-        // --- NEW: scale line width with magnification ---
-        let scale = 1 / canvas.magnification
-        let lineWidth = 1 * scale
-        // ------------------------------------------------
-        ctx.saveGState()
-        ctx.setStrokeColor(NSColor(.blue).cgColor)
-        ctx.setFillColor(NSColor(.blue.opacity(0.1)).cgColor)
-        ctx.setLineWidth(lineWidth)
-        ctx.setLineDash(phase: 0, lengths: [4 * scale, 2 * scale]) // Also scale the dash pattern
-        ctx.stroke(rect)
-        ctx.fill(rect)
-        ctx.restoreGState()
     }
 }

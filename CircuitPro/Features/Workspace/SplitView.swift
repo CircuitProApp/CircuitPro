@@ -35,6 +35,7 @@ struct SplitView<TopContent: View, DividerContent: View, BottomContent: View>: V
                 .foregroundStyle(.quaternary)
             if showBottomView {
                 bottomView
+                    .frame(height: 200)
                     .transition(.move(edge: .bottom))
             }
         }

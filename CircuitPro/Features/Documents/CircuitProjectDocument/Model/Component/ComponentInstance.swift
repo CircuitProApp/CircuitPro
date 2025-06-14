@@ -40,3 +40,17 @@ final class ComponentInstance: Identifiable, Codable {
         case _footprintInstance = "footprintInstance"
     }
 }
+
+// MARK: - Hashable
+extension ComponentInstance: Hashable {
+    
+    // Two component instances are considered equal if they carry the same `id`.
+    public static func == (lhs: ComponentInstance, rhs: ComponentInstance) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    // The `id` is also the only thing we need to hash – it is already unique.
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}

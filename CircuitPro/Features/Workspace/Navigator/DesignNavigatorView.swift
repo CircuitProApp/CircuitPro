@@ -31,19 +31,33 @@ public struct DesignNavigatorView: View {
                 .frame(height: 14)
                 .listRowSeparator(.hidden)
                 .contextMenu {
-                    Button("Delete") { document.deleteDesign(design) }
+                    Button("Delete") {
+                        if projectManager.selectedDesign == design {
+                            projectManager.selectedDesign = nil
+                        }
+                        document.deleteDesign(design)
+
+                    }
                 }
             }
             .frame(height: 180)
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
             .environment(\.defaultMinListRowHeight, 14)
+            .overlay {
+                if projectManager.project.designs.isEmpty {
+                    Button("Create a Design") {
+                        document.addNewDesign()
+                        projectManager.selectedDesign = projectManager.project.designs.first!
+                    }
+                }
+            }
         } label: {
             HStack {
                 Group {
-                    if isExpanded {
+                   
+                    if projectManager.project.designs.isEmpty || isExpanded {
                         Text("Designs")
-                        
                     } else {
                         Menu {
                             ForEach(projectManager.project.designs) { design in
@@ -53,25 +67,19 @@ public struct DesignNavigatorView: View {
                             }
                         } label: {
                             HStack(spacing: 5) {
-                                Text(projectManager.selectedDesign?.name ?? "New Design")
+                                Text(projectManager.selectedDesign?.name ?? "Designs")
                                 Image(systemName: AppIcons.chevronDown)
                                     .imageScale(.small)
-                           
                                     .fontWeight(.regular)
-                             
-                              
                             }
-                            .contentShape(.rect())
-                            
+                            .contentShape(Rectangle())
                         }
-
-                       
-                        
-                        
                     }
                 }
                 .font(.system(size: 11))
                 .fontWeight(.semibold)
+                
+
                 
                
                 Spacer()
@@ -82,7 +90,9 @@ public struct DesignNavigatorView: View {
                 }
                 .buttonStyle(.plain)
             }
+            .foregroundStyle(.secondary)
         }
         .disclosureGroupStyle(NavigatorDisclosureGroupStyle())
+
     }
 }

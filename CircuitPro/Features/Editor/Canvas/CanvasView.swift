@@ -13,11 +13,13 @@ struct CanvasView: NSViewRepresentable {
         let canvas: CoreGraphicsCanvasView
         let background: BackgroundView
         let crosshairs: CrosshairsView
+        let marquee     : MarqueeView
 
         init() {
             self.canvas = CoreGraphicsCanvasView()
             self.background = BackgroundView()
             self.crosshairs = CrosshairsView()
+            self.marquee = MarqueeView()
         }
     }
 
@@ -32,12 +34,16 @@ struct CanvasView: NSViewRepresentable {
         let background = context.coordinator.background
         let canvas = context.coordinator.canvas
         let crosshairs = context.coordinator.crosshairs
+        let marquee = context.coordinator.marquee
 
         canvas.crosshairsView = crosshairs
+        canvas.marqueeView    = marquee
 
         background.frame = boardRect
         canvas.frame = boardRect
         crosshairs.frame = boardRect
+        marquee.frame = boardRect
+        
 
         background.currentStyle = manager.backgroundStyle
 
@@ -54,10 +60,12 @@ struct CanvasView: NSViewRepresentable {
         background.autoresizingMask = [.width, .height]
         canvas.autoresizingMask = [.width, .height]
         crosshairs.autoresizingMask = [.width, .height]
+        marquee.autoresizingMask    = [.width, .height]
 
         container.addSubview(background)
         container.addSubview(canvas)
         container.addSubview(crosshairs)
+        container.addSubview(marquee, positioned: .above, relativeTo: canvas)
 
         let scrollView = NSScrollView()
         scrollView.documentView = container
@@ -86,6 +94,7 @@ struct CanvasView: NSViewRepresentable {
         let canvas = context.coordinator.canvas
         let background = context.coordinator.background
         let crosshairs = context.coordinator.crosshairs
+        let marquee = context.coordinator.marquee
 
         canvas.elements = elements
         canvas.selectedIDs = selectedIDs
@@ -118,6 +127,8 @@ struct CanvasView: NSViewRepresentable {
         background.showAxes = manager.enableAxesBackground
         background.magnification = manager.magnification
         background.gridSpacing = manager.gridSpacing.rawValue * 10.0
+        
+        marquee.magnification = manager.magnification
     }
 
     private func centerScrollView(_ scrollView: NSScrollView, container: NSView) {
@@ -133,3 +144,4 @@ struct CanvasView: NSViewRepresentable {
         }
     }
 }
+
