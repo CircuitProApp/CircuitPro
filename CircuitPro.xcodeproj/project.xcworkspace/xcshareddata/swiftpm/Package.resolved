@@ -7,7 +7,7 @@
       "location" : "https://github.com/CodeEditApp/AboutWindow",
       "state" : {
         "branch" : "main",
-        "revision" : "f24aabcb52a6f9b6b502ad77b311ef9e83b51aff"
+        "revision" : "79c7c01fb739d024a3ca07fe153a068339213baf"
       }
     },
     {
@@ -16,7 +16,7 @@
       "location" : "https://github.com/CodeEditApp/CodeEditWelcomeWindow",
       "state" : {
         "branch" : "main",
-        "revision" : "ee40e75bb064fc4207724e6d9b4abd579e9b3939"
+        "revision" : "bd405120115277dc7431b06ecc92ca49777451fa"
       }
     },
     {
