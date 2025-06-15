@@ -144,7 +144,7 @@ final class CanvasInteractionController {
             for handle in element.handles()
             where hypot(loc.x - handle.position.x, loc.y - handle.position.y) < tolerance {
                 activeHandle = (element.id, handle.kind)
-                if let oppositeKind = oppositeKind(of: handle.kind),
+                if let oppositeKind = handle.kind.opposite,
                    let opposite = element.handles().first(where: { $0.kind == oppositeKind }) {
                     frozenOppositeWorld = opposite.position
                 }
@@ -263,17 +263,5 @@ final class CanvasInteractionController {
             return true
         }
         return false
-    }
-
-    private func oppositeKind(of kind: Handle.Kind) -> Handle.Kind? {
-        switch kind {
-        case .rectTopLeft: return .rectBottomRight
-        case .rectTopRight: return .rectBottomLeft
-        case .rectBottomRight: return .rectTopLeft
-        case .rectBottomLeft: return .rectTopRight
-        case .lineStart: return .lineEnd
-        case .lineEnd: return .lineStart
-        default: return nil
-        }
     }
 }

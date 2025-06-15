@@ -1,9 +1,10 @@
 //
 //  CanvasElement.swift
-//  Circuit Pro_Tests
+//  Circuit Pro
 //
 //  Created by Giorgi Tchelidze on 5/15/25.
 //
+
 import SwiftUI
 
 enum CanvasElement: Identifiable, Hashable {

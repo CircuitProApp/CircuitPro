@@ -32,7 +32,7 @@ struct ComponentCardView: View {
             .clipAndStroke(with: .rect(cornerRadius: 15))
             .draggableIfPresent(TransferableComponent(component: component))
             Text(component.name)
-                .lineLimit(1)
+                .lineLimit(2)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
