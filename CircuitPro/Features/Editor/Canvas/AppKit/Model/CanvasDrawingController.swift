@@ -2,7 +2,9 @@
 import AppKit
 
 final class CanvasDrawingController {
+
     unowned let canvas: CoreGraphicsCanvasView
+
     init(canvas: CoreGraphicsCanvasView) { self.canvas = canvas }
     // ---------------------------------------------------------------- draw
     func draw(in ctx: CGContext, dirtyRect: NSRect) {

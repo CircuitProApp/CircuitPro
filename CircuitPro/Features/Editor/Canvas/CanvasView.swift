@@ -13,7 +13,7 @@ struct CanvasView: NSViewRepresentable {
         let canvas: CoreGraphicsCanvasView
         let background: BackgroundView
         let crosshairs: CrosshairsView
-        let marquee     : MarqueeView
+        let marquee   : MarqueeView
 
         init() {
             self.canvas = CoreGraphicsCanvasView()
@@ -79,12 +79,14 @@ struct CanvasView: NSViewRepresentable {
         centerScrollView(scrollView, container: container)
 
         scrollView.postsBoundsChangedNotifications = true
+
         NotificationCenter.default.addObserver(
             forName: NSView.boundsDidChangeNotification,
             object: scrollView.contentView,
             queue: .main
         ) { _ in
             self.manager.magnification = scrollView.magnification
+            self.manager.scrollOrigin  = scrollView.contentView.bounds.origin   // <─ NEW
         }
 
         return scrollView

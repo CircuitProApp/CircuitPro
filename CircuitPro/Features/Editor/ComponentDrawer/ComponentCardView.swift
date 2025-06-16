@@ -42,10 +42,34 @@ struct ComponentCardView: View {
         Group {
             switch selectedViewType {
             case .symbol:
-                VStack {
-                    Text(component.symbol?.primitives.count.description ?? "No primitives")
-                    Text(component.symbol?.pins.count.description ?? "No primitives")
-                }
+                if let primitives = component.symbol?.primitives, !primitives.isEmpty {
+                     Canvas { context, size in
+                         for primitive in primitives {
+                             // Convert the `primitive` to a `CGPath` and draw it on the canvas
+                             let path = primitive.makePath()
+                             let resolvedColor = primitive.color.color // Uses the color defined in the primitive
+
+                             if primitive.filled {
+                                 context.fill(
+                                     Path(path), // Wrap the CGPath in a SwiftUI-friendly Path
+                                     with: .color(resolvedColor)
+                                 )
+                             } else {
+                                 context.stroke(
+                                     Path(path),
+                                     with: .color(resolvedColor),
+                                     lineWidth: primitive.strokeWidth
+                                 )
+                             }
+                         }
+                     }
+                     .frame(width: 100, height: 100) // Adjust frame size for rendering
+                     .border(Color.gray, width: 1)
+                 } else {
+                     Text("No primitives available")
+                         .foregroundStyle(.secondary)
+                 }
+
             case .footprint:
                 if component.footprints.isNotEmpty {
                     Image(AppIcons.photoTriangleBadgeExclamationMark)
