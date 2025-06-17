@@ -25,7 +25,7 @@ struct SymbolNavigatorView: View {
             ) { $instance in
                 
                 HStack {
-                    Text(instance.componentUUID.uuidString)
+                    Text(instance.symbolInstance.symbolUUID.description)
                         .foregroundStyle(.secondary)
                 }
                 .frame(height: 14)

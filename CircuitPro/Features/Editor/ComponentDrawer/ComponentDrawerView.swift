@@ -99,11 +99,11 @@ struct ComponentDrawerView: View {
 
             }
             Spacer()
-            Button {
-                appManager.path.append(CircuitProPage.componentDesign)
-            } label: {
-                Text("Create a Component")
-            }
+//            Button {
+//                appManager.path.append(CircuitProPage.componentDesign)
+//            } label: {
+//                Text("Create a Component")
+//            }
 
         }
         .font(.subheadline)

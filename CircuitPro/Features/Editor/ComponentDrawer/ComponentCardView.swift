@@ -16,17 +16,17 @@ struct ComponentCardView: View {
 
     var body: some View {
         VStack(spacing: 5) {
-            VStack {
-                VStack {
+            Group {
+                if let sym = component.symbol,
+                   !(sym.primitives.isEmpty && sym.pins.isEmpty) {
 
-                    Spacer()
-                    selectedView
-                    Spacer()
+                    SymbolThumbnail(symbol: sym, side: 100)
+
+                } else {
+                    Text("No symbol")
+                        .foregroundStyle(.secondary)
                 }
-                Spacer()
-                componentViewTypeSwitcher
             }
-            .padding(5)
             .frame(width: 110, height: 110)
             .background(.gray.opacity(0.1))
             .clipAndStroke(with: .rect(cornerRadius: 15))
@@ -38,85 +38,79 @@ struct ComponentCardView: View {
         }
     }
 
-    var selectedView: some View {
-        Group {
-            switch selectedViewType {
-            case .symbol:
-                if let primitives = component.symbol?.primitives, !primitives.isEmpty {
-                     Canvas { context, size in
-                         for primitive in primitives {
-                             // Convert the `primitive` to a `CGPath` and draw it on the canvas
-                             let path = primitive.makePath()
-                             let resolvedColor = primitive.color.color // Uses the color defined in the primitive
-
-                             if primitive.filled {
-                                 context.fill(
-                                     Path(path), // Wrap the CGPath in a SwiftUI-friendly Path
-                                     with: .color(resolvedColor)
-                                 )
-                             } else {
-                                 context.stroke(
-                                     Path(path),
-                                     with: .color(resolvedColor),
-                                     lineWidth: primitive.strokeWidth
-                                 )
-                             }
-                         }
-                     }
-                     .frame(width: 100, height: 100) // Adjust frame size for rendering
-                     .border(Color.gray, width: 1)
-                 } else {
-                     Text("No primitives available")
-                         .foregroundStyle(.secondary)
-                 }
-
-            case .footprint:
-                if component.footprints.isNotEmpty {
-                    Image(AppIcons.photoTriangleBadgeExclamationMark)
-                        .font(.largeTitle)
-                        .imageScale(.large)
-                        .foregroundStyle(.quaternary)
-                } else {
-                    Text("Footprint View")
-                }
-            }
-        }
-    }
-
-    var componentViewTypeSwitcher: some View {
-        HStack {
-            ForEach(ComponentViewType.allCases, id: \.self) { type in
-                Button {
-                    selectedViewType = type
-                } label: {
-                    Label(type.label, systemImage: type.icon)
-                        .foregroundStyle(selectedViewType == type ? .blue : .primary)
-                }
-                .disabled(!type.isAvailable(in: component))
-
-                if type != ComponentViewType.allCases.last {
-                    Spacer()
-                }
-            }
-        }
-        .padding(.horizontal)
-        .labelStyle(.iconOnly)
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity)
-    }
-
-    func realityView(_ name: String) -> some View {
-        RealityView { content in
-            if let model = try? await ModelEntity(named: name) {
-                content.add(model)
-                model.scale = .init(x: 30, y: 30, z: 30)
-            }
-        } placeholder: {
-            ProgressView()
-        }
-    }
 }
 
 #Preview {
     ComponentCardView(component: Component(name: "Pololu Distance Sensor"))
+}
+struct SymbolThumbnail: View {
+
+    let symbol: Symbol               // <── the real model
+    var side:  CGFloat = 100
+    private let padding: CGFloat = 0.9
+
+    var body: some View {
+        Canvas { context, size in
+            guard let xf = makeFittingTransform(for: size) else { return }
+
+            context.withCGContext { cg in
+                cg.saveGState()
+                cg.concatenate(xf)
+
+                // Primitives
+                for p in symbol.primitives {
+                    p.draw(in: cg, selected: false)
+                }
+
+                // Pins (no text → unreadable in 100 pt)
+                for pin in symbol.pins {
+                    pin.draw(in: cg,
+                             showText: false,
+                             highlight: false)
+                }
+                cg.restoreGState()
+            }
+        }
+        .frame(width: side, height: side)
+    }
+}
+
+// MARK: - Geometry helpers
+private extension SymbolThumbnail {
+
+    func makeFittingTransform(for size: CGSize) -> CGAffineTransform? {
+
+        // 1. collect bounds of everything
+        let boxes = symbol.primitives
+            .map { $0.makePath().boundingBoxOfPath }
+          + symbol.pins
+            .flatMap { $0.primitives }
+            .map { $0.makePath().boundingBoxOfPath }
+
+        guard let first = boxes.first else { return nil }
+
+        // 2. overall bounds
+        let bounds = boxes.dropFirst()
+                          .reduce(first, { $0.union($1) })
+
+        guard bounds.width > 0, bounds.height > 0 else { return nil }
+
+        // 3. aspect-preserving scale
+        let scale = padding * min(size.width  / bounds.width,
+                                  size.height / bounds.height)
+
+        // 4. resulting size after scale
+        let rendered = CGSize(width:  bounds.width  * scale,
+                              height: bounds.height * scale)
+
+        // 5. build transform: move → scale → centre
+        let moveToOrigin = CGAffineTransform(translationX: -bounds.minX,
+                                             y: -bounds.minY)
+        let scaleUp      = CGAffineTransform(scaleX: scale, y: scale)
+        let centre       = CGAffineTransform(
+                              translationX: (size.width  - rendered.width ) / 2,
+                              y:            (size.height - rendered.height) / 2)
+
+        return moveToOrigin.concatenating(scaleUp).concatenating(centre)
+    }
 }
