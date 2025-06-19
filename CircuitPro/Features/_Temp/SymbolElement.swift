@@ -53,6 +53,10 @@ struct SymbolElement: Identifiable {
 
         ctx.restoreGState()
     }
+    
+    var effectivePosition: CGPoint {
+        instance.position
+    }
 
     func systemHitTest(at point: CGPoint) -> Bool {
         let local = point.applying(transform.inverted())

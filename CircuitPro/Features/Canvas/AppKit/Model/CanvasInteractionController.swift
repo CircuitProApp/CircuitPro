@@ -169,18 +169,33 @@ final class CanvasInteractionController {
                 tentativeSelection = canvas.selectedIDs.subtracting([id])
                 if !shift {
                     for element in canvas.elements where canvas.selectedIDs.contains(element.id) {
-                        if let primitive = element.primitives.first {
-                            originalPositions[element.id] = primitive.position
+                        // Use the appropriate position for each element type
+                        let position: CGPoint
+                        if case .symbol(let symbol) = element {
+                            position = symbol.instance.position
+                        } else if let primitive = element.primitives.first {
+                            position = primitive.position
+                        } else {
+                            continue
                         }
+                        originalPositions[element.id] = position
                     }
                 }
             } else {
                 tentativeSelection = shift ? canvas.selectedIDs.union([id]) : [id]
             }
 
-            if let element = canvas.elements.first(where: { $0.id == id }),
-               let primitive = element.primitives.first {
-                originalPositions[id] = primitive.position
+            if let element = canvas.elements.first(where: { $0.id == id }) {
+                // Use the appropriate position for the hit element
+                let position: CGPoint
+                if case .symbol(let symbol) = element {
+                    position = symbol.instance.position
+                } else if let primitive = element.primitives.first {
+                    position = primitive.position
+                } else {
+                    return
+                }
+                originalPositions[id] = position
             }
         } else if !shift {
             tentativeSelection = []
@@ -225,10 +240,24 @@ final class CanvasInteractionController {
                 y: original.y + snappedDY
             )
 
-            let current = updated[i].primitives.first?.position ?? original
-            let delta = CGPoint(x: newPos.x - current.x, y: newPos.y - current.y)
-
-            updated[i].translate(by: delta)
+            // Set absolute position instead of translating by delta
+            switch updated[i] {
+            case .primitive(var p):
+                p.position = newPos
+                updated[i] = .primitive(p)
+                
+            case .pin(var p):
+                p.position = newPos
+                updated[i] = .pin(p)
+                
+            case .pad(var p):
+                p.position = newPos
+                updated[i] = .pad(p)
+                
+            case .symbol(var s):
+                s.instance.position = newPos
+                updated[i] = .symbol(s)
+            }
         }
 
         canvas.elements = updated
