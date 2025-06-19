@@ -62,10 +62,25 @@ final class CanvasInteractionController {
                 let snapped = CardinalRotation.closest(to: rawAngle)
                 pad.rotation = snapped
                 updated[index] = .pad(pad)
+
             case .symbol(var symbol):
                 let snapped = CardinalRotation.closest(to: rawAngle)
                 symbol.instance.rotation = snapped
                 updated[index] = .symbol(symbol)
+
+            case .connection(var c):
+                c.segments = c.segments.map { segment in
+                    let center = CGPoint(
+                        x: (segment.0.x + segment.1.x) / 2,
+                        y: (segment.0.y + segment.1.y) / 2
+                    )
+                    
+                    let transformedStart = rotatePoint(segment.0, around: center, by: rawAngle)
+                    let transformedEnd = rotatePoint(segment.1, around: center, by: rawAngle)
+                    
+                    return (transformedStart, transformedEnd)
+                }
+                updated[index] = .connection(c)
             }
         }
 
@@ -73,6 +88,17 @@ final class CanvasInteractionController {
         canvas.onUpdate?(updated)
         canvas.needsDisplay = true
     }
+
+    private func rotatePoint(_ point: CGPoint, around origin: CGPoint, by angle: CGFloat) -> CGPoint {
+        let translatedX = point.x - origin.x
+        let translatedY = point.y - origin.y
+
+        let rotatedX = translatedX * cos(angle) - translatedY * sin(angle)
+        let rotatedY = translatedX * sin(angle) + translatedY * cos(angle)
+
+        return CGPoint(x: rotatedX + origin.x, y: rotatedY + origin.y)
+    }
+
     func mouseDown(at loc: CGPoint, event: NSEvent) {
         if isRotatingViaMouse {
             isRotatingViaMouse = false
@@ -227,6 +253,7 @@ final class CanvasInteractionController {
         let rawDX = loc.x - origin.x
         let rawDY = loc.y - origin.y
 
+        // Only snap once
         let snappedDX = canvas.snapDelta(rawDX)
         let snappedDY = canvas.snapDelta(rawDY)
 
@@ -240,23 +267,36 @@ final class CanvasInteractionController {
                 y: original.y + snappedDY
             )
 
-            // Set absolute position instead of translating by delta
             switch updated[i] {
             case .primitive(var p):
                 p.position = newPos
                 updated[i] = .primitive(p)
-                
+
             case .pin(var p):
                 p.position = newPos
                 updated[i] = .pin(p)
-                
+
             case .pad(var p):
                 p.position = newPos
                 updated[i] = .pad(p)
-                
+
             case .symbol(var s):
                 s.instance.position = newPos
                 updated[i] = .symbol(s)
+
+            case .connection(var c):
+                c.segments = c.segments.map { segment in
+                    let newStart = CGPoint(
+                        x: segment.0.x + snappedDX,
+                        y: segment.0.y + snappedDY
+                    )
+                    let newEnd = CGPoint(
+                        x: segment.1.x + snappedDX,
+                        y: segment.1.y + snappedDY
+                    )
+                    return (newStart, newEnd)
+                }
+                updated[i] = .connection(c)
             }
         }
 

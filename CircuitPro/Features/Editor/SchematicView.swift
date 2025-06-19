@@ -33,7 +33,7 @@ struct SchematicView: View {
             }
 
             .overlay(alignment: .leading) {
-                SymbolDesignToolbarView()
+                SchematicToolbarView(selectedSchematicTool: $selectedTool)
                     .padding(16)
             }
 

@@ -12,7 +12,8 @@ enum CanvasElement: Identifiable, Hashable {
     case primitive(AnyPrimitive)
     case pin(Pin)
     case pad(Pad)
-    case symbol(SymbolElement)          // ← NEW
+    case symbol(SymbolElement)
+    case connection(ConnectionElement)
 
     // ─────────────────────────────────────────────── id
     var id: UUID {
@@ -21,6 +22,7 @@ enum CanvasElement: Identifiable, Hashable {
         case .pin      (let p): return p.id
         case .pad      (let p): return p.id
         case .symbol   (let s): return s.id
+        case .connection(let c): return c.id
         }
     }
 
@@ -31,6 +33,7 @@ enum CanvasElement: Identifiable, Hashable {
         case .pin      (let p): return p.primitives
         case .pad      (let p): return p.shapePrimitives + p.maskPrimitives
         case .symbol   (let s): return s.primitives
+        case .connection(let c): return c.primitives
         }
     }
 
@@ -48,6 +51,7 @@ enum CanvasElement: Identifiable, Hashable {
         case .pin      (let p): return "\(p)"
         case .pad      (let p): return "\(p)"
         case .symbol   (let s): return "SymbolElement(id: \(s.id))"
+        case .connection(let c): return "\(c.id)"
         }
     }
 
@@ -65,10 +69,20 @@ enum CanvasElement: Identifiable, Hashable {
     // ─────────────────────────────────────────────── draw
     func draw(in ctx: CGContext, selected: Bool) {
         switch self {
-        case .primitive(let p): p.draw(in: ctx, selected: selected)
-        case .pin      (let p): p.draw(in: ctx, showText: true, highlight: selected)
-        case .pad      (let p): p.draw(in: ctx, highlight: selected)
-        case .symbol   (let s): s.draw(in: ctx, selected: selected)
+        case .primitive(let p):
+            p.draw(in: ctx, selected: selected)
+            
+        case .pin(let p):
+            p.draw(in: ctx, showText: true, highlight: selected)
+            
+        case .pad(let p):
+            p.draw(in: ctx, highlight: selected)
+            
+        case .symbol(let s):
+            s.draw(in: ctx, selected: selected)
+            
+        case .connection(let c):
+            c.draw(in: ctx, selected: selected)
         }
     }
 
@@ -126,6 +140,14 @@ enum CanvasElement: Identifiable, Hashable {
         case .symbol(var s):
             s.translate(by: delta)
             self = .symbol(s)
+
+        case .connection(var c):
+            c.segments = c.segments.map { segment in
+                let newStart = CGPoint(x: segment.0.x + delta.x, y: segment.0.y + delta.y)
+                let newEnd = CGPoint(x: segment.1.x + delta.x, y: segment.1.y + delta.y)
+                return (newStart, newEnd)
+            }
+            self = .connection(c)
         }
     }
 }
