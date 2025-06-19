@@ -38,11 +38,6 @@ struct SymbolElement: Identifiable {
         ctx.saveGState()
         ctx.concatenate(transform)
 
-        // -- temporary visual aid, remove when no longer needed
-        ctx.setStrokeColor(NSColor.red.cgColor)
-        ctx.setLineWidth(0.5)
-        ctx.stroke(CGRect(x: -50, y: -50, width: 100, height: 100))
-
         // primitives need to know whether the symbol is selected
         symbol.primitives.forEach { $0.draw(in: ctx, selected: selected) }
 
