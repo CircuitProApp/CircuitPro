@@ -149,13 +149,16 @@ struct UtilityAreaView: View {
         Group {
             switch selectedTab {
             case .design:
-                VStack {
+               
                     ScrollView {
+                        VStack {
                         ForEach(projectManager.selectedDesign?.componentInstances ?? []) { componentInstance in
-                            Text(componentInstance.componentUUID.uuidString)
+                            Text(componentInstance.symbolInstance.symbolUUID.uuidString)
                         }
                     }
+                        .frame(maxWidth: .infinity)
                 }
+              
             case .appLibrary:
                 ComponentGridView(filteredComponents) { component in
                     ComponentCardView(component: component)

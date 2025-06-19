@@ -23,16 +23,17 @@ final class CanvasHitTestController {
     }
 
     func hitTest(at point: CGPoint) -> UUID? {
-        for (id, rect) in pinLabelRects where rect.contains(point) {
-            return id
-        }
-        for (id, rect) in pinNumberRects where rect.contains(point) {
-            return id
-        }
-        for element in canvas.elements.reversed()
-        where element.primitives.contains(where: { $0.systemHitTest(at: point) }) {
+        // 1. Text rectangles on pins have highest priority
+        for (id, rect) in pinLabelRects  where rect.contains(point) { return id }
+        for (id, rect) in pinNumberRects where rect.contains(point) { return id }
+
+        // 2. Defer to each element’s own hit-test logic
+        for element in canvas.elements.reversed()           // top-most first
+        where element.systemHitTest(at: point) {
             return element.id
         }
+
+        // 3. Nothing hit
         return nil
     }
 }

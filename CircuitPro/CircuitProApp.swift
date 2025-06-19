@@ -27,7 +27,7 @@ struct CircuitProApp: App {
                         CircuitProjectDocumentController.shared.openDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject]), onDialogPresented: { dismiss() })
                     }
                     WelcomeButton(iconName: AppIcons.plusApp, title: "Create New Component...") {
-                        openWindow(id: "componentDesignerWindow")
+                        openWindow(id: "ComponentDesignWindow")
                     }
                 },
                 onDrop: { url, dismiss in
@@ -44,10 +44,34 @@ struct CircuitProApp: App {
         }
         .environment(\.appManager, appManager)
         
-        WindowGroup(id: "componentDesignerWindow") {
+        Window("Component Design", id: "ComponentDesignWindow") {
             ComponentDesignView()
                 .modelContainer(ModelContainerManager.shared.container)
                 .environment(\.componentDesignManager, componentDesignManager)
+                .task {
+                    if let window = NSApp.findWindow("ComponentDesignWindow") {
+                        window.makeKeyAndOrderFront(nil)
+                        window.makeFirstResponder(window.contentView)
+                    }
+                }
         }
+    }
+}
+
+extension NSApplication {
+    func closeWindow(_ id: String) {
+        windows.first { $0.identifier?.rawValue == id }?.close()
+    }
+
+    func closeWindows(_ ids: [String]) {
+        ids.forEach { closeWindow($0) }
+    }
+
+    func findWindow(_ id: String) -> NSWindow? {
+        windows.first { $0.identifier?.rawValue == id }
+    }
+
+    var openSwiftUIWindowIDs: [String] {
+        windows.compactMap { $0.identifier?.rawValue }
     }
 }

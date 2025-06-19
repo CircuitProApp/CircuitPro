@@ -100,79 +100,43 @@ struct ComponentDesignView: View {
     }
 
     private func createComponent() {
-        let newComponent = Component(
-            name: componentDesignManager.componentName,
-            abbreviation: componentDesignManager.componentAbbreviation,
-            symbol: nil,
-            footprints: [],
-            category: componentDesignManager.selectedCategory,
-            package: componentDesignManager.selectedPackageType,
-            properties: componentDesignManager.componentProperties
-        )
-        let graphicPrimitives: [AnyPrimitive] = componentDesignManager.symbolElements.compactMap {
-            if case .primitive(let prim) = $0 { return prim }
-            return nil
-        }
-        let newComponentSymbol = Symbol(
-            name: componentDesignManager.componentName,
-            component: newComponent,
-            primitives: graphicPrimitives,
-            pins: componentDesignManager.pins
-        )
-        newComponent.symbol = newComponentSymbol
-        modelContext.insert(newComponent)
-        print("Inserted new component: \(newComponent)")
-    }
-}
 
-private struct StageContentView<Left: View, Center: View, Right: View>: View {
-    let left: Left
-    let center: Center
-    let right: Right
-    let width: CGFloat
-    let height: CGFloat
-    let sidebarWidth: CGFloat
-    init(
-        width: CGFloat = 800,
-        height: CGFloat = 500,
-        sidebarWidth: CGFloat = 325,
-        @ViewBuilder left: () -> Left,
-        @ViewBuilder center: () -> Center,
-        @ViewBuilder right: () -> Right
-    ) {
-        self.left = left()
-        self.center = center()
-        self.right = right()
-        self.width = width
-        self.height = height
-        self.sidebarWidth = sidebarWidth
-    }
-    var body: some View {
-        HStack(spacing: 0) {
-            left.frame(width: sidebarWidth, height: height)
-                .zIndex(0)
-            center.frame(width: width, height: height)
-                .zIndex(1)
-            right.frame(width: sidebarWidth, height: height)
-                .zIndex(0)
-        }
-    }
-}
+        // 0. Pick the anchor (see above)
+        let anchor = CGPoint(x: 2_500, y: 2_500)
 
-struct StageSidebarView<Header: View, Content: View>: View {
-    @ViewBuilder let header: Header
-    @ViewBuilder let content: Content
-    var body: some View {
-        VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 10) {
-                header
+        // 1. Collect primitives & pins from the designer UI
+        let rawPrimitives: [AnyPrimitive] =
+            componentDesignManager.symbolElements.compactMap {
+                if case .primitive(let p) = $0 { return p }
+                return nil
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .border(edge: .bottom, style: .gray.opacity(0.3))
-            content
-        }
-        .frame(maxHeight: .infinity)
-        .clipAndStroke(with: RoundedRectangle(cornerRadius: 15))
+        let rawPins = componentDesignManager.pins
+
+        // 2. Move them into symbol-local coordinates
+        let primitives = rawPrimitives.map { $0.shifted(by: anchor) }
+        let pins       = rawPins      .map { $0.shifted(by: anchor) }
+
+        // 3. Build component & symbol
+        let newComponent = Component(
+            name       : componentDesignManager.componentName,
+            abbreviation: componentDesignManager.componentAbbreviation,
+            symbol     : nil,
+            footprints : [],
+            category   : componentDesignManager.selectedCategory,
+            package    : componentDesignManager.selectedPackageType,
+            properties : componentDesignManager.componentProperties
+        )
+
+        let newSymbol = Symbol(
+            name      : componentDesignManager.componentName,
+            component : newComponent,
+            primitives: primitives,
+            pins      : pins
+        )
+
+        newComponent.symbol = newSymbol
+        modelContext.insert(newComponent)
+        print("Inserted component: \(newComponent.name) with normalised symbol")
     }
+
 }

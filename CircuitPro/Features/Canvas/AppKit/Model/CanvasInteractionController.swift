@@ -62,6 +62,10 @@ final class CanvasInteractionController {
                 let snapped = CardinalRotation.closest(to: rawAngle)
                 pad.rotation = snapped
                 updated[index] = .pad(pad)
+            case .symbol(var symbol):
+                let snapped = CardinalRotation.closest(to: rawAngle)
+                symbol.instance.rotation = snapped
+                updated[index] = .symbol(symbol)
             }
         }
 

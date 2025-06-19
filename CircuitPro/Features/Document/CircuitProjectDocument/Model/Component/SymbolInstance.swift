@@ -15,9 +15,9 @@ final class SymbolInstance: Identifiable, Codable {
 
     var symbolUUID: UUID
     var position: CGPoint
-    var rotation: CGFloat
+    var rotation: CardinalRotation = .deg0
 
-    init(id: UUID = UUID(), symbolUUID: UUID, position: CGPoint, rotation: CGFloat = 0) {
+    init(id: UUID = UUID(), symbolUUID: UUID, position: CGPoint, rotation: CardinalRotation = .deg0) {
         self.id = id
         self.symbolUUID = symbolUUID
         self.position = position
