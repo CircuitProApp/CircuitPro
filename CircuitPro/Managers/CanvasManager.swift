@@ -13,7 +13,9 @@ final class CanvasManager {
 
     var magnification: CGFloat = 1
     var gridSpacing: GridSpacing = .mm1
-    var scrollOrigin: CGPoint = .zero 
+    var scrollOrigin: CGPoint = .zero
+    
+    var paperSize: PaperSize = .a5
 
     var mouseLocation: CGPoint = CGPoint(x: 2500, y: 2500)
 

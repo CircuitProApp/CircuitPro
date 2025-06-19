@@ -374,16 +374,16 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/CodeEditApp/AboutWindow";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
 			};
 		};
 		5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/CodeEditApp/CodeEditWelcomeWindow";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

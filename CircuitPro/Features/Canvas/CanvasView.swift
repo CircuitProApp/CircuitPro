@@ -1,149 +1,215 @@
 import SwiftUI
+import AppKit
 
 struct CanvasView: NSViewRepresentable {
 
+    // MARK: – Bindings coming from the document
     @Bindable var manager: CanvasManager
-    @Binding var elements: [CanvasElement]
-    @Binding var selectedIDs: Set<UUID>
-    @Binding var selectedTool: AnyCanvasTool
-    @Binding var selectedLayer: LayerKind?
-    @Binding var layerAssignments: [UUID: LayerKind]
+    @Binding var elements:          [CanvasElement]
+    @Binding var selectedIDs:       Set<UUID>
+    @Binding var selectedTool:      AnyCanvasTool
+    @Binding var selectedLayer:     LayerKind?
+    @Binding var layerAssignments:  [UUID: LayerKind]
 
+    // MARK: – Coordinator holding the App-Kit subviews
     final class Coordinator {
-        let canvas: CoreGraphicsCanvasView
-        let background: BackgroundView
-        let crosshairs: CrosshairsView
-        let marquee   : MarqueeView
-
-        init() {
-            self.canvas = CoreGraphicsCanvasView()
-            self.background = BackgroundView()
-            self.crosshairs = CrosshairsView()
-            self.marquee = MarqueeView()
-        }
+        let background = BackgroundView()
+        let sheet      = DrawingSheetView()            // ← NEW
+        let canvas     = CoreGraphicsCanvasView()
+        let crosshairs = CrosshairsView()
+        let marquee    = MarqueeView()
     }
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
+    // MARK: – Building the hierarchy
     func makeNSView(context: Context) -> NSScrollView {
-        let boardSize: CGFloat = 5000
+
+        let boardSize: CGFloat = 5_000
         let boardRect = NSRect(x: 0, y: 0, width: boardSize, height: boardSize)
 
-        let background = context.coordinator.background
-        let canvas = context.coordinator.canvas
-        let crosshairs = context.coordinator.crosshairs
-        let marquee = context.coordinator.marquee
+        let c = context.coordinator
 
-        canvas.crosshairsView = crosshairs
-        canvas.marqueeView    = marquee
+        //----------------------------------------------------------------------
+        // 1. Paper dimensions in internal units – one line now
+        //----------------------------------------------------------------------
+        // 1.  Paper size in internal units
+        let paperSize = manager.paperSize
+            .canvasSize(scale: 10, orientation: .landscape)   // ← landscape here
 
-        background.frame = boardRect
-        canvas.frame = boardRect
-        crosshairs.frame = boardRect
-        marquee.frame = boardRect
-        
+        //----------------------------------------------------------------------
+        // 2. Frame assignments (unchanged except for c.sheet.frame)
+        //----------------------------------------------------------------------
+        c.background.frame  = boardRect
+        c.canvas.frame      = boardRect
+        c.crosshairs.frame  = boardRect
+        c.marquee.frame     = boardRect
 
-        background.currentStyle = manager.backgroundStyle
+        // MARK: – choose where the sheet’s *top-left* must be
+        let desiredTopLeft = NSPoint(x: 2_500, y: 2_500)          // what you asked for
 
-        canvas.elements = elements
-        canvas.selectedIDs = selectedIDs
-        canvas.selectedTool = selectedTool
-        canvas.magnification = manager.magnification
-        canvas.onUpdate = { self.elements = $0 }
-        canvas.onSelectionChange = { self.selectedIDs = $0 }
+        // convert that into a bottom-left origin, because App Kit measures from the bottom
+        let sheetOrigin = NSPoint(
+            x: desiredTopLeft.x,
+            y: desiredTopLeft.y - paperSize.height                // subtract height to get the bottom-left
+        )
 
+        // finally set the frame
+        c.sheet.frame = NSRect(origin: sheetOrigin, size: paperSize)
+        c.sheet.orientation = .landscape                      // ← tell the view
+        c.sheet.autoresizingMask = []
+
+        [c.background, c.canvas, c.crosshairs, c.marquee].forEach {
+            $0.autoresizingMask = [.width, .height]
+        }
+
+        // -----------------------------------------------------------------------------
+        // 3.  Everything below is unchanged …
+        // -----------------------------------------------------------------------------
+        c.background.currentStyle = manager.backgroundStyle
+
+        c.canvas.crosshairsView  = c.crosshairs
+        c.canvas.marqueeView     = c.marquee
+        c.canvas.elements        = elements
+        c.canvas.selectedIDs     = selectedIDs
+        c.canvas.selectedTool    = selectedTool
+        c.canvas.magnification   = manager.magnification
+        c.canvas.onUpdate        = { self.elements = $0 }
+        c.canvas.onSelectionChange = { self.selectedIDs = $0 }
+
+        // Drawing sheet initialisation
+        c.sheet.sheetSize    = .a4
+        c.sheet.cellValues   = [
+            "Title":   "Test Layout/Sheet",
+            "Project": "ProjectName",
+            "Units":   "mm",
+            "Size":    PaperSize.a4.name.uppercased()
+        ]
+
+        // Z-stack container
         let container = NSView(frame: boardRect)
         container.wantsLayer = true
 
-        background.autoresizingMask = [.width, .height]
-        canvas.autoresizingMask = [.width, .height]
-        crosshairs.autoresizingMask = [.width, .height]
-        marquee.autoresizingMask    = [.width, .height]
+        container.addSubview(c.background)
+        container.addSubview(c.sheet,      positioned: .above,  relativeTo: c.background)
+        container.addSubview(c.canvas,     positioned: .above,  relativeTo: c.sheet)
+        container.addSubview(c.crosshairs, positioned: .above,  relativeTo: c.canvas)
+        container.addSubview(c.marquee,    positioned: .above,  relativeTo: c.canvas)
 
-        container.addSubview(background)
-        container.addSubview(canvas)
-        container.addSubview(crosshairs)
-        container.addSubview(marquee, positioned: .above, relativeTo: canvas)
-
+        // Scroll view scaffolding
         let scrollView = NSScrollView()
-        scrollView.documentView = container
-        scrollView.hasHorizontalScroller = true
-        scrollView.hasVerticalScroller = true
-        scrollView.allowsMagnification = true
-        scrollView.minMagnification = ZoomStep.minZoom
-        scrollView.maxMagnification = ZoomStep.maxZoom
-        scrollView.magnification = manager.magnification
+        scrollView.documentView            = container
+        scrollView.hasHorizontalScroller   = true
+        scrollView.hasVerticalScroller     = true
+        scrollView.allowsMagnification     = true
+        scrollView.minMagnification        = ZoomStep.minZoom
+        scrollView.maxMagnification        = ZoomStep.maxZoom
+        scrollView.magnification           = manager.magnification
 
-        centerScrollView(scrollView, container: container)
+        centerScrollView(on: c.sheet, in: scrollView)
 
         scrollView.postsBoundsChangedNotifications = true
-
+        
         NotificationCenter.default.addObserver(
             forName: NSView.boundsDidChangeNotification,
             object: scrollView.contentView,
             queue: .main
         ) { _ in
             self.manager.magnification = scrollView.magnification
-            self.manager.scrollOrigin  = scrollView.contentView.bounds.origin   // <─ NEW
+            self.manager.scrollOrigin  = scrollView.contentView.bounds.origin
         }
 
         return scrollView
     }
 
+    // MARK: – Propagate state changes
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        let canvas = context.coordinator.canvas
-        let background = context.coordinator.background
-        let crosshairs = context.coordinator.crosshairs
-        let marquee = context.coordinator.marquee
 
-        canvas.elements = elements
-        canvas.selectedIDs = selectedIDs
-        canvas.selectedTool = selectedTool
-        canvas.magnification = manager.magnification
-        canvas.isSnappingEnabled = manager.enableSnapping  // 🔄 Snap toggle here!
-        canvas.snapGridSize = manager.gridSpacing.rawValue * 10.0
-        canvas.selectedLayer = selectedLayer ?? .copper
+        let c = context.coordinator
 
-        canvas.onPrimitiveAdded = { id, layer in
-            self.layerAssignments[id] = layer
+        // Canvas
+        c.canvas.elements          = elements
+        c.canvas.selectedIDs       = selectedIDs
+        c.canvas.selectedTool      = selectedTool
+        c.canvas.magnification     = manager.magnification
+        c.canvas.isSnappingEnabled = manager.enableSnapping
+        c.canvas.snapGridSize      = manager.gridSpacing.rawValue * 10.0
+        c.canvas.selectedLayer     = selectedLayer ?? .copper
+        c.canvas.onPrimitiveAdded  = { id, layer in self.layerAssignments[id] = layer }
+        c.canvas.onMouseMoved      = { p in self.manager.mouseLocation = p }
+
+        // Background
+        if c.background.currentStyle != manager.backgroundStyle {
+            c.background.currentStyle = manager.backgroundStyle
         }
+        c.background.showAxes      = manager.enableAxesBackground
+        c.background.magnification = manager.magnification
+        c.background.gridSpacing   = manager.gridSpacing.rawValue * 10.0
+
+        // Cross-hairs & marquee
+        c.crosshairs.magnification = manager.magnification
+        c.crosshairs.crosshairsStyle = manager.crosshairsStyle
+        c.marquee.magnification    = manager.magnification
+
+        // Drawing sheet
+        c.sheet.sheetSize   = manager.paperSize
+        c.sheet.orientation = .landscape
+        c.sheet.cellValues["Size"] = manager.paperSize.name.uppercased()
         
-        canvas.onMouseMoved = { point in
-            self.manager.mouseLocation = point
+        let newPaperSize = manager.paperSize
+                            .canvasSize(scale: 10, orientation: .landscape)
+        if c.sheet.frame.size != newPaperSize {
+            c.sheet.frame.size = newPaperSize
         }
-
-
-        crosshairs.magnification = manager.magnification
-        crosshairs.crosshairsStyle = manager.crosshairsStyle
-
+        // Sync external zoom changes
         if scrollView.magnification != manager.magnification {
             scrollView.magnification = manager.magnification
         }
+    }
 
-        if background.currentStyle != manager.backgroundStyle {
-            background.currentStyle = manager.backgroundStyle
-        }
-
-        background.showAxes = manager.enableAxesBackground
-        background.magnification = manager.magnification
-        background.gridSpacing = manager.gridSpacing.rawValue * 10.0
-        
-        marquee.magnification = manager.magnification
+    // MARK: – Helpers
+    private func colorForScheme(_ scheme: ColorScheme) -> NSColor {
+        scheme == .dark ? .white : .black
     }
 
     private func centerScrollView(_ scrollView: NSScrollView, container: NSView) {
         DispatchQueue.main.async {
-            let clipSize = scrollView.contentView.bounds.size
-            let docSize = container.frame.size
-            let centeredOrigin = NSPoint(
-                x: (docSize.width - clipSize.width) / 2,
-                y: (docSize.height - clipSize.height) / 2
+            let clip = scrollView.contentView.bounds.size
+            let doc  = container.frame.size
+            let origin = NSPoint(
+                x: (doc.width  - clip.width)  * 0.5,
+                y: (doc.height - clip.height) * 0.5
             )
-            scrollView.contentView.scroll(to: centeredOrigin)
+            scrollView.contentView.scroll(to: origin)
+            scrollView.reflectScrolledClipView(scrollView.contentView)
+        }
+    }
+    
+    /// Centres the scroll view on the drawing sheet instead of on the board.
+    private func centerScrollView(on sheet: NSView,
+                                  in scrollView: NSScrollView) {
+        DispatchQueue.main.async {
+            let clipSize    = scrollView.contentView.bounds.size
+            let sheetFrame  = sheet.frame                 // in container coords
+
+            // Mid-point of the sheet.
+            let sheetCenter = NSPoint(x: sheetFrame.midX,
+                                      y: sheetFrame.midY)
+
+            // Clip origin that would place the sheet centre at the clip centre.
+            var origin = NSPoint(x: sheetCenter.x - clipSize.width  * 0.5,
+                                 y: sheetCenter.y - clipSize.height * 0.5)
+
+            // Clamp so we never scroll beyond the container’s bounds.
+            if let container = scrollView.documentView {
+                let maxX = container.frame.maxX - clipSize.width
+                let maxY = container.frame.maxY - clipSize.height
+                origin.x = max(0, min(origin.x, maxX))
+                origin.y = max(0, min(origin.y, maxY))
+            }
+
+            scrollView.contentView.scroll(to: origin)
             scrollView.reflectScrolledClipView(scrollView.contentView)
         }
     }
 }
-

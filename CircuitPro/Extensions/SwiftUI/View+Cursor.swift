@@ -1,9 +1,10 @@
 //
 //  View+Cursor.swift
-//  CodeEditWelcomeWindow
+//  Circuit Pro
 //
 //  Created by Giorgi Tchelidze on 25.05.25.
 //
+
 import SwiftUI
 
 extension View {

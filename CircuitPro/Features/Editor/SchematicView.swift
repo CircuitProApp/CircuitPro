@@ -31,6 +31,7 @@ struct SchematicView: View {
                 addComponents(dropped, atClipPoint: loc)
                 return !dropped.isEmpty
             }
+        
 
             .overlay(alignment: .leading) {
                 SchematicToolbarView(selectedSchematicTool: $selectedTool)
@@ -96,11 +97,7 @@ struct SchematicView: View {
                                      instance: inst.symbolInstance,
                                      symbol:   libSym)
             return .symbol(elem)
-        }
-        for element in canvasElements {
-            print(element.primitives)
-        }
-      
+        }      
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -117,6 +114,7 @@ struct SchematicView: View {
                 compInsts[idx].symbolInstance.rotation  = symEl.instance.rotation
             }
         }
+        document.updateChangeCount(.changeDone)
     }
 
     // ════════════════════════════════════════════════════════════════════

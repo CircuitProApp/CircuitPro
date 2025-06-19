@@ -1,120 +1,208 @@
-import SwiftUI
+//
+//  DrawingSheetView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 19.06.25.
+//
 
-struct DrawingSheetView: View {
+import AppKit
 
-    @Environment(\.projectManager)
-    private var projectManager
-    @Environment(\.colorScheme)
-    private var colorScheme
+// MARK: - DrawingSheetView ---------------------------------------------------
+final class DrawingSheetView: NSView {
 
-    @State private var sheetSize: PaperSize = .a4
+    // Public knobs -----------------------------------------------------------
+    var sheetSize:    PaperSize = .a4      { didSet { invalidate() } }
+    var orientation:    PaperOrientation = .portrait { didSet { invalidate() } }
+    
+    private let graphicColor: NSColor = NSColor(name: nil) { appearance in
+        if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+            return .white
+        } else {
+            return .black
+        }
+    }
+    
+    var cellValues: [String: String] = [
+        "Title": "Untitled",
+        "Units": "mm",
+        "Size":  PaperSize.a4.name.uppercased()
+    ]                                      { didSet { invalidate() } }
 
-    var graphicColor: Color {
-        colorScheme == .dark ? .white : .black
+    // Constants --------------------------------------------------------------
+    private let inset:       CGFloat = 15
+    private let tickSpacing: CGFloat = 100
+    private let cellHeight:  CGFloat = 25
+    private let cellPad:     CGFloat = 10
+    private let unitsPerMM:  CGFloat = 10    // <── 10 canvas units == 1 mm
+
+    // House-keeping ----------------------------------------------------------
+    override var isFlipped: Bool { true }
+    private func invalidate()    { needsDisplay = true }
+
+    // Convenience ------------------------------------------------------------
+    private func safeFont(size: CGFloat, weight: NSFont.Weight) -> NSFont {
+        NSFont.monospacedSystemFont(ofSize: size, weight: weight)
+        ?? NSFont.systemFont(ofSize: size, weight: weight)
     }
 
-    private let inset: CGFloat = 15
-
-    var body: some View {
-        Canvas { context, size in
-            // Outer rectangle covering the entire canvas.
-            let outerRect = CGRect(origin: .zero, size: size)
-            context.stroke(Path(outerRect), with: .color(graphicColor), lineWidth: 1)
-
-            // Inner rectangle inset from the outer border.
-            let insetMargin: CGFloat = inset  // Adjust as needed.
-            let innerRect = outerRect.insetBy(dx: insetMargin, dy: insetMargin)
-            context.stroke(Path(innerRect), with: .color(graphicColor), lineWidth: 1)
-
-            // Parameters for tick marks.
-            let tickSpacing: CGFloat = 100.0
-
-            // --- TOP EDGE ---
-            // Create an array of x positions along the top edge from innerRect.minX to innerRect.maxX.
-            let topTickPositions = stride(from: innerRect.minX, through: innerRect.maxX, by: tickSpacing).map { $0 }
-
-            // Draw the tick marks along the top edge (ticks extend upward toward the outer rectangle).
-            for tickX in topTickPositions {
-                var tickPath = Path()
-                tickPath.move(to: CGPoint(x: tickX, y: innerRect.minY))
-                tickPath.addLine(to: CGPoint(x: tickX, y: outerRect.minY))
-                context.stroke(tickPath, with: .color(graphicColor), lineWidth: 1)
-            }
-
-            // For each consecutive pair, draw the label centered in the gap.
-            for i in 0..<topTickPositions.count - 1 {
-                let midX = (topTickPositions[i] + topTickPositions[i+1]) / 2
-                // Center the label vertically within the sliver (between outer and inner top edges).
-                let midY = (innerRect.minY + outerRect.minY) / 2
-                let labelPos = CGPoint(x: midX, y: midY)
-                let label = Text("\(i + 1)")
-                    .font(.caption2)
-                    .foregroundColor(graphicColor)
-                context.draw(label, at: labelPos)
-            }
-
-            // --- LEFT EDGE ---
-            // Create an array of y positions along the left edge from innerRect.minY to innerRect.maxY.
-            let leftTickPositions = stride(from: innerRect.minY, through: innerRect.maxY, by: tickSpacing).map { $0 }
-
-            // Draw the tick marks along the left edge (ticks extend leftward toward the outer rectangle).
-            for tickY in leftTickPositions {
-                var tickPath = Path()
-                tickPath.move(to: CGPoint(x: innerRect.minX, y: tickY))
-                tickPath.addLine(to: CGPoint(x: outerRect.minX, y: tickY))
-                context.stroke(tickPath, with: .color(graphicColor), lineWidth: 1)
-            }
-
-            // For each consecutive pair, draw the label centered in the gap.
-            for i in 0..<leftTickPositions.count - 1 {
-                let midY = (leftTickPositions[i] + leftTickPositions[i+1]) / 2
-                // Center the label horizontally within the sliver (between outer and inner left edges).
-                let midX = (innerRect.minX + outerRect.minX) / 2
-                let labelPos = CGPoint(x: midX, y: midY)
-                let label = Text("\(i + 1)")
-                    .font(.caption2)
-                    .foregroundColor(graphicColor)
-                context.draw(label, at: labelPos)
-            }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            HStack(spacing: 0) {
-                // Overlay cell views.
-                cellView(cellTitle: "Title", text: "Test Layout/Sheet")
-//                cellView(cellTitle: "Project", text: projectManager.project?.name ?? "N/A")
-//                cellView(
-//                    cellTitle: "Last Updated",
-//                    text: projectManager.selectedDesign?.timestamps.dateModified.formatted() ?? "N/A"
-//                )
-                cellView(cellTitle: "Units", text: "mm")
-                cellView(cellTitle: "Size", text: sheetSize.name.uppercased())
-            }
-            .padding(inset)
-            .foregroundStyle(graphicColor)
-        }
-        .frame(width: sheetSize.dimensions.height * 4, height: sheetSize.dimensions.width * 4)
-        .border(graphicColor)
-
+    private func attrs(font: NSFont) -> [NSAttributedString.Key: Any] {
+        [.font: font, .foregroundColor: graphicColor]
     }
 
-    private func cellView(cellTitle: String, text: String) -> some View {
-        VStack(alignment: .leading) {
-            Text(cellTitle)
-                .textCase(.uppercase)
-                .font(.caption2)
-                .fontDesign(.monospaced)
-            Text(text)
-                .font(.body)
-                .fontDesign(.monospaced)
-        }
-        .frame(maxWidth: .infinity, minHeight: 25, alignment: .leading)
-        .padding(10)
-        .overlay(
-            Rectangle().stroke(graphicColor, lineWidth: 1)
-        )
-    }
-}
+    // MARK: Drawing ----------------------------------------------------------
+    override func draw(_ dirtyRect: NSRect) {
 
-#Preview {
-    DrawingSheetView()
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        ctx.setStrokeColor(graphicColor.cgColor)
+        ctx.setLineWidth(1)
+
+        // ------------------------------------------------------------------
+        // 1. Sheet border (full paper size)
+        // ------------------------------------------------------------------
+        let outer = bounds
+        ctx.stroke(outer)
+
+        // ------------------------------------------------------------------
+        // 2. Margin outline 85 units inside the sheet
+        // ------------------------------------------------------------------
+        let marginRect = outer.insetBy(dx: 100 - inset, dy: 100 - inset)
+        ctx.stroke(marginRect)
+
+        // ------------------------------------------------------------------
+        // 3. Title-block (or content) outline inside the margin
+        // ------------------------------------------------------------------
+        let inner = marginRect.insetBy(dx: inset, dy: inset)
+        ctx.stroke(inner)
+
+        // ------------------------------------------------------------------
+        // 4. Rulers and title block use the updated rectangles
+        // ------------------------------------------------------------------
+        drawHorizontalRuler(ctx, inner: inner, outer: marginRect, isTop: true)
+        drawHorizontalRuler(ctx, inner: inner, outer: marginRect, isTop: false)
+        drawVerticalRuler  (ctx, inner: inner, outer: marginRect, isLeft: true)
+        drawVerticalRuler  (ctx, inner: inner, outer: marginRect, isLeft: false)
+
+        drawTitleBlock(ctx, inner: inner)
+    }
+    
+    private func labelForIndex(_ idx: Int, isNumber: Bool) -> String {
+        if isNumber { return "\(idx + 1)" }
+
+        // Spreadsheet-style lettering: A, B, …, Z, AA, AB, …
+        var n = idx
+        var s = ""
+        repeat {
+            let rem = n % 26
+            s = String(UnicodeScalar(65 + rem)!) + s
+            n = n / 26 - 1
+        } while n >= 0
+        return s
+    }
+
+    private func drawHorizontalRuler(_ ctx: CGContext,
+                                     inner: CGRect,
+                                     outer: CGRect,
+                                     isTop: Bool) {
+
+        let font = safeFont(size: 9, weight: .regular)
+        let attr = attrs(font: font)
+
+        let yTick = isTop ? inner.minY : inner.maxY
+        let yLabel = isTop
+            ? (inner.minY + outer.minY) * 0.5
+            : (inner.maxY + outer.maxY) * 0.5
+
+        for (i, x) in stride(from: inner.minX, through: inner.maxX, by: tickSpacing).enumerated() {
+
+            ctx.move(to: .init(x: x, y: yTick))
+            ctx.addLine(to: .init(x: x, y: isTop ? outer.minY : outer.maxY))
+            ctx.strokePath()
+
+            let nextX = min(x + tickSpacing, inner.maxX)
+            let mid   = (x + nextX) * 0.5
+
+            let text  = labelForIndex(i, isNumber: true) as NSString
+            let size  = text.size(withAttributes: attr)
+            text.draw(at: .init(x: mid - size.width * 0.5,
+                                y: yLabel - size.height * 0.5),
+                      withAttributes: attr)
+        }
+    }
+
+    // MARK: – Vertical edges (letters)
+    private func drawVerticalRuler(_ ctx: CGContext,
+                                   inner: CGRect,
+                                   outer: CGRect,
+                                   isLeft: Bool) {
+
+        let font = safeFont(size: 9, weight: .regular)
+        let attr = attrs(font: font)
+
+        let xTick = isLeft ? inner.minX : inner.maxX
+        let xLabel = isLeft
+            ? (inner.minX + outer.minX) * 0.5
+            : (inner.maxX + outer.maxX) * 0.5
+
+        for (i, y) in stride(from: inner.minY, through: inner.maxY, by: tickSpacing).enumerated() {
+
+            ctx.move(to: .init(x: xTick, y: y))
+            ctx.addLine(to: .init(x: isLeft ? outer.minX : outer.maxX, y: y))
+            ctx.strokePath()
+
+            let nextY = min(y + tickSpacing, inner.maxY)
+            let mid   = (y + nextY) * 0.5
+
+            let text  = labelForIndex(i, isNumber: false) as NSString
+            let size  = text.size(withAttributes: attr)
+            text.draw(at: .init(x: xLabel - size.width * 0.5,
+                                y: mid - size.height * 0.5),
+                      withAttributes: attr)
+        }
+    }
+
+    private func drawTitleBlock(_ ctx: CGContext, inner: CGRect) {
+
+        let rows        = cellValues.count
+        let blockWidth  = cellHeight * 8
+        let blockHeight = CGFloat(rows) * cellHeight
+        let rect        = CGRect(x: inner.maxX - blockWidth,
+                                 y: inner.maxY - blockHeight,
+                                 width: blockWidth,
+                                 height: blockHeight)
+
+        ctx.stroke(rect)
+
+        for r in 1..<rows {
+            let y = rect.minY + CGFloat(r) * cellHeight
+            ctx.move(to: .init(x: rect.minX, y: y))
+            ctx.addLine(to: .init(x: rect.maxX, y: y))
+            ctx.strokePath()
+        }
+
+        let keyFont   = safeFont(size: 8,  weight: .semibold)
+        let valFont   = safeFont(size: 11, weight: .regular)
+        let keyAttr   = attrs(font: keyFont)
+        let valueAttr = attrs(font: valFont)
+
+        for (row, kv) in cellValues.enumerated() {
+            let y = rect.minY + CGFloat(row) * cellHeight
+            let cell = CGRect(x: rect.minX, y: y, width: blockWidth, height: cellHeight)
+                         .insetBy(dx: cellPad, dy: 0)
+
+            (kv.key.uppercased() as NSString)
+                .draw(at: CGPoint(x: cell.minX, y: cell.minY + 2), withAttributes: keyAttr)
+
+            let value = kv.value as NSString
+            let sz    = value.size(withAttributes: valueAttr)
+            value.draw(at: CGPoint(x: cell.maxX - sz.width,
+                                   y: cell.minY + (cell.height - sz.height) * 0.5),
+                       withAttributes: valueAttr)
+        }
+    }
+
+    // MARK: Intrinsic size (10 units == 1 mm)
+    // replaces the old intrinsicContentSize
+    override var intrinsicContentSize: NSSize {
+        sheetSize.canvasSize(scale: 10, orientation: orientation)      // 10 canvas units = 1 mm
+    }
 }
