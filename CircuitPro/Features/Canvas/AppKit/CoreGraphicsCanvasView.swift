@@ -22,6 +22,16 @@ final class CoreGraphicsCanvasView: NSView {
     var onSelectionChange: ((Set<UUID>) -> Void)?
     var onPrimitiveAdded: ((UUID, LayerKind) -> Void)?
     var onMouseMoved: ((CGPoint) -> Void)?
+    
+    private(set) var hoveredPinID: UUID? {
+        didSet {
+            if hoveredPinID != oldValue {
+                // let anyone interested know that the hover target changed
+                onPinHoverChange?(hoveredPinID)
+            }
+        }
+    }
+    var onPinHoverChange: ((UUID?) -> Void)?
 
 
     // MARK: Private Controllers
@@ -52,9 +62,13 @@ final class CoreGraphicsCanvasView: NSView {
 
     override func mouseMoved(with event: NSEvent) {
         let location = convert(event.locationInWindow, from: nil)
-        crosshairsView?.location = snap(location)
-        
-        onMouseMoved?(snap(location))
+        let snapped  = snap(location)
+
+        crosshairsView?.location = snapped
+        onMouseMoved?(snapped)
+
+        // NEW ─ figure out whether the mouse sits on a pin
+        hoveredPinID = hitRects.pin(at: location)?.id
 
         if interaction.isRotating {
             interaction.updateRotation(to: location)

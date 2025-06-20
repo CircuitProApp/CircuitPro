@@ -46,7 +46,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         guard let s = start else { return }
 
         ctx.saveGState()
-        ctx.setStrokeColor(NSColor.blue.cgColor)
+        ctx.setStrokeColor(NSColor(.blue).cgColor)
         ctx.setLineWidth(1)
         ctx.setLineDash(phase: 0, lengths: [4])
 

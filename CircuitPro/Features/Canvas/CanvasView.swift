@@ -137,6 +137,12 @@ struct CanvasView: NSViewRepresentable {
         c.canvas.selectedLayer     = selectedLayer ?? .copper
         c.canvas.onPrimitiveAdded  = { id, layer in self.layerAssignments[id] = layer }
         c.canvas.onMouseMoved      = { p in self.manager.mouseLocation = p }
+        
+        c.canvas.onPinHoverChange = { id in
+            if let id = id {
+                print("Hovering pin \(id)")
+            }
+        }
 
         // Background
         if c.background.currentStyle != manager.backgroundStyle {
