@@ -1,7 +1,7 @@
 import AppKit
 
 struct RectanglePrimitive: GraphicPrimitive {
-    let uuid: UUID
+    let id: UUID
     var position: CGPoint
     var size: CGSize
     var rotation: CGFloat

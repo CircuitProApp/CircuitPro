@@ -21,7 +21,7 @@ extension Pad {
         switch shape {
         case let .rect(width, height):
             let rect = RectanglePrimitive(
-                uuid: UUID(),
+                id: UUID(),
                 position: position,
                 size: CGSize(width: width, height: height),
                 rotation: rotation.radians,
@@ -32,7 +32,7 @@ extension Pad {
             return [.rectangle(rect)]
         case .circle(let radius):
             let circle = CirclePrimitive(
-                uuid: UUID(),
+                id: UUID(),
                 position: position,
                 radius: radius,
                 rotation: rotation.radians,
@@ -47,7 +47,7 @@ extension Pad {
     var maskPrimitives: [AnyPrimitive] {
         guard type == .throughHole, let drill = drillDiameter else { return [] }
         let mask = CirclePrimitive(
-            uuid: UUID(),
+            id: UUID(),
             position: position,
             radius: drill / 2,
             rotation: rotation.radians,

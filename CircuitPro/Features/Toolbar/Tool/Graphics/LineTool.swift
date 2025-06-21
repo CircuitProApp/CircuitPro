@@ -17,7 +17,7 @@ struct LineTool: CanvasTool {
         if let start {
             defer { self.start = nil }
             let prim = LinePrimitive(
-                uuid: UUID(),
+                id: UUID(),
                 start: start,
                 end: location,
                 strokeWidth: 1,

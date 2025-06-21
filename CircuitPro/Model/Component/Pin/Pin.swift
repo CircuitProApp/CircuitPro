@@ -44,7 +44,7 @@ extension Pin {
 
     var primitives: [AnyPrimitive] {
         let line = LinePrimitive(
-            uuid: .init(),
+            id: .init(),
             start: legStart,
             end: position,
             rotation: 0,          // geometry is already rotated
@@ -53,7 +53,7 @@ extension Pin {
         )
 
         let circle = CirclePrimitive(
-            uuid: .init(),
+            id: .init(),
             position: position,
             radius: 4,
             rotation: 0,

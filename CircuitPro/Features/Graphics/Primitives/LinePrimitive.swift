@@ -1,7 +1,7 @@
 import AppKit
 
 struct LinePrimitive: GraphicPrimitive {
-    let uuid: UUID
+    let id: UUID
     var start: CGPoint
     var end: CGPoint
     var rotation: CGFloat = 0

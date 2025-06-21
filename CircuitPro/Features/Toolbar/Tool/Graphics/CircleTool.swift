@@ -11,7 +11,7 @@ struct CircleTool: CanvasTool {
         if let center {
             let radius = hypot(location.x - center.x, location.y - center.y)
             let circle = CirclePrimitive(
-                uuid: UUID(),
+                id: UUID(),
                 position: center,
                 radius: radius,
                 rotation: 0,

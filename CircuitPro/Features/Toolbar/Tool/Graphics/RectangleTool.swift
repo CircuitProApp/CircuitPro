@@ -14,7 +14,7 @@ struct RectangleTool: CanvasTool {
             let size = CGSize(width: rect.width, height: rect.height)
 
             let prim = RectanglePrimitive(
-                uuid: UUID(),
+                id: UUID(),
                 position: center,
                 size: size,
                 rotation: 0,

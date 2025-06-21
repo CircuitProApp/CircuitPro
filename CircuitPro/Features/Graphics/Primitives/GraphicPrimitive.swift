@@ -1,7 +1,7 @@
 import AppKit
 
 protocol GraphicPrimitive: Identifiable, Hashable, Codable {
-    var uuid: UUID { get }
+    var id: UUID { get }
     var position: CGPoint { get set }
     var rotation: CGFloat { get set }
     var strokeWidth: CGFloat { get set }
@@ -14,10 +14,6 @@ protocol GraphicPrimitive: Identifiable, Hashable, Codable {
 
     func makePath(offset: CGPoint) -> CGPath
 
-}
-
-extension GraphicPrimitive {
-    var id: UUID { uuid }
 }
 
 extension GraphicPrimitive {

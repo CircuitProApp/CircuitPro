@@ -8,12 +8,12 @@ enum AnyPrimitive: GraphicPrimitive, Codable, Hashable {
     case circle(CirclePrimitive)
     case rectangle(RectanglePrimitive)
     case line(LinePrimitive)
-
+ 
     var uuid: UUID {
         switch self {
-        case .circle(let circle): return circle.uuid
-        case .rectangle(let rectangle): return rectangle.uuid
-        case .line(let line): return line.uuid
+        case .circle(let circle): return circle.id
+        case .rectangle(let rectangle): return rectangle.id
+        case .line(let line): return line.id
         }
     }
 

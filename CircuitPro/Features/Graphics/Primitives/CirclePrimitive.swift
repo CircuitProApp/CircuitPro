@@ -1,7 +1,7 @@
 import AppKit
 
 struct CirclePrimitive: GraphicPrimitive {
-    let uuid: UUID
+    let id: UUID
     var position: CGPoint
     var radius: CGFloat
     var rotation: CGFloat
