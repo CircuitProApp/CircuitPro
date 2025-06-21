@@ -1,6 +1,6 @@
 //
 //  BackgroundStyle.swift
-//  Circuit Pro_Tests
+//  Circuit Pro
 //
 //  Created by Giorgi Tchelidze on 5/16/25.
 //

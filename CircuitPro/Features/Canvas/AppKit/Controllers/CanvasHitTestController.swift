@@ -28,8 +28,7 @@ final class CanvasHitTestController {
         for (id, rect) in pinNumberRects where rect.contains(point) { return id }
 
         // 2. Defer to each element’s own hit-test logic
-        for element in canvas.elements.reversed()           // top-most first
-        where element.systemHitTest(at: point) {
+        for element in canvas.elements.reversed() where element.systemHitTest(at: point) {
             return element.id
         }
 
