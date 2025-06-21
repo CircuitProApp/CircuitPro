@@ -9,15 +9,13 @@ enum AnyPrimitive: GraphicPrimitive, Codable, Hashable {
     case rectangle(RectanglePrimitive)
     case line(LinePrimitive)
  
-    var uuid: UUID {
+    var id: UUID {
         switch self {
         case .circle(let circle): return circle.id
         case .rectangle(let rectangle): return rectangle.id
         case .line(let line): return line.id
         }
     }
-
-    var id: UUID { uuid }
 
     // MARK: - Mutating accessors that need to write back into enum
 
