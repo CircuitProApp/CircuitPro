@@ -1,13 +1,21 @@
+//
+//  LinePrimitive.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 21.06.25.
+//
+
 import AppKit
 
-struct LinePrimitive: GraphicPrimitive {
+struct LinePrimitive: GraphicPrimitive, CanvasPrimitive {
+
     let id: UUID
     var start: CGPoint
     var end: CGPoint
-    var rotation: CGFloat = 0
+    var rotation: CGFloat
     var strokeWidth: CGFloat
-    var color: SDColor
     var filled: Bool = false
+    var color: SDColor
 
     var position: CGPoint {
         get {
@@ -25,6 +33,7 @@ struct LinePrimitive: GraphicPrimitive {
             end.y += deltaY
         }
     }
+
     func handles() -> [Handle] {
         let mid = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
         let rotatedStart = rotate(point: start, around: mid, by: rotation)

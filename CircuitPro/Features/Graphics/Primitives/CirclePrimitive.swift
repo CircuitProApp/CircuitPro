@@ -1,13 +1,22 @@
+//
+//  CirclePrimitive.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 21.06.25.
+//
+
 import AppKit
 
-struct CirclePrimitive: GraphicPrimitive {
+struct CirclePrimitive: GraphicPrimitive, CanvasPrimitive {
+
     let id: UUID
-    var position: CGPoint
     var radius: CGFloat
+    var position: CGPoint
     var rotation: CGFloat
     var strokeWidth: CGFloat
     var color: SDColor
     var filled: Bool
+
     func handles() -> [Handle] {
         let rawPoint = CGPoint(x: position.x + radius, y: position.y)
         let rotated = rotate(point: rawPoint, around: position, by: rotation)
@@ -39,6 +48,7 @@ struct CirclePrimitive: GraphicPrimitive {
         // just forward to the existing implementation
         updateHandle(kind, to: newPos)
     }
+
     func makePath(offset: CGPoint = .zero) -> CGPath {
             let center = CGPoint(
                 x: offset.x + position.x,

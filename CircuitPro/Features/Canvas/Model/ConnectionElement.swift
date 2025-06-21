@@ -13,7 +13,7 @@ struct ConnectionElement: Identifiable {
     
     var primitives: [AnyPrimitive] {
         segments.map { segment in
-            AnyPrimitive.line(LinePrimitive(id: UUID(), start: segment.0, end: segment.1, strokeWidth: 1, color: SDColor(color: .blue)))
+            AnyPrimitive.line(LinePrimitive(id: UUID(), start: segment.0, end: segment.1, rotation: 0, strokeWidth: 1, color: SDColor(color: .blue)))
         }
     }
     

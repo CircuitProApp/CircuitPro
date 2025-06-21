@@ -4,9 +4,11 @@
 //
 //  Created by Giorgi Tchelidze on 4/30/25.
 //
+
 import SwiftUI
 
 enum PinType: Displayable {
+
     case input
     case output
     case bidirectional

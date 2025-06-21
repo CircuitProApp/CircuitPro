@@ -1,9 +1,10 @@
 import AppKit
 
 struct CursorTool: CanvasTool {
-    var id = "cursor"
-    var symbolName = AppIcons.cursor
-    var label = "Select"
+
+    let id = "cursor"
+    let symbolName = AppIcons.cursor
+    let label = "Select"
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
         return nil // selection logic is handled by CanvasInteractionController

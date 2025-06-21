@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct AnyCanvasTool: CanvasTool {
+
     let id: String
     let symbolName: String
     let label: String

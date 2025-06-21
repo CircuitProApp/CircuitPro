@@ -4,6 +4,7 @@
 //
 //  Created by Giorgi Tchelidze on 4/30/25.
 //
+
 import SwiftUI
 
 struct Pin: Identifiable, Codable, Hashable {
@@ -54,8 +55,8 @@ extension Pin {
 
         let circle = CirclePrimitive(
             id: .init(),
-            position: position,
             radius: 4,
+            position: position,
             rotation: 0,
             strokeWidth: 1,
             color: .init(color: .blue),

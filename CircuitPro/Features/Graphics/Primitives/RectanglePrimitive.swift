@@ -1,14 +1,23 @@
+//
+//  RectanglePrimitive.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 21.06.25.
+//
+
 import AppKit
 
-struct RectanglePrimitive: GraphicPrimitive {
+struct RectanglePrimitive: GraphicPrimitive, CanvasPrimitive {
+
     let id: UUID
-    var position: CGPoint
     var size: CGSize
+    var cornerRadius: CGFloat
+    var position: CGPoint
     var rotation: CGFloat
     var strokeWidth: CGFloat
-    var color: SDColor
     var filled: Bool
-    var cornerRadius: CGFloat = 0
+    var color: SDColor
+    
     
     func handles() -> [Handle] {
         let halfW = size.width / 2

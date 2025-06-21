@@ -9,9 +9,9 @@ import SwiftUI
 
 struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
-    var id         = "connection"
-    var symbolName = AppIcons.line
-    var label      = "Connection"
+    let id         = "connection"
+    let symbolName = AppIcons.line
+    let label      = "Connection"
 
     private var start: CGPoint?
     private var segments: [(CGPoint, CGPoint)] = []

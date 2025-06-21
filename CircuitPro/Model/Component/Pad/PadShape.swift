@@ -4,9 +4,11 @@
 //
 //  Created by Giorgi Tchelidze on 5/5/25.
 //
+
 import SwiftUI
 
 enum PadShape: Codable, Hashable {
+
     case rect(width: Double, height: Double)
     case circle(radius: Double)
 

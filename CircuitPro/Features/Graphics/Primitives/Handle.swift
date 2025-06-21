@@ -1,6 +1,14 @@
+//
+//  Handle.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 21.06.25.
+//
+
 import CoreGraphics
 
 struct Handle: Hashable {
+
     enum Kind: Hashable {
         case circleRadius
         case lineStart, lineEnd
@@ -10,19 +18,20 @@ struct Handle: Hashable {
 
     let kind: Kind
     let position: CGPoint
+
 }
 
 extension Handle.Kind {
     /// The handle that is geometrically opposite to self, if any.
     var opposite: Handle.Kind? {
         switch self {
-        case .rectTopLeft:      return .rectBottomRight
-        case .rectTopRight:     return .rectBottomLeft
-        case .rectBottomRight:  return .rectTopLeft
-        case .rectBottomLeft:   return .rectTopRight
-        case .lineStart:        return .lineEnd
-        case .lineEnd:          return .lineStart
-        default:                return nil
+        case .rectTopLeft: return .rectBottomRight
+        case .rectTopRight: return .rectBottomLeft
+        case .rectBottomRight: return .rectTopLeft
+        case .rectBottomLeft: return .rectTopRight
+        case .lineStart: return .lineEnd
+        case .lineEnd: return .lineStart
+        default: return nil
         }
     }
 }

@@ -8,9 +8,10 @@
 import SwiftUI
 
 struct PinTool: CanvasTool {
-    var id = "pin"
-    var symbolName = AppIcons.pin
-    var label = "Pin"
+
+    let id = "pin"
+    let symbolName = AppIcons.pin
+    let label = "Pin"
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
         let number = context.existingPinCount + 1

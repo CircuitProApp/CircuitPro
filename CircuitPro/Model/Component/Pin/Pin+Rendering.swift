@@ -1,4 +1,10 @@
-// Pin+Rendering.swift
+//
+//  Pin+Rendering.swift
+//  Circuit Pro
+//
+//  Created by Giorgi Tchelidze on 5/16/25.
+//
+
 import AppKit
 
 private let haloThickness: CGFloat = 4 // keep all magic numbers in one place

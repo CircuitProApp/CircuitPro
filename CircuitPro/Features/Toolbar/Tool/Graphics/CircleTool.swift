@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct CircleTool: CanvasTool {
-    var id = "circle"
-    var symbolName = AppIcons.circle
-    var label = "Circle"
+
+    let id = "circle"
+    let symbolName = AppIcons.circle
+    let label = "Circle"
 
     private var center: CGPoint?
 
@@ -12,8 +13,8 @@ struct CircleTool: CanvasTool {
             let radius = hypot(location.x - center.x, location.y - center.y)
             let circle = CirclePrimitive(
                 id: UUID(),
-                position: center,
                 radius: radius,
+                position: center,
                 rotation: 0,
                 strokeWidth: 1,
                 color: .init(color: context.selectedLayer.defaultColor),

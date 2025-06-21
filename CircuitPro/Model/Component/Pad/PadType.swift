@@ -4,9 +4,11 @@
 //
 //  Created by Giorgi Tchelidze on 5/5/25.
 //
+
 import SwiftUI
 
-enum PadType: String, Displayable {
+enum PadType: Displayable {
+
     case surfaceMount
     case throughHole
 

@@ -7,9 +7,10 @@
 import SwiftUI
 
 struct PadTool: CanvasTool {
-    var id = "pad"
-    var symbolName = AppIcons.pad
-    var label = "Pad"
+
+    let id = "pad"
+    let symbolName = AppIcons.pad
+    let label = "Pad"
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
         let number = context.existingPadCount + 1

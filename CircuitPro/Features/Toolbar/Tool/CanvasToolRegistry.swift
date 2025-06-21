@@ -6,6 +6,7 @@
 //
 
 enum CanvasToolRegistry {
+
     static let cursor: [AnyCanvasTool] = [
         AnyCanvasTool(CursorTool())
     ]

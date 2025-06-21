@@ -4,6 +4,7 @@
 //
 //  Created by Giorgi Tchelidze on 4/30/25.
 //
+
 import SwiftUI
 
 protocol CanvasTool: Hashable {
@@ -13,7 +14,6 @@ protocol CanvasTool: Hashable {
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement?
 
-    // New CoreGraphics preview method
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext)
 }
 

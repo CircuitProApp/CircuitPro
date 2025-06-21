@@ -7,9 +7,10 @@
 import SwiftUI
 
 struct LineTool: CanvasTool {
-    var id = "line"
-    var symbolName = AppIcons.line
-    var label = "Line"
+
+    let id = "line"
+    let symbolName = AppIcons.line
+    let label = "Line"
 
     private var start: CGPoint?
 
@@ -20,6 +21,7 @@ struct LineTool: CanvasTool {
                 id: UUID(),
                 start: start,
                 end: location,
+                rotation: 0,
                 strokeWidth: 1,
                 color: .init(color: context.selectedLayer.defaultColor)
             )

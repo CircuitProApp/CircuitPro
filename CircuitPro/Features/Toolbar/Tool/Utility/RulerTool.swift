@@ -6,9 +6,10 @@
 import SwiftUI
 
 struct RulerTool: CanvasTool {
-    var id: String = "ruler"
-    var symbolName: String = AppIcons.ruler
-    var label: String = "Ruler"
+
+    let id: String = "ruler"
+    let symbolName: String = AppIcons.ruler
+    let label: String = "Ruler"
 
     private var start: CGPoint?
     private var end: CGPoint?

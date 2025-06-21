@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct RectangleTool: CanvasTool {
-    var id = "rectangle"
-    var symbolName = AppIcons.rectangle
-    var label = "Rectangle"
+
+    let id = "rectangle"
+    let symbolName = AppIcons.rectangle
+    let label = "Rectangle"
 
     private var start: CGPoint?
 
@@ -15,12 +16,13 @@ struct RectangleTool: CanvasTool {
 
             let prim = RectanglePrimitive(
                 id: UUID(),
-                position: center,
                 size: size,
+                cornerRadius: 0,
+                position: center,
                 rotation: 0,
                 strokeWidth: 1,
-                color: .init(color: context.selectedLayer.defaultColor),
-                filled: false
+                filled: false,
+                color: .init(color: context.selectedLayer.defaultColor)
             )
             self.start = nil
             return .primitive(.rectangle(prim))
