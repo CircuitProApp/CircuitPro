@@ -7,7 +7,7 @@
 
 import AppKit
 
-struct CirclePrimitive: GraphicPrimitive, CanvasPrimitive {
+struct CirclePrimitive: GraphicPrimitive {
 
     let id: UUID
     var radius: CGFloat
@@ -19,7 +19,7 @@ struct CirclePrimitive: GraphicPrimitive, CanvasPrimitive {
 
     func handles() -> [Handle] {
         let rawPoint = CGPoint(x: position.x + radius, y: position.y)
-        let rotated = rotate(point: rawPoint, around: position, by: rotation)
+        let rotated = rotate1(point: rawPoint, around: position, by: rotation)
         return [Handle(kind: .circleRadius, position: rotated)]
     }
 
@@ -49,14 +49,10 @@ struct CirclePrimitive: GraphicPrimitive, CanvasPrimitive {
         updateHandle(kind, to: newPos)
     }
 
-    func makePath(offset: CGPoint = .zero) -> CGPath {
-            let center = CGPoint(
-                x: offset.x + position.x,
-                y: offset.y + position.y
-            )
+    func makePath() -> CGPath {
             let path = CGMutablePath()
             path.addArc(
-                center: center,
+                center: position,
                 radius: radius,
                 startAngle: 0,
                 endAngle: .pi * 2,
@@ -64,9 +60,9 @@ struct CirclePrimitive: GraphicPrimitive, CanvasPrimitive {
             )
 
             var transform = CGAffineTransform.identity
-                .translatedBy(x: center.x, y: center.y)
+                .translatedBy(x: position.x, y: position.y)
                 .rotated(by: rotation)
-                .translatedBy(x: -center.x, y: -center.y)
+                .translatedBy(x: -position.x, y: -position.y)
             return path.copy(using: &transform) ?? path
         }
 }

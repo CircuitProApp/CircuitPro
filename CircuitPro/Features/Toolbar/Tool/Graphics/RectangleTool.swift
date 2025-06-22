@@ -14,7 +14,7 @@ struct RectangleTool: CanvasTool {
             let center = CGPoint(x: rect.midX, y: rect.midY)
             let size = CGSize(width: rect.width, height: rect.height)
 
-            let prim = RectanglePrimitive(
+            let rectangle = RectanglePrimitive(
                 id: UUID(),
                 size: size,
                 cornerRadius: 0,
@@ -25,7 +25,7 @@ struct RectangleTool: CanvasTool {
                 color: .init(color: context.selectedLayer.defaultColor)
             )
             self.start = nil
-            return .primitive(.rectangle(prim))
+            return .primitive(.rectangle(rectangle))
         } else {
             self.start = location
             return nil

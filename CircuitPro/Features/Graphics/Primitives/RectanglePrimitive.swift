@@ -7,7 +7,7 @@
 
 import AppKit
 
-struct RectanglePrimitive: GraphicPrimitive, CanvasPrimitive {
+struct RectanglePrimitive: GraphicPrimitive {
 
     let id: UUID
     var size: CGSize
@@ -31,19 +31,19 @@ struct RectanglePrimitive: GraphicPrimitive, CanvasPrimitive {
         return [
             Handle(
                 kind: .rectTopLeft,
-                position: rotate(point: topLeft, around: position, by: rotation)
+                position: rotate1(point: topLeft, around: position, by: rotation)
             ),
             Handle(
                 kind: .rectTopRight,
-                position: rotate(point: topRight, around: position, by: rotation)
+                position: rotate1(point: topRight, around: position, by: rotation)
             ),
             Handle(
                 kind: .rectBottomRight,
-                position: rotate(point: bottomRight, around: position, by: rotation)
+                position: rotate1(point: bottomRight, around: position, by: rotation)
             ),
             Handle(
                 kind: .rectBottomLeft,
-                position: rotate(point: bottomLeft, around: position, by: rotation)
+                position: rotate1(point: bottomLeft, around: position, by: rotation)
             )
         ]
     }
@@ -87,16 +87,11 @@ struct RectanglePrimitive: GraphicPrimitive, CanvasPrimitive {
             break
         }
     }
-    func makePath(offset: CGPoint = .zero) -> CGPath {
-        // 1. Build an *unrotated* rectangle whose center is position + offset
-        let center = CGPoint(
-            x: offset.x + position.x,
-            y: offset.y + position.y
-        )
+    func makePath() -> CGPath {
 
         let frame = CGRect(
-            x: center.x - size.width  * 0.5,
-            y: center.y - size.height * 0.5,
+            x: position.x - size.width  * 0.5,
+            y: position.y - size.height * 0.5,
             width: size.width,
             height: size.height
         )
@@ -106,9 +101,9 @@ struct RectanglePrimitive: GraphicPrimitive, CanvasPrimitive {
 
         // 2. Apply the primitive’s rotation about the rectangle center
         var transform = CGAffineTransform.identity
-            .translatedBy(x: center.x, y: center.y)
+            .translatedBy(x: position.x, y: position.y)
             .rotated(by: rotation)
-            .translatedBy(x: -center.x, y: -center.y)
+            .translatedBy(x: -position.x, y: -position.y)
 
         return path.copy(using: &transform) ?? path
     }

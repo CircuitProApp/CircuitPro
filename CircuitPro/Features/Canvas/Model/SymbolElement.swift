@@ -9,8 +9,7 @@ import SwiftUI
 
 struct SymbolElement: Identifiable {
 
-    // MARK: Identity
-    let id: UUID                     // normally the ComponentInstance.id
+    let id: UUID
 
     // MARK: Instance-specific data
     var instance: SymbolInstance     // position, rotation … (mutable)
@@ -18,53 +17,11 @@ struct SymbolElement: Identifiable {
     // MARK: Library master (immutable, reference type → no copy cost)
     let symbol: Symbol
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  Internal helpers
-    // ═══════════════════════════════════════════════════════════════════════
-    var transform: CGAffineTransform {
-        CGAffineTransform(translationX: instance.position.x,
-                          y: instance.position.y)
-        .rotated(by: instance.rotation.radians)
-    }
 
     var primitives: [AnyPrimitive] {
         symbol.primitives + symbol.pins.flatMap(\.primitives)
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  CanvasElement behaviour
-    // ═══════════════════════════════════════════════════════════════════════
-    func draw(in ctx: CGContext, selected: Bool) {
-        ctx.saveGState()
-        ctx.concatenate(transform)
-
-        // primitives need to know whether the symbol is selected
-        symbol.primitives.forEach { $0.draw(in: ctx, selected: selected) }
-
-        // pins already receive the flag
-        symbol.pins.forEach {
-            $0.draw(in: ctx, showText: true, highlight: selected)
-        }
-
-        ctx.restoreGState()
-    }
-    
-    var effectivePosition: CGPoint {
-        instance.position
-    }
-
-    func systemHitTest(at point: CGPoint) -> Bool {
-        let local = point.applying(transform.inverted())
-        return symbol.primitives.contains { $0.systemHitTest(at: local) } ||
-               symbol.pins.contains      { $0.systemHitTest(at: local) }
-    }
-
-    func handles() -> [Handle] { [] }      // treat whole symbol as rigid
-
-    mutating func translate(by delta: CGPoint) {
-        instance.position.x += delta.x
-        instance.position.y += delta.y
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -77,5 +34,56 @@ extension SymbolElement: Equatable, Hashable {
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+    }
+}
+
+extension SymbolElement: Placeable {
+
+    var position: CGPoint {
+        get { instance.position }
+        set { instance.position = newValue }
+    }
+
+    var rotation: CGFloat {
+        get { instance.rotation }
+        set { instance.rotation = newValue }
+    }
+}
+
+extension SymbolElement: Drawable {
+
+    func draw(in ctx: CGContext, selected: Bool) {
+
+        ctx.saveGState()
+        ctx.concatenate(
+            CGAffineTransform(translationX: position.x,
+                              y: position.y)
+            .rotated(by: rotation)
+        )
+
+        // primitives belonging to the symbol master
+        symbol.primitives.forEach { $0.draw(in: ctx, selected: selected) }
+
+        // pins are already Drawables in their own right
+        symbol.pins.forEach { $0.draw(in: ctx, selected: selected) }
+
+        ctx.restoreGState()
+    }
+}
+
+extension SymbolElement: Tappable {
+
+    func hitTest(_ worldPoint: CGPoint, tolerance: CGFloat = 5) -> Bool {
+
+        // map the probe into the symbol’s local space
+        let local = worldPoint.applying(
+            CGAffineTransform(translationX: position.x,
+                              y: position.y)
+            .rotated(by: rotation)
+            .inverted()
+        )
+
+        return symbol.primitives.contains { $0.hitTest(local, tolerance: tolerance) } ||
+               symbol.pins.contains      { $0.hitTest(local, tolerance: tolerance) }
     }
 }

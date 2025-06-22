@@ -9,25 +9,30 @@ import Observation
 import SwiftUI
 
 @Observable
-final class SymbolInstance: Identifiable, Codable {
+final class SymbolInstance: Identifiable, Codable, Placeable {
 
     var id: UUID
 
     var symbolUUID: UUID
     var position: CGPoint
-    var rotation: CardinalRotation = .deg0
+    var cardinalRotation: CardinalRotation = .deg0
+    
+    var rotation: CGFloat {
+        get { cardinalRotation.radians }
+        set { cardinalRotation = .closest(to: newValue) }
+    }
 
-    init(id: UUID = UUID(), symbolUUID: UUID, position: CGPoint, rotation: CardinalRotation = .deg0) {
+    init(id: UUID = UUID(), symbolUUID: UUID, position: CGPoint, cardinalRotation: CardinalRotation = .deg0) {
         self.id = id
         self.symbolUUID = symbolUUID
         self.position = position
-        self.rotation = rotation
+        self.cardinalRotation = cardinalRotation
     }
     
     enum CodingKeys: String, CodingKey {
         case _id = "id"
         case _symbolUUID = "symbolUUID"
         case _position = "position"
-        case _rotation = "rotation"
+        case _cardinalRotation = "rotation"
     }
 }

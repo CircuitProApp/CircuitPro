@@ -10,7 +10,7 @@ import CoreGraphics
 import AppKit
 
 /// A type-erased wrapper so we can store heterogeneous primitives in one array.
-enum AnyPrimitive: GraphicPrimitive, CanvasPrimitive, Codable, Hashable {
+enum AnyPrimitive: GraphicPrimitive {
 
     case line(LinePrimitive)
     case rectangle(RectanglePrimitive)
@@ -111,11 +111,11 @@ enum AnyPrimitive: GraphicPrimitive, CanvasPrimitive, Codable, Hashable {
     }
 
     // MARK: - Unified Path
-    func makePath(offset: CGPoint = .zero) -> CGPath {
+    func makePath() -> CGPath {
         switch self {
-        case .line(let line): return line.makePath(offset: offset)
-        case .rectangle(let rectangle): return rectangle.makePath(offset: offset)
-        case .circle(let circle): return circle.makePath(offset: offset)
+        case .line(let line): return line.makePath()
+        case .rectangle(let rectangle): return rectangle.makePath()
+        case .circle(let circle): return circle.makePath()
         }
     }
 

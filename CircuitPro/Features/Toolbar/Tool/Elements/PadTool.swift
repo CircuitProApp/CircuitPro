@@ -34,6 +34,6 @@ struct PadTool: CanvasTool {
             drillDiameter: nil
         )
 
-        previewPad.draw(in: ctx, highlight: false)
+        previewPad.draw(in: ctx, selected: false)
     }
 }

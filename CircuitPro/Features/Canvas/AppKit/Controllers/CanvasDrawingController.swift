@@ -26,18 +26,7 @@ final class CanvasDrawingController {
             let selected = canvas.selectedIDs.contains(element.id)
 
             element.draw(in: ctx, selected: selected)
-
-            if case let .pin(pin) = element {
-                cacheHitRects(for: pin)
-            }
         }
-    }
-    private func cacheHitRects(for pin: Pin) {
-
-        let rects = pin.textHitRects()
-
-        canvas.hitRects.pinNumberRects[pin.id] = rects.number
-        canvas.hitRects.pinLabelRects[pin.id]  = rects.label
     }
     // MARK: - 2 live preview for the active tool
     private func drawLivePreview(in ctx: CGContext) {

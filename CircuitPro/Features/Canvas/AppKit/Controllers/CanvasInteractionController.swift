@@ -54,18 +54,17 @@ final class CanvasInteractionController {
                 updated[index] = .primitive(primitive)
 
             case .pin(var pin):
-                let snapped = CardinalRotation.closest(to: rawAngle)
-                pin.rotation = snapped
+            
+                pin.rotation = rawAngle
                 updated[index] = .pin(pin)
 
             case .pad(var pad):
-                let snapped = CardinalRotation.closest(to: rawAngle)
-                pad.rotation = snapped
+          
+                pad.rotation = rawAngle
                 updated[index] = .pad(pad)
 
             case .symbol(var symbol):
-                let snapped = CardinalRotation.closest(to: rawAngle)
-                symbol.instance.rotation = snapped
+                symbol.instance.rotation = rawAngle
                 updated[index] = .symbol(symbol)
 
             case .connection(var c):

@@ -13,10 +13,8 @@ enum PinLengthType: Displayable {
 
     var label: String {
         switch self {
-        case .short:
-            return "Short"
-        case .long:
-            return "Long"
+        case .short: return "Short"
+        case .long: return "Long"
         }
     }
 }

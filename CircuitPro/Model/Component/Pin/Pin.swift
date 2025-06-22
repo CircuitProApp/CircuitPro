@@ -12,11 +12,22 @@ struct Pin: Identifiable, Codable, Hashable {
     var name: String
     var number: Int
     var position: CGPoint
-    var rotation: CardinalRotation = .deg0
+    var cardinalRotation: CardinalRotation = .deg0
     var type: PinType
     var lengthType: PinLengthType = .long
     var showLabel: Bool = true
     var showNumber: Bool = true
+}
+
+
+extension Pin: Placeable {
+
+    // bridge enum ⇄ radians so the rest of the canvas can treat the pad
+    // just like any continuously-rotated item.
+    var rotation: CGFloat {
+        get { cardinalRotation.radians }
+        set { cardinalRotation = .closest(to: newValue) }
+    }
 }
 
 extension Pin {
@@ -31,15 +42,11 @@ extension Pin {
         name == "" ? "Pin \(number)" : name
     }
 
-    var dir: CGPoint {
-        rotation.direction
-    }
-
     /// World-space start of the pin’s “leg”.
     var legStart: CGPoint {
         CGPoint(
-            x: position.x + dir.x * length,
-            y: position.y + dir.y * length
+            x: position.x + length,
+            y: position.y + length
         )
     }
 
@@ -64,9 +71,5 @@ extension Pin {
         )
 
         return [.line(line), .circle(circle)]
-    }
-
-    func systemHitTest(at point: CGPoint) -> Bool {
-        primitives.contains { $0.systemHitTest(at: point) }
     }
 }

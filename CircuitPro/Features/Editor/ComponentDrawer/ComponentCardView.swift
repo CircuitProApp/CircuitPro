@@ -65,8 +65,7 @@ struct SymbolThumbnail: View {
                 // Pins (no text → unreadable in 100 pt)
                 for pin in symbol.pins {
                     pin.draw(in: cg,
-                             showText: false,
-                             highlight: false)
+                             selected: false)
                 }
                 cg.restoreGState()
             }

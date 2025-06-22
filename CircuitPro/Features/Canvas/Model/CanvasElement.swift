@@ -45,42 +45,17 @@ enum CanvasElement: Identifiable, Hashable {
         }
     }
 
-    var debugDescription: String {
-        switch self {
-        case .primitive(let p): return "\(p)"
-        case .pin      (let p): return "\(p)"
-        case .pad      (let p): return "\(p)"
-        case .symbol   (let s): return "SymbolElement(id: \(s.id))"
-        case .connection(let c): return "\(c.id)"
-        }
-    }
-
-    var rotationDescription: String {
-        switch self {
-        case .primitive(let p):
-            return "\(p.rotation * 180 / .pi)"
-        case .symbol(let s):
-            return "\(s.instance.rotation.radians)"
-        default:
-            return "no rotation"
-        }
-    }
-
     // ─────────────────────────────────────────────── draw
     func draw(in ctx: CGContext, selected: Bool) {
         switch self {
         case .primitive(let p):
             p.draw(in: ctx, selected: selected)
-            
         case .pin(let p):
-            p.draw(in: ctx, showText: true, highlight: selected)
-            
+            p.draw(in: ctx, selected: selected)
         case .pad(let p):
-            p.draw(in: ctx, highlight: selected)
-            
+            p.draw(in: ctx, selected: selected)
         case .symbol(let s):
             s.draw(in: ctx, selected: selected)
-            
         case .connection(let c):
             c.draw(in: ctx, selected: selected)
         }
@@ -90,9 +65,9 @@ enum CanvasElement: Identifiable, Hashable {
     func systemHitTest(at point: CGPoint) -> Bool {
         switch self {
         case .symbol(let s):
-            return s.systemHitTest(at: point)
+            return s.hitTest(point)
         default:
-            return primitives.contains { $0.systemHitTest(at: point) }
+            return primitives.contains { $0.hitTest(point) }
         }
     }
 
@@ -164,12 +139,7 @@ extension CanvasElement {
         switch self {
 
         case .symbol(let s):
-            let t = s.transform                // world ← local
-            let boxes = s.primitives.map {
-                $0.makePath().boundingBoxOfPath.applying(t)
-            }
-            return boxes.reduce(.null) { $0.union($1) }
-
+            return .init(origin: .zero, size: .init(width: 100, height: 100))
         default:
             return primitives
                 .map { $0.makePath().boundingBoxOfPath }
@@ -177,3 +147,4 @@ extension CanvasElement {
         }
     }
 }
+ 

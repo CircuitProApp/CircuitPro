@@ -36,8 +36,7 @@ struct PinTool: CanvasTool {
 
         previewPin.draw(
             in: ctx,
-            showText: true,      // want number/label during preview?
-            highlight: false     // no selection halo for preview
+            selected: false     // no selection halo for preview
         )
     }
 }

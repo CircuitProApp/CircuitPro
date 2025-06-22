@@ -64,7 +64,7 @@ struct SchematicView: View {
         for comp in comps {
             let symbolInst = SymbolInstance(symbolUUID: comp.symbolUUID,
                                             position  : pos,
-                                            rotation  : .deg0)
+                                            cardinalRotation: .deg0)
 
             let instance = ComponentInstance(componentUUID   : comp.componentUUID,
                                              properties      : comp.properties,

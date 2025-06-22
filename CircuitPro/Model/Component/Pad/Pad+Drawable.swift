@@ -1,5 +1,5 @@
 //
-//  Pad+Rendering.swift
+//  Pad+Drawable.swift
 //  Circuit Pro
 //
 //  Created by Giorgi Tchelidze on 5/16/25.
@@ -9,13 +9,13 @@ import AppKit
 
 private let padHaloThickness: CGFloat = 4
 
-extension Pad {
+extension Pad: Drawable {
 
     /// Draws the pad using its geometric primitives and optional halo.
-    func draw(in ctx: CGContext, highlight: Bool = false) {
+    func draw(in ctx: CGContext, selected: Bool = false) {
         ctx.saveGState()
         // ───────────────────────────────────── 1. unified halo (drawn *behind* the pad)
-        if highlight {
+        if selected {
             let haloPath = CGMutablePath()
             for prim in shapePrimitives {
                 let stroked = prim.makePath().copy(

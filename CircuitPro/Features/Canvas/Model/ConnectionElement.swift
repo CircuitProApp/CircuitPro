@@ -7,7 +7,11 @@
 
 import SwiftUI
 
-struct ConnectionElement: Identifiable {
+struct ConnectionElement: Identifiable, Drawable, Tappable, Placeable {
+    var position: CGPoint
+    
+    var rotation: CGFloat
+    
     let id: UUID
     var segments: [(CGPoint, CGPoint)]
     
@@ -18,9 +22,9 @@ struct ConnectionElement: Identifiable {
     }
     
     // Hit Testing
-    func hitTest(at point: CGPoint, tolerance: CGFloat = 5.0) -> Bool {
+    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5.0) -> Bool {
         for primitive in primitives {
-            if primitive.systemHitTest(at: point, tolerance: tolerance) {
+            if primitive.hitTest(point, tolerance: tolerance) {
                 return true
             }
         }

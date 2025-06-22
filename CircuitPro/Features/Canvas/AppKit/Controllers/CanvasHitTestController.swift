@@ -42,7 +42,7 @@ final class CanvasHitTestController {
         // 1 ─ stand-alone Pin elements -------------------------------------------------
         for element in canvas.elements {
             if case .pin(let pin) = element,
-               pin.systemHitTest(at: point) {
+               pin.hitTest(point) {
                 return pin
             }
         }
@@ -52,10 +52,10 @@ final class CanvasHitTestController {
             guard case .symbol(let symbol) = element else { continue }
 
             // go into the symbol's local space first
-            let local = point.applying(symbol.transform.inverted())
+            let local = point /*.applying(symbol.transform.inverted())*/
 
             for pin in symbol.symbol.pins
-            where pin.systemHitTest(at: local) {
+            where pin.hitTest(local) {
                 return pin
             }
         }
