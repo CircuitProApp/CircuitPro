@@ -105,11 +105,11 @@ struct ComponentDesignView: View {
         let anchor = CGPoint(x: 2_500, y: 2_500)
 
         // 1. Collect primitives & pins from the designer UI
-        let rawPrimitives: [AnyPrimitive] = []
-//            componentDesignManager.symbolElements.compactMap {
-//                if case .primitive(let p) = $0 { return p }
-//                return nil
-//            }
+        let rawPrimitives: [AnyPrimitive] =
+            componentDesignManager.symbolElements.compactMap {
+                if case .primitive(let p) = $0 { return p }
+                return nil
+            }
         let rawPins = componentDesignManager.pins
 
 

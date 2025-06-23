@@ -25,7 +25,7 @@ final class CanvasDrawingController {
 
             let selected = canvas.selectedIDs.contains(element.id)
 
-            element.draw(in: ctx, selected: selected)
+            element.drawable.draw(in: ctx, selected: selected)
         }
     }
     // MARK: - 2 live preview for the active tool

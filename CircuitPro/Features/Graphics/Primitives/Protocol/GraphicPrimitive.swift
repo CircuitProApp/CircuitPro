@@ -7,7 +7,7 @@
 
 import AppKit
 
-protocol GraphicPrimitive: Placeable & Drawable & Tappable & HandleEditable & Codable & Hashable & Identifiable {
+protocol GraphicPrimitive: Transformable & Drawable & Hittable & HandleEditable & Codable & Hashable & Identifiable {
 
     var id: UUID { get }
     var color: SDColor       { get set }
@@ -19,7 +19,10 @@ protocol GraphicPrimitive: Placeable & Drawable & Tappable & HandleEditable & Co
 
 extension GraphicPrimitive {
 
-    func draw(in ctx: CGContext, selected: Bool) {
+
+
+        // body drawing stays exactly like today
+    func drawBody(in ctx: CGContext) {
         let path = makePath()
 
         if filled {
@@ -33,29 +36,21 @@ extension GraphicPrimitive {
             ctx.addPath(path)
             ctx.strokePath()
         }
-
-        if selected {
-            let haloWidth = max(strokeWidth * 2, strokeWidth + 3)
-            let haloColor = CGColor(red: CGFloat(color.red),
-                                    green: CGFloat(color.green),
-                                    blue: CGFloat(color.blue),
-                                    alpha: 0.4)
-            ctx.setStrokeColor(haloColor)
-            ctx.setLineWidth(haloWidth)
-            ctx.setLineCap(.round)
-            ctx.addPath(path)
-            ctx.strokePath()
-        }
     }
+    
 
     func hitTest(_ p: CGPoint, tolerance: CGFloat = 5) -> Bool {
         let path = makePath()
         if filled { return path.contains(p) }
 
-        let fat = path.copy(strokingWithWidth: strokeWidth + tolerance,
+        let stroke = path.copy(strokingWithWidth: strokeWidth + tolerance,
                             lineCap: .round,
                             lineJoin: .round,
                             miterLimit: 10)
-        return fat.contains(p)
+        return stroke.contains(p)
     }
+}
+
+extension Drawable where Self: GraphicPrimitive {
+    func selectionPath() -> CGPath? { makePath() }
 }

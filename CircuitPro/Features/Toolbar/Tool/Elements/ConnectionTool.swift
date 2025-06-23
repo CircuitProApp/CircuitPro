@@ -23,7 +23,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         // 1 ▸ double-tap = finish
         if let s = start, isDoubleTap(from: s, to: location) {
             defer { clearState() }
-            return .connection(ConnectionElement(position: .zero, rotation: .zero, id: UUID(), segments: segments))
+            return .connection(ConnectionElement(id: UUID(), segments: segments, position: .zero, rotation: .zero))
         }
 
         // 2 ▸ first tap = begin

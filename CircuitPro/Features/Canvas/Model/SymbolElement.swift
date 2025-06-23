@@ -37,7 +37,7 @@ extension SymbolElement: Equatable, Hashable {
     }
 }
 
-extension SymbolElement: Placeable {
+extension SymbolElement: Transformable {
 
     var position: CGPoint {
         get { instance.position }
@@ -52,26 +52,54 @@ extension SymbolElement: Placeable {
 
 extension SymbolElement: Drawable {
 
-    func draw(in ctx: CGContext, selected: Bool) {
+    // ─────────────────────────────────────────────────────────────
+    // 1.  Normal appearance
+    // ─────────────────────────────────────────────────────────────
+    func drawBody(in ctx: CGContext) {
 
         ctx.saveGState()
+
+        // place the symbol instance in world space
         ctx.concatenate(
             CGAffineTransform(translationX: position.x,
                               y: position.y)
             .rotated(by: rotation)
         )
 
-        // primitives belonging to the symbol master
-        symbol.primitives.forEach { $0.draw(in: ctx, selected: selected) }
+        // master primitives
+        symbol.primitives.forEach { $0.drawBody(in: ctx) }
 
-        // pins are already Drawables in their own right
-        symbol.pins.forEach { $0.draw(in: ctx, selected: selected) }
+        // pins are drawables themselves, so call their *body* only
+        symbol.pins.forEach { $0.drawBody(in: ctx) }
 
         ctx.restoreGState()
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // 2.  Outline that should glow when selected
+    // ─────────────────────────────────────────────────────────────
+    func selectionPath() -> CGPath? {
+
+        // accumulate every path that makes up the symbol
+        let combined = CGMutablePath()
+
+        for prim in symbol.primitives {
+            combined.addPath(prim.makePath())
+        }
+        for pin in symbol.pins {
+            pin.primitives.forEach { combined.addPath($0.makePath()) }
+        }
+
+        // copy it into world space with the same transform we used to draw
+        var t = CGAffineTransform(translationX: position.x,
+                                  y: position.y)
+                .rotated(by: rotation)
+
+        return combined.copy(using: &t)
+    }
 }
 
-extension SymbolElement: Tappable {
+extension SymbolElement: Hittable {
 
     func hitTest(_ worldPoint: CGPoint, tolerance: CGFloat = 5) -> Bool {
 

@@ -9,7 +9,7 @@ import Observation
 import SwiftUI
 
 @Observable
-final class SymbolInstance: Identifiable, Codable, Placeable {
+final class SymbolInstance: Identifiable, Codable, Transformable {
 
     var id: UUID
 

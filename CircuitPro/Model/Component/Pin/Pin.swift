@@ -20,10 +20,7 @@ struct Pin: Identifiable, Codable, Hashable {
 }
 
 
-extension Pin: Placeable {
-
-    // bridge enum ⇄ radians so the rest of the canvas can treat the pad
-    // just like any continuously-rotated item.
+extension Pin: Transformable {
     var rotation: CGFloat {
         get { cardinalRotation.radians }
         set { cardinalRotation = .closest(to: newValue) }
@@ -45,8 +42,8 @@ extension Pin {
     /// World-space start of the pin’s “leg”.
     var legStart: CGPoint {
         CGPoint(
-            x: position.x + length,
-            y: position.y + length
+            x: position.x + cos(rotation) * length,
+            y: position.y + sin(rotation) * length
         )
     }
 
@@ -55,7 +52,7 @@ extension Pin {
             id: .init(),
             start: legStart,
             end: position,
-            rotation: 0,          // geometry is already rotated
+            rotation: 0,
             strokeWidth: 1,
             color: .init(color: .blue)
         )

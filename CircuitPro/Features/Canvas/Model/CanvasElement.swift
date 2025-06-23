@@ -45,32 +45,6 @@ enum CanvasElement: Identifiable, Hashable {
         }
     }
 
-    // ─────────────────────────────────────────────── draw
-    func draw(in ctx: CGContext, selected: Bool) {
-        switch self {
-        case .primitive(let p):
-            p.draw(in: ctx, selected: selected)
-        case .pin(let p):
-            p.draw(in: ctx, selected: selected)
-        case .pad(let p):
-            p.draw(in: ctx, selected: selected)
-        case .symbol(let s):
-            s.draw(in: ctx, selected: selected)
-        case .connection(let c):
-            c.draw(in: ctx, selected: selected)
-        }
-    }
-
-    // ─────────────────────────────────────────────── hit-test & handles
-    func systemHitTest(at point: CGPoint) -> Bool {
-        switch self {
-        case .symbol(let s):
-            return s.hitTest(point)
-        default:
-            return primitives.contains { $0.hitTest(point) }
-        }
-    }
-
     func handles() -> [Handle] {
         switch self {
         case .symbol:
@@ -92,37 +66,6 @@ enum CanvasElement: Identifiable, Hashable {
         }
         if updated.count == 1, let p = updated.first {
             self = .primitive(p)
-        }
-    }
-
-    mutating func translate(by delta: CGPoint) {
-        switch self {
-        case .primitive(var p):
-            p.position.x += delta.x
-            p.position.y += delta.y
-            self = .primitive(p)
-
-        case .pin(var p):
-            p.position.x += delta.x
-            p.position.y += delta.y
-            self = .pin(p)
-
-        case .pad(var p):
-            p.position.x += delta.x
-            p.position.y += delta.y
-            self = .pad(p)
-
-        case .symbol(var s):
-            s.translate(by: delta)
-            self = .symbol(s)
-
-        case .connection(var c):
-            c.segments = c.segments.map { segment in
-                let newStart = CGPoint(x: segment.0.x + delta.x, y: segment.0.y + delta.y)
-                let newEnd = CGPoint(x: segment.1.x + delta.x, y: segment.1.y + delta.y)
-                return (newStart, newEnd)
-            }
-            self = .connection(c)
         }
     }
 }
@@ -148,3 +91,75 @@ extension CanvasElement {
     }
 }
  
+extension CanvasElement {
+    var drawable: Drawable {
+        switch self {
+        case .primitive(let p):   return p
+        case .pin      (let p):   return p
+        case .pad      (let p):   return p
+        case .symbol   (let s):   return s
+        case .connection(let c):  return c
+        }
+    }
+}
+
+extension CanvasElement: Hittable {
+
+    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> Bool {
+        switch self {
+
+        case .primitive(let p):
+            return p.hitTest(point, tolerance: tolerance)
+
+        case .pin(let p):
+            return p.hitTest(point, tolerance: tolerance)   // ← forwards to Pin
+
+        case .pad(let p):
+            return p.hitTest(point, tolerance: tolerance)
+
+        case .symbol(let s):
+            return s.hitTest(point, tolerance: tolerance)
+
+        case .connection(let c):
+            return c.hitTest(point, tolerance: tolerance)
+        }
+    }
+}
+
+extension CanvasElement {
+    mutating func moveTo(originalPosition  orig: CGPoint, offset delta: CGPoint) {
+        switch self {
+        case .primitive(var p):
+            p.position = orig + delta; self = .primitive(p)
+        case .pin(var p):
+            p.position = orig + delta; self = .pin(p)
+        case .pad(var p):
+            p.position = orig + delta; self = .pad(p)
+        case .symbol(var s):
+            s.position = orig + delta; self = .symbol(s)
+        case .connection(var c):
+            c.segments = c.segments.map { seg in
+                let start = seg.0 + delta
+                let end   = seg.1 + delta
+                return (start, end)
+            }
+            self = .connection(c)
+        }
+    }
+}
+
+extension CanvasElement {
+    mutating func setRotation(_ angle: CGFloat) {
+        switch self {
+        case .primitive(var p):    p.rotation            = angle; self = .primitive(p)
+        case .pin       (var p):   p.rotation            = angle; self = .pin(p)
+        case .pad       (var p):   p.rotation            = angle; self = .pad(p)
+        case .symbol    (var s):   s.rotation   = angle; self = .symbol(s)
+        case .connection(var c):
+            // connection needs a custom implementation because it has no single
+            // rotation property; delegate to a method you put on Connection itself
+            c.rotation = angle
+            self = .connection(c)
+        }
+    }
+}

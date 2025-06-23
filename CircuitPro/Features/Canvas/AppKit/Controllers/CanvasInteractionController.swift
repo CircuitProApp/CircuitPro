@@ -37,50 +37,16 @@ final class CanvasInteractionController {
     func updateRotation(to cursor: CGPoint) {
         guard isRotatingViaMouse, let origin = rotationOrigin else { return }
 
-        let deltaX = cursor.x - origin.x
-        let deltaY = cursor.y - origin.y
-        let rawAngle = atan2(deltaY, deltaX)
+        var angle = atan2(cursor.y - origin.y, cursor.x - origin.x)
+
+        if !NSEvent.modifierFlags.contains(.shift) {
+            let snap: CGFloat = .pi / 12            // 15°
+            angle = round(angle / snap) * snap
+        }
 
         var updated = canvas.elements
-        for index in updated.indices where canvas.selectedIDs.contains(updated[index].id) {
-            switch updated[index] {
-            case .primitive(var primitive):
-                var angle = rawAngle
-                if !NSEvent.modifierFlags.contains(.shift) {
-                    let snapIncrement: CGFloat = .pi / 12
-                    angle = round(angle / snapIncrement) * snapIncrement
-                }
-                primitive.rotation = angle
-                updated[index] = .primitive(primitive)
-
-            case .pin(var pin):
-            
-                pin.rotation = rawAngle
-                updated[index] = .pin(pin)
-
-            case .pad(var pad):
-          
-                pad.rotation = rawAngle
-                updated[index] = .pad(pad)
-
-            case .symbol(var symbol):
-                symbol.instance.rotation = rawAngle
-                updated[index] = .symbol(symbol)
-
-            case .connection(var c):
-                c.segments = c.segments.map { segment in
-                    let center = CGPoint(
-                        x: (segment.0.x + segment.1.x) / 2,
-                        y: (segment.0.y + segment.1.y) / 2
-                    )
-                    
-                    let transformedStart = rotatePoint(segment.0, around: center, by: rawAngle)
-                    let transformedEnd = rotatePoint(segment.1, around: center, by: rawAngle)
-                    
-                    return (transformedStart, transformedEnd)
-                }
-                updated[index] = .connection(c)
-            }
+        for i in updated.indices where canvas.selectedIDs.contains(updated[i].id) {
+            updated[i].setRotation(angle)
         }
 
         canvas.elements = updated
@@ -249,54 +215,15 @@ final class CanvasInteractionController {
     private func handleDraggingSelection(to loc: CGPoint, from origin: CGPoint) {
         guard !originalPositions.isEmpty else { return }
 
-        let rawDX = loc.x - origin.x
-        let rawDY = loc.y - origin.y
-
-        // Only snap once
-        let snappedDX = canvas.snapDelta(rawDX)
-        let snappedDY = canvas.snapDelta(rawDY)
+        let delta = CGPoint(
+            x: canvas.snapDelta(loc.x - origin.x),
+            y: canvas.snapDelta(loc.y - origin.y)
+        )
 
         var updated = canvas.elements
         for i in updated.indices {
-            let id = updated[i].id
-            guard let original = originalPositions[id] else { continue }
-
-            let newPos = CGPoint(
-                x: original.x + snappedDX,
-                y: original.y + snappedDY
-            )
-
-            switch updated[i] {
-            case .primitive(var p):
-                p.position = newPos
-                updated[i] = .primitive(p)
-
-            case .pin(var p):
-                p.position = newPos
-                updated[i] = .pin(p)
-
-            case .pad(var p):
-                p.position = newPos
-                updated[i] = .pad(p)
-
-            case .symbol(var s):
-                s.instance.position = newPos
-                updated[i] = .symbol(s)
-
-            case .connection(var c):
-                c.segments = c.segments.map { segment in
-                    let newStart = CGPoint(
-                        x: segment.0.x + snappedDX,
-                        y: segment.0.y + snappedDY
-                    )
-                    let newEnd = CGPoint(
-                        x: segment.1.x + snappedDX,
-                        y: segment.1.y + snappedDY
-                    )
-                    return (newStart, newEnd)
-                }
-                updated[i] = .connection(c)
-            }
+            guard let orig = originalPositions[updated[i].id] else { continue }
+            updated[i].moveTo(originalPosition: orig, offset: delta)
         }
 
         canvas.elements = updated

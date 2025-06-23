@@ -26,9 +26,9 @@ struct Pad: Identifiable, Codable, Hashable {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// MARK: - Placeable
+// MARK: - Transformable
 // ═══════════════════════════════════════════════════════════════════════
-extension Pad: Placeable {
+extension Pad: Transformable {
 
     // bridge enum ⇄ radians so the rest of the canvas can treat the pad
     // just like any continuously-rotated item.
@@ -93,9 +93,9 @@ extension Pad {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// MARK: - Drawable & Tappable
+// MARK: - Drawable & Hittable
 // ═══════════════════════════════════════════════════════════════════════
-extension Pad: Tappable {
+extension Pad: Hittable {
 
     func hitTest(_ p: CGPoint, tolerance t: CGFloat) -> Bool {
         allPrimitives.contains { $0.hitTest(p, tolerance: t) }

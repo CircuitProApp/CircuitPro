@@ -139,20 +139,3 @@ enum AnyPrimitive: GraphicPrimitive {
         }
     }
 }
-
-extension AnyPrimitive {
-    func shifted(by delta: CGPoint) -> AnyPrimitive {
-        switch self {
-        case .line(var line):
-            line.start -= delta
-            line.end -= delta
-            return .line(line)
-        case .rectangle(var rectangle):
-            rectangle.position -= delta
-            return .rectangle(rectangle)
-        case .circle(var circle):
-            circle.position -= delta
-            return .circle(circle)
-        }
-    }
-}

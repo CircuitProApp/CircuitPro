@@ -7,36 +7,45 @@
 
 import SwiftUI
 
-struct ConnectionElement: Identifiable, Drawable, Tappable, Placeable {
-    var position: CGPoint
-    
-    var rotation: CGFloat
-    
+struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
     let id: UUID
-    var segments: [(CGPoint, CGPoint)]
-    
-    var primitives: [AnyPrimitive] {
-        segments.map { segment in
-            AnyPrimitive.line(LinePrimitive(id: UUID(), start: segment.0, end: segment.1, rotation: 0, strokeWidth: 1, color: SDColor(color: .blue)))
-        }
-    }
-    
-    // Hit Testing
-    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5.0) -> Bool {
-        for primitive in primitives {
-            if primitive.hitTest(point, tolerance: tolerance) {
-                return true
+        var segments: [(CGPoint, CGPoint)]     // absolute world-space points
+
+        // Transformable
+        var position: CGPoint  = .zero         // not really meaningful, but required
+        var rotation: CGFloat  = 0             // (unused; see note below)
+
+        // MARK:  Convenience
+        var primitives: [AnyPrimitive] {
+            segments.map { start, end in
+                AnyPrimitive.line(
+                    LinePrimitive(
+                        id: UUID(),
+                        start: start,
+                        end:   end,
+                        rotation: 0,
+                        strokeWidth: 1,
+                        color: SDColor(color: .blue)
+                    )
+                )
             }
         }
-        return false
-    }
 
-    // Draw with selection highlight
-    func draw(in ctx: CGContext, selected: Bool) {
-        for primitive in primitives {
-            primitive.draw(in: ctx, selected: selected)
+        // MARK:  Drawable  -------------------------------------------------
+        func drawBody(in ctx: CGContext) {
+            primitives.forEach { $0.drawBody(in: ctx) }
         }
-    }
+
+        func selectionPath() -> CGPath? {
+            let path = CGMutablePath()
+            primitives.forEach { path.addPath($0.makePath()) }
+            return path
+        }
+
+        // MARK:  Hittable  -------------------------------------------------
+        func hitTest(_ p: CGPoint, tolerance: CGFloat = 5) -> Bool {
+            primitives.contains { $0.hitTest(p, tolerance: tolerance) }
+        }
 }
 
 extension ConnectionElement: Equatable, Hashable {

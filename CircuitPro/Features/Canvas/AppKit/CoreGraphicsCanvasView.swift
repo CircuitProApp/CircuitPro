@@ -56,7 +56,6 @@ final class CoreGraphicsCanvasView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        hitTesting.updateRects()
         drawing.draw(in: ctx, dirtyRect: dirtyRect)
     }
 
