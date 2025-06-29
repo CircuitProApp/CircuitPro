@@ -79,15 +79,12 @@ extension CanvasElement {
 // ───────────────────────────────────────────────────────── bounding box
 extension CanvasElement {
     var boundingBox: CGRect {
-        switch self {
 
-        case .symbol(let s):
-            return .init(origin: .zero, size: .init(width: 100, height: 100))
-        default:
+     
             return primitives
                 .map { $0.makePath().boundingBoxOfPath }
                 .reduce(.null) { $0.union($1) }
-        }
+        
     }
 }
  

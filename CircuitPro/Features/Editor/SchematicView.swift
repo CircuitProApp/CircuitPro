@@ -53,29 +53,40 @@ struct SchematicView: View {
     // MARK: –  Component drop
     // ════════════════════════════════════════════════════════════════════
     private func addComponents(_ comps: [TransferableComponent],
-                               atClipPoint clipPoint: CGPoint)
-    {
+                               atClipPoint clipPoint: CGPoint) {
+                               
         let origin = canvasManager.scrollOrigin
         let zoom   = canvasManager.magnification
-        let docPt  = CGPoint(x: origin.x + clipPoint.x / zoom,
-                             y: origin.y + clipPoint.y / zoom)
-        let pos    = canvasManager.snap(docPt)
+        
+        let docPt = CGPoint(
+            x: origin.x + clipPoint.x / zoom,
+            y: origin.y + clipPoint.y / zoom
+        )
+
+        let pos = canvasManager.snap(docPt)
+        
+        // Logging statements
+        print("Clip Point: \(clipPoint)")
+        print("Scroll Origin: \(origin)")
+        print("Zoom: \(zoom)")
+        print("Document Point (before snap): \(docPt)")
+        print("Snapped Position: \(pos)")
 
         for comp in comps {
             let symbolInst = SymbolInstance(symbolUUID: comp.symbolUUID,
-                                            position  : pos,
+                                            position: pos,
                                             cardinalRotation: .deg0)
 
-            let instance = ComponentInstance(componentUUID   : comp.componentUUID,
-                                             properties      : comp.properties,
-                                             symbolInstance  : symbolInst,
+            let instance = ComponentInstance(componentUUID: comp.componentUUID,
+                                             properties: comp.properties,
+                                             symbolInstance: symbolInst,
                                              footprintInstance: nil)
 
             projectManager.selectedDesign?.componentInstances.append(instance)
         }
 
         document.updateChangeCount(.changeDone)
-        rebuildCanvasElements()           // show what we just added
+        rebuildCanvasElements() // show what we just added
     }
 
     // ════════════════════════════════════════════════════════════════════

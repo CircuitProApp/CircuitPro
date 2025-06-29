@@ -56,20 +56,24 @@ extension SymbolElement: Drawable {
     // 1.  Normal appearance
     // ─────────────────────────────────────────────────────────────
     func drawBody(in ctx: CGContext) {
-
         ctx.saveGState()
 
-        // place the symbol instance in world space
+        // Place the symbol instance in world space
         ctx.concatenate(
-            CGAffineTransform(translationX: position.x,
-                              y: position.y)
+            CGAffineTransform(translationX: position.x, y: position.y)
             .rotated(by: rotation)
         )
 
-        // master primitives
+        // Debugging rectangle
+        let debugRect = CGRect(x: -10, y: -10, width: 20, height: 20)
+        ctx.setStrokeColor(NSColor.red.cgColor)
+        ctx.setLineWidth(1)
+        ctx.stroke(debugRect)
+
+        // Master primitives
         symbol.primitives.forEach { $0.drawBody(in: ctx) }
 
-        // pins are drawables themselves, so call their *body* only
+        // Pins are drawables themselves, so call their *body* only
         symbol.pins.forEach { $0.drawBody(in: ctx) }
 
         ctx.restoreGState()

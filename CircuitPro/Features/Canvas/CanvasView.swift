@@ -22,23 +22,20 @@ struct CanvasView: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    // MARK: – Building the hierarchy
     func makeNSView(context: Context) -> NSScrollView {
-
         let boardSize: CGFloat = 5_000
         let boardRect = NSRect(x: 0, y: 0, width: boardSize, height: boardSize)
 
         let c = context.coordinator
 
         //----------------------------------------------------------------------
-        // 1. Paper dimensions in internal units – one line now
+        // 1. Paper dimensions in internal units
         //----------------------------------------------------------------------
-        // 1.  Paper size in internal units
         let paperSize = manager.paperSize
-            .canvasSize(scale: 10, orientation: .landscape)   // ← landscape here
+            .canvasSize(scale: 10, orientation: .landscape)
 
         //----------------------------------------------------------------------
-        // 2. Frame assignments (unchanged except for c.sheet.frame)
+        // 2. Frame assignments
         //----------------------------------------------------------------------
         c.background.frame  = boardRect
         c.canvas.frame      = boardRect
@@ -46,26 +43,23 @@ struct CanvasView: NSViewRepresentable {
         c.marquee.frame     = boardRect
 
         // MARK: – choose where the sheet’s *top-left* must be
-        let desiredTopLeft = NSPoint(x: 2_500, y: 2_500)          // what you asked for
+        let desiredTopLeft = NSPoint(x: 2_500, y: 2_500)
 
-        // convert that into a bottom-left origin, because App Kit measures from the bottom
+        // convert that into a bottom-left origin
         let sheetOrigin = NSPoint(
             x: desiredTopLeft.x,
-            y: desiredTopLeft.y - paperSize.height                // subtract height to get the bottom-left
+            y: desiredTopLeft.y - paperSize.height
         )
 
         // finally set the frame
         c.sheet.frame = NSRect(origin: sheetOrigin, size: paperSize)
-        c.sheet.orientation = .landscape                      // ← tell the view
+        c.sheet.orientation = .landscape
         c.sheet.autoresizingMask = []
 
         [c.background, c.canvas, c.crosshairs, c.marquee].forEach {
             $0.autoresizingMask = [.width, .height]
         }
 
-        // -----------------------------------------------------------------------------
-        // 3.  Everything below is unchanged …
-        // -----------------------------------------------------------------------------
         c.background.currentStyle = manager.backgroundStyle
 
         c.canvas.crosshairsView  = c.crosshairs
@@ -77,7 +71,7 @@ struct CanvasView: NSViewRepresentable {
         c.canvas.onUpdate        = { self.elements = $0 }
         c.canvas.onSelectionChange = { self.selectedIDs = $0 }
 
-        // Drawing sheet initialisation
+        // Drawing sheet initialization
         c.sheet.sheetSize    = .a4
         c.sheet.cellValues   = [
             "Title":   "Test Layout/Sheet",
@@ -89,12 +83,7 @@ struct CanvasView: NSViewRepresentable {
         // Z-stack container
         let container = NSView(frame: boardRect)
         container.wantsLayer = true
-
         container.addSubview(c.background)
-        container.addSubview(c.sheet,      positioned: .above,  relativeTo: c.background)
-        container.addSubview(c.canvas,     positioned: .above,  relativeTo: c.sheet)
-        container.addSubview(c.crosshairs, positioned: .above,  relativeTo: c.canvas)
-        container.addSubview(c.marquee,    positioned: .above,  relativeTo: c.canvas)
 
         // Scroll view scaffolding
         let scrollView = NSScrollView()
@@ -106,17 +95,34 @@ struct CanvasView: NSViewRepresentable {
         scrollView.maxMagnification        = ZoomStep.maxZoom
         scrollView.magnification           = manager.magnification
 
-        centerScrollView(on: c.sheet, in: scrollView)
+        // Conditional display of sheet and scrolling
+        if manager.showDrawingSheet {
+            container.addSubview(c.sheet, positioned: .above, relativeTo: c.background)
+            centerScrollView(on: c.sheet, in: scrollView)
+        } else {
+            centerScrollView(scrollView, container: container)
+        }
+
+        container.addSubview(c.canvas,     positioned: .above, relativeTo: c.sheet)
+        container.addSubview(c.crosshairs, positioned: .above, relativeTo: c.canvas)
+        container.addSubview(c.marquee,    positioned: .above, relativeTo: c.canvas)
 
         scrollView.postsBoundsChangedNotifications = true
-        
+
         NotificationCenter.default.addObserver(
             forName: NSView.boundsDidChangeNotification,
             object: scrollView.contentView,
             queue: .main
         ) { _ in
+            let origin      = scrollView.contentView.bounds.origin        // bottom-left
+            let clip        = scrollView.contentView.bounds.size          // visible size
+            let boardHeight = container.bounds.height                     // = 5 000
+
+            // convert Y so that 0,0 becomes board *top-left* and Y grows downward
+            let flippedY = boardHeight - origin.y - clip.height
+
+            self.manager.scrollOrigin = CGPoint(x: origin.x, y: flippedY) // top-left, Y-down
             self.manager.magnification = scrollView.magnification
-            self.manager.scrollOrigin  = scrollView.contentView.bounds.origin
         }
 
         return scrollView
@@ -137,7 +143,7 @@ struct CanvasView: NSViewRepresentable {
         c.canvas.selectedLayer     = selectedLayer ?? .copper
         c.canvas.onPrimitiveAdded  = { id, layer in self.layerAssignments[id] = layer }
         c.canvas.onMouseMoved      = { p in self.manager.mouseLocation = p }
-        
+
         c.canvas.onPinHoverChange = { id in
             if let id = id {
                 print("Hovering pin \(id)")
@@ -161,12 +167,26 @@ struct CanvasView: NSViewRepresentable {
         c.sheet.sheetSize   = manager.paperSize
         c.sheet.orientation = .landscape
         c.sheet.cellValues["Size"] = manager.paperSize.name.uppercased()
-        
+
         let newPaperSize = manager.paperSize
-                            .canvasSize(scale: 10, orientation: .landscape)
+            .canvasSize(scale: 10, orientation: .landscape)
         if c.sheet.frame.size != newPaperSize {
             c.sheet.frame.size = newPaperSize
         }
+
+        // Update view for drawing sheet visibility
+        if manager.showDrawingSheet {
+            if !c.sheet.isDescendant(of: scrollView.documentView!) {
+                scrollView.documentView?.addSubview(c.sheet, positioned: .above, relativeTo: c.background)
+                centerScrollView(on: c.sheet, in: scrollView)
+            }
+        } else {
+            if c.sheet.isDescendant(of: scrollView.documentView!) {
+                c.sheet.removeFromSuperview()
+                centerScrollView(scrollView, container: scrollView.documentView!)
+            }
+        }
+
         // Sync external zoom changes
         if scrollView.magnification != manager.magnification {
             scrollView.magnification = manager.magnification
