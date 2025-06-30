@@ -17,7 +17,7 @@ extension Pin: Drawable {
             drawNumber(in: ctx)
         }
         
-        if showLabel {
+        if showLabel && name.isNotEmpty {
             drawLabel(in: ctx)
         }
     }
@@ -95,7 +95,7 @@ extension Pin: Drawable {
         primitives.forEach { outline.addPath($0.makePath()) }
 
         // 2. label glyphs
-        if showLabel {
+        if showLabel && name.isNotEmpty {
             let (text, pos, font) = labelLayout()
             outline.addPath(pathForText(text, font: font, at: pos))
         }

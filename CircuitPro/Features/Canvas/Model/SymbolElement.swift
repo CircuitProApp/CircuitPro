@@ -64,12 +64,6 @@ extension SymbolElement: Drawable {
             .rotated(by: rotation)
         )
 
-        // Debugging rectangle
-        let debugRect = CGRect(x: -10, y: -10, width: 20, height: 20)
-        ctx.setStrokeColor(NSColor.red.cgColor)
-        ctx.setLineWidth(1)
-        ctx.stroke(debugRect)
-
         // Master primitives
         symbol.primitives.forEach { $0.drawBody(in: ctx) }
 

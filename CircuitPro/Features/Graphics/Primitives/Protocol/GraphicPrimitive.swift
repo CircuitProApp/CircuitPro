@@ -49,6 +49,7 @@ extension GraphicPrimitive {
                             miterLimit: 10)
         return stroke.contains(p)
     }
+    
 }
 
 extension Drawable where Self: GraphicPrimitive {

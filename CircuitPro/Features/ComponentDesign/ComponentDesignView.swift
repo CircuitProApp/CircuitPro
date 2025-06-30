@@ -109,6 +109,7 @@ struct ComponentDesignView: View {
         let anchor = CGPoint(x: 2_500, y: 2_500)
 
         // 1. Collect primitives & pins from the designer UI
+        // 1. Collect the objects that were drawn on the canvas
         let rawPrimitives: [AnyPrimitive] =
             componentDesignManager.symbolElements.compactMap {
                 if case .primitive(let p) = $0 { return p }
@@ -116,6 +117,18 @@ struct ComponentDesignView: View {
             }
         let rawPins = componentDesignManager.pins
 
+        // 2. Move them from world space → local symbol space
+        let primitives = rawPrimitives.map { prim -> AnyPrimitive in
+            var copy = prim
+            copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
+            return copy
+        }
+
+        let pins = rawPins.map { pin -> Pin in
+            var copy = pin
+            copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
+            return copy
+        }
 
         // 3. Build component & symbol
         let newComponent = Component(
@@ -131,8 +144,8 @@ struct ComponentDesignView: View {
         let newSymbol = Symbol(
             name      : componentDesignManager.componentName,
             component : newComponent,
-            primitives: rawPrimitives,
-            pins      : rawPins
+            primitives: primitives,
+            pins      : pins
         )
 
         newComponent.symbol = newSymbol
