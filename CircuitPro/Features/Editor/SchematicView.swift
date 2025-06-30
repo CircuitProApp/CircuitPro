@@ -37,6 +37,12 @@ struct SchematicView: View {
                 SchematicToolbarView(selectedSchematicTool: $selectedTool)
                     .padding(16)
             }
+            .overlay(content: {
+                Rectangle()
+                    .fill(.red)
+                    .frame(width: 10, height: 10)
+                    
+            })
 
             .onAppear { rebuildCanvasElements() }
 

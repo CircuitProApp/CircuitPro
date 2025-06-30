@@ -42,7 +42,7 @@ extension Drawable {
 
             ctx.saveGState()
 
-            ctx.setStrokeColor(NSColor(Color.red.opacity(1)).cgColor)
+            ctx.setStrokeColor(haloColor)
             ctx.setLineWidth(haloWidth)
             ctx.setLineCap(.round)
             ctx.setLineJoin(.round)
