@@ -29,9 +29,9 @@ extension Drawable {
         switch self {
         case let prim as any GraphicPrimitive:
             return prim.color.cgColor.copy(alpha: haloAlpha) ??
-            NSColor(Color.accentColor.opacity(haloAlpha)).cgColor
+            NSColor(.blue.opacity(haloAlpha)).cgColor
         default:
-            return NSColor(Color.accentColor.opacity(haloAlpha)).cgColor
+            return NSColor(.blue.opacity(haloAlpha)).cgColor
         }
     }
 
@@ -42,7 +42,7 @@ extension Drawable {
 
             ctx.saveGState()
 
-            ctx.setStrokeColor(haloColor)
+            ctx.setStrokeColor(NSColor(Color.red.opacity(1)).cgColor)
             ctx.setLineWidth(haloWidth)
             ctx.setLineCap(.round)
             ctx.setLineJoin(.round)
