@@ -2,52 +2,53 @@ import AppKit
 
 class BaseGridLayer: CATiledLayer {
 
-    // MARK: – Public knobs
-    var unitSpacing: CGFloat = 10 {
-        didSet {
-            setNeedsDisplay()
-        }
-    }   // logical, in canvas units
-    var majorEvery: Int = 10
-    var showAxes: Bool = true {
-        didSet {
-            setNeedsDisplay()
-        }
-    }
-    var axisLineWidth: CGFloat = 1 {
-        didSet {
-            setNeedsDisplay()
-        }
-    }
+    // MARK: - Public knobs
+    var unitSpacing: CGFloat = 10        { didSet { setNeedsDisplay() } }
+    var majorEvery:   Int     = 10
+    var showAxes:     Bool    = true     { didSet { setNeedsDisplay() } }
+    var axisLineWidth: CGFloat = 1       { didSet { setNeedsDisplay() } }
+    var magnification: CGFloat = 1.0     { didSet { updateForMagnification(); setNeedsDisplay() } }
 
-    var magnification: CGFloat = 1.0 {      // current zoom factor (1 = 100 %)
-        didSet {
-            updateForMagnification()
-            setNeedsDisplay()
-        }
-    }
-
-    // MARK: – Internal constants
+    // MARK: - Internal constants
     private let baseAxisLineWidth: CGFloat = 1.0
     let   centerX: CGFloat = 2_500
     let   centerY: CGFloat = 2_500
 
-    // MARK: – Init boiler-plate
+    // MARK: - Init boiler-plate
     override class func fadeDuration() -> CFTimeInterval { 0 }
 
     private func commonInit() {
-        tileSize = .init(width: 512, height: 512)
-        levelsOfDetail = 4
+        tileSize          = .init(width: 512, height: 512)
+        levelsOfDetail    = 4
         levelsOfDetailBias = 4
     }
+
     override init() {
         super.init()
         commonInit()
     }
+
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         commonInit()
     }
+
+    // ❶ The missing copy initialiser
+    required override init(layer: Any) {
+        super.init(layer: layer)
+
+        // copy properties from the source layer
+        if let source = layer as? BaseGridLayer {
+            unitSpacing   = source.unitSpacing
+            majorEvery    = source.majorEvery
+            showAxes      = source.showAxes
+            axisLineWidth = source.axisLineWidth
+            magnification = source.magnification
+        }
+        // nothing to do for commonInit(): the layer we are copying
+        // already has its tileSize, levelsOfDetail, … set up
+    }
+
 
     // MARK: – Zoom hook
     func updateForMagnification() { axisLineWidth = baseAxisLineWidth / magnification }

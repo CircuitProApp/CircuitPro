@@ -37,20 +37,11 @@ struct SchematicView: View {
                 SchematicToolbarView(selectedSchematicTool: $selectedTool)
                     .padding(16)
             }
-            .overlay(content: {
-                Rectangle()
-                    .fill(.red)
-                    .frame(width: 10, height: 10)
-                    
-            })
-
             .onAppear { rebuildCanvasElements() }
-
             // If the list of instances in the design changes -> rebuild
             .onChange(of: projectManager.selectedDesign?.componentInstances) { _ in
                 rebuildCanvasElements()
             }
-
             // If the user moves a symbol on the canvas -> write back position
             .onChange(of: canvasElements) { syncCanvasToModel($0) }
     }
@@ -58,6 +49,7 @@ struct SchematicView: View {
     // ════════════════════════════════════════════════════════════════════
     // MARK: –  Component drop
     // ════════════════════════════════════════════════════════════════════
+    // 1. Component drop: Add Components with Incremental Reference Number
     private func addComponents(_ comps: [TransferableComponent],
                                atClipPoint clipPoint: CGPoint) {
                                
@@ -71,28 +63,32 @@ struct SchematicView: View {
 
         let pos = canvasManager.snap(docPt)
         
-        // Logging statements
         print("Clip Point: \(clipPoint)")
         print("Scroll Origin: \(origin)")
         print("Zoom: \(zoom)")
         print("Document Point (before snap): \(docPt)")
         print("Snapped Position: \(pos)")
-
+        
         for comp in comps {
             let symbolInst = SymbolInstance(symbolUUID: comp.symbolUUID,
                                             position: pos,
                                             cardinalRotation: .deg0)
-
+            
+            // 1.1 Determine next available reference number.
+            let currentMaxRef = projectManager.selectedDesign?.componentInstances.map { $0.reference }.max() ?? 0
+            let nextRef = currentMaxRef + 1
+            
             let instance = ComponentInstance(componentUUID: comp.componentUUID,
                                              properties: comp.properties,
                                              symbolInstance: symbolInst,
-                                             footprintInstance: nil)
-
+                                             footprintInstance: nil,
+                                             reference: nextRef)
+            
             projectManager.selectedDesign?.componentInstances.append(instance)
         }
-
+        
         document.updateChangeCount(.changeDone)
-        rebuildCanvasElements() // show what we just added
+        rebuildCanvasElements()
     }
 
     // ════════════════════════════════════════════════════════════════════

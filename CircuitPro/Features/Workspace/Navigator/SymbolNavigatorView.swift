@@ -10,33 +10,61 @@ import SwiftData
 
 struct SymbolNavigatorView: View {
     @Environment(\.projectManager) private var projectManager
-    @Query private var symbols: [Symbol]          // All symbols
-    @State  private var selectedComponentInstance: ComponentInstance?
+    @Query private var components: [Component]
+    @State private var selectedComponentInstances: Set<ComponentInstance> = []
+    
+    var document: CircuitProjectDocument
 
-    // Helper: UUID → Symbol name
-    private func name(for uuid: UUID) -> String {
-        symbols.first(where: { $0.uuid == uuid })?.name ?? "⚠︎ missing"
+    // 1. Delete logic, deferred to avoid exclusivity violations
+    private func performDelete(on instance: ComponentInstance) {
+        let selection = selectedComponentInstances
+        DispatchQueue.main.async {
+            if selection.contains(instance) && selection.count > 1 {
+                projectManager.selectedDesign?.componentInstances.removeAll { selection.contains($0) }
+                selectedComponentInstances.removeAll()
+            } else {
+                projectManager.selectedDesign?.componentInstances.removeAll { $0 == instance }
+                selectedComponentInstances.remove(instance)
+            }
+            document.updateChangeCount(.changeDone)
+        }
     }
 
     var body: some View {
         @Bindable var manager = projectManager
 
         if let design = Binding($manager.selectedDesign) {
-            // optional: build a dictionary once per render for O(1) look-ups
-            let symbolNames = Dictionary(uniqueKeysWithValues:
-                                         symbols.map { ($0.uuid, $0.name) })
+            // 2. Build name lookup once per render
+            let names = Dictionary(uniqueKeysWithValues:
+                components.map { ($0.symbol?.uuid, $0.symbol?.name) }
+            )
 
             List(design.componentInstances,
                  id: \.self,
-                 selection: $selectedComponentInstance) { $instance in
-
+                 selection: $selectedComponentInstances
+            ) { $instance in
                 HStack {
-                    Text(symbolNames[instance.symbolInstance.symbolUUID] ?? "⚠︎ missing")
+                    Text((names[instance.symbolInstance.symbolUUID] ?? "⚠︎ missing") ?? "No Component")
                         .foregroundStyle(.primary)
                     Spacer()
+                    Text((components.first(where: { $0.uuid == instance.componentUUID })?.abbreviation ?? "No Name")
+                         + instance.reference.description)
+                        .foregroundStyle(.secondary)
+                        .monospaced()
                 }
                 .frame(height: 14)
                 .listRowSeparator(.hidden)
+                .contextMenu {
+                    // 3. Dynamic delete label/action
+                    let multi = selectedComponentInstances.contains(instance) && selectedComponentInstances.count > 1
+                    Button(role: .destructive) {
+                        performDelete(on: instance)
+                    } label: {
+                        Text(multi
+                             ? "Delete Selected (\(selectedComponentInstances.count))"
+                             : "Delete")
+                    }
+                }
             }
             .listStyle(.inset)
             .scrollContentBackground(.hidden)

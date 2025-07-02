@@ -70,6 +70,18 @@ enum CanvasElement: Identifiable, Hashable {
     }
 }
 
+extension CanvasElement {
+    var transformable: Transformable {
+        switch self {
+        case .primitive(let p):   return p
+        case .pin      (let p):   return p
+        case .pad      (let p):   return p
+        case .symbol   (let s):   return s
+        case .connection(let c):  return c
+        }
+    }
+}
+
 // ───────────────────────────────────────────────────────── extra flags
 extension CanvasElement {
     var isPin: Bool { if case .pin = self { true } else { false } }

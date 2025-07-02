@@ -59,6 +59,23 @@ enum ComponentCategoryFilter: Identifiable, Hashable {
     }
 }
 
+enum ComponentDesignFilter: Displayable {
+    case all
+    case inSchematic
+    case inLayout
+
+    var label: String {
+        switch self {
+        case .all:
+            return "All"
+        case .inSchematic:
+            return "In Schematic"
+        case .inLayout:
+            return "In Layout"
+        }
+    }
+}
+
 
 struct UtilityAreaView: View {
     
@@ -68,6 +85,7 @@ struct UtilityAreaView: View {
     @Query private var components: [Component]
     
     @State private var selectedCategory: ComponentCategoryFilter = .all
+    @State private var selectedDesignFilter: ComponentDesignFilter = .all
     @State private var selectedTab: UtilityAreaTab = .design
     
     var filteredComponents: [Component] {
@@ -78,6 +96,10 @@ struct UtilityAreaView: View {
             return components.filter { $0.category == category }
         }
     }
+    
+//    var filteredDesignComponents: [Component] {
+//        projectManager.selectedDesign?.componentInstances as! [Component]
+//    }
 
     
     var body: some View {
@@ -104,7 +126,16 @@ struct UtilityAreaView: View {
         Group {
             switch selectedTab {
             case .design:
-                Text("Design library")
+                List(ComponentDesignFilter.allCases, id: \.self, selection: $selectedDesignFilter) { filter in
+                    HStack(spacing: 5) {
+                        Image(systemName: "text.page")
+                            .foregroundStyle(selectedDesignFilter == filter ? .primary : .secondary)
+                        Text(filter.label)
+                    }
+                    .listRowSeparator(.hidden)
+                }
+                .listStyle(.inset)
+                .scrollContentBackground(.hidden)
             case .appLibrary:
                 List([ComponentCategoryFilter.all] + ComponentCategory.allCases.map { .category($0) }, id: \.self, selection: $selectedCategory) { filter in
                     HStack(spacing: 5) {

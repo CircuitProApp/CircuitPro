@@ -17,19 +17,23 @@ final class ComponentInstance: Identifiable, Codable {
     var properties: [ComponentProperty]
     var symbolInstance: SymbolInstance
     var footprintInstance: FootprintInstance?
+    
+    var reference: Int
 
     init(
         id: UUID = UUID(),
         componentUUID: UUID,
         properties: [ComponentProperty] = [],
         symbolInstance: SymbolInstance,
-        footprintInstance: FootprintInstance? = nil
+        footprintInstance: FootprintInstance? = nil,
+        reference: Int = 0
     ) {
         self.id = id
         self.componentUUID = componentUUID
         self.properties = properties
         self.symbolInstance = symbolInstance
         self.footprintInstance = footprintInstance
+        self.reference = reference
     }
     
     enum CodingKeys: String, CodingKey {
@@ -38,6 +42,7 @@ final class ComponentInstance: Identifiable, Codable {
         case _properties = "properties"
         case _symbolInstance = "symbolInstance"
         case _footprintInstance = "footprintInstance"
+        case _reference = "reference"
     }
 }
 

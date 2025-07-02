@@ -18,7 +18,7 @@ protocol Drawable {
 }
 
 private let haloWidth: CGFloat = 4               // visual thickness
-private let haloAlpha: CGFloat = 0.40            // transparency
+private let haloAlpha: CGFloat = 0.30            // transparency
 
 extension Drawable {
 

@@ -22,7 +22,7 @@ struct ProjectNavigatorView: View {
 
             Divider().foregroundStyle(.quaternary)
             
-            SymbolNavigatorView()
+            SymbolNavigatorView(document: document)
 
             
         }
