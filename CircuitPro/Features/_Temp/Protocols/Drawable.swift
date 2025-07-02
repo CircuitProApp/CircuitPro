@@ -23,8 +23,7 @@ private let haloAlpha: CGFloat = 0.30            // transparency
 extension Drawable {
 
     /// Colour used for the outline.  If the drawable is (or contains) a
-    /// GraphicPrimitive we reuse its stroke colour, otherwise we fall back
-    /// to the system accent blue.
+    /// GraphicPrimitive we reuse its stroke colour, otherwise we fall back to blue
     private var haloColor: CGColor {
         switch self {
         case let prim as any GraphicPrimitive:

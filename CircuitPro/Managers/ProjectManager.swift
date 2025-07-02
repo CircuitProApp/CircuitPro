@@ -12,8 +12,12 @@ final class ProjectManager {
 
     var project: CircuitProject
     var selectedDesign: CircuitDesign?
+    
+    var selectedDesignComponents: [ComponentInstance] {
+        selectedDesign?.componentInstances ?? []
+    }
 
-init(project: CircuitProject, selectedDesign: CircuitDesign? = nil) {
+    init(project: CircuitProject, selectedDesign: CircuitDesign? = nil) {
         self.project = project
         self.selectedDesign = selectedDesign
     }
