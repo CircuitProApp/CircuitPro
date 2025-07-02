@@ -5,9 +5,6 @@
 //  Created by Giorgi Tchelidze on 5/5/25.
 //
 //
-//  Pad.swift
-//  CircuitPro
-//
 
 import SwiftUI
 

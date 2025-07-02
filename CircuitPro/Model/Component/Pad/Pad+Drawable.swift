@@ -53,3 +53,13 @@ extension Pad: Drawable {
         return combined
     }
 }
+
+extension Pad: Bounded {
+
+    // 1 Bounding rectangle that encloses everything the pad draws
+    var boundingBox: CGRect {
+        allPrimitives
+            .map(\.boundingBox)          // each primitive already knows its box
+            .reduce(CGRect.null) { $0.union($1) }
+    }
+}

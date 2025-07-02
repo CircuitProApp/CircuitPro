@@ -4,6 +4,11 @@
 //
 //  Created by Giorgi Tchelidze on 19.06.25.
 //
+//  ConnectionTool.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 19.06.25.
+//
 
 import SwiftUI
 
@@ -14,31 +19,63 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     let label      = "Connection"
 
     private var start: CGPoint?
-    private var segments: [(CGPoint, CGPoint)] = []
+    private var segments: [ConnectionSegment] = []
 
-    // ----------------------------------------------------------------– taps
+    // ---------------------------------------------------------------- taps
     mutating func handleTap(at location: CGPoint,
                             context: CanvasToolContext) -> CanvasElement? {
 
-        // 1 ▸ double-tap = finish
+        // 3.1 finish on double-tap
         if let s = start, isDoubleTap(from: s, to: location) {
             defer { clearState() }
-            return .connection(ConnectionElement(id: UUID(), segments: segments, position: .zero, rotation: .zero))
+            return .connection(
+                ConnectionElement(
+                    id: UUID(),
+                    segments: segments,
+                    position: .zero,
+                    rotation: .zero
+                )
+            )
         }
 
-        // 2 ▸ first tap = begin
+        // 3.2 first tap
         guard let s = start else {
             start = location
             return nil
         }
 
-        // 3 ▸ intermediate tap = add orthogonal run
-        segments.append(contentsOf: orthogonalSegments(from: s, to: location))
+        // 3.3 intermediate tap ⇒ merge runs
+        let runs = orthogonalSegments(from: s, to: location)
+        for run in runs {
+            addSegment(run)
+        }
         start = location
         return nil
     }
 
-    // ----------------------------------------------------------------– preview
+    private mutating func addSegment(_ seg: ConnectionSegment) {
+        guard seg.start != seg.end else { return }  // skip zero-length
+
+        if var last = segments.last {
+            let lastIsHorizontal = last.start.y == last.end.y
+            let segIsHorizontal     = seg.start.y == seg.end.y
+            let lastIsVertical     = last.start.x == last.end.x
+            let segIsVertical       = seg.start.x == seg.end.x
+            let contiguous = last.end == seg.start
+
+            if contiguous &&
+               ((lastIsHorizontal && segIsHorizontal) ||
+                (lastIsVertical   && segIsVertical)) {
+                last.end = seg.end
+                segments[segments.count - 1] = last
+                return
+            }
+        }
+
+        segments.append(seg)
+    }
+    
+    // ---------------------------------------------------------------- preview
     mutating func drawPreview(in ctx: CGContext,
                               mouse: CGPoint,
                               context: CanvasToolContext) {
@@ -50,59 +87,66 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         ctx.setLineWidth(1)
         ctx.setLineDash(phase: 0, lengths: [4])
 
-        // confirmed segments
         for seg in segments {
-            ctx.move(to: seg.0)
-            ctx.addLine(to: seg.1)
+            ctx.move(to: seg.start)
+            ctx.addLine(to: seg.end)
         }
 
-        // rubber-band segment
         for seg in orthogonalSegments(from: s, to: mouse) {
-            ctx.move(to: seg.0)
-            ctx.addLine(to: seg.1)
+            ctx.move(to: seg.start)
+            ctx.addLine(to: seg.end)
         }
 
         ctx.strokePath()
         ctx.restoreGState()
     }
 
-    // ----------------------------------------------------------------– helpers
+    // ---------------------------------------------------------------- helpers
     private func isDoubleTap(from a: CGPoint, to b: CGPoint) -> Bool {
-        hypot(a.x - b.x, a.y - b.y) < 5          // 5-pt radius ≈ double-tap
+        hypot(a.x - b.x, a.y - b.y) < 5
     }
 
-    private func orthogonalSegments(from a: CGPoint, to b: CGPoint)
-        -> [(CGPoint, CGPoint)] {
+    private func orthogonalSegments(from a: CGPoint, to b: CGPoint) -> [ConnectionSegment] {
+        let dx = b.x - a.x
+        let dy = b.y - a.y
 
-        let mid = CGPoint(x: b.x, y: a.y)        // horizontal then vertical
-        return [(a, mid), (mid, b)]
+        // purely horizontal
+        if dy == 0, dx != 0 {
+            return [ ConnectionSegment(id: .init(), start: a, end: b) ]
+        }
+        // purely vertical
+        if dx == 0, dy != 0 {
+            return [ ConnectionSegment(id: .init(), start: a, end: b) ]
+        }
+        // L-shape: horizontal then vertical
+        let mid = CGPoint(x: b.x, y: a.y)
+        return [
+            ConnectionSegment(id: .init(), start: a,   end: mid),
+            ConnectionSegment(id: .init(), start: mid, end: b)
+        ]
     }
+
 
     private mutating func clearState() {
         start = nil
         segments.removeAll()
     }
 
-    // ----------------------------------------------------------------– Equatable
+    // ---------------------------------------------------------------- Equatable
     static func == (lhs: ConnectionTool, rhs: ConnectionTool) -> Bool {
         lhs.id         == rhs.id &&
         lhs.symbolName == rhs.symbolName &&
         lhs.label      == rhs.label &&
         lhs.start      == rhs.start &&
-        lhs.segments.elementsEqual(rhs.segments) { $0.0 == $1.0 && $0.1 == $1.1 }
+        lhs.segments == rhs.segments
     }
 
-    // ----------------------------------------------------------------– Hashable
+    // ---------------------------------------------------------------- Hashable
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine(symbolName)
         hasher.combine(label)
         hasher.combine(start)
-
-        // fold each segment into the hash
-        for seg in segments {
-            hasher.combine(seg.0.x); hasher.combine(seg.0.y)
-            hasher.combine(seg.1.x); hasher.combine(seg.1.y)
-        }
+        for s in segments { hasher.combine(s) }
     }
 }

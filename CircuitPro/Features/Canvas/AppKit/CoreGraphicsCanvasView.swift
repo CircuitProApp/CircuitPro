@@ -139,14 +139,33 @@ final class CoreGraphicsCanvasView: NSView {
     private func deleteSelectedElements() {
         guard !selectedIDs.isEmpty else { return }
 
-        elements.removeAll { selectedIDs.contains($0.id) }
+        var out: [CanvasElement] = []
 
+        for var element in elements {
+
+            switch element {
+
+            // 1 ─ connection: strip only the selected segments
+            case .connection(var conn):
+                conn.segments.removeAll { seg in selectedIDs.contains(seg.id) }
+                if !conn.segments.isEmpty {          // keep non-empty tracks
+                    element = .connection(conn)
+                    out.append(element)
+                }
+
+            // 2 ─ anything else: drop the whole object when its id is selected
+            default:
+                if !selectedIDs.contains(element.id) { out.append(element) }
+            }
+        }
+
+        elements = out
         selectedIDs.removeAll()
         onSelectionChange?(selectedIDs)
         onUpdate?(elements)
-
         needsDisplay = true
     }
+
     // MARK: Internal Accessors for Controllers
     var hitRects: CanvasHitTestController { hitTesting }
     var marqueeRect: CGRect? { interaction.marqueeRect }

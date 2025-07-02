@@ -91,12 +91,15 @@ extension CanvasElement {
 // ───────────────────────────────────────────────────────── bounding box
 extension CanvasElement {
     var boundingBox: CGRect {
-
-     
+        switch self {
+        case .pin   (let p): return p.boundingBox
+        case .pad   (let p): return p.boundingBox
+        case .symbol(let s): return s.boundingBox
+        default:
             return primitives
-                .map { $0.makePath().boundingBoxOfPath }
-                .reduce(.null) { $0.union($1) }
-        
+                .map(\.boundingBox)
+                .reduce(CGRect.null) { $0.union($1) }
+        }
     }
 }
  
@@ -147,12 +150,13 @@ extension CanvasElement {
         case .symbol(var s):
             s.position = orig + delta; self = .symbol(s)
         case .connection(var c):
-            c.segments = c.segments.map { seg in
-                let start = seg.0 + delta
-                let end   = seg.1 + delta
-                return (start, end)
-            }
-            self = .connection(c)
+//            c.segments = c.segments.map { seg in
+//                let start = seg.0 + delta
+//                let end   = seg.1 + delta
+//                return (start, end)
+//            }
+//            self = .connection(c)
+            print("implementationOnly: moveTo not implemented for .connection")
         }
     }
 }

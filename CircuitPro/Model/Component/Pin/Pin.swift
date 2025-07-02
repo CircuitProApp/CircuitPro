@@ -67,6 +67,6 @@ extension Pin {
             filled: false
         )
 
-        return [.line(line), .circle(circle)]
+        return [.circle(circle), .line(line)]
     }
 }

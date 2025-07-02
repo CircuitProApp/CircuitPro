@@ -18,14 +18,23 @@ final class CanvasDrawingController {
         drawHandles(in: ctx)
         ctx.restoreGState()
     }
-    // MARK: - 1 elements + hit rects
+    // MARK: - 1 elements
     private func drawElements(in ctx: CGContext) {
 
         for element in canvas.elements {
 
-            let selected = canvas.selectedIDs.contains(element.id)
+            switch element {
+            case .connection(let conn):
+                // segment-level highlight
+                drawConnection(conn,
+                               in: ctx,
+                               selectedIDs: canvas.selectedIDs)
 
-            element.drawable.draw(in: ctx, selected: selected)
+            default:
+                // unchanged for every other kind
+                let sel = canvas.selectedIDs.contains(element.id)
+                element.drawable.draw(in: ctx, selected: sel)
+            }
         }
     }
     // MARK: - 2 live preview for the active tool
@@ -80,6 +89,38 @@ final class CanvasDrawingController {
                 ctx.fillEllipse(in: radius)
                 ctx.strokeEllipse(in: radius)
             }
+        }
+    }
+}
+
+// CanvasDrawingController.swift
+// ONLY the part that draws connections is new
+
+private extension CanvasDrawingController {
+
+    func drawConnection(_ conn: ConnectionElement,
+                        in ctx: CGContext,
+                        selectedIDs: Set<UUID>) {
+
+        for prim in conn.primitives {
+
+            // a single stroke is selected when its own id OR the whole
+            // connection’s id lives in the selection set
+            let thisIsSelected = selectedIDs.contains(prim.id) ||
+                                 selectedIDs.contains(conn.id)
+
+            ctx.saveGState()
+
+            if thisIsSelected {
+                ctx.setStrokeColor(NSColor(.blue.opacity(0.3)).cgColor)
+                ctx.setLineWidth(4)
+                ctx.setLineCap(.round)
+                ctx.addPath(prim.makePath())
+                ctx.strokePath()
+            }
+
+            prim.drawBody(in: ctx)        // normal appearance
+            ctx.restoreGState()
         }
     }
 }

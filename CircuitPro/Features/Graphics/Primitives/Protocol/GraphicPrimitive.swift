@@ -7,7 +7,7 @@
 
 import AppKit
 
-protocol GraphicPrimitive: Transformable & Drawable & Hittable & HandleEditable & Codable & Hashable & Identifiable {
+protocol GraphicPrimitive: Transformable & Drawable & Hittable & Bounded & HandleEditable & Codable & Hashable & Identifiable {
 
     var id: UUID { get }
     var color: SDColor       { get set }
@@ -50,6 +50,17 @@ extension GraphicPrimitive {
         return stroke.contains(p)
     }
     
+    var boundingBox: CGRect {
+        // 3.1 Base geometry
+        var box = makePath().boundingBoxOfPath
+
+        // 3.2 Include stroke thickness when outline only
+        if !filled {
+            let inset = -strokeWidth / 2
+            box = box.insetBy(dx: inset, dy: inset)
+        }
+        return box
+    }
 }
 
 extension Drawable where Self: GraphicPrimitive {

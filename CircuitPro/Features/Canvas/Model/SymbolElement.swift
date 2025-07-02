@@ -113,3 +113,46 @@ extension SymbolElement: Hittable {
                symbol.pins.contains      { $0.hitTest(local, tolerance: tolerance) }
     }
 }
+
+extension SymbolElement: Bounded {
+
+    // 1 Axis-aligned box in world space
+    var boundingBox: CGRect {
+
+        // 1.1 Local-to-world transform shared by every child
+        let t = CGAffineTransform(translationX: position.x,
+                                  y: position.y)
+                .rotated(by: rotation)
+
+        // 1.2 Local boxes of master primitives and pins
+        let localBoxes = symbol.primitives.map(\.boundingBox) +
+                         symbol.pins.map(\.boundingBox)
+
+        // 1.3 Union after mapping each box into world space
+        return localBoxes
+            .map { $0.transformed(by: t) }
+            .reduce(CGRect.null) { $0.union($1) }
+    }
+}
+
+private extension CGRect {
+
+    // 1 Transformed axis-aligned bounding box
+    func transformed(by t: CGAffineTransform) -> CGRect {
+
+        // 1.1 Corners in local space
+        let corners = [
+            origin,
+            CGPoint(x: maxX, y: minY),
+            CGPoint(x: maxX, y: maxY),
+            CGPoint(x: minX, y: maxY)
+        ]
+
+        // 1.2 Map every corner and grow a rectangle around them
+        var out = CGRect.null
+        for p in corners.map({ $0.applying(t) }) {
+            out = out.union(CGRect(origin: p, size: .zero))
+        }
+        return out
+    }
+}
