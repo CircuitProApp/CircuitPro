@@ -1,9 +1,3 @@
-//
-//  ConnectionTool.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 19.06.25.
-//
 //  ConnectionTool.swift
 //  CircuitPro
 //
@@ -11,6 +5,7 @@
 //
 
 import SwiftUI
+import AppKit          // for key-events (Return key finish)
 
 struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
@@ -19,63 +14,75 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     let label      = "Connection"
 
     private var start: CGPoint?
+    private var startOnWire = false
     private var segments: [ConnectionSegment] = []
 
-    // ---------------------------------------------------------------- taps
-    mutating func handleTap(at location: CGPoint,
+    // MARK: – taps -----------------------------------------------------
+    mutating func handleTap(at loc: CGPoint,
                             context: CanvasToolContext) -> CanvasElement? {
 
-        // 3.1 finish on double-tap
-        if let s = start, isDoubleTap(from: s, to: location) {
-            defer { clearState() }
-            return .connection(
-                ConnectionElement(
-                    id: UUID(),
-                    segments: segments,
-                    position: .zero,
-                    rotation: .zero
-                )
-            )
+        // 1. finish on double-tap
+        if let s = start, isDoubleTap(from: s, to: loc) {
+            return finishRoute()
         }
 
-        // 3.2 first tap
+        // 2. first tap: remember start point + “on wire?”
         guard let s = start else {
-            start = location
+            start       = loc
+            startOnWire = context.hitSegmentID != nil
             return nil
         }
 
-        // 3.3 intermediate tap ⇒ merge runs
-        let runs = orthogonalSegments(from: s, to: location)
-        for run in runs {
-            addSegment(run)
+        // 3. intermediate tap(s)
+        let runs      = orthogonalSegments(from: s, to: loc)
+        let endOnWire = context.hitSegmentID != nil
+
+        for (i, run) in runs.enumerated() {
+            let isFirst = i == 0
+            let isLast  = i == runs.count - 1
+            let maySplit = (isFirst && startOnWire) || (isLast && endOnWire)
+            addSegment(run, allowSplitting: maySplit)
         }
-        start = location
+
+        // 4. auto-finish when we ended on a wire / pad / pin
+        if endOnWire { return finishRoute() }
+
+        // 5. prepare for next leg
+        start       = loc
+        startOnWire = endOnWire
         return nil
     }
 
-    private mutating func addSegment(_ seg: ConnectionSegment) {
-        guard seg.start != seg.end else { return }  // skip zero-length
-
-        if var last = segments.last {
-            let lastIsHorizontal = last.start.y == last.end.y
-            let segIsHorizontal     = seg.start.y == seg.end.y
-            let lastIsVertical     = last.start.x == last.end.x
-            let segIsVertical       = seg.start.x == seg.end.x
-            let contiguous = last.end == seg.start
-
-            if contiguous &&
-               ((lastIsHorizontal && segIsHorizontal) ||
-                (lastIsVertical   && segIsVertical)) {
-                last.end = seg.end
-                segments[segments.count - 1] = last
-                return
-            }
-        }
-
-        segments.append(seg)
+    // MARK: – key presses (Return completes route) --------------------
+    mutating func handleKeyDown(_ event: NSEvent,
+                                context: CanvasToolContext) -> CanvasElement? {
+        if event.keyCode == 36 { return finishRoute() }     // ⏎
+        return nil
     }
-    
-    // ---------------------------------------------------------------- preview
+
+    // MARK: – finish + merge ------------------------------------------
+    private mutating func finishRoute() -> CanvasElement? {
+        guard !segments.isEmpty else { clearState(); return nil }
+
+        let newConn = ConnectionElement(id: UUID(),
+                                        segments: segments,
+                                        position: .zero,
+                                        rotation: .zero)
+
+        // after creating the element we must clear local state
+        clearState()
+        return .connection(newConn)
+    }
+
+    //  inside ConnectionTool  -------------------------------------------
+    static func merge(_ elem: ConnectionElement,
+                      into elements: inout [CanvasElement]) -> ConnectionElement {
+
+    // 1. delegate to ConnectionElement.merge
+        ConnectionElement.merge(elem, into: &elements)
+    }
+
+    // MARK: – drawing preview (unchanged) -----------------------------
     mutating func drawPreview(in ctx: CGContext,
                               mouse: CGPoint,
                               context: CanvasToolContext) {
@@ -88,65 +95,76 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         ctx.setLineDash(phase: 0, lengths: [4])
 
         for seg in segments {
-            ctx.move(to: seg.start)
-            ctx.addLine(to: seg.end)
+            ctx.move(to: seg.start); ctx.addLine(to: seg.end)
         }
-
         for seg in orthogonalSegments(from: s, to: mouse) {
-            ctx.move(to: seg.start)
-            ctx.addLine(to: seg.end)
+            ctx.move(to: seg.start); ctx.addLine(to: seg.end)
         }
 
         ctx.strokePath()
         ctx.restoreGState()
     }
 
-    // ---------------------------------------------------------------- helpers
+    // MARK: – helpers -------------------------------------------------
+    private mutating func addSegment(_ seg: ConnectionSegment,
+                                     allowSplitting: Bool) {
+
+        guard seg.start != seg.end else { return }      // zero-length
+
+        // 1. merge with last when collinear & contiguous
+        if var last = segments.last,
+           last.end == seg.start,
+           (last.isHorizontal && seg.isHorizontal) ||
+           (last.isVertical   && seg.isVertical)   {
+
+            last.end = seg.end
+            segments[segments.count - 1] = last
+        }
+
+        // 2. optional T/X
+        if allowSplitting {
+            var out: [ConnectionSegment] = []
+            for var run in segments {
+                if let p = run.intersectionPoint(with: seg) {
+                    let (a,b) = run.split(at: p)
+                    out.append(a); out.append(b)
+                    if p != seg.start && p != seg.end {
+                        let (c,d) = seg.split(at: p)
+                        out.append(c); out.append(d)
+                        segments = out; return
+                    }
+                } else { out.append(run) }
+            }
+            segments = out
+        }
+
+        // 3. append
+        segments.append(seg)
+    }
+
     private func isDoubleTap(from a: CGPoint, to b: CGPoint) -> Bool {
         hypot(a.x - b.x, a.y - b.y) < 5
     }
 
     private func orthogonalSegments(from a: CGPoint, to b: CGPoint) -> [ConnectionSegment] {
-        let dx = b.x - a.x
-        let dy = b.y - a.y
-
-        // purely horizontal
-        if dy == 0, dx != 0 {
-            return [ ConnectionSegment(id: .init(), start: a, end: b) ]
-        }
-        // purely vertical
-        if dx == 0, dy != 0 {
-            return [ ConnectionSegment(id: .init(), start: a, end: b) ]
-        }
-        // L-shape: horizontal then vertical
-        let mid = CGPoint(x: b.x, y: a.y)
-        return [
-            ConnectionSegment(id: .init(), start: a,   end: mid),
-            ConnectionSegment(id: .init(), start: mid, end: b)
-        ]
+        if a.y == b.y { return [ConnectionSegment(start: a, end: b)] }
+        if a.x == b.x { return [ConnectionSegment(start: a, end: b)] }
+        let m = CGPoint(x: b.x, y: a.y)
+        return [ConnectionSegment(start: a, end: m),
+                ConnectionSegment(start: m, end: b)]
     }
-
 
     private mutating func clearState() {
-        start = nil
-        segments.removeAll()
+        start = nil; startOnWire = false; segments.removeAll()
     }
 
-    // ---------------------------------------------------------------- Equatable
-    static func == (lhs: ConnectionTool, rhs: ConnectionTool) -> Bool {
-        lhs.id         == rhs.id &&
-        lhs.symbolName == rhs.symbolName &&
-        lhs.label      == rhs.label &&
-        lhs.start      == rhs.start &&
-        lhs.segments == rhs.segments
+    // MARK: – conformance --------------------------------------------
+    static func == (l: Self, r: Self) -> Bool {
+        l.id == r.id && l.start == r.start && l.segments == r.segments
     }
-
-    // ---------------------------------------------------------------- Hashable
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-        hasher.combine(symbolName)
-        hasher.combine(label)
-        hasher.combine(start)
-        for s in segments { hasher.combine(s) }
+    func hash(into h: inout Hasher) {
+        h.combine(id); h.combine(start); h.combine(segments)
     }
 }
+
+// MARK: – Connection merging helpers ---------------------------------

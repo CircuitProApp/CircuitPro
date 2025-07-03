@@ -239,25 +239,52 @@ final class CanvasInteractionController {
     }
 
     private func handleToolTap(at loc: CGPoint) -> Bool {
+
+        // 0 – any tool that is not the plain cursor
         if var tool = canvas.selectedTool, tool.id != "cursor" {
+
+            // 1 – gather statistics
             let pinCount = canvas.elements.reduce(0) { $1.isPin ? $0 + 1 : $0 }
             let padCount = canvas.elements.reduce(0) { $1.isPad ? $0 + 1 : $0 }
+
+            // 2 – snap the cursor to grid
+            let snapped = canvas.snap(loc)
+
+            // 3 – identify the element or segment that was clicked
+            let hitID = canvas.hitRects.hitTest(at: snapped)
+
+            // 4 – build the context handed to the tool
             let context = CanvasToolContext(
                 existingPinCount: pinCount,
                 existingPadCount: padCount,
-                selectedLayer: canvas.selectedLayer
+                selectedLayer:    canvas.selectedLayer,
+                magnification:    canvas.magnification,
+                hitSegmentID:     hitID
             )
 
-            let snapped = canvas.snap(loc)
+            // 5 – let the tool react to the tap
             if let newElement = tool.handleTap(at: snapped, context: context) {
-                canvas.elements.append(newElement)
-                canvas.onUpdate?(canvas.elements)
 
-                if case .primitive(let prim) = newElement {
-                    canvas.onPrimitiveAdded?(prim.id, context.selectedLayer)
+                switch newElement {
+
+                case .connection(let conn):
+                    // merge the new track into any connected connections
+                    let merged = ConnectionTool.merge(conn, into: &canvas.elements)
+                    canvas.elements.append(.connection(merged))
+
+                default:
+                    canvas.elements.append(newElement)
+
+                    // tell the document when a primitive was added
+                    if case .primitive(let prim) = newElement {
+                        canvas.onPrimitiveAdded?(prim.id, context.selectedLayer)
+                    }
                 }
+
+                canvas.onUpdate?(canvas.elements)
             }
 
+            // 6 – persist any state mutated inside the tool
             canvas.selectedTool = tool
             return true
         }

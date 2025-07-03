@@ -17,6 +17,8 @@ struct SchematicView: View {
 
     @State private var selectedLayer:     LayerKind?
     @State private var layerAssignments: [UUID: LayerKind] = [:]
+    
+    @State private var debugString: String?
 
     // ─────────────────────────────────────────────  view
     var body: some View {
@@ -37,6 +39,12 @@ struct SchematicView: View {
                 SchematicToolbarView(selectedSchematicTool: $selectedTool)
                     .padding(16)
             }
+            .overlay(content: {
+                VStack {
+                    Text(debugString ?? "No connection elements")
+                }
+            })
+
             .onAppear { rebuildCanvasElements() }
             // If the list of instances in the design changes -> rebuild
             .onChange(of: projectManager.selectedDesign?.componentInstances) { _ in
@@ -44,8 +52,24 @@ struct SchematicView: View {
             }
             // If the user moves a symbol on the canvas -> write back position
             .onChange(of: canvasElements) { syncCanvasToModel($0) }
+            .onChange(of: canvasElements) {
+                debugString = connectionElements()
+            }
     }
 
+    // 2 Connection debug
+    private func connectionElements() -> String? {
+        // 2.1 Filter out only the .connection cases, map to their UUID strings
+        let ids = canvasElements.compactMap { element -> String? in
+            if case .connection(let connectionElement) = element {
+                return connectionElement.id.uuidString
+            }
+            return nil
+        }
+        // 2.2 If there are none, return nil; otherwise join them with commas (or newlines)
+        guard !ids.isEmpty else { return nil }
+        return ids.joined(separator: ", ")
+    }
     // ════════════════════════════════════════════════════════════════════
     // MARK: –  Component drop
     // ════════════════════════════════════════════════════════════════════
