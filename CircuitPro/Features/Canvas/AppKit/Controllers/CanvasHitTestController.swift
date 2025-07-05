@@ -15,16 +15,23 @@ final class CanvasHitTestController {
     }
 
     func hitTest(at point: CGPoint) -> UUID? {
-        for element in canvas.elements {
+        // This logic remains sound. We iterate through elements and give connections
+        // a chance to return a more specific ID (an edge's ID) before falling back.
+        for element in canvas.elements.reversed() { // NOTE: Reversed to hit topmost elements first
 
-            // 1 ─ give connection elements a chance to return a *segment* id
+            // 1 — Check for a specific segment hit within a connection.
             if case .connection(let conn) = element,
-               let segID = conn.hitSegmentID(at: point, tolerance: 5) {
-                return segID
+               let edgeID = conn.hitSegmentID(at: point, tolerance: 5) {
+                print(edgeID)
+                return edgeID
             }
 
-            // 2 ─ fall back to the element as a whole
-            if element.hitTest(point) { return element.id }
+            // 2 — Fall back to hitting the element as a whole.
+            // This now works perfectly for connections, as their hitTest method
+            // checks all their constituent edges.
+            if element.hitTest(point) {
+                return element.id
+            }
         }
         return nil
     }

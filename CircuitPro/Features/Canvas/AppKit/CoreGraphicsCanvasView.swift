@@ -146,12 +146,12 @@ final class CoreGraphicsCanvasView: NSView {
             switch element {
 
             // 1 ─ connection: strip only the selected segments
-            case .connection(var conn):
-                conn.segments.removeAll { seg in selectedIDs.contains(seg.id) }
-                if !conn.segments.isEmpty {          // keep non-empty tracks
-                    element = .connection(conn)
-                    out.append(element)
-                }
+//            case .connection(var conn):
+//                conn.segments.removeAll { seg in selectedIDs.contains(seg.id) }
+//                if !conn.segments.isEmpty {          // keep non-empty tracks
+//                    element = .connection(conn)
+//                    out.append(element)
+//                }
 
             // 2 ─ anything else: drop the whole object when its id is selected
             default:

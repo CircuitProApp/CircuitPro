@@ -268,7 +268,9 @@ final class CanvasInteractionController {
                 switch newElement {
 
                 case .connection(let conn):
-                    // merge the new track into any connected connections
+                    // CHANGE: The call to merge is now cleaner.
+                    // The static function on ConnectionTool will contain the complex
+                    // graph logic for finding and merging with existing nets.
                     let merged = ConnectionTool.merge(conn, into: &canvas.elements)
                     canvas.elements.append(.connection(merged))
 

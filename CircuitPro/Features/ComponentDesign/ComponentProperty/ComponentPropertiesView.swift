@@ -59,7 +59,7 @@ struct ComponentPropertiesView: View {
         .buttonStyle(.bordered)
         .padding(10)
         .background(.thickMaterial)
-        .border(edge: .top, style: .gray.opacity(0.3), thickness: 1)
+//        .border(edge: .top, style: .gray.opacity(0.3), thickness: 1)
     }
 }
 
