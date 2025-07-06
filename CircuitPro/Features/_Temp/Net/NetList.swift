@@ -98,3 +98,64 @@ extension Net {
         }
     }
 }
+
+extension Net {
+
+    // 1. Helper
+    private func hasNode(at p: CGPoint, tolerance: CGFloat = 0.5) -> Bool {
+        nodeByID.values.contains { abs($0.point.x - p.x) < tolerance &&
+                                   abs($0.point.y - p.y) < tolerance }
+    }
+
+    // 2. New signature (old one remains a thin wrapper)
+    static func findAndMergeIntentionalIntersections(
+        between netA: inout Net,
+        and netB: inout Net) -> Bool
+    {
+        var intersections: [(edgeA: UUID, edgeB: UUID, p: CGPoint)] = []
+
+        // 2.1 Scan geometry
+        for edgeA in netA.edges {
+            guard let a0 = netA.nodeByID[edgeA.a], let a1 = netA.nodeByID[edgeA.b] else { continue }
+            let segA = LineSegment(start: a0.point, end: a1.point)
+
+            for edgeB in netB.edges {
+                guard let b0 = netB.nodeByID[edgeB.a], let b1 = netB.nodeByID[edgeB.b] else { continue }
+                let segB = LineSegment(start: b0.point, end: b1.point)
+
+                if let p = segA.intersectionPoint(with: segB) {
+                    // 2.2 Keep only intersections that sit on a real node
+                    if netA.hasNode(at: p) || netB.hasNode(at: p) {
+                        intersections.append((edgeA.id, edgeB.id, p))
+                    }
+                }
+            }
+        }
+
+        guard !intersections.isEmpty else { return false }
+
+        // 2.3 Perform splits (identical to previous implementation)
+        for i in intersections {
+            let nID = netA.splitEdge(withID: i.edgeA, at: i.p)
+            if let nID = nID,
+               let idx = netB.edges.firstIndex(where: { $0.id == i.edgeB }),
+               let nb0 = netB.nodeByID[netB.edges[idx].a],
+               let nb1 = netB.nodeByID[netB.edges[idx].b] {
+
+                let e1 = Edge(id: UUID(), a: nb0.id, b: nID)
+                let e2 = Edge(id: UUID(), a: nID,  b: nb1.id)
+                netB.edges.remove(at: idx)
+                netB.edges.append(contentsOf: [e1, e2])
+            }
+        }
+        return true
+    }
+
+    // 3. Legacy shim (keeps old call-sites working, if any)
+    static func findAndMergeIntersections(
+        between netA: inout Net,
+        and netB: inout Net) -> Bool
+    {
+        findAndMergeIntentionalIntersections(between: &netA, and: &netB)
+    }
+}

@@ -151,41 +151,30 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     /// This is the new, powerful merging logic. It's called by the canvas controller after a new connection element is created.
-    static func merge(_ newElement: ConnectionElement, into elements: inout [CanvasElement]) -> ConnectionElement {
-        
-        // 1. Start with the net from the newly created element. This will be our "master" net.
-        var masterNet = newElement.net
-        
-        // 2. We must iterate backwards to safely remove elements as we merge them.
+    static func merge(_ newElement: ConnectionElement,
+                      into elements: inout [CanvasElement]) -> ConnectionElement {
+
+        var master = newElement.net
+
         for i in (0..<elements.count).reversed() {
-            
-            // 3. Get the other element, making sure it's a connection we can merge with.
             guard case .connection(let otherConn) = elements[i],
-                  otherConn.id != newElement.id else {
-                continue
-            }
-            
-            // 4. Create a mutable copy of the other net to work with.
-            var otherNet = otherConn.net
-            
-            // 5. This is the magic. We check for intersections. If found, this function
-            // modifies both masterNet and otherNet, splitting edges and creating shared junctions.
-            let didIntersect = Net.findAndMergeIntersections(between: &masterNet, and: &otherNet)
-            
-            // 6. If they were connected, we merge the graphs.
-            if didIntersect {
-                // Absorb the nodes and edges from the other net into our master net.
-                masterNet.nodeByID.merge(otherNet.nodeByID) { (current, _) in current }
-                masterNet.edges.append(contentsOf: otherNet.edges)
-                
-                // Since the other connection has been absorbed, remove it from the canvas.
+                  otherConn.id != newElement.id else { continue }
+
+            var other = otherConn.net
+
+            let joined = Net.findAndMergeIntentionalIntersections(
+                            between: &master,
+                            and: &other)
+
+            if joined {
+                master.nodeByID.merge(other.nodeByID) { cur, _ in cur }
+                master.edges.append(contentsOf: other.edges)
                 elements.remove(at: i)
             }
         }
-        
-        // 7. Return a new ConnectionElement containing the final, fully merged net.
-        masterNet.mergeColinearEdges()
-        return ConnectionElement(id: masterNet.id, net: masterNet)
+
+        master.mergeColinearEdges()
+        return ConnectionElement(id: master.id, net: master)
     }
 
     // MARK: - Helpers & Conformance
@@ -211,7 +200,7 @@ import Foundation
 import CoreGraphics
 
 // A temporary, private struct used only for geometry calculations.
-fileprivate struct LineSegment {
+struct LineSegment {
     var start: CGPoint
     var end: CGPoint
     var isHorizontal: Bool { start.y == end.y }
@@ -265,49 +254,5 @@ extension Net {
     /// Finds all intersections between two nets, splits the affected edges in both,
     /// and establishes shared junction nodes to link them topologically.
     /// - Returns: `true` if any intersections were found and merged.
-    static func findAndMergeIntersections(between netA: inout Net, and netB: inout Net) -> Bool {
-        var intersectionsFound = false
-        var intersectionPoints: [(edgeA_ID: UUID, edgeB_ID: UUID, point: CGPoint)] = []
 
-        // 1. First, find all geometric intersection points without changing anything.
-        // This prevents mutation-during-iteration problems.
-        for edgeA in netA.edges {
-            guard let nodeA_start = netA.nodeByID[edgeA.a], let nodeA_end = netA.nodeByID[edgeA.b] else { continue }
-            let segA = LineSegment(start: nodeA_start.point, end: nodeA_end.point)
-            
-            for edgeB in netB.edges {
-                guard let nodeB_start = netB.nodeByID[edgeB.a], let nodeB_end = netB.nodeByID[edgeB.b] else { continue }
-                let segB = LineSegment(start: nodeB_start.point, end: nodeB_end.point)
-                
-                if let point = segA.intersectionPoint(with: segB) {
-                    intersectionsFound = true
-                    intersectionPoints.append((edgeA.id, edgeB.id, point))
-                }
-            }
-        }
-        
-        // 2. Now, process the intersections.
-        guard intersectionsFound else { return false }
-        
-        for intersection in intersectionPoints {
-            // Split the edge in Net A, creating a new junction node.
-            let junctionNodeID = netA.splitEdge(withID: intersection.edgeA_ID, at: intersection.point)
-            
-            // Split the edge in Net B, but instead of creating a new node,
-            // we will link it to the junction node created in Net A.
-            if let junctionNodeID = junctionNodeID,
-               let edgeB_Index = netB.edges.firstIndex(where: { $0.id == intersection.edgeB_ID }),
-               let nodeB_A = netB.nodeByID[netB.edges[edgeB_Index].a],
-               let nodeB_B = netB.nodeByID[netB.edges[edgeB_Index].b] {
-
-                let newEdge1 = Edge(id: UUID(), a: nodeB_A.id, b: junctionNodeID)
-                let newEdge2 = Edge(id: UUID(), a: junctionNodeID, b: nodeB_B.id)
-                
-                netB.edges.remove(at: edgeB_Index)
-                netB.edges.append(contentsOf: [newEdge1, newEdge2])
-            }
-        }
-        
-        return true
-    }
 }
