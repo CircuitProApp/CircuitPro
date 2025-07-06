@@ -29,6 +29,71 @@ final class ComponentDesignManager {
 
     var selectedFootprintLayer: LayerKind? = .copper
     var layerAssignments: [UUID: LayerKind] = [:]
+    
+    // MARK: - Reset All State
+    func resetAll() {
+        // 1. Component metadata
+        componentName = ""
+        componentAbbreviation = ""
+        selectedCategory = nil
+        selectedPackageType = nil
+        componentProperties = [
+            ComponentProperty(key: nil, value: .single(nil), unit: .init())
+        ]
+
+        // 2. Symbol design
+        symbolElements = []
+        selectedSymbolElementIDs = []
+        selectedSymbolTool = AnyCanvasTool(CursorTool())
+
+        // 3. Footprint design
+        footprintElements = []
+        selectedFootprintElementIDs = []
+        selectedFootprintTool = AnyCanvasTool(CursorTool())
+        selectedFootprintLayer = .copper
+        layerAssignments = [:]
+    }
+    
+    func validate() -> ValidationResult {
+        var errors   = [String]()
+        var warnings = [String]()
+
+        // 1. Errors on missing core fields
+        if componentName.trimmingCharacters(in: .whitespaces).isEmpty {
+            errors.append("Component must have a name.")
+        }
+        if componentAbbreviation.trimmingCharacters(in: .whitespaces).isEmpty {
+            errors.append("Component must have an abbreviation.")
+        }
+        if selectedCategory == nil {
+            errors.append("Component must have a category.")
+        }
+
+        // 2. Errors on symbol/primitives & pins
+        let primitives = symbolElements.compactMap { elem -> AnyPrimitive? in
+            if case .primitive(let p) = elem { return p }
+            return nil
+        }
+        let pins = symbolElements.compactMap { elem -> Pin? in
+            if case .pin(let p) = elem { return p }
+            return nil
+        }
+
+        if primitives.isEmpty {
+            errors.append("No symbol created.")
+        }
+        if pins.isEmpty {
+            errors.append("No pins added to symbol.")
+        }
+
+        // 3. Warning if no property has a key
+        let hasAnyKey = componentProperties.contains { $0.key != nil }
+        if !hasAnyKey {
+            warnings.append("At least one property should have a key.")
+        }
+
+        return ValidationResult(errors: errors, warnings: warnings)
+    }
 }
 
 extension ComponentDesignManager {
