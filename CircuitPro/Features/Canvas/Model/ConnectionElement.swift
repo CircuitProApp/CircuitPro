@@ -122,10 +122,3 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
 extension ConnectionElement: Hashable {
     func hash(into h: inout Hasher) { h.combine(id) }
 }
-
-// We can also add a helper to CGFloat for line calculations.
-extension CGFloat {
-    func isBetween(_ a: CGFloat, _ b: CGFloat) -> Bool {
-        (Swift.min(a, b)...Swift.max(a, b)).contains(self)
-    }
-}

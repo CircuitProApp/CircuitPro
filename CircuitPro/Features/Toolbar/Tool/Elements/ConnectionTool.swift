@@ -21,43 +21,52 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     // MARK: - RouteInProgress (The brains of the operation)
     /// A private helper struct that manages the construction of a new Net while the user clicks around the canvas.
     private struct RouteInProgress: Equatable, Hashable {
+
+        enum Orientation {
+            case horizontal, vertical
+        }
+
         var net: Net
-        var lastNodeID: UUID // The ID of the node at the end of the current route.
-        
+        var lastNodeID: UUID
+        private(set) var lastOrientation: Orientation? = nil     // NEW
+
         init(startPoint: CGPoint, connectingTo existingElementID: UUID?) {
             let startNode = Node(id: UUID(), point: startPoint, kind: .endpoint)
             self.net = Net(id: UUID(), nodeByID: [startNode.id: startNode], edges: [])
             self.lastNodeID = startNode.id
-
-            // If we started on an existing wire, we might need to handle splitting/joining later.
-            // For now, this is a placeholder for that future logic.
         }
 
-        /// Adds a point to the route, extending from the last point with orthogonal segments.
+        // MARK: - Extend Logic
         mutating func extend(to point: CGPoint) {
             guard let lastNode = net.nodeByID[lastNodeID] else { return }
 
-            // Create the intermediate elbow node if needed for an L-shaped segment.
+            // 1 Decide elbow order (flip default direction when necessary)
             if lastNode.point.x != point.x && lastNode.point.y != point.y {
-                let elbowPoint = CGPoint(x: point.x, y: lastNode.point.y)
+
+                let firstIsVertical = (lastOrientation == .horizontal)
+                let elbowPoint = firstIsVertical
+                    ? CGPoint(x: lastNode.point.x, y: point.y)     // vertical first
+                    : CGPoint(x: point.x, y: lastNode.point.y)      // horizontal first
+
                 let elbowNode = Node(id: UUID(), point: elbowPoint, kind: .endpoint)
                 net.nodeByID[elbowNode.id] = elbowNode
-                
+
                 let edge1 = Edge(id: UUID(), a: lastNodeID, b: elbowNode.id)
                 net.edges.append(edge1)
-                
-                // The new "last node" is the elbow.
+
+                lastOrientation = firstIsVertical ? .vertical : .horizontal
                 lastNodeID = elbowNode.id
             }
 
-            // Create the final node at the target point.
+            // 2 Final segment
             let endNode = Node(id: UUID(), point: point, kind: .endpoint)
             net.nodeByID[endNode.id] = endNode
 
             let edge2 = Edge(id: UUID(), a: lastNodeID, b: endNode.id)
             net.edges.append(edge2)
-            
-            // The new "last node" is now the end point.
+
+            lastOrientation = (endNode.point.x == net.nodeByID[lastNodeID]!.point.x)
+                ? .vertical : .horizontal
             lastNodeID = endNode.id
         }
     }
@@ -88,43 +97,41 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         return nil
     }
 
-    mutating func handleKeyDown(_ event: NSEvent, context: CanvasToolContext) -> CanvasElement? {
-        // Finish the route if the user presses Return (key code 36).
-        if event.keyCode == 36 {
-            return finishRoute()
-        }
-        return nil
-    }
-    
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
-        guard let route = inProgressRoute, let lastNode = route.net.nodeByID[route.lastNodeID] else { return }
+        guard let route = inProgressRoute,
+              let lastNode = route.net.nodeByID[route.lastNodeID] else { return }
 
         ctx.saveGState()
         ctx.setStrokeColor(NSColor(.blue).cgColor)
         ctx.setLineWidth(1)
-        
-        // Draw the segments already committed to the in-progress net.
+
+        // 2.1 Already-fixed segments
         for edge in route.net.edges {
-            guard let nodeA = route.net.nodeByID[edge.a], let nodeB = route.net.nodeByID[edge.b] else { continue }
-            ctx.move(to: nodeA.point)
-            ctx.addLine(to: nodeB.point)
+            guard let a = route.net.nodeByID[edge.a],
+                  let b = route.net.nodeByID[edge.b] else { continue }
+            ctx.move(to: a.point)
+            ctx.addLine(to: b.point)
         }
         ctx.strokePath()
 
-        // Draw the dashed "ghost" line from the last point to the current mouse cursor.
+        // 2.2 Ghost segment (respect flip rule)
         ctx.setLineDash(phase: 0, lengths: [4])
-        let startPoint = lastNode.point
-        if startPoint.x != mouse.x && startPoint.y != mouse.y {
-             let elbowPoint = CGPoint(x: mouse.x, y: startPoint.y)
-             ctx.move(to: startPoint)
-             ctx.addLine(to: elbowPoint)
-             ctx.addLine(to: mouse)
+        let p0 = lastNode.point
+
+        if p0.x != mouse.x && p0.y != mouse.y {
+            let firstIsVertical = (route.lastOrientation == .horizontal)
+            let elbow = firstIsVertical
+                ? CGPoint(x: p0.x, y: mouse.y)
+                : CGPoint(x: mouse.x, y: p0.y)
+
+            ctx.move(to: p0)
+            ctx.addLine(to: elbow)
+            ctx.addLine(to: mouse)
         } else {
-            ctx.move(to: startPoint)
+            ctx.move(to: p0)
             ctx.addLine(to: mouse)
         }
         ctx.strokePath()
-        
         ctx.restoreGState()
     }
     
@@ -192,67 +199,4 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         hasher.combine(id)
         hasher.combine(inProgressRoute)
     }
-}
-
-// Net+Graph.swift
-
-import Foundation
-import CoreGraphics
-
-// A temporary, private struct used only for geometry calculations.
-struct LineSegment {
-    var start: CGPoint
-    var end: CGPoint
-    var isHorizontal: Bool { start.y == end.y }
-    var isVertical:   Bool { start.x == end.x }
-
-    // Finds the intersection point between two orthogonal line segments.
-    func intersectionPoint(with other: LineSegment) -> CGPoint? {
-        if self.isHorizontal && other.isVertical {
-            if self.start.y.isBetween(other.start.y, other.end.y) &&
-               other.start.x.isBetween(self.start.x, self.end.x) {
-                return CGPoint(x: other.start.x, y: self.start.y)
-            }
-        } else if self.isVertical && other.isHorizontal {
-            if self.start.x.isBetween(other.start.x, other.end.x) &&
-               other.start.y.isBetween(self.start.y, self.end.y) {
-                return CGPoint(x: self.start.x, y: other.start.y)
-            }
-        }
-        return nil
-    }
-}
-
-extension Net {
-    
-    /// Splits an existing edge at a specific point, creating a new junction node and two new edges.
-    /// - Returns: The ID of the new junction node created at the split point.
-    @discardableResult
-    mutating func splitEdge(withID edgeID: UUID, at point: CGPoint) -> UUID? {
-        // 1. Find the original edge and its start/end nodes.
-        guard let originalEdgeIndex = self.edges.firstIndex(where: { $0.id == edgeID }),
-              let nodeA = self.nodeByID[self.edges[originalEdgeIndex].a],
-              let nodeB = self.nodeByID[self.edges[originalEdgeIndex].b] else {
-            return nil
-        }
-
-        // 2. Create the new node that will form the junction.
-        let junctionNode = Node(id: UUID(), point: point, kind: .junction)
-        self.nodeByID[junctionNode.id] = junctionNode
-        
-        // 3. Create two new edges to replace the original one.
-        let newEdge1 = Edge(id: UUID(), a: nodeA.id, b: junctionNode.id)
-        let newEdge2 = Edge(id: UUID(), a: junctionNode.id, b: nodeB.id)
-
-        // 4. Remove the original edge and add the two new ones.
-        self.edges.remove(at: originalEdgeIndex)
-        self.edges.append(contentsOf: [newEdge1, newEdge2])
-        
-        return junctionNode.id
-    }
-    
-    /// Finds all intersections between two nets, splits the affected edges in both,
-    /// and establishes shared junction nodes to link them topologically.
-    /// - Returns: `true` if any intersections were found and merged.
-
 }
