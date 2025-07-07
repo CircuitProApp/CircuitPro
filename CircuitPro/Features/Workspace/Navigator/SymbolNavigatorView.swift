@@ -34,7 +34,7 @@ struct SymbolNavigatorView: View {
         }
 
         // 1.2 Remove from the selected design
-        if let designIndex = projectManager.selectedDesign?.componentInstances {
+        if (projectManager.selectedDesign?.componentInstances) != nil {
             projectManager.selectedDesign?.componentInstances.removeAll {
                 inst in instancesToRemove.contains(where: { $0.id == inst.id })
             }
@@ -46,11 +46,8 @@ struct SymbolNavigatorView: View {
 
     var body: some View {
 
-
-
-
         List(projectManager.designComponents,
-                 id: \.self,
+                 id: \.id,
                  selection: $selectedComponentInstances
             ) { designComponent in
                 HStack {
