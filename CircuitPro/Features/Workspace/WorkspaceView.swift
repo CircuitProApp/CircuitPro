@@ -16,6 +16,7 @@ struct WorkspaceView: View {
     var document: CircuitProjectDocument
 
     @State private var showInspector: Bool = false
+    @State private var showFeedbackSheet: Bool = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     var body: some View {
@@ -42,7 +43,20 @@ struct WorkspaceView: View {
             }
         } detail: {
             EditorView(document: document)
+                .sheet(isPresented: $showFeedbackSheet) {
+                    FeedbackFormView()
+                        .frame(minWidth: 400, minHeight: 300)
+                }
                 .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            showFeedbackSheet.toggle()
+                        } label: {
+                            Image(systemName: AppIcons.feedbackBubble)
+                                .imageScale(.large)
+                        }
+                        .help("Send Feedback")
+                    }
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             self.showInspector.toggle()
@@ -67,3 +81,4 @@ struct WorkspaceView: View {
         }
     }
 }
+

@@ -35,6 +35,7 @@ enum AppIcons {
     static let projectNavigator = "list.bullet"
     static let directoryExplorer = "folder"
     static let ruleChecks = "exclamationmark.triangle"
+    static let feedbackBubble = "exclamationmark.bubble"
 
     // MARK: Canvas
     static let crosshairs = "dot.scope"
