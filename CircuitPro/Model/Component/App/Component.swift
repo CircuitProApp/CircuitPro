@@ -13,12 +13,16 @@ class Component {
 
     @Attribute(.unique)
     var uuid: UUID
+
     @Attribute(.unique)
     var name: String
+
     @Attribute(.unique)
-    var abbreviation: String?
+    var abbreviation: String
+
     @Relationship(deleteRule: .cascade, inverse: \Symbol.component)
     var symbol: Symbol?
+
     var footprints: [Footprint]
     var category: ComponentCategory?
     var package: PackageType?
@@ -27,7 +31,7 @@ class Component {
     init(
         uuid: UUID = UUID(),
         name: String,
-        abbreviation: String? = nil,
+        abbreviation: String,
         symbol: Symbol? = nil,
         footprints: [Footprint] = [],
         category: ComponentCategory? = nil,

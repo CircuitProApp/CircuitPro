@@ -9,56 +9,66 @@ import SwiftUI
 import SwiftData
 
 struct SymbolNavigatorView: View {
-    @Environment(\.projectManager) private var projectManager
+
+    @Environment(\.projectManager)
+    private var projectManager
+
     @Query private var components: [Component]
-    @State private var selectedComponentInstances: Set<ComponentInstance> = []
+
+    @State private var selectedComponentInstances: Set<DesignComponent> = []
     
     var document: CircuitProjectDocument
 
     // 1. Delete logic, deferred to avoid exclusivity violations
-    private func performDelete(on instance: ComponentInstance) {
-        let selection = selectedComponentInstances
-        DispatchQueue.main.async {
-            if selection.contains(instance) && selection.count > 1 {
-                projectManager.selectedDesign?.componentInstances.removeAll { selection.contains($0) }
-                selectedComponentInstances.removeAll()
-            } else {
-                projectManager.selectedDesign?.componentInstances.removeAll { $0 == instance }
-                selectedComponentInstances.remove(instance)
-            }
-            document.updateChangeCount(.changeDone)
+    private func performDelete(on designComponent: DesignComponent) {
+        // 1.1 Determine what to remove at the model level
+        let instancesToRemove: [ComponentInstance]
+
+        if selectedComponentInstances.contains(designComponent),
+           selectedComponentInstances.count > 1 {
+            instancesToRemove = selectedComponentInstances.map(\.instance)
+            selectedComponentInstances.removeAll()
+        } else {
+            instancesToRemove = [designComponent.instance]
+            selectedComponentInstances.remove(designComponent)
         }
+
+        // 1.2 Remove from the selected design
+        if let designIndex = projectManager.selectedDesign?.componentInstances {
+            projectManager.selectedDesign?.componentInstances.removeAll {
+                inst in instancesToRemove.contains(where: { $0.id == inst.id })
+            }
+        }
+
+        // 1.3 Persist change
+        document.updateChangeCount(.changeDone)
     }
 
     var body: some View {
-        @Bindable var manager = projectManager
 
-        if let design = Binding($manager.selectedDesign) {
-            // 2. Build name lookup once per render
-            let names = Dictionary(uniqueKeysWithValues:
-                components.map { ($0.symbol?.uuid, $0.symbol?.name) }
-            )
 
-            List(design.componentInstances,
+
+
+        List(projectManager.designComponents,
                  id: \.self,
                  selection: $selectedComponentInstances
-            ) { $instance in
+            ) { designComponent in
                 HStack {
-                    Text((names[instance.symbolInstance.symbolUUID] ?? "⚠︎ missing") ?? "No Component")
+                    Text(designComponent.definition.name)
                         .foregroundStyle(.primary)
                     Spacer()
-                    Text((components.first(where: { $0.uuid == instance.componentUUID })?.abbreviation ?? "No Name")
-                         + instance.reference.description)
+                    Text(designComponent.reference)
                         .foregroundStyle(.secondary)
                         .monospaced()
+          
                 }
                 .frame(height: 14)
                 .listRowSeparator(.hidden)
                 .contextMenu {
                     // 3. Dynamic delete label/action
-                    let multi = selectedComponentInstances.contains(instance) && selectedComponentInstances.count > 1
+                    let multi = selectedComponentInstances.contains(designComponent) && selectedComponentInstances.count > 1
                     Button(role: .destructive) {
-                        performDelete(on: instance)
+                        performDelete(on: designComponent)
                     } label: {
                         Text(multi
                              ? "Delete Selected (\(selectedComponentInstances.count))"
@@ -69,8 +79,6 @@ struct SymbolNavigatorView: View {
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
             .environment(\.defaultMinListRowHeight, 14)
-        } else {
-            Color.clear.frame(maxHeight: .infinity)
-        }
+
     }
 }

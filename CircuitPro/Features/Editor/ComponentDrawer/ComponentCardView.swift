@@ -41,7 +41,7 @@ struct ComponentCardView: View {
 }
 
 #Preview {
-    ComponentCardView(component: Component(name: "Pololu Distance Sensor"))
+    ComponentCardView(component: Component(name: "Pololu Distance Sensor", abbreviation: "VL53L1X"))
 }
 struct SymbolThumbnail: View {
 

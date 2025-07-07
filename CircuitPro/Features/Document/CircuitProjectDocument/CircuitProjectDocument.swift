@@ -8,7 +8,7 @@ final class CircuitProjectDocument: NSDocument {
     var model = CircuitProject(name: "Untitled", designs: [])
     
     lazy var projectManager: ProjectManager = {
-        return ProjectManager(project: model)
+        return ProjectManager(project: model, modelContext: ModelContainerManager.shared.container.mainContext)
     }()
 
     override class var autosavesInPlace: Bool { true }

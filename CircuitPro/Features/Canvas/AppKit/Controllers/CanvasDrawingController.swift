@@ -10,6 +10,7 @@ final class CanvasDrawingController {
     func draw(in ctx: CGContext, dirtyRect: NSRect) {
         // Content — respects zoom
         ctx.saveGState()
+        
         drawElements(in: ctx)
         drawLivePreview(in: ctx)
         ctx.restoreGState()
