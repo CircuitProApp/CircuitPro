@@ -9,10 +9,11 @@ import SwiftUI
 import SwiftData
 
 enum UtilityAreaTab: Displayable {
+
     case design
     case appLibrary
     case userLibrary
-    
+
     var label: String {
         switch self {
         case .design:
@@ -23,7 +24,7 @@ enum UtilityAreaTab: Displayable {
             return "User Library"
         }
     }
-    
+
     var icon: String {
         switch self {
         case .design:
@@ -60,15 +61,15 @@ enum ComponentCategoryFilter: Identifiable, Hashable {
 }
 
 struct UtilityAreaView: View {
-    
+
     @Environment(\.projectManager)
     private var projectManager
-    
+
     @Query private var components: [Component]
-    
+
     @State private var selectedCategory: ComponentCategoryFilter = .all
     @State private var selectedTab: UtilityAreaTab = .design
-    
+
     var filteredComponents: [Component] {
         switch selectedCategory {
         case .all:
@@ -77,34 +78,37 @@ struct UtilityAreaView: View {
             return components.filter { $0.category == category }
         }
     }
-    
+
     var body: some View {
         HStack(spacing: 0) {
             utilityAreaTab
-  
+
             Divider()
                 .foregroundStyle(.quaternary)
 
             selectionView
             .frame(width: 240)
-          
-      
+
             Divider()
                 .foregroundStyle(.quaternary)
             contentView
             .frame(maxWidth: .infinity)
-          
+
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     private var selectionView: some View {
         Group {
             switch selectedTab {
             case .design:
                 EmptyView()
             case .appLibrary:
-                List([ComponentCategoryFilter.all] + ComponentCategory.allCases.map { .category($0) }, id: \.self, selection: $selectedCategory) { filter in
+                List(
+                    [ComponentCategoryFilter.all] + ComponentCategory.allCases.map { .category($0) },
+                    id: \.self,
+                    selection: $selectedCategory
+                ) { filter in
                     HStack(spacing: 5) {
                         Image(systemName: "text.page")
                             .foregroundStyle(selectedCategory == filter ? .primary : .secondary)
@@ -119,7 +123,7 @@ struct UtilityAreaView: View {
             }
         }
     }
-    
+
     private var utilityAreaTab: some View {
         VStack(spacing: 12.5) {
             ForEach(UtilityAreaTab.allCases) { tab in
@@ -136,27 +140,24 @@ struct UtilityAreaView: View {
                 .buttonStyle(.plain)
                 .help(tab.label)
 
-           
             }
             Spacer()
         }
         .frame(width: 40)
     }
-    
+
     private var contentView: some View {
         Group {
             switch selectedTab {
             case .design:
-               
-                    ScrollView {
-                        VStack {
+                ScrollView {
+                    VStack {
                         ForEach(projectManager.designComponents) { designComponent in
                             Text(designComponent.definition.name)
                         }
                     }
-                        .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity)
                 }
-              
             case .appLibrary:
                 ComponentGridView(filteredComponents) { component in
                     ComponentCardView(component: component)
@@ -166,10 +167,5 @@ struct UtilityAreaView: View {
                 Text("User library")
             }
         }
- 
     }
 }
-
-//#Preview {
-//    UtilityAreaView()
-//}

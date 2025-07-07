@@ -5,11 +5,11 @@
 ////  Created by Giorgi Tchelidze on 4/5/25.
 ////
 //
-//import SwiftUI
-//import SwiftData
+// import SwiftUI
+// import SwiftData
 //
-//@Model
-//final class Layer {
+// @Model
+// final class Layer {
 //    var type: LayerType
 //    var layout: Layout?
 //    var color: SDColor
@@ -20,9 +20,9 @@
 //        self.layout = layout
 //        self.color = color
 //    }
-//}
+// }
 //
-//extension Layer {
+// extension Layer {
 //    var colorBinding: Binding<Color> {
 //        Binding<Color>(
 //            get: { self.color.color },
@@ -31,4 +31,4 @@
 //            }
 //        )
 //    }
-//}
+// }

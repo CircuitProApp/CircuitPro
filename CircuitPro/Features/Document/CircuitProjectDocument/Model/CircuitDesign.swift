@@ -14,7 +14,7 @@ class CircuitDesign: Codable, Identifiable {
     var id: UUID
     var name: String
     var componentInstances: [ComponentInstance] = []
-    
+
     var directoryName: String {
         id.uuidString
     }

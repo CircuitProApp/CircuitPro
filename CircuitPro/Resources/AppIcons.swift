@@ -35,8 +35,7 @@ enum AppIcons {
     static let projectNavigator = "list.bullet"
     static let directoryExplorer = "folder"
     static let ruleChecks = "exclamationmark.triangle"
-    
-    
+
     // MARK: Canvas
     static let crosshairs = "dot.scope"
     static let snapping = "dot.squareshape.split.2x2"
@@ -58,7 +57,7 @@ enum AppIcons {
 
     static let cursor = "cursorarrow"
     static let ruler = "ruler"
-    
+
     // MARK: Design
     static let design = "book.pages.fill"
 

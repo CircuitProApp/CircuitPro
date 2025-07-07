@@ -109,8 +109,9 @@ struct ComponentDrawerView: View {
         .font(.subheadline)
     }
 }
-// swiftlint:disable:next line_length
+
 struct ComponentGridView<Data: RandomAccessCollection, Content: View>: View where Data.Element: PersistentModel {
+
     let data: Data
     let content: (Data.Element) -> Content
 

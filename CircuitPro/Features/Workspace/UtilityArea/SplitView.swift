@@ -7,21 +7,25 @@
 import SwiftUI
 
 struct SplitView<TopContent: View, DividerContent: View, BottomContent: View>: View {
+
     @Binding var showBottomView: Bool
+
     let topView: TopContent
     let dividerView: DividerContent
     let bottomView: BottomContent
-    
-    init(showBottomView: Binding<Bool>,
-         @ViewBuilder topView: () -> TopContent,
-         @ViewBuilder dividerView: () -> DividerContent,
-         @ViewBuilder bottomView: () -> BottomContent) {
+
+    init(
+        showBottomView: Binding<Bool>,
+        @ViewBuilder topView: () -> TopContent,
+        @ViewBuilder dividerView: () -> DividerContent,
+        @ViewBuilder bottomView: () -> BottomContent
+    ) {
         self._showBottomView = showBottomView
         self.topView = topView()
         self.dividerView = dividerView()
         self.bottomView = bottomView()
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             topView
@@ -41,4 +45,3 @@ struct SplitView<TopContent: View, DividerContent: View, BottomContent: View>: V
         }
     }
 }
-

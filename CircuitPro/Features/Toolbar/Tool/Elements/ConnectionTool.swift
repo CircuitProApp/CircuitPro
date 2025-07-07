@@ -28,7 +28,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
         var net: Net
         var lastNodeID: UUID
-        private(set) var lastOrientation: Orientation? = nil     // NEW
+        private(set) var lastOrientation: Orientation?
 
         init(startPoint: CGPoint, connectingTo existingElementID: UUID?) {
             let startNode = Node(id: UUID(), point: startPoint, kind: .endpoint)
@@ -51,7 +51,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
                 let elbowNode = Node(id: UUID(), point: elbowPoint, kind: .endpoint)
                 net.nodeByID[elbowNode.id] = elbowNode
 
-                let edge1 = Edge(id: UUID(), a: lastNodeID, b: elbowNode.id)
+                let edge1 = Edge(id: UUID(), startNodeID: lastNodeID, endNodeID: elbowNode.id)
                 net.edges.append(edge1)
 
                 lastOrientation = firstIsVertical ? .vertical : .horizontal
@@ -62,7 +62,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             let endNode = Node(id: UUID(), point: point, kind: .endpoint)
             net.nodeByID[endNode.id] = endNode
 
-            let edge2 = Edge(id: UUID(), a: lastNodeID, b: endNode.id)
+            let edge2 = Edge(id: UUID(), startNodeID: lastNodeID, endNodeID: endNode.id)
             net.edges.append(edge2)
 
             lastOrientation = (endNode.point.x == net.nodeByID[lastNodeID]!.point.x)
@@ -70,9 +70,8 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             lastNodeID = endNode.id
         }
     }
-    
+
     // MARK: - Tool Actions
-    
     mutating func handleTap(at loc: CGPoint, context: CanvasToolContext) -> CanvasElement? {
         // 1. On the first tap, we begin a new route.
         if inProgressRoute == nil {
@@ -107,46 +106,45 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
         // 2.1 Already-fixed segments
         for edge in route.net.edges {
-            guard let a = route.net.nodeByID[edge.a],
-                  let b = route.net.nodeByID[edge.b] else { continue }
-            ctx.move(to: a.point)
-            ctx.addLine(to: b.point)
+            guard let nodeA = route.net.nodeByID[edge.startNodeID],
+                  let nodeB = route.net.nodeByID[edge.endNodeID] else { continue }
+            ctx.move(to: nodeA.point)
+            ctx.addLine(to: nodeB.point)
         }
         ctx.strokePath()
 
         // 2.2 Ghost segment (respect flip rule)
         ctx.setLineDash(phase: 0, lengths: [4])
-        let p0 = lastNode.point
+        let startPoint = lastNode.point
 
-        if p0.x != mouse.x && p0.y != mouse.y {
-            let firstIsVertical = (route.lastOrientation == .horizontal)
-            let elbow = firstIsVertical
-                ? CGPoint(x: p0.x, y: mouse.y)
-                : CGPoint(x: mouse.x, y: p0.y)
+        if startPoint.x != mouse.x && startPoint.y != mouse.y {
+            let firstSegmentIsVertical = (route.lastOrientation == .horizontal)
+            let elbowPoint = firstSegmentIsVertical
+                ? CGPoint(x: startPoint.x, y: mouse.y)
+                : CGPoint(x: mouse.x, y: startPoint.y)
 
-            ctx.move(to: p0)
-            ctx.addLine(to: elbow)
+            ctx.move(to: startPoint)
+            ctx.addLine(to: elbowPoint)
             ctx.addLine(to: mouse)
         } else {
-            ctx.move(to: p0)
+            ctx.move(to: startPoint)
             ctx.addLine(to: mouse)
         }
+
         ctx.strokePath()
         ctx.restoreGState()
     }
-    
-    // MARK: - Finishing and Merging
-    
+
     /// Finalizes the route, packages it into a ConnectionElement, and clears the tool's state.
     private mutating func finishRoute() -> CanvasElement? {
         guard var route = inProgressRoute, !route.net.edges.isEmpty else {
             clearState()
             return nil
         }
-        
+
         // 1. Merge colinear segments inside this single route.
         route.net.mergeColinearEdges()
-        
+
         // 2. Wrap and return.
         let element = ConnectionElement(id: route.net.id, net: route.net)
         clearState()
@@ -157,38 +155,39 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         inProgressRoute = nil
     }
 
-    /// This is the new, powerful merging logic. It's called by the canvas controller after a new connection element is created.
-    static func merge(_ newElement: ConnectionElement,
-                      into elements: inout [CanvasElement]) -> ConnectionElement {
+    static func merge(
+        _ newElement: ConnectionElement,
+        into elements: inout [CanvasElement]
+    ) -> ConnectionElement {
 
-        var master = newElement.net
+        var masterNet = newElement.net
 
-        for i in (0..<elements.count).reversed() {
-            guard case .connection(let otherConn) = elements[i],
-                  otherConn.id != newElement.id else { continue }
+        for index in (0..<elements.count).reversed() {
+            guard case .connection(let existingConnection) = elements[index],
+                  existingConnection.id != newElement.id else { continue }
 
-            var other = otherConn.net
+            var existingNet = existingConnection.net
 
-            let joined = Net.findAndMergeIntentionalIntersections(
-                            between: &master,
-                            and: &other)
+            let wasMerged = Net.findAndMergeIntentionalIntersections(
+                between: &masterNet,
+                and: &existingNet
+            )
 
-            if joined {
-                master.nodeByID.merge(other.nodeByID) { cur, _ in cur }
-                master.edges.append(contentsOf: other.edges)
-                elements.remove(at: i)
+            if wasMerged {
+                masterNet.nodeByID.merge(existingNet.nodeByID) { currentNode, _ in currentNode }
+                masterNet.edges.append(contentsOf: existingNet.edges)
+                elements.remove(at: index)
             }
         }
 
-        master.mergeColinearEdges()
-        return ConnectionElement(id: master.id, net: master)
+        masterNet.mergeColinearEdges()
+        return ConnectionElement(id: masterNet.id, net: masterNet)
     }
 
     // MARK: - Helpers & Conformance
-    
-    private func isDoubleTap(from a: CGPoint, to b: CGPoint) -> Bool {
+    private func isDoubleTap(from firstPoint: CGPoint, to secondPoint: CGPoint) -> Bool {
         // A simple distance check is sufficient for detecting a double-tap.
-        hypot(a.x - b.x, a.y - b.y) < 5
+        hypot(firstPoint.x - secondPoint.x, firstPoint.y - secondPoint.y) < 5
     }
 
     static func == (lhs: ConnectionTool, rhs: ConnectionTool) -> Bool {

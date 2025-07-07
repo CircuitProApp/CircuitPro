@@ -17,7 +17,6 @@ struct SymbolElement: Identifiable {
     // MARK: Library master (immutable, reference type → no copy cost)
     let symbol: Symbol
 
-
     var primitives: [AnyPrimitive] {
         symbol.primitives + symbol.pins.flatMap(\.primitives)
     }
@@ -89,11 +88,10 @@ extension SymbolElement: Drawable {
         }
 
         // copy it into world space with the same transform we used to draw
-        var t = CGAffineTransform(translationX: position.x,
-                                  y: position.y)
-                .rotated(by: rotation)
+        var transform = CGAffineTransform(translationX: position.x, y: position.y)
+            .rotated(by: rotation)
 
-        return combined.copy(using: &t)
+        return combined.copy(using: &transform)
     }
 }
 
@@ -103,14 +101,14 @@ extension SymbolElement: Hittable {
 
         // map the probe into the symbol’s local space
         let local = worldPoint.applying(
-            CGAffineTransform(translationX: position.x,
-                              y: position.y)
-            .rotated(by: rotation)
-            .inverted()
+            CGAffineTransform(translationX: position.x, y: position.y)
+                .rotated(by: rotation)
+                .inverted()
         )
 
-        return symbol.primitives.contains { $0.hitTest(local, tolerance: tolerance) } ||
-               symbol.pins.contains      { $0.hitTest(local, tolerance: tolerance) }
+        return
+        symbol.primitives.contains { $0.hitTest(local, tolerance: tolerance) } ||
+        symbol.pins.contains { $0.hitTest(local, tolerance: tolerance) }
     }
 }
 
@@ -120,9 +118,8 @@ extension SymbolElement: Bounded {
     var boundingBox: CGRect {
 
         // 1.1 Local-to-world transform shared by every child
-        let t = CGAffineTransform(translationX: position.x,
-                                  y: position.y)
-                .rotated(by: rotation)
+        let transform = CGAffineTransform(translationX: position.x, y: position.y)
+            .rotated(by: rotation)
 
         // 1.2 Local boxes of master primitives and pins
         let localBoxes = symbol.primitives.map(\.boundingBox) +
@@ -130,7 +127,7 @@ extension SymbolElement: Bounded {
 
         // 1.3 Union after mapping each box into world space
         return localBoxes
-            .map { $0.transformed(by: t) }
+            .map { $0.transformed(by: transform) }
             .reduce(CGRect.null) { $0.union($1) }
     }
 }
@@ -138,7 +135,7 @@ extension SymbolElement: Bounded {
 private extension CGRect {
 
     // 1 Transformed axis-aligned bounding box
-    func transformed(by t: CGAffineTransform) -> CGRect {
+    func transformed(by transform: CGAffineTransform) -> CGRect {
 
         // 1.1 Corners in local space
         let corners = [
@@ -150,8 +147,8 @@ private extension CGRect {
 
         // 1.2 Map every corner and grow a rectangle around them
         var out = CGRect.null
-        for p in corners.map({ $0.applying(t) }) {
-            out = out.union(CGRect(origin: p, size: .zero))
+        for point in corners.map({ $0.applying(transform) }) {
+            out = out.union(CGRect(origin: point, size: .zero))
         }
         return out
     }

@@ -35,7 +35,7 @@ final class CanvasHitTestController {
         }
         return nil
     }
-    
+
     /// Returns the Pin that sits under `point` or nil.
     func pin(at point: CGPoint) -> Pin? {
 

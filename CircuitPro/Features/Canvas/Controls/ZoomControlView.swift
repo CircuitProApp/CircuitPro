@@ -53,7 +53,6 @@ struct ZoomControlView: View {
                         .fontWeight(.medium)
                 }
             }
-            
             zoomButton(action: zoomIn, systemImage: AppIcons.plus)
         }
         .buttonStyle(.plain)

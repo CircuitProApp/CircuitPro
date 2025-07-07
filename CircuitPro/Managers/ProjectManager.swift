@@ -15,9 +15,11 @@ final class ProjectManager {
     var project: CircuitProject
     var selectedDesign: CircuitDesign?
 
-    init(project: CircuitProject,
-         selectedDesign: CircuitDesign? = nil,
-         modelContext: ModelContext) {
+    init(
+        project: CircuitProject,
+        selectedDesign: CircuitDesign? = nil,
+        modelContext: ModelContext
+    ) {
         self.project        = project
         self.selectedDesign = selectedDesign
         self.modelContext   = modelContext
@@ -46,6 +48,5 @@ final class ProjectManager {
             guard let def = dict[inst.componentUUID] else { return nil }
             return DesignComponent(definition: def, instance: inst)
         }
-
     }
 }

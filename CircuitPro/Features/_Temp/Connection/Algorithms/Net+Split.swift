@@ -10,23 +10,26 @@ import CoreGraphics
 
 extension Net {
     @discardableResult
-    mutating func splitEdge(withID eid:UUID,at p:CGPoint)->UUID? {
-        // 1 Find edge
-        guard let idx = edges.firstIndex(where:{ $0.id == eid }),
-              let nA = nodeByID[edges[idx].a],
-              let nB = nodeByID[edges[idx].b] else { return nil }
+    mutating func splitEdge(withID edgeID: UUID, at point: CGPoint) -> UUID? {
+        // 1. Find edge
+        guard let edgeIndex = edges.firstIndex(where: { $0.id == edgeID }),
+              let nodeA = nodeByID[edges[edgeIndex].startNodeID],
+              let nodeB = nodeByID[edges[edgeIndex].endNodeID] else {
+            return nil
+        }
 
-        // 2 New node
-        let j = Node(id:UUID(),point:p,kind:.junction)
-        nodeByID[j.id] = j
+        // 2. Create new junction node
+        let junction = Node(id: UUID(), point: point, kind: .junction)
+        nodeByID[junction.id] = junction
 
-        // 3 Two new edges
-        let e1 = Edge(id:UUID(),a:nA.id,b:j.id)
-        let e2 = Edge(id:UUID(),a:j.id,b:nB.id)
+        // 3. Create two new edges
+        let edge1 = Edge(id: UUID(), startNodeID: nodeA.id, endNodeID: junction.id)
+        let edge2 = Edge(id: UUID(), startNodeID: junction.id, endNodeID: nodeB.id)
 
-        // 4 Replace
-        edges.remove(at:idx)
-        edges.append(contentsOf:[e1,e2])
-        return j.id
+        // 4. Replace original edge with new edges
+        edges.remove(at: edgeIndex)
+        edges.append(contentsOf: [edge1, edge2])
+
+        return junction.id
     }
 }

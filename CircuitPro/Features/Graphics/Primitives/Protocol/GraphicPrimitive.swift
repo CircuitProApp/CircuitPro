@@ -7,21 +7,19 @@
 
 import AppKit
 
-protocol GraphicPrimitive: Transformable & Drawable & Hittable & Bounded & HandleEditable & Codable & Hashable & Identifiable {
+protocol GraphicPrimitive:
+    Transformable & Drawable & Hittable & Bounded & HandleEditable & Codable & Hashable & Identifiable {
 
     var id: UUID { get }
-    var color: SDColor       { get set }
+    var color: SDColor { get set }
     var strokeWidth: CGFloat { get set }
-    var filled: Bool         { get set }
+    var filled: Bool { get set }
 
     func makePath() -> CGPath
 }
 
 extension GraphicPrimitive {
-
-
-
-        // body drawing stays exactly like today
+    // body drawing stays exactly like today
     func drawBody(in ctx: CGContext) {
         let path = makePath()
 
@@ -37,19 +35,20 @@ extension GraphicPrimitive {
             ctx.strokePath()
         }
     }
-    
 
-    func hitTest(_ p: CGPoint, tolerance: CGFloat = 5) -> Bool {
+    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> Bool {
         let path = makePath()
-        if filled { return path.contains(p) }
+        if filled { return path.contains(point) }
 
-        let stroke = path.copy(strokingWithWidth: strokeWidth + tolerance,
-                            lineCap: .round,
-                            lineJoin: .round,
-                            miterLimit: 10)
-        return stroke.contains(p)
+        let stroke = path.copy(
+            strokingWithWidth: strokeWidth + tolerance,
+            lineCap: .round,
+            lineJoin: .round,
+            miterLimit: 10
+        )
+        return stroke.contains(point)
     }
-    
+
     var boundingBox: CGRect {
         // 3.1 Base geometry
         var box = makePath().boundingBoxOfPath

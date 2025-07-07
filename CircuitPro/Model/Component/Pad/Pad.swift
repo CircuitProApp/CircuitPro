@@ -94,8 +94,8 @@ extension Pad {
 // ═══════════════════════════════════════════════════════════════════════
 extension Pad: Hittable {
 
-    func hitTest(_ p: CGPoint, tolerance t: CGFloat) -> Bool {
-        allPrimitives.contains { $0.hitTest(p, tolerance: t) }
+    func hitTest(_ point: CGPoint, tolerance: CGFloat) -> Bool {
+        allPrimitives.contains { $0.hitTest(point, tolerance: tolerance) }
     }
 }
 
@@ -110,17 +110,17 @@ extension Pad {
     }
 
     var radius: Double {
-        get { if case let .circle(r) = shape { r } else { 0 } }
+        get { if case let .circle(radius) = shape { radius } else { 0 } }
         set { shape = .circle(radius: newValue) }
     }
 
     var width: Double {
-        get { if case let .rect(w, _) = shape { w } else { 0 } }
-        set { if case let .rect(_, h) = shape { shape = .rect(width: newValue, height: h) } }
+        get { if case let .rect(width, _) = shape { width } else { 0 } }
+        set { if case let .rect(_, height) = shape { shape = .rect(width: newValue, height: height) } }
     }
 
     var height: Double {
-        get { if case let .rect(_, h) = shape { h } else { 0 } }
-        set { if case let .rect(w, _) = shape { shape = .rect(width: w, height: newValue) } }
+        get { if case let .rect(_, height) = shape { height } else { 0 } }
+        set { if case let .rect(width, _) = shape { shape = .rect(width: width, height: newValue) } }
     }
 }

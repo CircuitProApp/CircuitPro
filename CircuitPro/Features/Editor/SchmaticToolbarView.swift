@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 19.06.25.
 //
 
-
 import SwiftUI
 
 struct SchematicToolbarView: View {

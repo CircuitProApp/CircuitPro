@@ -8,10 +8,11 @@
 import SwiftUI
 
 enum NavigatorViewTab: Displayable {
+
     case projectNavigator
     case directoryExplorer
     case ruleChecks
-    
+
     var label: String {
         switch self {
         case .projectNavigator:
@@ -22,7 +23,7 @@ enum NavigatorViewTab: Displayable {
             return "Rule Checks"
         }
     }
-    
+
     var icon: String {
         switch self {
         case .projectNavigator:
@@ -36,15 +37,12 @@ enum NavigatorViewTab: Displayable {
 }
 
 struct NavigatorView: View {
-  
-    
+
     @State private var selectedTab: NavigatorViewTab = .projectNavigator
     var document: CircuitProjectDocument
-    
-    
 
     var body: some View {
-        
+
         VStack(spacing: 0) {
             Divider().foregroundStyle(.quaternary)
 
@@ -70,7 +68,6 @@ struct NavigatorView: View {
 
             Divider().foregroundStyle(.quaternary)
 
-            
             switch selectedTab {
             case .projectNavigator:
                 ProjectNavigatorView(document: document)
@@ -80,9 +77,6 @@ struct NavigatorView: View {
                     Spacer()
                 }
             }
-         
         }
-        
-      
     }
 }

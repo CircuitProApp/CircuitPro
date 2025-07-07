@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ValidationResult {
-    let errors:   [String]
+    let errors: [String]
     let warnings: [String]
     var isValid: Bool { errors.isEmpty }
 }
@@ -10,7 +10,7 @@ struct ComponentDesignView: View {
 
     @Environment(\.dismissWindow)
     private var dismissWindow
-    
+
     @Environment(\.modelContext)
     private var modelContext
 
@@ -20,7 +20,7 @@ struct ComponentDesignView: View {
     @State private var currentStage: ComponentDesignStage = .component
     @State private var symbolCanvasManager = CanvasManager()
     @State private var footprintCanvasManager = CanvasManager()
-    
+
     @State private var showError   = false
     @State private var showWarning = false
     @State private var messages    = [String]()
@@ -146,7 +146,7 @@ struct ComponentDesignView: View {
 
     // 4. Build and insert component
     private func createComponent() {
-        
+
         let result = componentDesignManager.validate()
 
         // 1 Block on errors
@@ -162,12 +162,12 @@ struct ComponentDesignView: View {
           showWarning = true
           return
         }
-        
+
         let anchor = CGPoint(x: 2_500, y: 2_500)
 
         let rawPrimitives: [AnyPrimitive] =
             componentDesignManager.symbolElements.compactMap {
-                if case .primitive(let p) = $0 { return p }
+                if case .primitive(let primitive) = $0 { return primitive }
                 return nil
             }
         let rawPins = componentDesignManager.pins
@@ -184,20 +184,20 @@ struct ComponentDesignView: View {
         }
 
         let newComponent = Component(
-            name       : componentDesignManager.componentName,
+            name: componentDesignManager.componentName,
             abbreviation: componentDesignManager.componentAbbreviation,
-            symbol     : nil,
-            footprints : [],
-            category   : componentDesignManager.selectedCategory,
-            package    : componentDesignManager.selectedPackageType,
-            properties : componentDesignManager.componentProperties
+            symbol: nil,
+            footprints: [],
+            category: componentDesignManager.selectedCategory,
+            package: componentDesignManager.selectedPackageType,
+            properties: componentDesignManager.componentProperties
         )
 
         let newSymbol = Symbol(
-            name      : componentDesignManager.componentName,
-            component : newComponent,
+            name: componentDesignManager.componentName,
+            component: newComponent,
             primitives: primitives,
-            pins      : pins
+            pins: pins
         )
 
         newComponent.symbol = newSymbol

@@ -12,16 +12,16 @@ extension Pin: Drawable {
     func drawBody(in ctx: CGContext) {
         // draw the leg & pad but *without* the default halo
         primitives.forEach { $0.drawBody(in: ctx) }
-        
+
         if showNumber {
             drawNumber(in: ctx)
         }
-        
+
         if showLabel && name.isNotEmpty {
             drawLabel(in: ctx)
         }
     }
-    
+
     private func drawLabel(in ctx: CGContext) {
 
         let text  = label as NSString
@@ -30,23 +30,19 @@ extension Pin: Drawable {
             .foregroundColor: NSColor(.accentColor)
         ]
         let size = text.size(withAttributes: attrs)
-        let pad:  CGFloat = 4
+        let pad: CGFloat = 4
 
         // put the label a little further out than legStart
         let pos: CGPoint
         switch cardinalRotation {
         case .deg0:    // pointing right
-            pos = CGPoint(x: legStart.x + pad,
-                          y: legStart.y - size.height / 2)
+            pos = CGPoint(x: legStart.x + pad, y: legStart.y - size.height / 2)
         case .deg180:  // pointing left
-            pos = CGPoint(x: position.x - length - pad - size.width,
-                          y: legStart.y - size.height / 2)
+            pos = CGPoint(x: position.x - length - pad - size.width, y: legStart.y - size.height / 2)
         case .deg90:   // pointing down
-            pos = CGPoint(x: position.x - size.width / 2,
-                          y: legStart.y + pad)
+            pos = CGPoint(x: position.x - size.width / 2, y: legStart.y + pad)
         case .deg270:  // pointing up
-            pos = CGPoint(x: position.x - size.width / 2,
-                          y: position.y - length - pad - size.height)
+            pos = CGPoint(x: position.x - size.width / 2, y: position.y - length - pad - size.height)
         }
 
         text.draw(at: pos, withAttributes: attrs)
@@ -60,32 +56,26 @@ extension Pin: Drawable {
             .foregroundColor: NSColor(.accentColor)
         ]
         let size = text.size(withAttributes: attrs)
-        let pad:  CGFloat = 3
+        let pad: CGFloat = 3
 
         // midpoint of the leg
-        let mid = CGPoint(x: (position.x + legStart.x) / 2,
-                          y: (position.y + legStart.y) / 2)
+        let mid = CGPoint(x: (position.x + legStart.x) / 2, y: (position.y + legStart.y) / 2)
 
         // place the number perpendicular to the leg, on the “above” side
         let pos: CGPoint
         switch cardinalRotation {
         case .deg0:    // horizontal → above = up (negative y)
-            pos = CGPoint(x: mid.x - size.width / 2,
-                          y: mid.y - pad - size.height)
+            pos = CGPoint(x: mid.x - size.width / 2, y: mid.y - pad - size.height)
         case .deg180:  // horizontal → above = up
-            pos = CGPoint(x: mid.x - size.width / 2,
-                          y: mid.y - pad - size.height)
+            pos = CGPoint(x: mid.x - size.width / 2, y: mid.y - pad - size.height)
         case .deg90:   // vertical down → above = left
-            pos = CGPoint(x: mid.x - pad - size.width,
-                          y: mid.y - size.height / 2)
+            pos = CGPoint(x: mid.x - pad - size.width, y: mid.y - size.height / 2)
         case .deg270:  // vertical up → above = right
-            pos = CGPoint(x: mid.x + pad,
-                          y: mid.y - size.height / 2)
+            pos = CGPoint(x: mid.x + pad, y: mid.y - size.height / 2)
         }
 
         text.draw(at: pos, withAttributes: attrs)
     }
-    
 
     func selectionPath() -> CGPath? {
 
@@ -118,67 +108,57 @@ extension Pin: Drawable {
         switch cardinalRotation {
         case .deg0:
             return (label,
-                    CGPoint(x: legStart.x + pad,
-                            y: legStart.y - size.height / 2),
+                    CGPoint(x: legStart.x + pad, y: legStart.y - size.height / 2),
                     font)
 
         case .deg180:
             return (label,
-                    CGPoint(x: position.x - length - pad - size.width,
-                            y: legStart.y - size.height / 2),
+                    CGPoint(x: position.x - length - pad - size.width, y: legStart.y - size.height / 2),
                     font)
 
         case .deg90:
             return (label,
-                    CGPoint(x: position.x - size.width / 2,
-                            y: legStart.y + pad),
+                    CGPoint(x: position.x - size.width / 2, y: legStart.y + pad),
                     font)
 
         case .deg270:
             return (label,
-                    CGPoint(x: position.x - size.width / 2,
-                            y: position.y - length - pad - size.height),
+                    CGPoint(x: position.x - size.width / 2, y: position.y - length - pad - size.height),
                     font)
         }
     }
 
     private func numberLayout() -> (String, CGPoint, NSFont) {
         let font = NSFont.systemFont(ofSize: 9, weight: .medium)
-        let pad : CGFloat = 3
+        let pad: CGFloat = 3
         let text = "\(number)"
         let size = (text as NSString).size(withAttributes: [.font: font])
 
-        let mid = CGPoint(x: (position.x + legStart.x) / 2,
-                          y: (position.y + legStart.y) / 2)
+        let mid = CGPoint(x: (position.x + legStart.x) / 2, y: (position.y + legStart.y) / 2)
 
         switch cardinalRotation {
         case .deg0, .deg180:
             return (text,
-                    CGPoint(x: mid.x - size.width / 2,
-                            y: mid.y - pad - size.height),
+                    CGPoint(x: mid.x - size.width / 2, y: mid.y - pad - size.height),
                     font)
 
         case .deg90:
             return (text,
-                    CGPoint(x: mid.x - pad - size.width,
-                            y: mid.y - size.height / 2),
+                    CGPoint(x: mid.x - pad - size.width, y: mid.y - size.height / 2),
                     font)
 
         case .deg270:
             return (text,
-                    CGPoint(x: mid.x + pad,
-                            y: mid.y - size.height / 2),
+                    CGPoint(x: mid.x + pad, y: mid.y - size.height / 2),
                     font)
         }
     }
 }
 
-// ────────────────────────────────────────────────────────────────
-// MARK: - Hittable
-// ────────────────────────────────────────────────────────────────
+// MARK: Hittable
 extension Pin: Hittable {
 
-    func hitTest(_ p: CGPoint, tolerance: CGFloat = 5) -> Bool {
+    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> Bool {
         // 1. get the outline that selection/halo already uses
         guard let shape = selectionPath() else { return false }
 
@@ -190,21 +170,19 @@ extension Pin: Hittable {
             miterLimit: 10
         )
 
-        return fat.contains(p)
+        return fat.contains(point)
     }
 }
 
 import CoreText
 
-import CoreText
-import AppKit
-
 /// Exact glyph outlines for `string`, positioned in the *flipped*
 /// world space used by `NSView(isFlipped == true)`.
-private func pathForText(_ string: String,
-                         font: NSFont,
-                         at origin: CGPoint) -> CGPath
-{
+private func pathForText(
+    _ string: String,
+    font: NSFont,
+    at origin: CGPoint
+) -> CGPath {
     // 1. Lay the string out once with Core Text
     let attrString = NSAttributedString(string: string, attributes: [.font: font])
     let line       = CTLineCreateWithAttributedString(attrString)
@@ -212,18 +190,19 @@ private func pathForText(_ string: String,
     let composite  = CGMutablePath()
 
     // 2. Iterate over the glyph runs of that line
+    // swiftlint:disable:next force_cast
     for run in (CTLineGetGlyphRuns(line) as! [CTRun]) {
 
         let runFont = unsafeBitCast(
-            CFDictionaryGetValue(CTRunGetAttributes(run),
-                                 Unmanaged.passUnretained(kCTFontAttributeName).toOpaque()),
-            to: CTFont.self)
+            CFDictionaryGetValue(CTRunGetAttributes(run), Unmanaged.passUnretained(kCTFontAttributeName).toOpaque()),
+            to: CTFont.self
+        )
 
         let count = CTRunGetGlyphCount(run)
 
-        var glyphs    = [CGGlyph](repeating: 0, count: count)
+        var glyphs = [CGGlyph](repeating: 0, count: count)
         var positions = [CGPoint](repeating: .zero, count: count)
-        CTRunGetGlyphs(run,    CFRangeMake(0, 0), &glyphs)
+        CTRunGetGlyphs(run, CFRangeMake(0, 0), &glyphs)
         CTRunGetPositions(run, CFRangeMake(0, 0), &positions)
 
         let ascender = CGFloat(CTFontGetAscent(runFont))
@@ -236,11 +215,14 @@ private func pathForText(_ string: String,
             // a) move to glyph position relative to requested origin
             // b) move down by the font’s ascender (baseline → flipped space)
             // c) mirror the y-axis (scale y by −1)
-            var t = CGAffineTransform(translationX: origin.x + positions[i].x,
-                                      y: origin.y + positions[i].y + ascender)
-            t = t.scaledBy(x: 1, y: -1).translatedBy(x: 0, y: -0.3)
+            var transform = CGAffineTransform(
+                translationX: origin.x + positions[i].x,
+                y: origin.y + positions[i].y + ascender
+            )
 
-            composite.addPath(gPath, transform: t)
+            transform = transform.scaledBy(x: 1, y: -1).translatedBy(x: 0, y: -0.3)
+
+            composite.addPath(gPath, transform: transform)
         }
     }
 
@@ -265,12 +247,13 @@ extension Pin: Bounded {
         return box
     }
 
-    private func textRect(_ string: String,
-                          font: NSFont,
-                          at origin: CGPoint) -> CGRect
-    {
-        let size = (string as NSString)
-            .size(withAttributes: [.font: font])
+    private func textRect(
+        _ string: String,
+        font: NSFont,
+        at origin: CGPoint
+    ) -> CGRect {
+        let size = (string as NSString).size(withAttributes: [.font: font])
+
         return CGRect(origin: origin, size: size)
     }
 }

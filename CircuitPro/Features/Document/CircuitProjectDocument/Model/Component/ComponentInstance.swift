@@ -17,7 +17,7 @@ final class ComponentInstance: Identifiable, Codable {
     var properties: [ComponentProperty]
     var symbolInstance: SymbolInstance
     var footprintInstance: FootprintInstance?
-    
+
     var reference: Int
 
     init(
@@ -35,7 +35,7 @@ final class ComponentInstance: Identifiable, Codable {
         self.footprintInstance = footprintInstance
         self.reference = reference
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case _id = "id"
         case _componentUUID = "componentUUID"
@@ -48,12 +48,12 @@ final class ComponentInstance: Identifiable, Codable {
 
 // MARK: - Hashable
 extension ComponentInstance: Hashable {
-    
+
     // Two component instances are considered equal if they carry the same `id`.
     public static func == (lhs: ComponentInstance, rhs: ComponentInstance) -> Bool {
         lhs.id == rhs.id
     }
-    
+
     // The `id` is also the only thing we need to hash – it is already unique.
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)

@@ -29,7 +29,7 @@ final class ComponentDesignManager {
 
     var selectedFootprintLayer: LayerKind? = .copper
     var layerAssignments: [UUID: LayerKind] = [:]
-    
+
     // MARK: - Reset All State
     func resetAll() {
         // 1. Component metadata
@@ -53,7 +53,7 @@ final class ComponentDesignManager {
         selectedFootprintLayer = .copper
         layerAssignments = [:]
     }
-    
+
     func validate() -> ValidationResult {
         var errors   = [String]()
         var warnings = [String]()
@@ -71,11 +71,11 @@ final class ComponentDesignManager {
 
         // 2. Errors on symbol/primitives & pins
         let primitives = symbolElements.compactMap { elem -> AnyPrimitive? in
-            if case .primitive(let p) = elem { return p }
+            if case .primitive(let primitive) = elem { return primitive }
             return nil
         }
         let pins = symbolElements.compactMap { elem -> Pin? in
-            if case .pin(let p) = elem { return p }
+            if case .pin(let pin) = elem { return pin }
             return nil
         }
 

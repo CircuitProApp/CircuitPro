@@ -14,7 +14,7 @@ final class CanvasManager {
     var magnification: CGFloat = 1
     var gridSpacing: GridSpacing = .mm1
     var scrollOrigin: CGPoint = .zero
-    
+
     var showDrawingSheet: Bool = true
     var paperSize: PaperSize = .a5
 
@@ -34,12 +34,20 @@ final class CanvasManager {
             y: normalize(-(mouseLocation.y - 2500))
         )
     }
-    
+
     func snap(_ point: CGPoint) -> CGPoint {
         guard enableSnapping else { return point }
-        let grid = gridSpacing.rawValue * 10.0          // matches the canvas
-        func snapValue(_ v: CGFloat) -> CGFloat { round(v / grid) * grid }
-        return CGPoint(x: snapValue(point.x), y: snapValue(point.y))
+
+        let gridSize = gridSpacing.rawValue * 10.0 // Matches the canvas
+
+        func snapToGrid(_ value: CGFloat) -> CGFloat {
+            round(value / gridSize) * gridSize
+        }
+
+        return CGPoint(
+            x: snapToGrid(point.x),
+            y: snapToGrid(point.y)
+        )
     }
 }
 

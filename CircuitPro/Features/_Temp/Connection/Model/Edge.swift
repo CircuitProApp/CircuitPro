@@ -10,6 +10,6 @@ import Foundation
 
 struct Edge: Identifiable, Hashable {
     let id: UUID
-    var a: UUID
-    var b: UUID
+    var startNodeID: UUID
+    var endNodeID: UUID
 }

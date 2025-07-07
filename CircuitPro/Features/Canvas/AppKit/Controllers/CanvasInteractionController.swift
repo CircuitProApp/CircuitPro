@@ -1,6 +1,7 @@
 import AppKit
 
 final class CanvasInteractionController {
+
     unowned let canvas: CoreGraphicsCanvasView
 
     private var dragOrigin: CGPoint?
@@ -23,7 +24,6 @@ final class CanvasInteractionController {
     private var rotationOrigin: CGPoint?
 
     var isRotating: Bool { isRotatingViaMouse }
-    
 
     init(canvas: CoreGraphicsCanvasView) {
         self.canvas = canvas
@@ -257,9 +257,9 @@ final class CanvasInteractionController {
             let context = CanvasToolContext(
                 existingPinCount: pinCount,
                 existingPadCount: padCount,
-                selectedLayer:    canvas.selectedLayer,
-                magnification:    canvas.magnification,
-                hitSegmentID:     hitID
+                selectedLayer: canvas.selectedLayer,
+                magnification: canvas.magnification,
+                hitSegmentID: hitID
             )
 
             // 5 – let the tool react to the tap

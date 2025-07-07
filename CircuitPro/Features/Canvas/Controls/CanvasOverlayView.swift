@@ -23,13 +23,10 @@ struct CanvasOverlayView<Toolbar: View>: View {
             }
             Spacer()
             HStack {
-               
-        
                 CanvasControlView()
                 Spacer()
                 GridSpacingControlView()
                 ZoomControlView()
-              
             }
         }
     }

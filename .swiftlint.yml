@@ -16,6 +16,7 @@ identifier_name:
     - rf
     - i
     - j
+    - mm
 
 excluded:           # Paths SwiftLint should ignore
   - DerivedData

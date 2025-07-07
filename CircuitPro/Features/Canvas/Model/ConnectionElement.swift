@@ -20,8 +20,8 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
     // This computed property remains unchanged, providing primitives for drawing and hit-testing.
     var primitives: [AnyPrimitive] {
         net.edges.map { edge in
-            let nodeA = net.nodeByID[edge.a]!
-            let nodeB = net.nodeByID[edge.b]!
+            let nodeA = net.nodeByID[edge.startNodeID]!
+            let nodeB = net.nodeByID[edge.endNodeID]!
             return .line(
                 LinePrimitive(
                     id: edge.id, // The edge's ID is used for segment selection.
@@ -36,12 +36,9 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
     }
 
     // MARK: - Drawing Conformance (Drawable)
-    
     // This is the NEW custom implementation of the protocol method.
     // It overrides the default implementation to provide specialized selection drawing.
     func draw(in ctx: CGContext, with selection: Set<UUID>) {
-        
-        // --- Step 1: Draw Selection Halos ---
 
         // Case A: The entire net is selected as one unit.
         // We use `selectionPath()` to draw a halo around the whole thing.
@@ -78,7 +75,7 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
                  ctx.restoreGState()
             }
         }
-        
+
         // --- Step 2: Draw the Element Body ---
         // This is always called last, drawing the wires and dots on top of any halos.
         self.drawBody(in: ctx)
@@ -94,8 +91,12 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
         ctx.saveGState()
         ctx.setFillColor(NSColor(.blue).cgColor)
         for node in net.nodeByID.values where node.kind == .junction {
-            let rect = CGRect(x: node.point.x - radius, y: node.point.y - radius,
-                              width: radius * 2, height: radius * 2)
+            let rect = CGRect(
+                x: node.point.x - radius,
+                y: node.point.y - radius,
+                width: radius * 2,
+                height: radius * 2
+            )
             ctx.fillEllipse(in: rect)
         }
         ctx.restoreGState()
@@ -113,12 +114,12 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
         primitives.contains { $0.hitTest(point, tolerance: tolerance) }
     }
 
-    func hitSegmentID(at p: CGPoint, tolerance: CGFloat = 5) -> UUID? {
-        primitives.first { $0.hitTest(p, tolerance: tolerance) }?.id
+    func hitSegmentID(at point: CGPoint, tolerance: CGFloat = 5) -> UUID? {
+        primitives.first { $0.hitTest(point, tolerance: tolerance) }?.id
     }
 }
 
 // MARK: - Protocol Conformances
 extension ConnectionElement: Hashable {
-    func hash(into h: inout Hasher) { h.combine(id) }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }

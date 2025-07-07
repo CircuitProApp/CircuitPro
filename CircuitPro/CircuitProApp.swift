@@ -5,13 +5,13 @@ import AboutWindow
 
 @main
 struct CircuitProApp: App {
-    
+
     @Environment(\.openWindow)
     private var openWindow
 
     @State private var appManager = AppManager()
     @State private var componentDesignManager = ComponentDesignManager()
-    
+
     init() {
         _ = CircuitProjectDocumentController.shared
     }
@@ -21,10 +21,17 @@ struct CircuitProApp: App {
             WelcomeWindow(
                 actions: { dismiss in
                     WelcomeButton(iconName: AppIcons.plusApp, title: "Create New Project...") {
-                        CircuitProjectDocumentController.shared.createFileDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject), onDialogPresented: { dismiss() })
+                        CircuitProjectDocumentController.shared.createFileDocumentWithDialog(
+                            configuration:
+                                    .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject),
+                            onDialogPresented: { dismiss() }
+                        )
                     }
                     WelcomeButton(iconName: AppIcons.folder, title: "Open Existing Project...") {
-                        CircuitProjectDocumentController.shared.openDocumentWithDialog(configuration: .init(allowedContentTypes: [.circuitProject]), onDialogPresented: { dismiss() })
+                        CircuitProjectDocumentController.shared.openDocumentWithDialog(
+                            configuration: .init(allowedContentTypes: [.circuitProject]),
+                            onDialogPresented: { dismiss() }
+                        )
                     }
                     WelcomeButton(iconName: AppIcons.plusApp, title: "Create New Component...") {
                         openWindow(id: "ComponentDesignWindow")
@@ -36,14 +43,14 @@ struct CircuitProApp: App {
                     }
                 }
             )
-            
+
             AboutWindow(actions: {}, footer: { AboutFooterView() })
             .commands {
                 CircuitProCommands()
             }
         }
         .environment(\.appManager, appManager)
-        
+
         Window("Component Design", id: "ComponentDesignWindow") {
             ComponentDesignView()
                 .modelContainer(ModelContainerManager.shared.container)

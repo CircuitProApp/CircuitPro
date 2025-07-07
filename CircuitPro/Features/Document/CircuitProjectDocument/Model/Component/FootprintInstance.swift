@@ -19,7 +19,7 @@ final class FootprintInstance: Identifiable, Codable {
         self.id = id
         self.footprintUUID = footprintUUID
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case _id = "id"
         case _footprintUUID = "footprintUUID"

@@ -17,8 +17,7 @@ struct RectanglePrimitive: GraphicPrimitive {
     var strokeWidth: CGFloat
     var filled: Bool
     var color: SDColor
-    
-    
+
     func handles() -> [Handle] {
         let halfW = size.width / 2
         let halfH = size.height / 2

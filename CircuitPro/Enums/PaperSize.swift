@@ -36,16 +36,18 @@ enum PaperSize {
 
     /// Returns the paper size already converted to the *internal* coordinate
     /// system.  `scale` is “canvas units per millimetre”—in your app that is 10.
-    func canvasSize(scale unitsPerMM: CGFloat = 10,
-                    orientation: PaperOrientation = .landscape) -> CGSize {
+    func canvasSize(
+        scale unitsPerMM: CGFloat = 10,
+        orientation: PaperOrientation = .landscape
+    ) -> CGSize {
 
         let mm = dimensions
-        let w  = CGFloat(mm.width)  * unitsPerMM
-        let h  = CGFloat(mm.height) * unitsPerMM
+        let width  = CGFloat(mm.width)  * unitsPerMM
+        let height  = CGFloat(mm.height) * unitsPerMM
 
         switch orientation {
-        case .portrait:  return CGSize(width: w, height: h)
-        case .landscape: return CGSize(width: h, height: w)   // swap
+        case .portrait:  return CGSize(width: width, height: height)
+        case .landscape: return CGSize(width: height, height: width)   // swap
         }
     }
 }

@@ -41,7 +41,6 @@ struct ToolbarView<Tool: CanvasTool>: View {
             }
             .scrollIndicators(.never)
         }
-     
         .background(.thinMaterial)
         .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3), lineWidth: 1)
         .buttonStyle(.borderless)
@@ -61,7 +60,6 @@ struct ToolbarView<Tool: CanvasTool>: View {
         }
         .padding(8)
         .frame(width: 38)
-  
     }
 
     private func toolbarButton(_ tool: Tool) -> some View {
@@ -76,7 +74,5 @@ struct ToolbarView<Tool: CanvasTool>: View {
         }
         // TODO: Add shortcuts
         .help("\(tool.label) Tool\nShortcut:")
-    
- 
     }
 }

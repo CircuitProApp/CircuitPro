@@ -15,7 +15,6 @@ struct AboutFooterView: View {
                 Link(destination: URL(string: "https://github.com/CircuitProApp/CircuitPro/blob/main/LICENSE.md")!) {
                     Text("MIT License")
                         .underline()
-             
                 }
                 .focusable(false)
             },

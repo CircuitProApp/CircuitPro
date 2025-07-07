@@ -16,7 +16,7 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
     var symbolUUID: UUID
     var position: CGPoint
     var cardinalRotation: CardinalRotation = .deg0
-    
+
     var rotation: CGFloat {
         get { cardinalRotation.radians }
         set { cardinalRotation = .closest(to: newValue) }
@@ -28,7 +28,7 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
         self.position = position
         self.cardinalRotation = cardinalRotation
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case _id = "id"
         case _symbolUUID = "symbolUUID"

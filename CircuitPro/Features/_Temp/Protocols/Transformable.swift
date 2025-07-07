@@ -13,8 +13,8 @@ protocol Transformable {
 }
 
 extension Transformable {          // default implementation
-    mutating func translate(by v: CGVector) {
-        position.x += v.dx
-        position.y += v.dy
+    mutating func translate(by vector: CGVector) {
+        position.x += vector.dx
+        position.y += vector.dy
     }
 }

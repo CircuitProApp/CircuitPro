@@ -5,10 +5,10 @@
 ////  Created by Giorgi Tchelidze on 4/4/25.
 ////
 //
-//import SwiftUI
-//import SwiftData
+// import SwiftUI
+// import SwiftData
 //
-//struct LayerListView: View {
+// struct LayerListView: View {
 //
 //    let layers: [Layer]
 //
@@ -42,8 +42,4 @@
 //            }
 //        }
 //    }
-//}
-//
-//#Preview {
-//    LayerListView(layers: [])
-//}
+// }

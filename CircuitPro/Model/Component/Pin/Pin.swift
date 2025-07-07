@@ -19,7 +19,6 @@ struct Pin: Identifiable, Codable, Hashable {
     var showNumber: Bool = true
 }
 
-
 extension Pin: Transformable {
     var rotation: CGFloat {
         get { cardinalRotation.radians }

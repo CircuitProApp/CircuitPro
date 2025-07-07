@@ -9,7 +9,7 @@ import CoreGraphics
 import Foundation
 
 extension CGFloat {
-    func isBetween(_ a: CGFloat, _ b: CGFloat) -> Bool {
-        (Swift.min(a, b)...Swift.max(a, b)).contains(self)
+    func isBetween(_ lowerBound: CGFloat, _ upperBound: CGFloat) -> Bool {
+        (Swift.min(lowerBound, upperBound)...Swift.max(lowerBound, upperBound)).contains(self)
     }
 }

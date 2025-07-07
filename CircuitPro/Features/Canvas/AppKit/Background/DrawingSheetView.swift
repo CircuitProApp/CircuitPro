@@ -10,10 +10,9 @@ import AppKit
 // MARK: - DrawingSheetView ---------------------------------------------------
 final class DrawingSheetView: NSView {
 
-    // Public knobs -----------------------------------------------------------
-    var sheetSize:    PaperSize = .a4      { didSet { invalidate() } }
-    var orientation:    PaperOrientation = .portrait { didSet { invalidate() } }
-    
+    var sheetSize: PaperSize = .a4 { didSet { invalidate() } }
+    var orientation: PaperOrientation = .portrait { didSet { invalidate() } }
+
     private let graphicColor: NSColor = NSColor(name: nil) { appearance in
         if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
             return .white
@@ -21,23 +20,23 @@ final class DrawingSheetView: NSView {
             return .black
         }
     }
-    
+
     var cellValues: [String: String] = [
         "Title": "Untitled",
         "Units": "mm",
-        "Size":  PaperSize.a4.name.uppercased()
-    ]                                      { didSet { invalidate() } }
+        "Size": PaperSize.a4.name.uppercased()
+    ] { didSet { invalidate() } }
 
     // Constants --------------------------------------------------------------
-    private let inset:       CGFloat = 15
+    private let inset: CGFloat = 15
     private let tickSpacing: CGFloat = 100
-    private let cellHeight:  CGFloat = 25
-    private let cellPad:     CGFloat = 10
-    private let unitsPerMM:  CGFloat = 10    // <── 10 canvas units == 1 mm
+    private let cellHeight: CGFloat = 25
+    private let cellPad: CGFloat = 10
+    private let unitsPerMM: CGFloat = 10    // 10 canvas units == 1 mm
 
     // House-keeping ----------------------------------------------------------
     override var isFlipped: Bool { true }
-    private func invalidate()    { needsDisplay = true }
+    private func invalidate() { needsDisplay = true }
 
     // Convenience ------------------------------------------------------------
     private func safeFont(size: CGFloat, weight: NSFont.Weight) -> NSFont {
@@ -79,30 +78,33 @@ final class DrawingSheetView: NSView {
         // ------------------------------------------------------------------
         drawHorizontalRuler(ctx, inner: inner, outer: marginRect, isTop: true)
         drawHorizontalRuler(ctx, inner: inner, outer: marginRect, isTop: false)
-        drawVerticalRuler  (ctx, inner: inner, outer: marginRect, isLeft: true)
-        drawVerticalRuler  (ctx, inner: inner, outer: marginRect, isLeft: false)
+        drawVerticalRuler(ctx, inner: inner, outer: marginRect, isLeft: true)
+        drawVerticalRuler(ctx, inner: inner, outer: marginRect, isLeft: false)
 
         drawTitleBlock(ctx, inner: inner)
     }
-    
-    private func labelForIndex(_ idx: Int, isNumber: Bool) -> String {
-        if isNumber { return "\(idx + 1)" }
+
+    private func labelForIndex(_ index: Int, isNumber: Bool) -> String {
+        if isNumber { return "\(index + 1)" }
 
         // Spreadsheet-style lettering: A, B, …, Z, AA, AB, …
-        var n = idx
-        var s = ""
+        var number = index
+        var label = ""
         repeat {
-            let rem = n % 26
-            s = String(UnicodeScalar(65 + rem)!) + s
-            n = n / 26 - 1
-        } while n >= 0
-        return s
+            let remainder = number % 26
+            label = String(UnicodeScalar(65 + remainder)!) + label
+            number = number / 26 - 1
+        } while number >= 0
+
+        return label
     }
 
-    private func drawHorizontalRuler(_ ctx: CGContext,
-                                     inner: CGRect,
-                                     outer: CGRect,
-                                     isTop: Bool) {
+    private func drawHorizontalRuler(
+        _ ctx: CGContext,
+        inner: CGRect,
+        outer: CGRect,
+        isTop: Bool
+    ) {
 
         let font = safeFont(size: 9, weight: .regular)
         let attr = attrs(font: font)
@@ -123,17 +125,23 @@ final class DrawingSheetView: NSView {
 
             let text  = labelForIndex(i, isNumber: true) as NSString
             let size  = text.size(withAttributes: attr)
-            text.draw(at: .init(x: mid - size.width * 0.5,
-                                y: yLabel - size.height * 0.5),
-                      withAttributes: attr)
+            text.draw(
+                at: .init(
+                    x: mid - size.width * 0.5,
+                    y: yLabel - size.height * 0.5
+                ),
+                withAttributes: attr
+            )
         }
     }
 
     // MARK: – Vertical edges (letters)
-    private func drawVerticalRuler(_ ctx: CGContext,
-                                   inner: CGRect,
-                                   outer: CGRect,
-                                   isLeft: Bool) {
+    private func drawVerticalRuler(
+        _ ctx: CGContext,
+        inner: CGRect,
+        outer: CGRect,
+        isLeft: Bool
+    ) {
 
         let font = safeFont(size: 9, weight: .regular)
         let attr = attrs(font: font)
@@ -154,49 +162,59 @@ final class DrawingSheetView: NSView {
 
             let text  = labelForIndex(i, isNumber: false) as NSString
             let size  = text.size(withAttributes: attr)
-            text.draw(at: .init(x: xLabel - size.width * 0.5,
-                                y: mid - size.height * 0.5),
-                      withAttributes: attr)
+            text.draw(
+                at: .init(
+                    x: xLabel - size.width * 0.5,
+                    y: mid - size.height * 0.5
+                ),
+                withAttributes: attr
+            )
         }
     }
 
-    private func drawTitleBlock(_ ctx: CGContext, inner: CGRect) {
+    private func drawTitleBlock(_ context: CGContext, inner: CGRect) {
 
-        let rows        = cellValues.count
-        let blockWidth  = cellHeight * 8
-        let blockHeight = CGFloat(rows) * cellHeight
-        let rect        = CGRect(x: inner.maxX - blockWidth,
-                                 y: inner.maxY - blockHeight,
-                                 width: blockWidth,
-                                 height: blockHeight)
+        let rowCount = cellValues.count
+        let blockWidth = cellHeight * 8
+        let blockHeight = CGFloat(rowCount) * cellHeight
+        let rect = CGRect(
+            x: inner.maxX - blockWidth,
+            y: inner.maxY - blockHeight,
+            width: blockWidth,
+            height: blockHeight
+        )
 
-        ctx.stroke(rect)
+        context.stroke(rect)
 
-        for r in 1..<rows {
-            let y = rect.minY + CGFloat(r) * cellHeight
-            ctx.move(to: .init(x: rect.minX, y: y))
-            ctx.addLine(to: .init(x: rect.maxX, y: y))
-            ctx.strokePath()
+        for rowIndex in 1..<rowCount {
+            let y = rect.minY + CGFloat(rowIndex) * cellHeight
+            context.move(to: CGPoint(x: rect.minX, y: y))
+            context.addLine(to: CGPoint(x: rect.maxX, y: y))
+            context.strokePath()
         }
 
-        let keyFont   = safeFont(size: 8,  weight: .semibold)
-        let valFont   = safeFont(size: 11, weight: .regular)
-        let keyAttr   = attrs(font: keyFont)
-        let valueAttr = attrs(font: valFont)
+        let keyFont = safeFont(size: 8, weight: .semibold)
+        let valueFont = safeFont(size: 11, weight: .regular)
+        let keyAttributes = attrs(font: keyFont)
+        let valueAttributes = attrs(font: valueFont)
 
-        for (row, kv) in cellValues.enumerated() {
+        for (row, keyValue) in cellValues.enumerated() {
             let y = rect.minY + CGFloat(row) * cellHeight
             let cell = CGRect(x: rect.minX, y: y, width: blockWidth, height: cellHeight)
-                         .insetBy(dx: cellPad, dy: 0)
+                .insetBy(dx: cellPad, dy: 0)
 
-            (kv.key.uppercased() as NSString)
-                .draw(at: CGPoint(x: cell.minX, y: cell.minY + 2), withAttributes: keyAttr)
+            (keyValue.key.uppercased() as NSString)
+                .draw(at: CGPoint(x: cell.minX, y: cell.minY + 2), withAttributes: keyAttributes)
 
-            let value = kv.value as NSString
-            let sz    = value.size(withAttributes: valueAttr)
-            value.draw(at: CGPoint(x: cell.maxX - sz.width,
-                                   y: cell.minY + (cell.height - sz.height) * 0.5),
-                       withAttributes: valueAttr)
+            let value = keyValue.value as NSString
+            let valueSize = value.size(withAttributes: valueAttributes)
+            value.draw(
+                at: CGPoint(
+                    x: cell.maxX - valueSize.width,
+                    y: cell.minY + (cell.height - valueSize.height) * 0.5
+                ),
+                withAttributes: valueAttributes
+            )
         }
     }
 

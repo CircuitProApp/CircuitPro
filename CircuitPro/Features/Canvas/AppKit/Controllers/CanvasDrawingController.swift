@@ -10,7 +10,7 @@ final class CanvasDrawingController {
     func draw(in ctx: CGContext, dirtyRect: NSRect) {
         // Content — respects zoom
         ctx.saveGState()
-        
+
         drawElements(in: ctx)
         drawLivePreview(in: ctx)
         ctx.restoreGState()
@@ -25,8 +25,7 @@ final class CanvasDrawingController {
             if case .connection(let conn) = element {
                 // let the ConnectionElement itself handle “whole net” vs. “per‐edge” halos
                 conn.draw(in: ctx, with: canvas.selectedIDs)
-            }
-            else {
+            } else {
                 let isSelected = canvas.selectedIDs.contains(element.id)
                 element.drawable.draw(in: ctx, selected: isSelected)
             }

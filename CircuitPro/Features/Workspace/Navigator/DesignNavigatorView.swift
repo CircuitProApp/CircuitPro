@@ -13,14 +13,18 @@ public struct DesignNavigatorView: View {
     private var projectManager
 
     @State private var isExpanded: Bool = true
-    
+
     var document: CircuitProjectDocument
 
     public var body: some View {
         @Bindable var bindableProjectManager = projectManager
-        
+
         DisclosureGroup(isExpanded: $isExpanded) {
-            List($bindableProjectManager.project.designs, id: \.self, selection: $bindableProjectManager.selectedDesign) { $design in
+            List(
+                $bindableProjectManager.project.designs,
+                id: \.self,
+                selection: $bindableProjectManager.selectedDesign
+            ) { $design in
                 HStack {
                     Image(systemName: AppIcons.design)
                     TextField("Design Name", text: $design.name)
@@ -55,7 +59,6 @@ public struct DesignNavigatorView: View {
         } label: {
             HStack {
                 Group {
-                   
                     if projectManager.project.designs.isEmpty || isExpanded {
                         Text("Designs")
                     } else {
@@ -78,10 +81,7 @@ public struct DesignNavigatorView: View {
                 }
                 .font(.system(size: 11))
                 .fontWeight(.semibold)
-                
 
-                
-               
                 Spacer()
                 Button {
                     document.addNewDesign()
@@ -93,6 +93,5 @@ public struct DesignNavigatorView: View {
             .foregroundStyle(.secondary)
         }
         .disclosureGroupStyle(NavigatorDisclosureGroupStyle())
-
     }
 }

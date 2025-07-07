@@ -9,21 +9,22 @@ import Foundation
 import CoreGraphics
 
 struct LineSegment {
+
     var start: CGPoint
     var end: CGPoint
     var isHorizontal: Bool { start.y == end.y }
-    var isVertical:   Bool { start.x == end.x }
+    var isVertical: Bool { start.x == end.x }
 
-    func intersectionPoint(with o: LineSegment) -> CGPoint? {
-        if isHorizontal && o.isVertical {
-            if start.y.isBetween(o.start.y, o.end.y) &&
-               o.start.x.isBetween(start.x, end.x) {
-                return CGPoint(x: o.start.x, y: start.y)
+    func intersectionPoint(with other: LineSegment) -> CGPoint? {
+        if isHorizontal && other.isVertical {
+            if start.y.isBetween(other.start.y, other.end.y) &&
+                other.start.x.isBetween(start.x, end.x) {
+                return CGPoint(x: other.start.x, y: start.y)
             }
-        } else if isVertical && o.isHorizontal {
-            if start.x.isBetween(o.start.x, o.end.x) &&
-               o.start.y.isBetween(start.y, end.y) {
-                return CGPoint(x: start.x, y: o.start.y)
+        } else if isVertical && other.isHorizontal {
+            if start.x.isBetween(other.start.x, other.end.x) &&
+                other.start.y.isBetween(start.y, end.y) {
+                return CGPoint(x: start.x, y: other.start.y)
             }
         }
         return nil

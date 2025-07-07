@@ -3,16 +3,16 @@ import AppKit
 class BaseGridLayer: CATiledLayer {
 
     // MARK: - Public knobs
-    var unitSpacing: CGFloat = 10        { didSet { setNeedsDisplay() } }
-    var majorEvery:   Int     = 10
-    var showAxes:     Bool    = true     { didSet { setNeedsDisplay() } }
-    var axisLineWidth: CGFloat = 1       { didSet { setNeedsDisplay() } }
-    var magnification: CGFloat = 1.0     { didSet { updateForMagnification(); setNeedsDisplay() } }
+    var unitSpacing: CGFloat = 10 { didSet { setNeedsDisplay() } }
+    var majorEvery: Int = 10
+    var showAxes: Bool = true { didSet { setNeedsDisplay() } }
+    var axisLineWidth: CGFloat = 1 { didSet { setNeedsDisplay() } }
+    var magnification: CGFloat = 1.0 { didSet { updateForMagnification(); setNeedsDisplay() } }
 
     // MARK: - Internal constants
     private let baseAxisLineWidth: CGFloat = 1.0
-    let   centerX: CGFloat = 2_500
-    let   centerY: CGFloat = 2_500
+    let centerX: CGFloat = 2_500
+    let centerY: CGFloat = 2_500
 
     // MARK: - Init boiler-plate
     override class func fadeDuration() -> CFTimeInterval { 0 }
@@ -34,7 +34,7 @@ class BaseGridLayer: CATiledLayer {
     }
 
     // ❶ The missing copy initialiser
-    required override init(layer: Any) {
+    override required init(layer: Any) {
         super.init(layer: layer)
 
         // copy properties from the source layer
@@ -48,7 +48,6 @@ class BaseGridLayer: CATiledLayer {
         // nothing to do for commonInit(): the layer we are copying
         // already has its tileSize, levelsOfDetail, … set up
     }
-
 
     // MARK: – Zoom hook
     func updateForMagnification() { axisLineWidth = baseAxisLineWidth / magnification }

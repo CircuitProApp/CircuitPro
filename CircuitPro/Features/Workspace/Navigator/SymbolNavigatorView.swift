@@ -16,7 +16,7 @@ struct SymbolNavigatorView: View {
     @Query private var components: [Component]
 
     @State private var selectedComponentInstances: Set<DesignComponent> = []
-    
+
     var document: CircuitProjectDocument
 
     // 1. Delete logic, deferred to avoid exclusivity violations
@@ -35,8 +35,8 @@ struct SymbolNavigatorView: View {
 
         // 1.2 Remove from the selected design
         if (projectManager.selectedDesign?.componentInstances) != nil {
-            projectManager.selectedDesign?.componentInstances.removeAll {
-                inst in instancesToRemove.contains(where: { $0.id == inst.id })
+            projectManager.selectedDesign?.componentInstances.removeAll { inst in
+                instancesToRemove.contains(where: { $0.id == inst.id })
             }
         }
 
@@ -46,36 +46,35 @@ struct SymbolNavigatorView: View {
 
     var body: some View {
 
-        List(projectManager.designComponents,
-                 id: \.id,
-                 selection: $selectedComponentInstances
-            ) { designComponent in
-                HStack {
-                    Text(designComponent.definition.name)
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    Text(designComponent.reference)
-                        .foregroundStyle(.secondary)
-                        .monospaced()
-          
-                }
-                .frame(height: 14)
-                .listRowSeparator(.hidden)
-                .contextMenu {
-                    // 3. Dynamic delete label/action
-                    let multi = selectedComponentInstances.contains(designComponent) && selectedComponentInstances.count > 1
-                    Button(role: .destructive) {
-                        performDelete(on: designComponent)
-                    } label: {
-                        Text(multi
-                             ? "Delete Selected (\(selectedComponentInstances.count))"
-                             : "Delete")
-                    }
+        List(
+            projectManager.designComponents,
+            id: \.id,
+            selection: $selectedComponentInstances
+        ) { designComponent in
+            HStack {
+                Text(designComponent.definition.name)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(designComponent.reference)
+                    .foregroundStyle(.secondary)
+                    .monospaced()
+            }
+            .frame(height: 14)
+            .listRowSeparator(.hidden)
+            .contextMenu {
+                // 3. Dynamic delete label/action
+                let multi = selectedComponentInstances.contains(designComponent) && selectedComponentInstances.count > 1
+                Button(role: .destructive) {
+                    performDelete(on: designComponent)
+                } label: {
+                    Text(multi
+                         ? "Delete Selected (\(selectedComponentInstances.count))"
+                         : "Delete")
                 }
             }
-            .listStyle(.inset)
-            .scrollContentBackground(.hidden)
-            .environment(\.defaultMinListRowHeight, 14)
-
+        }
+        .listStyle(.inset)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 14)
     }
 }

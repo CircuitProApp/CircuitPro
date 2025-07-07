@@ -9,12 +9,12 @@ import SwiftUI
 import SwiftData
 
 struct WorkspaceView: View {
-    
+
     @Environment(\.projectManager)
     private var projectManager
 
     var document: CircuitProjectDocument
-    
+
     @State private var showInspector: Bool = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
@@ -34,9 +34,6 @@ struct WorkspaceView: View {
                                 self.columnVisibility = .detailOnly
                             }
                         }
-
-                 
-                        
                     } label: {
                         Image(systemName: AppIcons.sidebarLeading)
                             .imageScale(.large)
@@ -45,7 +42,6 @@ struct WorkspaceView: View {
             }
         } detail: {
             EditorView(document: document)
-          
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
@@ -57,7 +53,6 @@ struct WorkspaceView: View {
                     }
                 }
         }
-
         .frame(minWidth: 800, minHeight: 600)
         .inspector(isPresented: $showInspector) {
             VStack {
@@ -69,8 +64,6 @@ struct WorkspaceView: View {
             if projectManager.project.designs.isNotEmpty {
                 projectManager.selectedDesign = projectManager.project.designs.first!
             }
-       
         }
     }
 }
-

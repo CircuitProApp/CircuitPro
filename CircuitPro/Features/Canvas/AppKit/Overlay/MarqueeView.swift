@@ -21,7 +21,7 @@ final class MarqueeView: NSView {
 
     // Same coordinate system as the main canvas.
     override var isFlipped: Bool { true }
-    override var isOpaque:  Bool { false }   // overlay must stay transparent
+    override var isOpaque: Bool { false }   // overlay must stay transparent
 
     override func draw(_ dirty: NSRect) {
         guard let rect = rect else { return }

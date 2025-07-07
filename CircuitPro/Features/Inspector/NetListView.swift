@@ -42,7 +42,3 @@ struct NetListView: View {
         }
     }
 }
-
-//#Preview {
-//    NetListView(nets: [])
-//}

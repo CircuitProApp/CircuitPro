@@ -15,7 +15,7 @@ enum AnyPrimitive: GraphicPrimitive {
     case line(LinePrimitive)
     case rectangle(RectanglePrimitive)
     case circle(CirclePrimitive)
- 
+
     var id: UUID {
         switch self {
         case .line(let line): return line.id
@@ -133,9 +133,12 @@ enum AnyPrimitive: GraphicPrimitive {
         opposite opp: CGPoint? = nil
     ) {
         switch self {
-        case .line(var line): line.updateHandle(kind, to: newPos, opposite: opp); self = .line(line)
-        case .rectangle(var rectangle): rectangle.updateHandle(kind, to: newPos, opposite: opp); self = .rectangle(rectangle)
-        case .circle(var circle): circle.updateHandle(kind, to: newPos, opposite: opp); self = .circle(circle)
+        case .line(var line):
+            line.updateHandle(kind, to: newPos, opposite: opp); self = .line(line)
+        case .rectangle(var rectangle):
+            rectangle.updateHandle(kind, to: newPos, opposite: opp); self = .rectangle(rectangle)
+        case .circle(var circle):
+            circle.updateHandle(kind, to: newPos, opposite: opp); self = .circle(circle)
         }
     }
 }

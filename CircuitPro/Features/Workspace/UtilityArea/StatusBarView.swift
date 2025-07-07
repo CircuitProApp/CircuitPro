@@ -8,13 +8,12 @@
 import SwiftUI
 
 struct StatusBarView: View {
-    
-    var canvasManager: CanvasManager
-    @Binding var showUtilityArea: Bool
-    
-    var body: some View {
-        
 
+    var canvasManager: CanvasManager
+
+    @Binding var showUtilityArea: Bool
+
+    var body: some View {
         HStack {
             CanvasControlView()
             Divider()
@@ -28,7 +27,7 @@ struct StatusBarView: View {
             }
             .font(.system(size: 12))
             .foregroundStyle(.secondary)
-            
+
             Spacer()
             GridSpacingControlView()
             Divider()
@@ -49,7 +48,6 @@ struct StatusBarView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 13, height: 13)
                     .fontWeight(.light)
-                
             }
             .buttonStyle(.borderless)
         }

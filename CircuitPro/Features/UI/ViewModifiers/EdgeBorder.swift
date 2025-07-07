@@ -5,9 +5,9 @@
 //  Created by Giorgi Tchelidze on 4/21/25.
 //
 //
-//import SwiftUI
+// import SwiftUI
 //
-//struct EdgeBorder<S: ShapeStyle>: ViewModifier {
+// struct EdgeBorder<S: ShapeStyle>: ViewModifier {
 //    var edge: Edge
 //    var style: S
 //    var thickness: CGFloat
@@ -31,15 +31,15 @@
 //        case .trailing: return .trailing
 //        }
 //    }
-//}
+// }
 //
-//private extension Edge {
+// private extension Edge {
 //    var isVertical: Bool { self == .leading || self == .trailing }
 //    var isHorizontal: Bool { self == .top || self == .bottom }
-//}
+// }
 //
-//extension View {
+// extension View {
 //    func border<S: ShapeStyle>(edge: Edge, style: S, thickness: CGFloat = 1) -> some View {
 //        self.modifier(EdgeBorder(edge: edge, style: style, thickness: thickness))
 //    }
-//}
+// }

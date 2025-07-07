@@ -1,24 +1,23 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-//──────────────  CircuitProjectDocument  ──────────────
 final class CircuitProjectDocument: NSDocument {
 
-    // MARK: – Model ---------------------------------------------------
+    // MARK: – Model
     var model = CircuitProject(name: "Untitled", designs: [])
-    
+
     lazy var projectManager: ProjectManager = {
         return ProjectManager(project: model, modelContext: ModelContainerManager.shared.container.mainContext)
     }()
 
-    override class var autosavesInPlace: Bool { true }
+    override static var autosavesInPlace: Bool { true }
 
-    // MARK: – Init ----------------------------------------------------
+    // MARK: – Init
     override init() {
         super.init()
     }
 
-    // MARK: – Window --------------------------------------------------
+    // MARK: – Window
     override func makeWindowControllers() {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1000, height: 700),
@@ -43,10 +42,8 @@ final class CircuitProjectDocument: NSDocument {
         addWindowController(NSWindowController(window: window))
     }
 
-    // MARK: – Reading -----------------------------------------------------
-    //
+    // MARK: – Reading
     // 1.  URL-based reader (normal open/save cycle)
-    //
     override func read(from url: URL, ofType typeName: String) throws {
 
         // — project.json --------------------------------------------------
@@ -57,7 +54,6 @@ final class CircuitProjectDocument: NSDocument {
 
         let headerData = try Data(contentsOf: headerURL)
         model = try JSONDecoder().decode(CircuitProject.self, from: headerData)
-        
 
         // — components.json of every design ------------------------------
         for index in model.designs.indices {
@@ -74,16 +70,15 @@ final class CircuitProjectDocument: NSDocument {
                 model.designs[index].componentInstances = instances
             }
         }
-        
     }
 
-    //
     // 2.  FileWrapper-based reader (state restoration, hand-off, …)
-    //
-    override func read(from fileWrapper: FileWrapper,
-                       ofType typeName: String) throws {
+    override func read(
+        from fileWrapper: FileWrapper,
+        ofType typeName: String
+    ) throws {
 
-        // — project.json --------------------------------------------------
+        // — project.json
         guard
             let headerWrapper = fileWrapper.fileWrappers?["project.json"],
             let headerData    = headerWrapper.regularFileContents
@@ -92,7 +87,7 @@ final class CircuitProjectDocument: NSDocument {
         }
         model = try JSONDecoder().decode(CircuitProject.self, from: headerData)
 
-        // — components.json of every design ------------------------------
+        // — components.json of every design
         guard let designsDir = fileWrapper.fileWrappers?["Designs"] else { return }
 
         for index in model.designs.indices {
@@ -109,7 +104,7 @@ final class CircuitProjectDocument: NSDocument {
         }
     }
 
-    // MARK: – Writing -------------------------------------------------
+    // MARK: – Writing
     //
     // Build an in-memory FileWrapper tree that represents the package
     // and let NSDocument write/replace it atomically.
@@ -134,19 +129,24 @@ final class CircuitProjectDocument: NSDocument {
             designDir.preferredFilename = design.directoryName
 
             // 2.1 schematic.sch & layout.pcb stay unchanged
-            designDir.addRegularFile(withContents: Data(),
-                                     preferredFilename: "schematic.sch")
-            designDir.addRegularFile(withContents: Data(),
-                                     preferredFilename: "layout.pcb")
+            designDir.addRegularFile(
+                withContents: Data(),
+                preferredFilename: "schematic.sch"
+            )
+            designDir.addRegularFile(
+                withContents: Data(),
+                preferredFilename: "layout.pcb"
+            )
 
             // 2.2     REAL DATA  ← here is the new part
             let compsData = try JSONEncoder().encode(design.componentInstances)
-            designDir.addRegularFile(withContents: compsData,
-                                     preferredFilename: "components.json")
+            designDir.addRegularFile(
+                withContents: compsData,
+                preferredFilename: "components.json"
+            )
 
             designsDir.addFileWrapper(designDir)
         }
-
 
         root.addFileWrapper(designsDir)
         return root
@@ -157,8 +157,7 @@ final class CircuitProjectDocument: NSDocument {
     }
 }
 
-
-//──────────────  Tiny helper  ──────────────
+// Tiny helper
 private extension NSToolbar {
     func apply(_ build: (NSToolbar) -> Void) -> NSToolbar { build(self); return self }
 }

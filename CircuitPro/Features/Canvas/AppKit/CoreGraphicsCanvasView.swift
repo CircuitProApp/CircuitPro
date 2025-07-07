@@ -22,7 +22,7 @@ final class CoreGraphicsCanvasView: NSView {
     var onSelectionChange: ((Set<UUID>) -> Void)?
     var onPrimitiveAdded: ((UUID, LayerKind) -> Void)?
     var onMouseMoved: ((CGPoint) -> Void)?
-    
+
     private(set) var hoveredPinID: UUID? {
         didSet {
             if hoveredPinID != oldValue {
@@ -32,7 +32,6 @@ final class CoreGraphicsCanvasView: NSView {
         }
     }
     var onPinHoverChange: ((UUID?) -> Void)?
-
 
     // MARK: Private Controllers
     private lazy var interaction = CanvasInteractionController(canvas: self)
