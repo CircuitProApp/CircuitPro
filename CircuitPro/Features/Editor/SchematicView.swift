@@ -38,11 +38,12 @@ struct SchematicView: View {
                 SchematicToolbarView(selectedSchematicTool: $selectedTool)
                     .padding(16)
             }
-            .overlay(content: {
+            .overlay(alignment: .bottomLeading){
                 VStack {
                     Text(debugString ?? "No connection elements")
                 }
-            })
+                .padding(10)
+            }
 
             .onAppear { rebuildCanvasElements() }
             // If the list of instances in the design changes -> rebuild
