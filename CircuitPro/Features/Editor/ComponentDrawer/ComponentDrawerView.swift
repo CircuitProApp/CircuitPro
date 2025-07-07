@@ -130,7 +130,7 @@ struct ComponentGridView<Data: RandomAccessCollection, Content: View>: View wher
         } else {
             ScrollView {
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.adaptive(minimum: 150, maximum: 200)), count: 3),
+                    columns: Array(repeating: GridItem(.adaptive(minimum: 200, maximum: 200)), count: 3),
                     alignment: .leading
                 ) {
                     ForEach(data, id: \.persistentModelID) { element in

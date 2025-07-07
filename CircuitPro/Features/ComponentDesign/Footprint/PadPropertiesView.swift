@@ -9,7 +9,16 @@ import SwiftUI
 
 struct PadPropertiesView: View {
 
+    @State private var showDrillDialog: Bool = false
+
     @Binding var pad: Pad
+    
+    var isTooLarge: Bool {
+        let drill = pad.drillDiameter ?? 0.0
+        return pad.isCircle
+            ? drill > pad.radius
+            : drill > pad.width || drill > pad.height
+    }
 
     var body: some View {
         Group {
@@ -22,16 +31,30 @@ struct PadPropertiesView: View {
             }
 
             if pad.type == .throughHole {
-                fieldWithUnit {
-                    DoubleField(
-                        title: "Drill Diameter",
-                        value: Binding(
-                            get: { pad.drillDiameter ?? 0.0 },
-                            set: { pad.drillDiameter = $0 }
-                        ),
-                        displayMultiplier: 0.1
-                    )
+                HStack {
+                    if isTooLarge {
+                        Image(systemName: AppIcons.ruleChecks + ".fill")
+                            .foregroundStyle(.primary, .yellow)
+                            .onHover { _ in showDrillDialog.toggle() }
+                            .popover(isPresented: $showDrillDialog) {
+                                Text("Drill diameter exceeds pad size.")
+                                    .padding(7.5)
+                            }
+                    }
+                    fieldWithUnit {
+                        DoubleField(
+                            title: "Drill Diameter",
+                            value: Binding(
+                                get: { pad.drillDiameter ?? 0.0 },
+                                set: { pad.drillDiameter = $0 }
+                            ),
+                            displayMultiplier: 0.1
+                        )
+                    }
+                    .foregroundStyle(isTooLarge ? .red : .primary)
                 }
+                .animation(.default, value: isTooLarge)
+           
             }
 
             Picker("Shape", selection: Binding(
@@ -42,18 +65,21 @@ struct PadPropertiesView: View {
                 Text("Rectangle").tag("Rectangle")
             }
 
-            if pad.isCircle {
-                fieldWithUnit {
-                    DoubleField(title: "Radius", value: $pad.radius, displayMultiplier: 0.1)
-                }
-            } else {
-                fieldWithUnit {
-                    DoubleField(title: "Width", value: $pad.width, displayMultiplier: 0.1)
-                }
-                fieldWithUnit {
-                    DoubleField(title: "Height", value: $pad.height, displayMultiplier: 0.1)
+            Group {
+                if pad.isCircle {
+                    fieldWithUnit {
+                        DoubleField(title: "Radius", value: $pad.radius, displayMultiplier: 0.1)
+                    }
+                } else {
+                    fieldWithUnit {
+                        DoubleField(title: "Width", value: $pad.width, displayMultiplier: 0.1)
+                    }
+                    fieldWithUnit {
+                        DoubleField(title: "Height", value: $pad.height, displayMultiplier: 0.1)
+                    }
                 }
             }
+            .foregroundStyle(isTooLarge ? .red : .primary)
         }
     }
 

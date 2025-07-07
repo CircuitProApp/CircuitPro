@@ -8,30 +8,14 @@
 import SwiftUI
 import AppKit
 
-enum FeedbackIssueType: Displayable {
-    case bug
-    case featureRequest
-    case uiIssue
-    case performance
-    case other
-    
-    var label: String {
-        switch self {
-        case .bug: return "Bug"
-        case .featureRequest: return "Feature Request"
-        case .uiIssue: return "UI Issue"
-        case .performance: return "Performance"
-        case .other: return "Other"
-        }
-    }
-}
-
 struct FeedbackFormView: View {
 
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedIssueType: FeedbackIssueType = .bug
     @State private var message: String = ""
+    
+    var additionalContext: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -45,6 +29,7 @@ struct FeedbackFormView: View {
                 }
             }
             .pickerStyle(.menu)
+            .frame(maxWidth: 300)
 
             Text("Message:")
             TextEditor(text: $message)
@@ -63,6 +48,8 @@ struct FeedbackFormView: View {
                     sendEmail()
                     dismiss()
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
                 .disabled(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
@@ -71,10 +58,12 @@ struct FeedbackFormView: View {
 
     func sendEmail() {
         let to = "george@circuitpro.app"
-        let subject = "Feedback: \(selectedIssueType)"
+        let subject = "Feedback: \(selectedIssueType.label)"
         let body =
 """
-Issue Type: \(selectedIssueType)
+Issue Type: \(selectedIssueType.label)
+
+Additional Context: \(additionalContext ?? "N/A") 
 
 \(message)
 """

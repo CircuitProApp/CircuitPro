@@ -24,7 +24,8 @@ struct ComponentDesignView: View {
     @State private var showError   = false
     @State private var showWarning = false
     @State private var messages    = [String]()
-    @State private var didCreateComponent = false  // 1. Creation flag
+    @State private var didCreateComponent = false
+    @State private var showFeedbackSheet: Bool = false
 
     var body: some View {
         Group {
@@ -34,7 +35,7 @@ struct ComponentDesignView: View {
                     Image(systemName: "checkmark.seal.fill")
                         .resizable()
                         .frame(width: 80, height: 80)
-                        .foregroundColor(.green)
+                        .foregroundStyle(.primary, .green.gradient)
                     Text("Component created successfully")
                         .font(.title)
                         .foregroundStyle(.primary)
@@ -127,6 +128,21 @@ struct ComponentDesignView: View {
                     symbolCanvasManager.showDrawingSheet = false
                     footprintCanvasManager.showDrawingSheet = false
                 }
+            }
+        }
+        .sheet(isPresented: $showFeedbackSheet) {
+            FeedbackFormView(additionalContext: "Feedback sent from the Component Designer View, "\(currentStage.label)" stage.")
+                .frame(minWidth: 400, minHeight: 300)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showFeedbackSheet.toggle()
+                } label: {
+                    Image(systemName: AppIcons.feedbackBubble)
+                        .imageScale(.large)
+                }
+                .help("Send Feedback")
             }
         }
         .alert("Error", isPresented: $showError, actions: {

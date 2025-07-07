@@ -64,8 +64,18 @@ struct UtilityAreaView: View {
 
     @Environment(\.projectManager)
     private var projectManager
+    
+    @Environment(\.modelContext)
+    private var modelContext
 
-    @Query private var components: [Component]
+    @Query(
+        filter: #Predicate<Component> { component in
+            // Dynamic filtering will be handled through a computed property
+            true
+        },
+        sort: [SortDescriptor(\.name, order: .forward)]
+    )
+    private var components: [Component]
 
     @State private var selectedCategory: ComponentCategoryFilter = .all
     @State private var selectedTab: UtilityAreaTab = .design
@@ -161,8 +171,13 @@ struct UtilityAreaView: View {
             case .appLibrary:
                 ComponentGridView(filteredComponents) { component in
                     ComponentCardView(component: component)
+                        .contextMenu {
+                            Button("Delete Component") {
+                                modelContext.delete(component)
+                            }
+                        }
                 }
-                .contentMargins(10)
+                .contentMargins([.top, .leading, .bottom], 10, for: .scrollContent)
             case .userLibrary:
                 Text("User library")
             }
