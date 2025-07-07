@@ -59,24 +59,6 @@ enum ComponentCategoryFilter: Identifiable, Hashable {
     }
 }
 
-enum ComponentDesignFilter: Displayable {
-    case all
-    case inSchematic
-    case inLayout
-
-    var label: String {
-        switch self {
-        case .all:
-            return "All"
-        case .inSchematic:
-            return "In Schematic"
-        case .inLayout:
-            return "In Layout"
-        }
-    }
-}
-
-
 struct UtilityAreaView: View {
     
     @Environment(\.projectManager)
@@ -85,7 +67,6 @@ struct UtilityAreaView: View {
     @Query private var components: [Component]
     
     @State private var selectedCategory: ComponentCategoryFilter = .all
-    @State private var selectedDesignFilter: ComponentDesignFilter = .all
     @State private var selectedTab: UtilityAreaTab = .design
     
     var filteredComponents: [Component] {
@@ -96,11 +77,6 @@ struct UtilityAreaView: View {
             return components.filter { $0.category == category }
         }
     }
-    
-//    var filteredDesignComponents: [Component] {
-//        projectManager.selectedDesign?.componentInstances as! [Component]
-//    }
-
     
     var body: some View {
         HStack(spacing: 0) {
@@ -126,16 +102,7 @@ struct UtilityAreaView: View {
         Group {
             switch selectedTab {
             case .design:
-                List(ComponentDesignFilter.allCases, id: \.self, selection: $selectedDesignFilter) { filter in
-                    HStack(spacing: 5) {
-                        Image(systemName: "text.page")
-                            .foregroundStyle(selectedDesignFilter == filter ? .primary : .secondary)
-                        Text(filter.label)
-                    }
-                    .listRowSeparator(.hidden)
-                }
-                .listStyle(.inset)
-                .scrollContentBackground(.hidden)
+                EmptyView()
             case .appLibrary:
                 List([ComponentCategoryFilter.all] + ComponentCategory.allCases.map { .category($0) }, id: \.self, selection: $selectedCategory) { filter in
                     HStack(spacing: 5) {
@@ -183,8 +150,8 @@ struct UtilityAreaView: View {
                
                     ScrollView {
                         VStack {
-                        ForEach(projectManager.selectedDesign?.componentInstances ?? []) { componentInstance in
-                            Text(componentInstance.symbolInstance.symbolUUID.uuidString)
+                        ForEach(projectManager.designComponents) { designComponent in
+                            Text(designComponent.definition.name)
                         }
                     }
                         .frame(maxWidth: .infinity)

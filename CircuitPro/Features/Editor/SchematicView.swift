@@ -7,7 +7,6 @@ struct SchematicView: View {
     var document: CircuitProjectDocument
     var canvasManager = CanvasManager()
 
-    @Environment(\.modelContext)      private var modelContext
     @Environment(\.projectManager)    private var projectManager
 
     // ─────────────────────────────────────────────  canvas state
@@ -47,7 +46,7 @@ struct SchematicView: View {
 
             .onAppear { rebuildCanvasElements() }
             // If the list of instances in the design changes -> rebuild
-            .onChange(of: projectManager.selectedDesign?.componentInstances) { _ in
+            .onChange(of: projectManager.componentInstances) { _ in
                 rebuildCanvasElements()
             }
             // If the user moves a symbol on the canvas -> write back position
@@ -70,76 +69,68 @@ struct SchematicView: View {
         guard !ids.isEmpty else { return nil }
         return ids.joined(separator: ", ")
     }
-    // ════════════════════════════════════════════════════════════════════
-    // MARK: –  Component drop
-    // ════════════════════════════════════════════════════════════════════
+
     // 1. Component drop: Add Components with Incremental Reference Number
+    // Adds the dropped components and assigns a reference number that
+    // increments *within each component type* (e.g. C1, C2 … R1 …).
     private func addComponents(_ comps: [TransferableComponent],
-                               atClipPoint clipPoint: CGPoint) {
-                               
+                               atClipPoint clipPoint: CGPoint)
+    {
+        // ── 1. Convert clip-space → document coordinates
         let origin = canvasManager.scrollOrigin
         let zoom   = canvasManager.magnification
-        
-        let docPt = CGPoint(
-            x: origin.x + clipPoint.x / zoom,
-            y: origin.y + clipPoint.y / zoom
-        )
+        let docPt  = CGPoint(x: origin.x + clipPoint.x / zoom,
+                             y: origin.y + clipPoint.y / zoom)
+        let pos    = canvasManager.snap(docPt)
 
-        let pos = canvasManager.snap(docPt)
-        
-        print("Clip Point: \(clipPoint)")
-        print("Scroll Origin: \(origin)")
-        print("Zoom: \(zoom)")
-        print("Document Point (before snap): \(docPt)")
-        print("Snapped Position: \(pos)")
-        
+        // ── 2. Pre-compute the current max reference *per component UUID*
+        let instances = projectManager.selectedDesign?.componentInstances ?? []
+        var nextRef: [UUID: Int] = instances
+            .reduce(into: [:]) { dict, inst in
+                dict[inst.componentUUID] = max(dict[inst.componentUUID] ?? 0,
+                                               inst.reference)
+            }
+
+        // ── 3. Add each dropped component, bumping the counter only for its own UUID
         for comp in comps {
-            let symbolInst = SymbolInstance(symbolUUID: comp.symbolUUID,
-                                            position: pos,
-                                            cardinalRotation: .deg0)
-            
-            // 1.1 Determine next available reference number.
-            let currentMaxRef = projectManager.selectedDesign?.componentInstances.map { $0.reference }.max() ?? 0
-            let nextRef = currentMaxRef + 1
-            
-            let instance = ComponentInstance(componentUUID: comp.componentUUID,
-                                             properties: comp.properties,
-                                             symbolInstance: symbolInst,
-                                             footprintInstance: nil,
-                                             reference: nextRef)
-            
+            // 3.1 Get the next number for *this* component type
+            let refNumber = (nextRef[comp.componentUUID] ?? 0) + 1
+            nextRef[comp.componentUUID] = refNumber        // update for multi-drop
+
+            // 3.2 Build instances
+            let symbolInst = SymbolInstance(
+                symbolUUID:        comp.symbolUUID,
+                position:          pos,
+                cardinalRotation: .deg0
+            )
+
+            let instance = ComponentInstance(
+                componentUUID:    comp.componentUUID,
+                properties:       comp.properties,
+                symbolInstance:   symbolInst,
+                footprintInstance: nil,
+                reference:        refNumber
+            )
+
             projectManager.selectedDesign?.componentInstances.append(instance)
         }
-        
+
         document.updateChangeCount(.changeDone)
         rebuildCanvasElements()
     }
 
-    // ════════════════════════════════════════════════════════════════════
-    // MARK: –  Build CanvasElement array
-    // ════════════════════════════════════════════════════════════════════
+    /// Builds [CanvasElement] from in-memory DesignComponents — no DB round-trip.
     private func rebuildCanvasElements() {
-        guard let instances = projectManager.selectedDesign?.componentInstances
-        else { canvasElements = []; return }
-
-        // 1. Fetch all required library symbols with ONE SwiftData call
-        let neededUUIDs = Set(instances.map { $0.symbolInstance.symbolUUID })
-        let symbols     = fetchSymbols(for: neededUUIDs)
-        let symDict     = Dictionary(uniqueKeysWithValues: symbols.map { ($0.uuid, $0) })
-
-        // 2. Map each instance → SymbolElement → CanvasElement.symbol
-        canvasElements = instances.compactMap { inst in
-            guard let libSym = symDict[inst.symbolInstance.symbolUUID] else { return nil }
-            let elem = SymbolElement(id:       inst.id,
-                                     instance: inst.symbolInstance,
-                                     symbol:   libSym)
+        canvasElements = projectManager.designComponents.map { dc in
+            let elem = SymbolElement(
+                id:       dc.instance.id,
+                instance: dc.instance.symbolInstance,
+                symbol:   dc.definition.symbol!      // already prefetched
+            )
             return .symbol(elem)
-        }      
+        }
     }
 
-    // ════════════════════════════════════════════════════════════════════
-    // MARK: –  Push canvas edits back into the data-model
-    // ════════════════════════════════════════════════════════════════════
     private func syncCanvasToModel(_ elems: [CanvasElement]) {
         guard var compInsts = projectManager.selectedDesign?.componentInstances
         else { return }
@@ -152,14 +143,5 @@ struct SchematicView: View {
             }
         }
         document.updateChangeCount(.changeDone)
-    }
-
-    // ════════════════════════════════════════════════════════════════════
-    // MARK: –  Symbol fetch helper
-    // ════════════════════════════════════════════════════════════════════
-    private func fetchSymbols(for uuids: Set<UUID>) -> [Symbol] {
-        guard !uuids.isEmpty else { return [] }
-        let request = FetchDescriptor<Symbol>(predicate: #Predicate { uuids.contains($0.uuid) })
-        return (try? modelContext.fetch(request)) ?? []
     }
 }
