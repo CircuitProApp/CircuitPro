@@ -63,7 +63,9 @@ struct ToolbarView<Tool: CanvasTool>: View {
     }
 
     private func toolbarButton(_ tool: Tool) -> some View {
-        Button {
+        let index = tools.firstIndex(of: tool) ?? 0
+
+        return Button {
             selectedTool = tool
             onToolSelected(tool)
         } label: {
@@ -72,7 +74,12 @@ struct ToolbarView<Tool: CanvasTool>: View {
                 .frame(width: 22, height: 22)
                 .foregroundStyle(selectedTool == tool ? .blue : .secondary)
         }
-        // TODO: Add shortcuts
-        .help("\(tool.label) Tool\nShortcut:")
+        .if(index < 9) { view in
+            view.keyboardShortcut(
+                KeyEquivalent(Character(String(index + 1))),
+                modifiers: []
+            )
+        }
+        .help("\(tool.label) Tool\nShortcut: \(index + 1)")
     }
 }
