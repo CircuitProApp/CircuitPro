@@ -13,15 +13,15 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     mutating func handleTap(at loc: CGPoint, context: CanvasToolContext) -> CanvasElement? {
-        controller.handleTap(at: loc, context: context)
+        controller.handle(event: .tap(loc, context))
     }
 
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
         controller.drawPreview(in: ctx, mouse: mouse, context: context)
     }
 
-    mutating func handleEscape() { controller.handleEscape() }
-    mutating func handleBackspace() { controller.handleBackspace() }
+    mutating func handleEscape() { controller.handle(event: .escape) }
+    mutating func handleBackspace() { controller.handle(event: .backspace) }
 
     static func merge(
         _ newElement: ConnectionElement,
