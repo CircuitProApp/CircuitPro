@@ -37,7 +37,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         }
 
         // MARK: - Extend Logic
-        mutating func extend(to point: CGPoint) {
+        mutating func extend(to point: CGPoint, connectingTo existingNodeID: UUID? = nil) {
             guard let lastNode = net.nodeByID[lastNodeID] else { return }
 
             // 1 Decide elbow order (flip default direction when necessary)
@@ -59,15 +59,22 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             }
 
             // 2 Final segment
-            let endNode = Node(id: UUID(), point: point, kind: .endpoint)
-            net.nodeByID[endNode.id] = endNode
+            let endID: UUID
+            if let existingID = existingNodeID {
+                endID = existingID
+            } else {
+                let endNode = Node(id: UUID(), point: point, kind: .endpoint)
+                net.nodeByID[endNode.id] = endNode
+                endID = endNode.id
+            }
 
-            let edge2 = Edge(id: UUID(), startNodeID: lastNodeID, endNodeID: endNode.id)
+            let edge2 = Edge(id: UUID(), startNodeID: lastNodeID, endNodeID: endID)
             net.edges.append(edge2)
 
-            lastOrientation = (endNode.point.x == net.nodeByID[lastNodeID]!.point.x)
+            let endPoint = net.nodeByID[endID]!.point
+            lastOrientation = (endPoint.x == net.nodeByID[lastNodeID]!.point.x)
                 ? .vertical : .horizontal
-            lastNodeID = endNode.id
+            lastNodeID = endID
         }
     }
 
@@ -79,14 +86,31 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             return nil
         }
 
+        var targetNodeID: UUID? = nil
+        var shouldFinish = false
+
+        if let nodeID = inProgressRoute?.net.nodeID(at: loc) {
+            inProgressRoute?.net.nodeByID[nodeID]?.kind = .junction
+            targetNodeID = nodeID
+            shouldFinish = true
+        } else if let edgeID = inProgressRoute?.net.edgeID(containing: loc),
+                  let newID = inProgressRoute?.net.splitEdge(withID: edgeID, at: loc) {
+            targetNodeID = newID
+            shouldFinish = true
+        }
+
         // 2. On a double-tap, finish the route.
         if let lastPoint = inProgressRoute?.net.nodeByID[inProgressRoute!.lastNodeID]?.point,
            isDoubleTap(from: lastPoint, to: loc) {
+            inProgressRoute?.extend(to: loc, connectingTo: targetNodeID)
             return finishRoute()
         }
 
-        // 3. For subsequent taps, extend the route.
-        inProgressRoute?.extend(to: loc)
+        inProgressRoute?.extend(to: loc, connectingTo: targetNodeID)
+
+        if shouldFinish {
+            return finishRoute()
+        }
 
         // 4. If this tap landed on another wire, finish the route automatically.
         if context.hitSegmentID != nil {
