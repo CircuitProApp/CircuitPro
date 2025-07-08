@@ -42,9 +42,16 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     let symbolName = CircuitProSymbols.Graphic.line
     let label = "Connection"
 
-    // The entire state of the route-in-progress is held here.
-    // It's nil when the tool is idle.
-    private var inProgressRoute: RouteInProgress?
+    // Simple state machine tracker
+    private enum Phase: Equatable, Hashable {
+        case idle
+        case begin(RouteInProgress)
+        case running(RouteInProgress)
+        case done
+        case cancelled
+    }
+
+    private var phase: Phase = .idle
 
     // MARK: - RouteInProgress (The brains of the operation)
     /// A private helper struct that manages the construction of a new Net while the user clicks around the canvas.
@@ -133,76 +140,85 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     // MARK: - Tool Actions
     mutating func handleTap(at loc: CGPoint, context: CanvasToolContext) -> CanvasElement? {
-        // 1. On the first tap, we begin a new route.
-        if inProgressRoute == nil {
-            inProgressRoute = RouteInProgress(
-                startPoint: loc,
-                connectingTo: context.hitSegmentID,
-                strategy: ManhattanRoutingStrategy()
+        switch phase {
+        case .idle:
+            phase = .begin(
+                RouteInProgress(
+                    startPoint: loc,
+                    connectingTo: context.hitSegmentID,
+                    strategy: ManhattanRoutingStrategy()
+                )
             )
             return nil
-        }
+        case .begin(var route), .running(var route):
+            var targetNodeID: UUID? = nil
+            var shouldFinish = false
 
-        var targetNodeID: UUID? = nil
-        var shouldFinish = false
+            let lastNodeID = route.lastNodeID
+            let hitNodeID = route.net.nodeID(at: loc)
 
-        let lastNodeID = inProgressRoute!.lastNodeID
-        let hitNodeID = inProgressRoute?.net.nodeID(at: loc)
-
-        if let nodeID = hitNodeID, nodeID != lastNodeID {
-            if var node = inProgressRoute?.net.nodeByID[nodeID] {
-                node.kind = .junction
-                inProgressRoute?.net.nodeByID[nodeID] = node
-            }
-            targetNodeID = nodeID
-            shouldFinish = true
-        } else if hitNodeID == nil,
-                  let edgeID = inProgressRoute?.net.edgeID(containing: loc),
-                  let newID = inProgressRoute?.net.splitEdge(withID: edgeID, at: loc) {
-            // Only suppress junction dot if splitting at the route's start or end point
-            if let route = inProgressRoute,
-               let splitNode = route.net.nodeByID[newID] {
-                let tol: CGFloat = 0.5
-                let startPt = route.net.nodeByID[route.startNodeID]?.point
-                let endPt = route.net.nodeByID[route.lastNodeID]?.point
-                if (startPt != nil && abs(splitNode.point.x - startPt!.x) < tol && abs(splitNode.point.y - startPt!.y) < tol)
-                    || (endPt != nil && abs(splitNode.point.x - endPt!.x) < tol && abs(splitNode.point.y - endPt!.y) < tol) {
-                    var node = splitNode
-                    node.kind = .endpoint
-                    inProgressRoute?.net.nodeByID[newID] = node
+            if let nodeID = hitNodeID, nodeID != lastNodeID {
+                if var node = route.net.nodeByID[nodeID] {
+                    node.kind = .junction
+                    route.net.nodeByID[nodeID] = node
                 }
+                targetNodeID = nodeID
+                shouldFinish = true
+            } else if hitNodeID == nil,
+                      let edgeID = route.net.edgeID(containing: loc),
+                      let newID = route.net.splitEdge(withID: edgeID, at: loc) {
+                // Only suppress junction dot if splitting at the route's start or end point
+                if let splitNode = route.net.nodeByID[newID] {
+                    let tol: CGFloat = 0.5
+                    let startPt = route.net.nodeByID[route.startNodeID]?.point
+                    let endPt = route.net.nodeByID[route.lastNodeID]?.point
+                    if (startPt != nil && abs(splitNode.point.x - startPt!.x) < tol && abs(splitNode.point.y - startPt!.y) < tol)
+                        || (endPt != nil && abs(splitNode.point.x - endPt!.x) < tol && abs(splitNode.point.y - endPt!.y) < tol) {
+                        var node = splitNode
+                        node.kind = .endpoint
+                        route.net.nodeByID[newID] = node
+                }
+                targetNodeID = newID
+                shouldFinish = true
             }
-            targetNodeID = newID
-            shouldFinish = true
-        }
 
-        // 2. On a double-tap, finish the route.
-        if let lastPoint = inProgressRoute?.net.nodeByID[lastNodeID]?.point,
-           isDoubleTap(from: lastPoint, to: loc) {
-            if hitNodeID == lastNodeID {
-                return finishRoute()
+            // 2. On a double-tap, finish the route.
+            if let lastPoint = route.net.nodeByID[lastNodeID]?.point,
+               isDoubleTap(from: lastPoint, to: loc) {
+                if hitNodeID == lastNodeID {
+                    phase = .idle
+                    return finishRoute(route)
+                }
+                route.extend(to: loc, connectingTo: targetNodeID)
+                return finishRoute(route)
             }
-            inProgressRoute?.extend(to: loc, connectingTo: targetNodeID)
-            return finishRoute()
+
+            route.extend(to: loc, connectingTo: targetNodeID)
+
+            if shouldFinish {
+                return finishRoute(route)
+            }
+
+            if context.hitSegmentID != nil {
+                return finishRoute(route)
+            }
+
+            phase = .running(route)
+            return nil
+        case .done, .cancelled:
+            return nil
         }
-
-        inProgressRoute?.extend(to: loc, connectingTo: targetNodeID)
-
-        if shouldFinish {
-            return finishRoute()
-        }
-
-        // 4. If this tap landed on another wire, finish the route automatically.
-        if context.hitSegmentID != nil {
-            return finishRoute()
-        }
-
-        return nil
     }
 
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
-        guard let route = inProgressRoute,
-              let lastNode = route.net.nodeByID[route.lastNodeID] else { return }
+        let route: RouteInProgress
+        switch phase {
+        case .begin(let r), .running(let r):
+            route = r
+        default:
+            return
+        }
+        guard let lastNode = route.net.nodeByID[route.lastNodeID] else { return }
 
         ctx.saveGState()
         ctx.setStrokeColor(NSColor(.blue).cgColor)
@@ -240,9 +256,10 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     /// Finalizes the route, packages it into a ConnectionElement, and clears the tool's state.
-    private mutating func finishRoute() -> CanvasElement? {
-        guard var route = inProgressRoute, !route.net.edges.isEmpty else {
-            clearState()
+    private mutating func finishRoute(_ finished: RouteInProgress) -> CanvasElement? {
+        var route = finished
+        guard !route.net.edges.isEmpty else {
+            phase = .idle
             return nil
         }
 
@@ -251,12 +268,12 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
         // 2. Wrap and return.
         let element = ConnectionElement(id: route.net.id, net: route.net)
-        clearState()
+        phase = .idle
         return .connection(element)
     }
 
     private mutating func clearState() {
-        inProgressRoute = nil
+        phase = .idle
     }
 
     mutating func handleEscape() {
@@ -264,12 +281,16 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     mutating func handleBackspace() {
-        guard var route = inProgressRoute else { return }
-        route.backtrack()
-        if route.net.edges.isEmpty {
-            inProgressRoute = nil
-        } else {
-            inProgressRoute = route
+        switch phase {
+        case .begin(var route), .running(var route):
+            route.backtrack()
+            if route.net.edges.isEmpty {
+                phase = .begin(route)
+            } else {
+                phase = .running(route)
+            }
+        default:
+            break
         }
     }
 
@@ -309,11 +330,11 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     static func == (lhs: ConnectionTool, rhs: ConnectionTool) -> Bool {
-        lhs.id == rhs.id && lhs.inProgressRoute == rhs.inProgressRoute
+        lhs.id == rhs.id && lhs.phase == rhs.phase
     }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
-        hasher.combine(inProgressRoute)
+        hasher.combine(phase)
     }
 }
