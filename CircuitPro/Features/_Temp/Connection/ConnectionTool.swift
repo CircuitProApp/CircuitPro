@@ -25,13 +25,15 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     static func merge(
         _ newElement: ConnectionElement,
-        into elements: inout [CanvasElement]
+        into elements: inout [CanvasElement],
+        repository: NetRepository
     ) -> ConnectionElement {
         var masterNet = newElement.net
         for index in (0..<elements.count).reversed() {
             guard case .connection(let existingConnection) = elements[index],
                   existingConnection.id != newElement.id else { continue }
             var existingNet = existingConnection.net
+            guard repository.mergePolicy.shouldMerge(masterNet, into: existingNet, at: .afterCommit) else { continue }
             let wasMerged = Net.findAndMergeIntentionalIntersections(
                 between: &masterNet,
                 and: &existingNet
