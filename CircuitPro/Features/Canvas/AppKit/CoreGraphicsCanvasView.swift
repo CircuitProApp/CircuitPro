@@ -20,7 +20,7 @@ final class CoreGraphicsCanvasView: NSView {
 
     var onUpdate: (([CanvasElement]) -> Void)?
     var onSelectionChange: ((Set<UUID>) -> Void)?
-    var onPrimitiveAdded: ((UUID, LayerKind) -> Void)?
+    var onPrimitiveAdded: ((UUID, CanvasLayer) -> Void)?
     var onMouseMoved: ((CGPoint) -> Void)?
 
     private(set) var hoveredPinID: UUID? {
@@ -39,7 +39,7 @@ final class CoreGraphicsCanvasView: NSView {
     private lazy var hitTesting = CanvasHitTestController(canvas: self)
 
     var selectedTool: AnyCanvasTool?
-    var selectedLayer: LayerKind = .copper
+    var selectedLayer: CanvasLayer = .layer0
 
     override var isFlipped: Bool { true }
 

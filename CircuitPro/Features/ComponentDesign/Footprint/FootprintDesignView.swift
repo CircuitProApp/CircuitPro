@@ -20,8 +20,10 @@ struct FootprintDesignView: View {
             elements: $bindableComponentDesignManager.footprintElements,
             selectedIDs: $bindableComponentDesignManager.selectedFootprintElementIDs,
             selectedTool: $bindableComponentDesignManager.selectedFootprintTool,
-            selectedLayer: $bindableComponentDesignManager.selectedFootprintLayer,
-            layerAssignments: $bindableComponentDesignManager.layerAssignments
+            layerBindings: CanvasLayerBindings(
+                selectedLayer: $bindableComponentDesignManager.selectedFootprintLayer,
+                layerAssignments: $bindableComponentDesignManager.layerAssignments
+            )
         )
         .clipAndStroke(with: .rect(cornerRadius: 20))
         .overlay {

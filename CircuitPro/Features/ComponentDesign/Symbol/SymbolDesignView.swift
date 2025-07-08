@@ -17,8 +17,7 @@ struct SymbolDesignView: View {
             elements: $bindableComponentDesignManager.symbolElements,
             selectedIDs: $bindableComponentDesignManager.selectedSymbolElementIDs,
             selectedTool: $bindableComponentDesignManager.selectedSymbolTool,
-            selectedLayer: .constant(.copper),
-            layerAssignments: .constant([.init(): .copper])
+            layerBindings: nil
         )
         .clipAndStroke(with: .rect(cornerRadius: 20))
         .overlay {

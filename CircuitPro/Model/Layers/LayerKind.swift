@@ -59,6 +59,22 @@ extension LayerKind {
 }
 
 extension LayerKind {
+    /// Default z-index used when converting to ``CanvasLayer``.
+    var zIndex: Int {
+        switch self {
+        case .boardOutline: return 0
+        case .copper, .innerCopper: return 1
+        case .solderMask: return 2
+        case .paste: return 3
+        case .silkscreen: return 4
+        case .adhesive: return 5
+        case .courtyard: return 6
+        case .fabrication: return 7
+        }
+    }
+}
+
+extension LayerKind {
     /// Layer kinds that are used in footprint creation
     static var footprintLayers: [LayerKind] {
         return [

@@ -27,8 +27,8 @@ final class ComponentDesignManager {
     var selectedFootprintElementIDs: Set<UUID> = []
     var selectedFootprintTool: AnyCanvasTool = AnyCanvasTool(CursorTool())
 
-    var selectedFootprintLayer: LayerKind? = .copper
-    var layerAssignments: [UUID: LayerKind] = [:]
+    var selectedFootprintLayer: CanvasLayer? = .layer0
+    var layerAssignments: [UUID: CanvasLayer] = [:]
 
     // MARK: - Reset All State
     func resetAll() {
@@ -50,7 +50,7 @@ final class ComponentDesignManager {
         footprintElements = []
         selectedFootprintElementIDs = []
         selectedFootprintTool = AnyCanvasTool(CursorTool())
-        selectedFootprintLayer = .copper
+        selectedFootprintLayer = .layer0
         layerAssignments = [:]
     }
 

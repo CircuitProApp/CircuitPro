@@ -8,8 +8,7 @@ struct CanvasView: NSViewRepresentable {
     @Binding var elements: [CanvasElement]
     @Binding var selectedIDs: Set<UUID>
     @Binding var selectedTool: AnyCanvasTool
-    @Binding var selectedLayer: LayerKind?
-    @Binding var layerAssignments: [UUID: LayerKind]
+    var layerBindings: CanvasLayerBindings? = nil
 
     // MARK: – Coordinator holding the App-Kit subviews
     final class Coordinator {
@@ -63,6 +62,7 @@ struct CanvasView: NSViewRepresentable {
         coordinator.canvas.elements = elements
         coordinator.canvas.selectedIDs = selectedIDs
         coordinator.canvas.selectedTool = selectedTool
+        coordinator.canvas.selectedLayer = layerBindings?.selectedLayer.wrappedValue ?? .layer0
         coordinator.canvas.magnification = manager.magnification
         coordinator.canvas.onUpdate = { self.elements = $0 }
         coordinator.canvas.onSelectionChange = { self.selectedIDs = $0 }
@@ -136,8 +136,16 @@ struct CanvasView: NSViewRepresentable {
         coordinator.canvas.magnification = manager.magnification
         coordinator.canvas.isSnappingEnabled = manager.enableSnapping
         coordinator.canvas.snapGridSize = manager.gridSpacing.rawValue * 10.0
-        coordinator.canvas.selectedLayer = selectedLayer ?? .copper
-        coordinator.canvas.onPrimitiveAdded = { id, layer in self.layerAssignments[id] = layer }
+        if let layers = layerBindings {
+            coordinator.canvas.selectedLayer = layers.selectedLayer.wrappedValue ?? .layer0
+            let assignments = layers.layerAssignments
+            coordinator.canvas.onPrimitiveAdded = { id, layer in
+                assignments.wrappedValue[id] = layer
+            }
+        } else {
+            coordinator.canvas.selectedLayer = .layer0
+            coordinator.canvas.onPrimitiveAdded = nil
+        }
         coordinator.canvas.onMouseMoved = { position in self.manager.mouseLocation = position }
 
         coordinator.canvas.onPinHoverChange = { id in

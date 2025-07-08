@@ -19,10 +19,22 @@ struct LayerTypeListView: View {
             Text("Layers")
                 .font(.headline)
         } content: {
+            // Bridge ``CanvasLayer`` selection with the list of ``LayerKind`` values.
+            let selection = Binding<LayerKind?>(
+                get: { bindableComponentDesignManager.selectedFootprintLayer?.kind },
+                set: { newValue in
+                    if let newValue {
+                        bindableComponentDesignManager.selectedFootprintLayer = CanvasLayer(kind: newValue)
+                    } else {
+                        bindableComponentDesignManager.selectedFootprintLayer = nil
+                    }
+                }
+            )
+
             List(
                 LayerKind.footprintLayers,
                 id: \.self,
-                selection: $bindableComponentDesignManager.selectedFootprintLayer
+                selection: selection
             ) { layerType in
                         HStack {
                             Image(systemName: "circle.fill")
