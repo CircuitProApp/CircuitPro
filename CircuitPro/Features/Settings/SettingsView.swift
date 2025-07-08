@@ -15,11 +15,11 @@ enum SettingsTab: String, CaseIterable {
     var icon: String {
         switch self {
         case .board:
-            return AppIcons.board
+            return CircuitProSymbols.Project.board
         case .schematic:
-            return AppIcons.schematic
+            return CircuitProSymbols.Project.schematic
         case .layout:
-            return AppIcons.layout
+            return CircuitProSymbols.Project.layout
         }
     }
 }

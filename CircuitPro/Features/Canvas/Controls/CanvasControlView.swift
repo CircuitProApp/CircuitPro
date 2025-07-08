@@ -22,14 +22,14 @@ struct CanvasControlView: View {
                     }
                 }
             } label: {
-                Image(systemName: AppIcons.crosshairs)
+                Image(systemName: CircuitProSymbols.Canvas.crosshairs)
                     .frame(width: 13, height: 13)
                     .foregroundStyle(canvasManager.crosshairsStyle != .hidden ? .blue : .secondary)
             }
             Button {
                 canvasManager.enableSnapping.toggle()
             } label: {
-                Image(systemName: AppIcons.snapping)
+                Image(systemName: CircuitProSymbols.Canvas.snapping)
                     .frame(width: 13, height: 13)
                     .foregroundStyle(canvasManager.enableSnapping ? .blue : .secondary)
             }
@@ -37,7 +37,7 @@ struct CanvasControlView: View {
             Button {
                 canvasManager.enableAxesBackground.toggle()
             } label: {
-                Image(systemName: AppIcons.axesBackground)
+                Image(systemName: CircuitProSymbols.Canvas.axesBackground)
                     .frame(width: 13, height: 13)
                     .foregroundStyle(canvasManager.enableAxesBackground ? .blue : .secondary)
             }
@@ -49,8 +49,9 @@ struct CanvasControlView: View {
                     Label(
                         "Dotted Background",
                         systemImage: canvasManager.backgroundStyle == .dotted ?
-                        AppIcons.checkmarkCircleFill : AppIcons.dottedBackground
+                        CircuitProSymbols.Generic.checkmark : CircuitProSymbols.Canvas.dottedBackground
                     )
+                    .symbolVariant(canvasManager.backgroundStyle == .grid ? .circle.fill : .none)
                     .labelStyle(.titleAndIcon)
                 }
                 Button {
@@ -59,12 +60,13 @@ struct CanvasControlView: View {
                     Label(
                         "Grid Background",
                         systemImage: canvasManager.backgroundStyle == .grid ?
-                        AppIcons.checkmarkCircleFill : AppIcons.gridBackground
+                        CircuitProSymbols.Generic.checkmark : CircuitProSymbols.Canvas.gridBackground
                     )
+                    .symbolVariant(canvasManager.backgroundStyle == .grid ? .circle.fill : .none)
                     .labelStyle(.titleAndIcon)
                 }
             } label: {
-                Image(systemName: AppIcons.backgroundType)
+                Image(systemName: CircuitProSymbols.Canvas.backgroundType)
                     .frame(width: 13, height: 13)
             }
         }

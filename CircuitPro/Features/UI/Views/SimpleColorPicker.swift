@@ -25,7 +25,8 @@ struct SimpleColorPicker: View {
                 Button {
                     isPresented = false
                 } label: {
-                    Label("Close", systemImage: AppIcons.xmarkCircleFill)
+                    Label("Close", systemImage: CircuitProSymbols.Generic.xmark)
+                        .symbolVariant(.circle.fill)
                         .labelStyle(.iconOnly)
                 }
                 .buttonStyle(.plain)

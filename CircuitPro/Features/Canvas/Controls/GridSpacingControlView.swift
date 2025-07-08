@@ -25,7 +25,7 @@ struct GridSpacingControlView: View {
             HStack(spacing: 2.5) {
                 Text(canvasManager.gridSpacing.label)
                     .font(.system(size: 12))
-                Image(systemName: AppIcons.chevronDown)
+                Image(systemName: CircuitProSymbols.Generic.chevronDown)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 7, height: 7)

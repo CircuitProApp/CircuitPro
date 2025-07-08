@@ -19,8 +19,8 @@ enum ComponentViewType: CaseIterable {
 
         var icon: String {
             switch self {
-            case .symbol: return AppIcons.symbol
-            case .footprint: return AppIcons.footprint
+            case .symbol: return CircuitProSymbols.ComponentParts.symbol
+            case .footprint: return CircuitProSymbols.ComponentParts.footprint
             }
         }
 

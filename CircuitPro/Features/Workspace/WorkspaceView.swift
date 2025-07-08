@@ -36,7 +36,7 @@ struct WorkspaceView: View {
                             }
                         }
                     } label: {
-                        Image(systemName: AppIcons.sidebarLeading)
+                        Image(systemName: CircuitProSymbols.Workspace.sidebarLeading)
                             .imageScale(.large)
                     }
                 }
@@ -52,7 +52,7 @@ struct WorkspaceView: View {
                         Button {
                             showFeedbackSheet.toggle()
                         } label: {
-                            Image(systemName: AppIcons.feedbackBubble)
+                            Image(systemName: CircuitProSymbols.Workspace.feedbackBubble)
                                 .imageScale(.large)
                         }
                         .help("Send Feedback")
@@ -61,7 +61,7 @@ struct WorkspaceView: View {
                         Button {
                             self.showInspector.toggle()
                         } label: {
-                            Image(systemName: AppIcons.sidebarTrailing)
+                            Image(systemName: CircuitProSymbols.Workspace.sidebarTrailing)
                                 .imageScale(.large)
                         }
                     }

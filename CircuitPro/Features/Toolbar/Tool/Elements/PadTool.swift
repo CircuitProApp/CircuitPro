@@ -9,7 +9,7 @@ import SwiftUI
 struct PadTool: CanvasTool {
 
     let id = "pad"
-    let symbolName = AppIcons.pad
+    let symbolName = CircuitProSymbols.Footprint.pad
     let label = "Pad"
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {

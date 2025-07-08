@@ -27,11 +27,11 @@ enum NavigatorViewTab: Displayable {
     var icon: String {
         switch self {
         case .projectNavigator:
-            return AppIcons.projectNavigator
+            return CircuitProSymbols.Workspace.projectNavigator
         case .directoryExplorer:
-            return AppIcons.directoryExplorer
+            return CircuitProSymbols.Workspace.directoryExplorer
         case .ruleChecks:
-            return AppIcons.ruleChecks
+            return CircuitProSymbols.Workspace.ruleChecks
         }
     }
 }

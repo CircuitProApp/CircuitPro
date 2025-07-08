@@ -32,7 +32,7 @@ struct ComponentDesignView: View {
             if didCreateComponent {
                 // 2. Success screen
                 VStack(spacing: 20) {
-                    Image(systemName: "checkmark.seal.fill")
+                    Image(systemName: CircuitProSymbols.Generic.checkmark)
                         .resizable()
                         .frame(width: 80, height: 80)
                         .foregroundStyle(.primary, .green.gradient)
@@ -131,7 +131,7 @@ struct ComponentDesignView: View {
             }
         }
         .sheet(isPresented: $showFeedbackSheet) {
-            FeedbackFormView(additionalContext: "Feedback sent from the Component Designer View, "\(currentStage.label)" stage.")
+            FeedbackFormView(additionalContext: "Feedback sent from the Component Designer View, '\(currentStage.label)' stage.")
                 .frame(minWidth: 400, minHeight: 300)
         }
         .toolbar {
@@ -139,7 +139,7 @@ struct ComponentDesignView: View {
                 Button {
                     showFeedbackSheet.toggle()
                 } label: {
-                    Image(systemName: AppIcons.feedbackBubble)
+                    Image(systemName: CircuitProSymbols.Workspace.feedbackBubble)
                         .imageScale(.large)
                 }
                 .help("Send Feedback")

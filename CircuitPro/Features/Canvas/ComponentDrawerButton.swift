@@ -18,12 +18,13 @@ struct ComponentDrawerButton: View {
         } label: {
             HStack {
                 if !canvasManager.showComponentDrawer {
-                    Image(systemName: AppIcons.trayFull)
+                    Image(systemName: CircuitProSymbols.Generic.tray)
+                        .symbolVariant(.fill)
                         .transition(.move(edge: .leading).combined(with: .blurReplace))
                 }
                 Text("Component Drawer")
                 if canvasManager.showComponentDrawer {
-                    Image(systemName: AppIcons.xmark)
+                    Image(systemName: CircuitProSymbols.Generic.xmark)
                         .transition(.move(edge: .trailing).combined(with: .blurReplace))
                 }
             }

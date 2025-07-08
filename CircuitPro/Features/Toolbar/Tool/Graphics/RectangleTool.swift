@@ -3,7 +3,7 @@ import SwiftUI
 struct RectangleTool: CanvasTool {
 
     let id = "rectangle"
-    let symbolName = AppIcons.rectangle
+    let symbolName = CircuitProSymbols.Graphic.rectangle
     let label = "Rectangle"
 
     private var start: CGPoint?

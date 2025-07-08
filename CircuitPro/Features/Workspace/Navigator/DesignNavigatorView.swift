@@ -26,7 +26,7 @@ public struct DesignNavigatorView: View {
                 selection: $bindableProjectManager.selectedDesign
             ) { $design in
                 HStack {
-                    Image(systemName: AppIcons.design)
+                    Image(systemName: CircuitProSymbols.Design.design)
                     TextField("Design Name", text: $design.name)
                         .textFieldStyle(.plain)
                         .onSubmit { document.renameDesign(design) }
@@ -71,7 +71,7 @@ public struct DesignNavigatorView: View {
                         } label: {
                             HStack(spacing: 5) {
                                 Text(projectManager.selectedDesign?.name ?? "Designs")
-                                Image(systemName: AppIcons.chevronDown)
+                                Image(systemName: CircuitProSymbols.Generic.chevronDown)
                                     .imageScale(.small)
                                     .fontWeight(.regular)
                             }
@@ -86,7 +86,7 @@ public struct DesignNavigatorView: View {
                 Button {
                     document.addNewDesign()
                 } label: {
-                    Image(systemName: AppIcons.plus)
+                    Image(systemName: CircuitProSymbols.Generic.plus)
                 }
                 .buttonStyle(.plain)
             }

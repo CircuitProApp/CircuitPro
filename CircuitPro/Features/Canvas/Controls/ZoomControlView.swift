@@ -33,7 +33,7 @@ struct ZoomControlView: View {
 
     var body: some View {
         HStack {
-            zoomButton(action: zoomOut, systemImage: AppIcons.minus)
+            zoomButton(action: zoomOut, systemImage: CircuitProSymbols.Generic.minus)
             Menu {
                 ForEach(ZoomStep.allCases) { step in
                     Button {
@@ -46,14 +46,14 @@ struct ZoomControlView: View {
                 HStack(spacing: 2.5) {
                     Text(clampedZoomText)
                         .font(.system(size: 12))
-                    Image(systemName: AppIcons.chevronDown)
+                    Image(systemName: CircuitProSymbols.Generic.chevronDown)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 7, height: 7)
                         .fontWeight(.medium)
                 }
             }
-            zoomButton(action: zoomIn, systemImage: AppIcons.plus)
+            zoomButton(action: zoomIn, systemImage: CircuitProSymbols.Generic.plus)
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)

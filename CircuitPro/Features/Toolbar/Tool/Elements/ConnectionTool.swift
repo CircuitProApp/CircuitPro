@@ -11,7 +11,7 @@ import AppKit
 struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     let id = "connection"
-    let symbolName = AppIcons.line
+    let symbolName = CircuitProSymbols.Graphic.line
     let label = "Connection"
 
     // The entire state of the route-in-progress is held here.

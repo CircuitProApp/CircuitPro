@@ -9,7 +9,7 @@ import SwiftUI
 struct LineTool: CanvasTool {
 
     let id = "line"
-    let symbolName = AppIcons.line
+    let symbolName = CircuitProSymbols.Graphic.line
     let label = "Line"
 
     private var start: CGPoint?

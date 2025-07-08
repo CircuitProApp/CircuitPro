@@ -33,7 +33,8 @@ struct PadPropertiesView: View {
             if pad.type == .throughHole {
                 HStack {
                     if isTooLarge {
-                        Image(systemName: AppIcons.ruleChecks + ".fill")
+                        Image(systemName: CircuitProSymbols.Workspace.ruleChecks)
+                            .symbolVariant(.fill)
                             .foregroundStyle(.primary, .yellow)
                             .onHover { _ in showDrillDialog.toggle() }
                             .popover(isPresented: $showDrillDialog) {

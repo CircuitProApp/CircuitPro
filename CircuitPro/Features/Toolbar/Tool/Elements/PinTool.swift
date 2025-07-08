@@ -10,7 +10,7 @@ import SwiftUI
 struct PinTool: CanvasTool {
 
     let id = "pin"
-    let symbolName = AppIcons.pin
+    let symbolName = CircuitProSymbols.Symbol.pin
     let label = "Pin"
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {

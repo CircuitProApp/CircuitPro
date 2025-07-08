@@ -20,22 +20,25 @@ struct CircuitProApp: App {
         Group {
             WelcomeWindow(
                 actions: { dismiss in
-                    WelcomeButton(iconName: AppIcons.plusApp, title: "Create New Project...") {
+                    WelcomeButton(iconName: CircuitProSymbols.Generic.plus, title: "Create New Project...") {
                         CircuitProjectDocumentController.shared.createFileDocumentWithDialog(
                             configuration:
                                     .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject),
                             onDialogPresented: { dismiss() }
                         )
                     }
-                    WelcomeButton(iconName: AppIcons.folder, title: "Open Existing Project...") {
+                    .symbolVariant(.rectangle)
+                    WelcomeButton(iconName: CircuitProSymbols.Generic.folder, title: "Open Existing Project...") {
                         CircuitProjectDocumentController.shared.openDocumentWithDialog(
                             configuration: .init(allowedContentTypes: [.circuitProject]),
                             onDialogPresented: { dismiss() }
                         )
                     }
-                    WelcomeButton(iconName: AppIcons.plusApp, title: "Create New Component...") {
+                    .symbolVariant(.rectangle)
+                    WelcomeButton(iconName: CircuitProSymbols.Generic.plus, title: "Create New Component...") {
                         openWindow(id: "ComponentDesignWindow")
                     }
+                    .symbolVariant(.rectangle)
                 },
                 onDrop: { url, dismiss in
                     Task {

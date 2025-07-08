@@ -38,6 +38,10 @@ struct FeedbackFormView: View {
                 .frame(height: 150)
                 .background(Color(NSColor.textBackgroundColor))
                 .clipShape(.rect(cornerRadius: 10))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(.quaternary)
+                }
 
             HStack {
                 Spacer()

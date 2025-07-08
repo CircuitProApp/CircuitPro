@@ -43,7 +43,7 @@ struct StatusBarView: View {
                     self.showUtilityArea.toggle()
                 }
             } label: {
-                Image(systemName: AppIcons.toggleUtilityArea)
+                Image(systemName: CircuitProSymbols.Workspace.toggleUtilityArea)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 13, height: 13)

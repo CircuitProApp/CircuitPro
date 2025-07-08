@@ -28,7 +28,7 @@ enum UtilityAreaTab: Displayable {
     var icon: String {
         switch self {
         case .design:
-            return AppIcons.design.replacingOccurrences(of: ".fill", with: "")
+            return CircuitProSymbols.Design.design.replacingOccurrences(of: ".fill", with: "")
         case .appLibrary:
             return "books.vertical"
         case .userLibrary:

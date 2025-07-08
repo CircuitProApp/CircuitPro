@@ -41,7 +41,7 @@ struct ComponentPropertiesView: View {
                 let newProperty = ComponentProperty(key: nil, value: .single(nil), unit: .init())
                 componentProperties.append(newProperty)
             } label: {
-                Image(systemName: AppIcons.plus)
+                Image(systemName: CircuitProSymbols.Generic.plus)
             }
 
             Button {
@@ -50,7 +50,7 @@ struct ComponentPropertiesView: View {
                 }
                 selectedProperties.removeAll()
             } label: {
-                Image(systemName: AppIcons.minus)
+                Image(systemName: CircuitProSymbols.Generic.minus)
             }
             .disabled(selectedProperties.isEmpty)
 

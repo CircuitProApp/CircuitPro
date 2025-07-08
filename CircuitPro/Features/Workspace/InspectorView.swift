@@ -27,7 +27,7 @@ struct InspectorView: View {
                         Button {
                             selectedLayoutInspector = .layers
                         } label: {
-                            Image(systemName: AppIcons.layoutLayers)
+                            Image(systemName: CircuitProSymbols.Layout.layoutLayers)
                                 .foregroundStyle(selectedLayoutInspector == .layers ? .primary : .secondary)
                         }
 
@@ -36,7 +36,7 @@ struct InspectorView: View {
                         Button {
                             selectedLayoutInspector = .nets
                         } label: {
-                            Image(systemName: AppIcons.layoutNets)
+                            Image(systemName: CircuitProSymbols.Layout.layoutNets)
                                 .foregroundStyle(selectedLayoutInspector == .nets ? .primary : .secondary)
                         }
                     }

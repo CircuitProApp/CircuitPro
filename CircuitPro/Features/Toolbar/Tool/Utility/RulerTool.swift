@@ -8,7 +8,7 @@ import SwiftUI
 struct RulerTool: CanvasTool {
 
     let id: String = "ruler"
-    let symbolName: String = AppIcons.ruler
+    let symbolName: String = CircuitProSymbols.Graphic.ruler
     let label: String = "Ruler"
 
     private var start: CGPoint?

@@ -3,7 +3,7 @@ import SwiftUI
 struct CircleTool: CanvasTool {
 
     let id = "circle"
-    let symbolName = AppIcons.circle
+    let symbolName = CircuitProSymbols.Graphic.circle
     let label = "Circle"
 
     private var center: CGPoint?
