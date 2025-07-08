@@ -108,5 +108,28 @@ struct RulerTool: CanvasTool {
 
         text.draw(at: drawPoint)
     }
+    mutating func handleEscape() {
+        start = nil
+        end = nil
+        clicks = 0
+    }
+
+    mutating func handleBackspace() {
+        switch clicks {
+        case 0:
+            break
+        case 1:
+            start = nil
+            clicks = 0
+        case 2:
+            end = nil
+            clicks = 1
+        default:
+            start = nil
+            end = nil
+            clicks = 0
+        }
+    }
+
 
 }

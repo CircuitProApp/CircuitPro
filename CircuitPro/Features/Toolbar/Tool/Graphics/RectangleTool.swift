@@ -43,4 +43,12 @@ struct RectangleTool: CanvasTool {
         ctx.stroke(rect)
         ctx.restoreGState()
     }
+
+    mutating func handleEscape() {
+        start = nil
+    }
+
+    mutating func handleBackspace() {
+        start = nil
+    }
 }

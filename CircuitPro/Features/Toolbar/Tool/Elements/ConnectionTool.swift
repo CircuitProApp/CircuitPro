@@ -76,6 +76,26 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
                 ? .vertical : .horizontal
             lastNodeID = endID
         }
+
+        mutating func backtrack() {
+            guard let lastEdge = net.edges.popLast() else {
+                return
+            }
+
+            if net.edges.allSatisfy({ $0.startNodeID != lastEdge.endNodeID && $0.endNodeID != lastEdge.endNodeID }) {
+                net.nodeByID.removeValue(forKey: lastEdge.endNodeID)
+            }
+
+            lastNodeID = lastEdge.startNodeID
+
+            if let prevEdge = net.edges.last,
+               let start = net.nodeByID[prevEdge.startNodeID],
+               let end = net.nodeByID[prevEdge.endNodeID] {
+                lastOrientation = (start.point.x == end.point.x) ? .vertical : .horizontal
+            } else {
+                lastOrientation = nil
+            }
+        }
     }
 
     // MARK: - Tool Actions
@@ -177,6 +197,20 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     private mutating func clearState() {
         inProgressRoute = nil
+    }
+
+    mutating func handleEscape() {
+        clearState()
+    }
+
+    mutating func handleBackspace() {
+        guard var route = inProgressRoute else { return }
+        route.backtrack()
+        if route.net.edges.isEmpty {
+            inProgressRoute = nil
+        } else {
+            inProgressRoute = route
+        }
     }
 
     static func merge(
