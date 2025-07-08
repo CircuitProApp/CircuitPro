@@ -15,7 +15,7 @@ struct SymbolNavigatorView: View {
 
     @Query private var components: [Component]
 
-    @State private var selectedComponentInstances: Set<DesignComponent> = []
+    @State private var selectedComponentIDs: Set<UUID> = []
 
     var document: CircuitProjectDocument
 
@@ -24,17 +24,20 @@ struct SymbolNavigatorView: View {
         // 1.1 Determine what to remove at the model level
         let instancesToRemove: [ComponentInstance]
 
-        if selectedComponentInstances.contains(designComponent),
-           selectedComponentInstances.count > 1 {
-            instancesToRemove = selectedComponentInstances.map(\.instance)
-            selectedComponentInstances.removeAll()
+        let isMultiSelect = selectedComponentIDs.contains(designComponent.id) && selectedComponentIDs.count > 1
+
+        if isMultiSelect {
+            instancesToRemove = projectManager.designComponents
+                .filter { selectedComponentIDs.contains($0.id) }
+                .map(\.instance)
+            selectedComponentIDs.removeAll()
         } else {
             instancesToRemove = [designComponent.instance]
-            selectedComponentInstances.remove(designComponent)
+            selectedComponentIDs.remove(designComponent.id)
         }
 
         // 1.2 Remove from the selected design
-        if (projectManager.selectedDesign?.componentInstances) != nil {
+        if let _ = projectManager.selectedDesign?.componentInstances {
             projectManager.selectedDesign?.componentInstances.removeAll { inst in
                 instancesToRemove.contains(where: { $0.id == inst.id })
             }
@@ -45,11 +48,10 @@ struct SymbolNavigatorView: View {
     }
 
     var body: some View {
-
         List(
             projectManager.designComponents,
             id: \.id,
-            selection: $selectedComponentInstances
+            selection: $selectedComponentIDs
         ) { designComponent in
             HStack {
                 Text(designComponent.definition.name)
@@ -62,13 +64,12 @@ struct SymbolNavigatorView: View {
             .frame(height: 14)
             .listRowSeparator(.hidden)
             .contextMenu {
-                // 3. Dynamic delete label/action
-                let multi = selectedComponentInstances.contains(designComponent) && selectedComponentInstances.count > 1
+                let multi = selectedComponentIDs.contains(designComponent.id) && selectedComponentIDs.count > 1
                 Button(role: .destructive) {
                     performDelete(on: designComponent)
                 } label: {
                     Text(multi
-                         ? "Delete Selected (\(selectedComponentInstances.count))"
+                         ? "Delete Selected (\(selectedComponentIDs.count))"
                          : "Delete")
                 }
             }

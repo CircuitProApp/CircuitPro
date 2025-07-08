@@ -38,11 +38,12 @@ extension Pin {
         name == "" ? "Pin \(number)" : name
     }
 
-    /// World-space start of the pin’s “leg”.
+    /// World-space start of the pin’s "leg".
     var legStart: CGPoint {
-        CGPoint(
-            x: position.x + cos(rotation) * length,
-            y: position.y + sin(rotation) * length
+        let dir = cardinalRotation.direction
+        return CGPoint(
+            x: position.x + dir.x * length,
+            y: position.y + dir.y * length
         )
     }
 
