@@ -20,8 +20,22 @@ extension Net {
             usedNodeIDs.insert(edge.startNodeID)
             usedNodeIDs.insert(edge.endNodeID)
         }
-        let remainingNodes = nodeByID.filter { usedNodeIDs.contains($0.key) }
-        let baseNet = Net(id: UUID(), nodeByID: remainingNodes, edges: remainingEdges)
+        var remainingNodes = nodeByID.filter { usedNodeIDs.contains($0.key) }
+
+        // Downgrade junctions that are no longer used as intersections
+        var degree: [UUID: Int] = [:]
+        for edge in remainingEdges {
+            degree[edge.startNodeID, default: 0] += 1
+            degree[edge.endNodeID, default: 0] += 1
+        }
+        for id in remainingNodes.keys {
+            if degree[id, default: 0] <= 2 {
+                remainingNodes[id]?.kind = .endpoint
+            }
+        }
+
+        var baseNet = Net(id: UUID(), nodeByID: remainingNodes, edges: remainingEdges)
+        baseNet.mergeColinearEdges()
         return baseNet.connectedComponents()
     }
 

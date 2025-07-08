@@ -32,4 +32,14 @@ extension Net {
 
         return junction.id
     }
+
+    mutating func splitEdge(
+        withID edgeID: UUID,
+        at point: CGPoint,
+        reusing nodeID: UUID
+    ) -> UUID? {
+        guard let newID = splitEdge(withID: edgeID, at: point) else { return nil }
+        replaceNodeID(newID, with: nodeID)
+        return nodeID
+    }
 }
