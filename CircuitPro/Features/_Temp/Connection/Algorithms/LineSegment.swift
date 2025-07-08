@@ -29,4 +29,15 @@ struct LineSegment {
         }
         return nil
     }
+
+    func contains(_ point: CGPoint, tolerance: CGFloat = 0.5) -> Bool {
+        if isHorizontal {
+            return abs(point.y - start.y) < tolerance &&
+                   point.x.isBetween(start.x, end.x)
+        } else if isVertical {
+            return abs(point.x - start.x) < tolerance &&
+                   point.y.isBetween(start.y, end.y)
+        }
+        return false
+    }
 }
