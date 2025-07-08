@@ -17,6 +17,7 @@ struct CanvasView: NSViewRepresentable {
         let canvas     = CoreGraphicsCanvasView()
         let crosshairs = CrosshairsView()
         let marquee    = MarqueeView()
+        var boundsObserver: NSObjectProtocol?
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -105,7 +106,7 @@ struct CanvasView: NSViewRepresentable {
 
         scrollView.postsBoundsChangedNotifications = true
 
-        NotificationCenter.default.addObserver(
+        coordinator.boundsObserver = NotificationCenter.default.addObserver(
             forName: NSView.boundsDidChangeNotification,
             object: scrollView.contentView,
             queue: .main
@@ -198,6 +199,13 @@ struct CanvasView: NSViewRepresentable {
         // Sync external zoom changes
         if scrollView.magnification != manager.magnification {
             scrollView.magnification = manager.magnification
+        }
+    }
+
+    static func dismantleNSView(_ scrollView: NSScrollView, coordinator: Coordinator) {
+        if let observer = coordinator.boundsObserver {
+            NotificationCenter.default.removeObserver(observer)
+            coordinator.boundsObserver = nil
         }
     }
 
