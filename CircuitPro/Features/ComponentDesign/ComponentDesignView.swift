@@ -20,6 +20,9 @@ struct ComponentDesignView: View {
     @State private var currentStage: ComponentDesignStage = .component
     @State private var symbolCanvasManager = CanvasManager()
     @State private var footprintCanvasManager = CanvasManager()
+    
+    @State private var validationSummary = ValidationSummary()
+    @State private var showFieldErrors   = false   // toggled after “Create Component”
 
     @State private var showError   = false
     @State private var showWarning = false
@@ -74,7 +77,10 @@ struct ComponentDesignView: View {
                         center: {
                             switch currentStage {
                             case .component:
-                                ComponentDetailView()
+                                ComponentDetailView(
+                                    showFieldErrors: $showFieldErrors,
+                                    validationSummary: validationSummary          // ← now injected
+                                )
                             case .symbol:
                                 SymbolDesignView()
                                     .environment(symbolCanvasManager)
@@ -128,6 +134,10 @@ struct ComponentDesignView: View {
                     symbolCanvasManager.showDrawingSheet = false
                     footprintCanvasManager.showDrawingSheet = false
                 }
+                .onChange(of: componentDesignManager.componentName)         { _ in refreshFieldValidation() }
+                .onChange(of: componentDesignManager.componentAbbreviation) { _ in refreshFieldValidation() }
+                .onChange(of: componentDesignManager.selectedCategory)      { _ in refreshFieldValidation() }
+                .onChange(of: componentDesignManager.selectedPackageType)   { _ in refreshFieldValidation() }
             }
         }
         .sheet(isPresented: $showFeedbackSheet) {
@@ -159,10 +169,22 @@ struct ComponentDesignView: View {
           Text(messages.joined(separator: "\n"))
         })
     }
+    
+    private func refreshFieldValidation() {
+        guard showFieldErrors                               // only once the user pressed “Create Component”
+        else { return }
+
+        validationSummary = componentDesignManager.validateDetails()
+    }
 
     // 4. Build and insert component
     private func createComponent() {
 
+        validationSummary = componentDesignManager.validateDetails()
+        showFieldErrors = true                          // turn on UI highlights
+
+        guard validationSummary.isValid else { return } // abort if errors
+        
         let result = componentDesignManager.validate()
 
         // 1 Block on errors
@@ -233,21 +255,76 @@ struct ComponentDesignView: View {
     private var stageIndicator: some View {
         HStack {
             ForEach(ComponentDesignStage.allCases) { stage in
-                Text(stage.label)
-                    .padding(10)
-                    .background(currentStage == stage ? .blue : .clear)
-                    .foregroundStyle(currentStage == stage ? .white : .secondary)
-                    .clipShape(.capsule)
-                    .onTapGesture {
-                        currentStage = stage
-                    }
-                if stage == .component || stage == .symbol {
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(.secondary)
-                }
+                StagePill(stage: stage,
+                          isSelected: currentStage == stage,
+                          hasErrors:   stage == .component &&
+                                       !validationSummary.errors.isEmpty,
+                          hasWarnings: stage == .component &&
+                                       validationSummary.errors.isEmpty &&
+                                       !validationSummary.warnings.isEmpty)
+                    .onTapGesture { currentStage = stage }
+
             }
         }
         .font(.headline)
         .padding()
     }
 }
+
+struct StagePill: View {
+    let stage: ComponentDesignStage
+    let isSelected: Bool
+    let hasErrors: Bool
+    let hasWarnings: Bool          // ← NEW
+
+    var body: some View {
+        Text(stage.label)
+            .padding(10)
+            .background(isSelected ? .blue : .clear)
+            .foregroundStyle(isSelected ? .white : .secondary)
+            .clipShape(.capsule)
+            .overlay(alignment: .topTrailing) {
+                if hasErrors {
+                    Image(systemName: "exclamationmark.circle.fill")   // red
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .red)
+                        .offset(x: 6, y: -6)
+                } else if hasWarnings {
+                    Image(systemName: "exclamationmark.triangle.fill") // yellow
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .yellow)
+                        .offset(x: 6, y: -6)
+                }
+            }
+    }
+}
+
+
+struct ValidationStyle: ViewModifier {
+    let active: Bool
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                RoundedRectangle(cornerRadius: 7.5)
+                    .stroke(active ? Color.red : .clear, lineWidth: 2)
+            )
+    }
+}
+extension View {
+    func validationHighlight(_ active: Bool) -> some View {
+        modifier(ValidationStyle(active: active))
+    }
+}
+
+struct WarningStyle: ViewModifier {
+    let active: Bool
+    func body(content: Content) -> some View {
+        content.overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(active ? Color.yellow : .clear, style: StrokeStyle(lineWidth: 2, dash: [6]))
+        )
+    }
+}
+extension View { func warningHighlight(_ a: Bool) -> some View {
+    modifier(WarningStyle(active: a))
+}}

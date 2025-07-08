@@ -10,6 +10,8 @@ import SwiftUI
 struct ComponentPropertiesView: View {
 
     @Binding var componentProperties: [ComponentProperty]
+    var showWarning: Bool
+    
     @State private var selectedProperties: Set<ComponentProperty.ID> = []
     @State private var selectedValueType: PropertyValueType = .single
 
@@ -33,6 +35,7 @@ struct ComponentPropertiesView: View {
             addOrRemoveProperty
         }
         .clipShape(.rect(cornerRadius: 10))
+        .warningHighlight(showWarning)           // yellow outline
     }
 
     var addOrRemoveProperty: some View {
@@ -63,15 +66,15 @@ struct ComponentPropertiesView: View {
     }
 }
 
-#Preview {
-    ComponentPropertiesView(
-        componentProperties: .constant(
-            [ComponentProperty(
-                key: .basic(.capacitance),
-                value: .single(10),
-                unit: .init(prefix: .giga, base: .farad),
-                warnsOnEdit: true
-            )]
-        )
-    )
-}
+//#Preview {
+//    ComponentPropertiesView(
+//        componentProperties: .constant(
+//            [ComponentProperty(
+//                key: .basic(.capacitance),
+//                value: .single(10),
+//                unit: .init(prefix: .giga, base: .farad),
+//                warnsOnEdit: true
+//            )]
+//        )
+//    )
+//}

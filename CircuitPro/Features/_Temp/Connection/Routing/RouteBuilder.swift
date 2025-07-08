@@ -5,7 +5,7 @@ enum RoutingOrientation {
     case horizontal, vertical
 }
 
-protocol RoutingStrategy {
+protocol RoutingStrategy: Hashable, Equatable {
     func route(from start: CGPoint, to end: CGPoint, lastOrientation: RoutingOrientation?) -> [CGPoint]
 }
 
@@ -23,12 +23,12 @@ struct ManhattanRoutingStrategy: RoutingStrategy {
 }
 
 final class RouteBuilder {
-    private struct RouteInProgress: Equatable, Hashable {
+    struct RouteInProgress: Equatable, Hashable {
         var net: Net
         let startNodeID: UUID
         var lastNodeID: UUID
         var lastOrientation: RoutingOrientation?
-        let strategy: RoutingStrategy
+        let strategy: any RoutingStrategy
 
         init(startPoint: CGPoint, connectingTo existingElementID: UUID?, strategy: RoutingStrategy) {
             let startNode = Node(id: UUID(), point: startPoint, kind: .endpoint)
@@ -106,4 +106,25 @@ final class RouteBuilder {
     }
 
     func cancel() { route = nil }
+}
+
+extension RouteBuilder.RouteInProgress {
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        // Compare everything you care about.
+        // Here we ignore `strategy` (or you can
+        // compare `ObjectIdentifier(type(of:))` if you need to).
+        lhs.net             == rhs.net &&
+        lhs.startNodeID     == rhs.startNodeID &&
+        lhs.lastNodeID      == rhs.lastNodeID &&
+        lhs.lastOrientation == rhs.lastOrientation
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(net)
+        hasher.combine(startNodeID)
+        hasher.combine(lastNodeID)
+        hasher.combine(lastOrientation)
+        // If you need the strategy to take part in hashing:
+        // hasher.combine(ObjectIdentifier(type(of: strategy)))
+    }
 }

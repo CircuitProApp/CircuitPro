@@ -11,6 +11,9 @@ struct ComponentDetailView: View {
 
     @Environment(\.componentDesignManager)
     private var componentDesignManager
+    
+    @Binding var showFieldErrors: Bool
+    let validationSummary: ValidationSummary
 
     var body: some View {
         @Bindable var manager = componentDesignManager
@@ -24,6 +27,7 @@ struct ComponentDetailView: View {
                         .padding(10)
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
+                        .validationHighlight(showFieldErrors && validationSummary.errors[.name] != nil)
                 }
                 SectionView("Abbreviation") {
                     TextField("e.g. LED", text: $manager.componentAbbreviation)
@@ -33,6 +37,7 @@ struct ComponentDetailView: View {
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
                         .frame(width: 200)
+                        .validationHighlight(showFieldErrors && validationSummary.errors[.abbreviation] != nil)
                 }
             }
 
@@ -48,6 +53,7 @@ struct ComponentDetailView: View {
                     .pickerStyle(.menu)
                     .labelsHidden()
                     .frame(width: 300)
+                    .validationHighlight(showFieldErrors && validationSummary.errors[.category] != nil)
                 }
                 SectionView("Package Type") {
                     Picker("Package Type", selection: $manager.selectedPackageType) {
@@ -60,15 +66,16 @@ struct ComponentDetailView: View {
                     .pickerStyle(.menu)
                     .labelsHidden()
                     .frame(width: 300)
+                    .validationHighlight(showFieldErrors && validationSummary.errors[.packageType] != nil)
                 }
             }
             SectionView("Properties") {
-                ComponentPropertiesView(componentProperties: $manager.componentProperties)
+                ComponentPropertiesView(
+                    componentProperties: $manager.componentProperties,
+                    showWarning: showFieldErrors &&
+                                 validationSummary.warnings[.properties] != nil
+                )
             }
         }
     }
-}
-
-#Preview {
-    ComponentDetailView()
 }

@@ -191,3 +191,41 @@ extension ComponentDesignManager {
         )
     }
 }
+
+// MARK: - Which fields can have errors
+struct ValidationSummary {
+    var errors:   [ComponentField : String] = [:]     // blocking
+    var warnings: [ComponentField : String] = [:]     // non-blocking
+    var isValid:  Bool { errors.isEmpty }             // only errors block
+}
+
+enum ComponentField: Hashable {
+    case name, abbreviation, category, packageType, properties
+}
+
+extension ComponentDesignManager {
+    func validateDetails() -> ValidationSummary {
+        var summary = ValidationSummary()
+
+        if componentName.trimmingCharacters(in: .whitespaces).isEmpty {
+            summary.errors[.name] = "Component name is required."
+        }
+        if componentAbbreviation.trimmingCharacters(in: .whitespaces).isEmpty {
+            summary.errors[.abbreviation] = "Abbreviation is required."
+        }
+        if selectedCategory == nil {
+            summary.errors[.category] = "Choose a category."
+        }
+        if selectedPackageType == nil {
+            summary.errors[.packageType] = "Choose a package type."
+        }
+
+        // NEW –– property-key rule → *warning*
+        let hasAnyKey = componentProperties.contains { $0.key != nil }
+        if !hasAnyKey {
+            summary.warnings[.properties] =
+              "At least one property should have a key."
+        }
+        return summary
+    }
+}
