@@ -11,7 +11,7 @@ final class CanvasDrawingController {
         // Content — respects zoom
         ctx.saveGState()
 
-        drawElements(in: ctx)
+        drawElements(in: ctx, dirtyRect: dirtyRect)
         drawLivePreview(in: ctx)
         ctx.restoreGState()
         // Overlay — screen space
@@ -20,8 +20,8 @@ final class CanvasDrawingController {
         ctx.restoreGState()
     }
     // MARK: - 1 elements
-    private func drawElements(in ctx: CGContext) {
-        for element in canvas.elements {
+    private func drawElements(in ctx: CGContext, dirtyRect: CGRect) {
+        for element in canvas.elements where element.boundingBox.intersects(dirtyRect) {
             if case .connection(let conn) = element {
                 // let the ConnectionElement itself handle “whole net” vs. “per‐edge” halos
                 conn.draw(in: ctx, with: canvas.selectedIDs)
