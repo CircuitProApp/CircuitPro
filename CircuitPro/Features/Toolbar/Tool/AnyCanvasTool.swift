@@ -17,6 +17,7 @@ struct AnyCanvasTool: CanvasTool {
     private let _drawPreview: (CGContext, CGPoint, CanvasToolContext) -> Void
     private let _handleEscape: () -> Void
     private let _handleBackspace: () -> Void
+    private let _handleRotate: () -> Void
     private let box: ToolBoxBase          // <— keeps the ToolBox alive
 
      init<T: CanvasTool>(_ tool: T) {
@@ -55,6 +56,13 @@ struct AnyCanvasTool: CanvasTool {
             inner.handleBackspace()
             storage.tool = inner
         }
+
+        // ----- handleRotate -------------------------------------------------
+        _handleRotate = {
+            var inner = storage.tool
+            inner.handleRotate()
+            storage.tool = inner
+        }
      }
 
      // simple forwarders -------------------------------------------------------
@@ -71,6 +79,10 @@ struct AnyCanvasTool: CanvasTool {
 
     mutating func handleBackspace() {
         _handleBackspace()
+    }
+
+    mutating func handleRotate() {
+        _handleRotate()
     }
 
     static func == (lhs: AnyCanvasTool, rhs: AnyCanvasTool) -> Bool { lhs.id == rhs.id }

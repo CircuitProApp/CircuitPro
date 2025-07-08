@@ -128,8 +128,12 @@ final class CoreGraphicsCanvasView: NSView {
 
         switch key {
         case "r":
-            if let id = selectedIDs.first,
-               let center = elements.first(where: { $0.id == id })?.primitives.first?.position {
+            if var tool = selectedTool, tool.id != "cursor" {
+                tool.handleRotate()
+                selectedTool = tool
+                needsDisplay = true
+            } else if let id = selectedIDs.first,
+                      let center = elements.first(where: { $0.id == id })?.primitives.first?.position {
                 interaction.enterRotationMode(around: center)
             }
 
