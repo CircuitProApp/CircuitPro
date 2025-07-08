@@ -18,6 +18,12 @@ struct CanvasView: NSViewRepresentable {
         let crosshairs = CrosshairsView()
         let marquee    = MarqueeView()
         var boundsObserver: NSObjectProtocol?
+
+        deinit {
+            if let observer = boundsObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -110,7 +116,8 @@ struct CanvasView: NSViewRepresentable {
             forName: NSView.boundsDidChangeNotification,
             object: scrollView.contentView,
             queue: .main
-        ) { _ in
+        ) { [weak manager = self.manager] _ in
+            guard let manager else { return }
             let origin      = scrollView.contentView.bounds.origin        // bottom-left
             let clip        = scrollView.contentView.bounds.size          // visible size
             let boardHeight = container.bounds.height                     // = 5 000
@@ -118,8 +125,8 @@ struct CanvasView: NSViewRepresentable {
             // convert Y so that 0,0 becomes board *top-left* and Y grows downward
             let flippedY = boardHeight - origin.y - clip.height
 
-            self.manager.scrollOrigin = CGPoint(x: origin.x, y: flippedY) // top-left, Y-down
-            self.manager.magnification = scrollView.magnification
+            manager.scrollOrigin = CGPoint(x: origin.x, y: flippedY) // top-left, Y-down
+            manager.magnification = scrollView.magnification
         }
 
         return scrollView
