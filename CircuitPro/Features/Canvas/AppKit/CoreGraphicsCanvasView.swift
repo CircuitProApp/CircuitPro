@@ -133,9 +133,24 @@ final class CoreGraphicsCanvasView: NSView {
                 interaction.enterRotationMode(around: center)
             }
 
+        case "\u{1b}":
+            if var tool = selectedTool, tool.id != "cursor" {
+                tool.handleEscape()
+                selectedTool = tool
+                needsDisplay = true
+            } else {
+                super.keyDown(with: event)
+            }
+
         case String(UnicodeScalar(NSDeleteCharacter)!),
              String(UnicodeScalar(NSBackspaceCharacter)!):
-            deleteSelectedElements()
+            if var tool = selectedTool, tool.id != "cursor" {
+                tool.handleBackspace()
+                selectedTool = tool
+                needsDisplay = true
+            } else {
+                deleteSelectedElements()
+            }
 
         default:
             super.keyDown(with: event)

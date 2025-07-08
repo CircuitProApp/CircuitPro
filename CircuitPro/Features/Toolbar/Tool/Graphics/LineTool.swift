@@ -43,4 +43,12 @@ struct LineTool: CanvasTool {
         ctx.strokePath()
         ctx.restoreGState()
     }
+
+    mutating func handleEscape() {
+        start = nil
+    }
+
+    mutating func handleBackspace() {
+        start = nil
+    }
 }

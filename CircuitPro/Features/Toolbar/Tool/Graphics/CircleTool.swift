@@ -40,4 +40,12 @@ struct CircleTool: CanvasTool {
         ctx.strokeEllipse(in: rect)
         ctx.restoreGState()
     }
+
+    mutating func handleEscape() {
+        center = nil
+    }
+
+    mutating func handleBackspace() {
+        center = nil
+    }
 }
