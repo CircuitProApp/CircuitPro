@@ -15,9 +15,6 @@ struct SchematicView: View {
     @State private var selectedIDs: Set<UUID> = []
     @State private var selectedTool: AnyCanvasTool = .init(CursorTool())
 
-    @State private var selectedLayer: CanvasLayer?
-    @State private var layerAssignments: [UUID: CanvasLayer] = [:]
-
     @State private var debugString: String?
 
     var body: some View {
@@ -25,11 +22,7 @@ struct SchematicView: View {
             manager: canvasManager,
             elements: $canvasElements,
             selectedIDs: $selectedIDs,
-            selectedTool: $selectedTool,
-            layerBindings: CanvasLayerBindings(
-                selectedLayer: $selectedLayer,
-                layerAssignments: $layerAssignments
-            )
+            selectedTool: $selectedTool
         )
         .dropDestination(for: TransferableComponent.self) { dropped, loc in
             addComponents(dropped, atClipPoint: loc)

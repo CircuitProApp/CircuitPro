@@ -8,10 +8,13 @@
 import SwiftUI
 
 struct FootprintDesignView: View {
+
     @Environment(CanvasManager.self)
     private var canvasManager
+
     @Environment(\.componentDesignManager)
     private var componentDesignManager
+
     var body: some View {
         @Bindable var bindableComponentDesignManager = componentDesignManager
 

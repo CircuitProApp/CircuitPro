@@ -16,8 +16,7 @@ struct SymbolDesignView: View {
             manager: canvasManager,
             elements: $bindableComponentDesignManager.symbolElements,
             selectedIDs: $bindableComponentDesignManager.selectedSymbolElementIDs,
-            selectedTool: $bindableComponentDesignManager.selectedSymbolTool,
-            layerBindings: nil
+            selectedTool: $bindableComponentDesignManager.selectedSymbolTool
         )
         .clipAndStroke(with: .rect(cornerRadius: 20))
         .overlay {
