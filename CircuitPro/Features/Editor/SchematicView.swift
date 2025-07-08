@@ -130,9 +130,15 @@ struct SchematicView: View {
     }
 
     private func syncCanvasToModel(_ elements: [CanvasElement]) {
-        guard var compInsts = projectManager.selectedDesign?.componentInstances
-        else { return }
+        guard let design = projectManager.selectedDesign else { return }
 
+        var compInsts = design.componentInstances
+
+        // 1 ─ delete instances that no longer have a matching element on canvas
+        let remainingIDs = Set(elements.map(\.id))
+        compInsts.removeAll { !remainingIDs.contains($0.id) }
+
+        // 2 ─ update positions and rotations of the remaining instances
         for element in elements {
             guard case .symbol(let symbolElement) = element else { continue }
             if let idx = compInsts.firstIndex(where: { $0.id == symbolElement.id }) {
@@ -140,6 +146,8 @@ struct SchematicView: View {
                 compInsts[idx].symbolInstance.cardinalRotation = symbolElement.instance.cardinalRotation
             }
         }
+
+        design.componentInstances = compInsts
         document.updateChangeCount(.changeDone)
     }
 }
