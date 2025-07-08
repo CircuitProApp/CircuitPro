@@ -24,6 +24,10 @@ protocol CanvasTool: Hashable {
     /// Called when the Backspace key is pressed. Tools should undo the most
     /// recent step of the operation if possible.
     mutating func handleBackspace()
+
+    /// Called when the R key is pressed. Tools can use this to cycle through
+    /// discrete rotation states or otherwise adjust orientation.
+    mutating func handleRotate()
 }
 
 extension CanvasTool {
@@ -34,4 +38,6 @@ extension CanvasTool {
     mutating func handleEscape() {}
 
     mutating func handleBackspace() {}
+
+    mutating func handleRotate() {}
 }

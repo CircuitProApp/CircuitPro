@@ -12,11 +12,14 @@ struct PadTool: CanvasTool {
     let symbolName = CircuitProSymbols.Footprint.pad
     let label = "Pad"
 
+    private var rotation: CardinalRotation = .deg0
+
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
         let number = context.existingPadCount + 1
         let pad = Pad(
             number: number,
             position: location,
+            cardinalRotation: rotation,
             shape: .rect(width: 5, height: 10),
             type: .surfaceMount,
             drillDiameter: nil
@@ -29,11 +32,19 @@ struct PadTool: CanvasTool {
         let previewPad = Pad(
             number: number,
             position: mouse,
+            cardinalRotation: rotation,
             shape: .rect(width: 5, height: 10),
             type: .surfaceMount,
             drillDiameter: nil
         )
 
         previewPad.draw(in: ctx, selected: false)
+    }
+
+    mutating func handleRotate() {
+        let all = CardinalRotation.allCases
+        if let idx = all.firstIndex(of: rotation) {
+            rotation = all[(idx + 1) % all.count]
+        }
     }
 }
