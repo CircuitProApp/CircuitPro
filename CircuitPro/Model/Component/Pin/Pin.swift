@@ -39,6 +39,11 @@ extension Pin {
     }
 
     /// World-space start of the pin’s "leg".
+    ///
+    /// Using `cardinalRotation.direction` ensures the leg follows
+    /// the expected cardinal orientation. Prior logic relied on
+    /// `rotation` which treated 0° as pointing west, leading to
+    /// inverted left/right behaviour when rotating pins.
     var legStart: CGPoint {
         let dir = cardinalRotation.direction
         return CGPoint(
