@@ -65,7 +65,7 @@ struct ToolbarView<Tool: CanvasTool>: View {
     private func toolbarButton(_ tool: Tool) -> some View {
         let index = tools.firstIndex(of: tool) ?? 0
 
-        Button {
+        return Button {
             selectedTool = tool
             onToolSelected(tool)
         } label: {
