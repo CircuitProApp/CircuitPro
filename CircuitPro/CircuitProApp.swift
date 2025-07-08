@@ -58,12 +58,6 @@ struct CircuitProApp: App {
             ComponentDesignView()
                 .modelContainer(ModelContainerManager.shared.container)
                 .environment(\.componentDesignManager, componentDesignManager)
-                .task {
-                    if let window = NSApp.findWindow("ComponentDesignWindow") {
-                        window.makeKeyAndOrderFront(nil)
-                        window.makeFirstResponder(window.contentView)
-                    }
-                }
         }
     }
 }
