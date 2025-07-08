@@ -31,7 +31,8 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         private(set) var lastOrientation: Orientation?
 
         init(startPoint: CGPoint, connectingTo existingElementID: UUID?) {
-            let startNode = Node(id: UUID(), point: startPoint, kind: .endpoint)
+            let startKind: NodeKind = (existingElementID == nil) ? .junction : .endpoint
+            let startNode = Node(id: UUID(), point: startPoint, kind: startKind)
             self.net = Net(id: UUID(), nodeByID: [startNode.id: startNode], edges: [])
             self.lastNodeID = startNode.id
         }
@@ -110,7 +111,10 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         var shouldFinish = false
 
         if let nodeID = inProgressRoute?.net.nodeID(at: loc) {
-            inProgressRoute?.net.nodeByID[nodeID]?.kind = .junction
+            if var node = inProgressRoute?.net.nodeByID[nodeID] {
+                node.kind = .junction
+                inProgressRoute?.net.nodeByID[nodeID] = node
+            }
             targetNodeID = nodeID
             shouldFinish = true
         } else if let edgeID = inProgressRoute?.net.edgeID(containing: loc),
