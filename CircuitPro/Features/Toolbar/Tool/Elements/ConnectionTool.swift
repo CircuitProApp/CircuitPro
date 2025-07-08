@@ -8,6 +8,34 @@
 import SwiftUI
 import AppKit
 
+/// Orientation of the last segment: used to flip elbow order in routing strategies.
+fileprivate enum RoutingOrientation {
+    case horizontal, vertical
+}
+
+/// Strategy for computing bend points between two coordinates.
+fileprivate protocol RoutingStrategy {
+    /// Returns the sequence of intermediate points (excluding the start point) to connect `start` to `end`,
+    /// taking into account the previous segment's orientation.
+    func route(from start: CGPoint, to end: CGPoint, lastOrientation: RoutingOrientation?) -> [CGPoint]
+}
+
+/// Default Manhattan (orthogonal elbow) routing: horizontal vs vertical first.
+fileprivate struct ManhattanRoutingStrategy: RoutingStrategy {
+    func route(from start: CGPoint, to end: CGPoint, lastOrientation: RoutingOrientation?) -> [CGPoint] {
+        // Insert an elbow if both coordinates differ
+        if start.x != end.x && start.y != end.y {
+            let firstIsVertical = (lastOrientation == .horizontal)
+            let elbow = firstIsVertical
+                ? CGPoint(x: start.x, y: end.y)
+                : CGPoint(x: end.x, y: start.y)
+            return [elbow, end]
+        }
+        // Straight segment
+        return [end]
+    }
+}
+
 struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     let id = "connection"
@@ -21,59 +49,49 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     // MARK: - RouteInProgress (The brains of the operation)
     /// A private helper struct that manages the construction of a new Net while the user clicks around the canvas.
     private struct RouteInProgress: Equatable, Hashable {
-
-        enum Orientation {
-            case horizontal, vertical
-        }
-
         var net: Net
+        let startNodeID: UUID
         var lastNodeID: UUID
-        private(set) var lastOrientation: Orientation?
+        private(set) var lastOrientation: RoutingOrientation?
+        let strategy: RoutingStrategy
 
-        init(startPoint: CGPoint, connectingTo existingElementID: UUID?) {
+        init(startPoint: CGPoint, connectingTo existingElementID: UUID?, strategy: RoutingStrategy) {
             let startNode = Node(id: UUID(), point: startPoint, kind: .endpoint)
             self.net = Net(id: UUID(), nodeByID: [startNode.id: startNode], edges: [])
+            self.startNodeID = startNode.id
             self.lastNodeID = startNode.id
+            self.strategy = strategy
         }
 
-        // MARK: - Extend Logic
+        // MARK: - Extend Logic (delegates to routing strategy)
         mutating func extend(to point: CGPoint, connectingTo existingNodeID: UUID? = nil) {
             guard let lastNode = net.nodeByID[lastNodeID] else { return }
 
-            // 1 Decide elbow order (flip default direction when necessary)
-            if lastNode.point.x != point.x && lastNode.point.y != point.y {
+            // Compute bend points (including final) via strategy
+            let bendPoints = strategy.route(from: lastNode.point, to: point, lastOrientation: lastOrientation)
 
-                let firstIsVertical = (lastOrientation == .horizontal)
-                let elbowPoint = firstIsVertical
-                    ? CGPoint(x: lastNode.point.x, y: point.y)     // vertical first
-                    : CGPoint(x: point.x, y: lastNode.point.y)      // horizontal first
-
-                let elbowNode = Node(id: UUID(), point: elbowPoint, kind: .endpoint)
-                net.nodeByID[elbowNode.id] = elbowNode
-
-                let edge1 = Edge(id: UUID(), startNodeID: lastNodeID, endNodeID: elbowNode.id)
-                net.edges.append(edge1)
-
-                lastOrientation = firstIsVertical ? .vertical : .horizontal
-                lastNodeID = elbowNode.id
+            // Create intermediate bends
+            for bend in bendPoints.dropLast() {
+                let bendNode = Node(id: UUID(), point: bend, kind: .endpoint)
+                net.nodeByID[bendNode.id] = bendNode
+                net.edges.append(Edge(id: UUID(), startNodeID: lastNodeID, endNodeID: bendNode.id))
+                // Update orientation for this segment
+                lastOrientation = (bend.x == lastNode.point.x) ? .vertical : .horizontal
+                lastNodeID = bendNode.id
             }
 
-            // 2 Final segment
+            // Final segment (possibly reusing existing node)
+            let finalPoint = bendPoints.last!
             let endID: UUID
-            if let existingID = existingNodeID {
-                endID = existingID
+            if let existing = existingNodeID {
+                endID = existing
             } else {
-                let endNode = Node(id: UUID(), point: point, kind: .endpoint)
+                let endNode = Node(id: UUID(), point: finalPoint, kind: .endpoint)
                 net.nodeByID[endNode.id] = endNode
                 endID = endNode.id
             }
-
-            let edge2 = Edge(id: UUID(), startNodeID: lastNodeID, endNodeID: endID)
-            net.edges.append(edge2)
-
-            let endPoint = net.nodeByID[endID]!.point
-            lastOrientation = (endPoint.x == net.nodeByID[lastNodeID]!.point.x)
-                ? .vertical : .horizontal
+            net.edges.append(Edge(id: UUID(), startNodeID: lastNodeID, endNodeID: endID))
+            lastOrientation = (finalPoint.x == net.nodeByID[lastNodeID]!.point.x) ? .vertical : .horizontal
             lastNodeID = endID
         }
 
@@ -96,13 +114,32 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
                 lastOrientation = nil
             }
         }
+
+        // MARK: - Equatable & Hashable (ignoring strategy)
+        static func == (lhs: RouteInProgress, rhs: RouteInProgress) -> Bool {
+            lhs.net == rhs.net
+            && lhs.startNodeID == rhs.startNodeID
+            && lhs.lastNodeID == rhs.lastNodeID
+            && lhs.lastOrientation == rhs.lastOrientation
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(net)
+            hasher.combine(startNodeID)
+            hasher.combine(lastNodeID)
+            hasher.combine(lastOrientation)
+        }
     }
 
     // MARK: - Tool Actions
     mutating func handleTap(at loc: CGPoint, context: CanvasToolContext) -> CanvasElement? {
         // 1. On the first tap, we begin a new route.
         if inProgressRoute == nil {
-            inProgressRoute = RouteInProgress(startPoint: loc, connectingTo: context.hitSegmentID)
+            inProgressRoute = RouteInProgress(
+                startPoint: loc,
+                connectingTo: context.hitSegmentID,
+                strategy: ManhattanRoutingStrategy()
+            )
             return nil
         }
 
@@ -122,6 +159,19 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         } else if hitNodeID == nil,
                   let edgeID = inProgressRoute?.net.edgeID(containing: loc),
                   let newID = inProgressRoute?.net.splitEdge(withID: edgeID, at: loc) {
+            // Only suppress junction dot if splitting at the route's start or end point
+            if let route = inProgressRoute,
+               let splitNode = route.net.nodeByID[newID] {
+                let tol: CGFloat = 0.5
+                let startPt = route.net.nodeByID[route.startNodeID]?.point
+                let endPt = route.net.nodeByID[route.lastNodeID]?.point
+                if (startPt != nil && abs(splitNode.point.x - startPt!.x) < tol && abs(splitNode.point.y - startPt!.y) < tol)
+                    || (endPt != nil && abs(splitNode.point.x - endPt!.x) < tol && abs(splitNode.point.y - endPt!.y) < tol) {
+                    var node = splitNode
+                    node.kind = .endpoint
+                    inProgressRoute?.net.nodeByID[newID] = node
+                }
+            }
             targetNodeID = newID
             shouldFinish = true
         }
