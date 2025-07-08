@@ -198,6 +198,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
         // 1. Merge colinear segments inside this single route.
         route.net.mergeColinearEdges()
+        route.net.downgradeRedundantJunctions()
 
         // 2. Wrap and return.
         let element = ConnectionElement(id: route.net.id, net: route.net)
@@ -249,6 +250,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         }
 
         masterNet.mergeColinearEdges()
+        masterNet.downgradeRedundantJunctions()
         return ConnectionElement(id: masterNet.id, net: masterNet)
     }
 

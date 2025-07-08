@@ -31,4 +31,19 @@ extension Net {
             nodeByID[newID] = nodeByID[newID] ?? Node(id: newID, point: node.point, kind: node.kind)
         }
     }
+
+    mutating func downgradeRedundantJunctions() {
+        var degree: [UUID: Int] = [:]
+        for edge in edges {
+            degree[edge.startNodeID, default: 0] += 1
+            degree[edge.endNodeID, default: 0] += 1
+        }
+        for (id, node) in nodeByID where node.kind == .junction {
+            if degree[id, default: 0] <= 2 {
+                var updated = node
+                updated.kind = .endpoint
+                nodeByID[id] = updated
+            }
+        }
+    }
 }

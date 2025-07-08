@@ -36,6 +36,7 @@ extension Net {
 
         var baseNet = Net(id: UUID(), nodeByID: remainingNodes, edges: remainingEdges)
         baseNet.mergeColinearEdges()
+        baseNet.downgradeRedundantJunctions()
         return baseNet.connectedComponents()
     }
 

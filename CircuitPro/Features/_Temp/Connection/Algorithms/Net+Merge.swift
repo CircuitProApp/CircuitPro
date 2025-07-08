@@ -20,6 +20,10 @@ extension Net {
             return adjacencyMap
         }
 
+        func near(_ a: CGFloat, _ b: CGFloat, tol: CGFloat = 0.5) -> Bool {
+            abs(a - b) < tol
+        }
+
         var adjacency = rebuildAdjacency()
         var didChange = true
 
@@ -42,8 +46,8 @@ extension Net {
 
                 let point1 = node.point
 
-                let isHorizontal = (point0.y == point1.y) && (point1.y == point2.y)
-                let isVertical = (point0.x == point1.x) && (point1.x == point2.x)
+                let isHorizontal = near(point0.y, point1.y) && near(point1.y, point2.y)
+                let isVertical = near(point0.x, point1.x) && near(point1.x, point2.x)
 
                 guard isHorizontal || isVertical else { continue }
 
