@@ -123,18 +123,18 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         if let lastPoint = inProgressRoute?.net.nodeByID[inProgressRoute!.lastNodeID]?.point,
            isDoubleTap(from: lastPoint, to: loc) {
             inProgressRoute?.extend(to: loc, connectingTo: targetNodeID)
-            return finishRoute()
+            return finishRoute(addJunction: targetNodeID == nil)
         }
 
         inProgressRoute?.extend(to: loc, connectingTo: targetNodeID)
 
         if shouldFinish {
-            return finishRoute()
+            return finishRoute(addJunction: targetNodeID == nil)
         }
 
         // 4. If this tap landed on another wire, finish the route automatically.
         if context.hitSegmentID != nil {
-            return finishRoute()
+            return finishRoute(addJunction: targetNodeID == nil)
         }
 
         return nil
@@ -180,16 +180,22 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     /// Finalizes the route, packages it into a ConnectionElement, and clears the tool's state.
-    private mutating func finishRoute() -> CanvasElement? {
+    private mutating func finishRoute(addJunction: Bool) -> CanvasElement? {
         guard var route = inProgressRoute, !route.net.edges.isEmpty else {
             clearState()
             return nil
         }
 
-        // 1. Merge colinear segments inside this single route.
+        // 1. Optionally convert the final node into a junction for open routes.
+        if addJunction, var last = route.net.nodeByID[route.lastNodeID] {
+            last.kind = .junction
+            route.net.nodeByID[last.id] = last
+        }
+
+        // 2. Merge colinear segments inside this single route.
         route.net.mergeColinearEdges()
 
-        // 2. Wrap and return.
+        // 3. Wrap and return.
         let element = ConnectionElement(id: route.net.id, net: route.net)
         clearState()
         return .connection(element)
