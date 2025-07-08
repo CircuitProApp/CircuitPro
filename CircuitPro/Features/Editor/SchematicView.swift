@@ -137,7 +137,7 @@ struct SchematicView: View {
             guard case .symbol(let symbolElement) = element else { continue }
             if let idx = compInsts.firstIndex(where: { $0.id == symbolElement.id }) {
                 compInsts[idx].symbolInstance.position = symbolElement.instance.position
-                compInsts[idx].symbolInstance.rotation = symbolElement.instance.rotation
+                compInsts[idx].symbolInstance.cardinalRotation = symbolElement.instance.cardinalRotation
             }
         }
         document.updateChangeCount(.changeDone)
