@@ -65,6 +65,10 @@ extension Net {
     ) -> Bool {
         var intersectionHits: [(UUID, UUID, CGPoint)] = []
 
+        func near(_ p1: CGPoint, _ p2: CGPoint, tol: CGFloat = 0.5) -> Bool {
+            abs(p1.x - p2.x) < tol && abs(p1.y - p2.y) < tol
+        }
+
         for edgeA in netA.edges {
             guard let nodeAStart = netA.nodeByID[edgeA.startNodeID],
                   let nodeAEnd = netA.nodeByID[edgeA.endNodeID] else { continue }
@@ -77,9 +81,27 @@ extension Net {
 
                 let segmentB = LineSegment(start: nodeBStart.point, end: nodeBEnd.point)
 
-                if let intersection = segmentA.intersectionPoint(with: segmentB),
-                   netA.hasNode(at: intersection) || netB.hasNode(at: intersection) {
-                    intersectionHits.append((edgeA.id, edgeB.id, intersection))
+                if let intersection = segmentA.intersectionPoint(with: segmentB) {
+
+                    let aNodeID: UUID? =
+                        near(intersection, nodeAStart.point) ? nodeAStart.id :
+                        near(intersection, nodeAEnd.point) ? nodeAEnd.id : nil
+                    let bNodeID: UUID? =
+                        near(intersection, nodeBStart.point) ? nodeBStart.id :
+                        near(intersection, nodeBEnd.point) ? nodeBEnd.id : nil
+
+                    switch (aNodeID, bNodeID) {
+                    case let (idA?, idB?):
+                        netB.replaceNodeID(idB, with: idA)
+                    case let (idA?, nil):
+                        _ = netB.splitEdge(withID: edgeB.id, at: intersection, reusing: idA)
+                    case let (nil, idB?):
+                        _ = netA.splitEdge(withID: edgeA.id, at: intersection, reusing: idB)
+                    default:
+                        if netA.hasNode(at: intersection) || netB.hasNode(at: intersection) {
+                            intersectionHits.append((edgeA.id, edgeB.id, intersection))
+                        }
+                    }
                 }
             }
         }
