@@ -17,7 +17,7 @@ struct CircleTool: CanvasTool {
                 position: center,
                 rotation: 0,
                 strokeWidth: 1,
-                color: .init(color: context.selectedLayer.defaultColor),
+                color: .init(color: context.selectedLayer.color),
                 filled: false
             )
             self.center = nil
@@ -34,7 +34,7 @@ struct CircleTool: CanvasTool {
         let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
 
         ctx.saveGState()
-        ctx.setStrokeColor(NSColor(context.selectedLayer.defaultColor).cgColor)
+        ctx.setStrokeColor(NSColor(context.selectedLayer.color).cgColor)
         ctx.setLineWidth(1)
         ctx.setLineDash(phase: 0, lengths: [4])
         ctx.strokeEllipse(in: rect)

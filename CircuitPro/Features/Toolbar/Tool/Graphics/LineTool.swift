@@ -23,7 +23,7 @@ struct LineTool: CanvasTool {
                 end: location,
                 rotation: 0,
                 strokeWidth: 1,
-                color: .init(color: context.selectedLayer.defaultColor)
+                color: .init(color: context.selectedLayer.color)
             )
             return .primitive(.line(line))
         } else {
@@ -35,7 +35,7 @@ struct LineTool: CanvasTool {
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
         guard let start else { return }
         ctx.saveGState()
-        ctx.setStrokeColor(NSColor(context.selectedLayer.defaultColor).cgColor)
+        ctx.setStrokeColor(NSColor(context.selectedLayer.color).cgColor)
         ctx.setLineWidth(1)
         ctx.setLineDash(phase: 0, lengths: [4])
         ctx.move(to: start)
