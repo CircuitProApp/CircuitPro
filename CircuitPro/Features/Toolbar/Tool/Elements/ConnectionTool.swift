@@ -109,22 +109,29 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         var targetNodeID: UUID? = nil
         var shouldFinish = false
 
-        if let nodeID = inProgressRoute?.net.nodeID(at: loc) {
+        let lastNodeID = inProgressRoute!.lastNodeID
+        let hitNodeID = inProgressRoute?.net.nodeID(at: loc)
+
+        if let nodeID = hitNodeID, nodeID != lastNodeID {
             if var node = inProgressRoute?.net.nodeByID[nodeID] {
                 node.kind = .junction
                 inProgressRoute?.net.nodeByID[nodeID] = node
             }
             targetNodeID = nodeID
             shouldFinish = true
-        } else if let edgeID = inProgressRoute?.net.edgeID(containing: loc),
+        } else if hitNodeID == nil,
+                  let edgeID = inProgressRoute?.net.edgeID(containing: loc),
                   let newID = inProgressRoute?.net.splitEdge(withID: edgeID, at: loc) {
             targetNodeID = newID
             shouldFinish = true
         }
 
         // 2. On a double-tap, finish the route.
-        if let lastPoint = inProgressRoute?.net.nodeByID[inProgressRoute!.lastNodeID]?.point,
+        if let lastPoint = inProgressRoute?.net.nodeByID[lastNodeID]?.point,
            isDoubleTap(from: lastPoint, to: loc) {
+            if hitNodeID == lastNodeID {
+                return finishRoute()
+            }
             inProgressRoute?.extend(to: loc, connectingTo: targetNodeID)
             return finishRoute()
         }
