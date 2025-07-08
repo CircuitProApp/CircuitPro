@@ -1,52 +1,118 @@
 import AppKit
+import CoreGraphics
 
-class DottedLayer: BaseGridLayer {
+/// Optimised dotted-grid layer that aligns perfectly with the axes and
+/// uses a cached CGPattern so scrolling costs ~0 CPU.
+final class DottedLayer: BaseGridLayer {
+
+    // MARK: – Public knobs (same as before)
     private let baseDotRadius: CGFloat = 1
-    private var dotRadius: CGFloat = 1 {
-        didSet { setNeedsDisplay() }
-    }
+    private(set) var dotRadius: CGFloat = 1 { didSet { invalidatePattern() } }
 
-    // Update zoom-dependent parameters
+    // MARK: – Pattern cache & book-keeping
+    private var cachedPattern: CGPattern?
+    private var cachedSpacing: CGFloat  = .nan
+    private var cachedDotRadius: CGFloat = .nan
+    private var cachedMajorEvery: Int    = -1
+    private let patternCS = CGColorSpace(patternBaseSpace: nil)!
+
+    // MARK: – React to zoom
     override func updateForMagnification() {
         super.updateForMagnification()
         dotRadius = baseDotRadius / max(magnification, 1)
     }
 
-    // Draw a single tile
+    // MARK: – Main draw entry
     override func draw(in ctx: CGContext) {
         let spacing = adjustedSpacing()
-        let radius = dotRadius
-        let tileRect = ctx.boundingBoxOfClipPath
 
-        let startI = Int(floor((tileRect.minX - centerX) / spacing))
-        let endI = Int(ceil((tileRect.maxX - centerX) / spacing))
-        let startJ = Int(floor((tileRect.minY - centerY) / spacing))
-        let endJ = Int(ceil((tileRect.maxY - centerY) / spacing))
+        // 1. Re-build pattern only if geometry really changed
+        if cachedPattern == nil ||
+           spacing      != cachedSpacing ||
+           dotRadius    != cachedDotRadius ||
+           majorEvery   != cachedMajorEvery {
 
-        for i in startI...endI {
-            let pointX = centerX + CGFloat(i) * spacing
-
-            for j in startJ...endJ {
-                let pointY = centerY + CGFloat(j) * spacing
-
-                if showAxes && (i == 0 || j == 0) {
-                    continue
-                }
-
-                let isMajor = (i % majorEvery == 0) || (j % majorEvery == 0)
-                let alpha = isMajor ? 0.7 : 0.3
-                let color = NSColor.gray.withAlphaComponent(alpha).cgColor
-
-                ctx.setFillColor(color)
-                ctx.fillEllipse(in: CGRect(
-                    x: pointX - radius,
-                    y: pointY - radius,
-                    width: radius * 2,
-                    height: radius * 2
-                ))
-            }
+            cachedPattern    = buildPattern(spacing: spacing, radius: dotRadius)
+            cachedSpacing    = spacing
+            cachedDotRadius  = dotRadius
+            cachedMajorEvery = majorEvery
         }
 
-        drawAxes(in: ctx, tileRect: tileRect)
+        guard let pattern = cachedPattern else { return }
+
+        // 2. ALIGN the pattern so a dot sits exactly on the logical axes
+        //
+        //    Quartz places the pattern cell’s origin at `phase`.
+        //    We want world-coordinate (centerX, centerY) to line up with
+        //    the *centre* of a minor cell (spacing · 0.5).
+        //
+        //    phase = remainder − 0.5 · spacing
+        let remX = centerX.truncatingRemainder(dividingBy: spacing)
+        let remY = centerY.truncatingRemainder(dividingBy: spacing)
+        ctx.setPatternPhase(CGSize(width: remX - spacing * 0.5,
+                                   height: remY - spacing * 0.5))
+
+        // 3. Pattern fill (AA off – a one-dot texture doesn’t need it)
+        var alpha: CGFloat = 1
+        ctx.setAllowsAntialiasing(false)
+        ctx.setShouldAntialias(false)
+        ctx.setFillColorSpace(patternCS)
+        ctx.setFillPattern(pattern, colorComponents: &alpha)
+        ctx.fill(ctx.boundingBoxOfClipPath)
+
+        // 4. Draw axes on top (AA back on)
+        ctx.setAllowsAntialiasing(true)
+        ctx.setShouldAntialias(true)
+        drawAxes(in: ctx, tileRect: ctx.boundingBoxOfClipPath)
     }
+
+    // MARK: – Pattern builder (runs rarely)
+    private func buildPattern(spacing: CGFloat,
+                              radius: CGFloat) -> CGPattern? {
+
+        let cellSide = spacing * CGFloat(majorEvery)
+        let cellRect = CGRect(origin: .zero,
+                              size: CGSize(width: cellSide, height: cellSide))
+
+        // >>> Needs an `AnyObject` for Unmanaged
+        final class Capture: NSObject {
+            let s: CGFloat; let r: CGFloat; let N: Int
+            init(s: CGFloat, r: CGFloat, N: Int) { self.s = s; self.r = r; self.N = N }
+        }
+        let cap = Capture(s: spacing, r: radius, N: majorEvery)
+        let ip  = Unmanaged.passRetained(cap).toOpaque()
+
+        var cbs = CGPatternCallbacks(
+            version: 0,
+            drawPattern: { info, ctx in
+                let c = Unmanaged<Capture>.fromOpaque(info!).takeUnretainedValue()
+                let (s, r, N) = (c.s, c.r, c.N)
+
+                for i in 0..<N {
+                    let cx = CGFloat(i) * s + s * 0.5
+                    for j in 0..<N {
+                        let cy = CGFloat(j) * s + s * 0.5
+                        let isMajor = (i % N == 0) || (j % N == 0)
+                        let α: CGFloat = isMajor ? 0.7 : 0.3
+                        ctx.setFillColor(NSColor.gray.withAlphaComponent(α).cgColor)
+                        ctx.fillEllipse(in: CGRect(x: cx - r, y: cy - r,
+                                                   width: r * 2, height: r * 2))
+                    }
+                }
+            },
+            releaseInfo: { info in
+                Unmanaged<AnyObject>.fromOpaque(info!).release()
+            })
+
+        return CGPattern(info: ip,
+                         bounds: cellRect,
+                         matrix: .identity,
+                         xStep: cellSide,
+                         yStep: cellSide,
+                         tiling: .constantSpacing,
+                         isColored: true,
+                         callbacks: &cbs)
+    }
+
+    private func invalidatePattern() { cachedPattern = nil }
 }
