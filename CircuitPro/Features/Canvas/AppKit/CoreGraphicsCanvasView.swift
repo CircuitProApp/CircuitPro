@@ -7,6 +7,14 @@ final class CoreGraphicsCanvasView: NSView {
         didSet { needsDisplay = true }
     }
 
+    var marqueeSelectedIDs: Set<UUID> = [] {
+        didSet {
+            if oldValue != marqueeSelectedIDs {
+                needsDisplay = true
+            }
+        }
+    }
+
     var selectedIDs: Set<UUID> = [] {
         didSet {
             needsDisplay = true

@@ -79,7 +79,7 @@ struct ComponentDesignView: View {
                             case .component:
                                 ComponentDetailView(
                                     showFieldErrors: $showFieldErrors,
-                                    validationSummary: validationSummary          // ← now injected
+                                    validationSummary: validationSummary
                                 )
                             case .symbol:
                                 SymbolDesignView()

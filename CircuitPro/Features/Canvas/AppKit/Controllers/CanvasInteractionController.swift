@@ -93,7 +93,7 @@ final class CanvasInteractionController {
                 let ids = canvas.elements.filter {
                     $0.boundingBox.intersects(rect)
                 }.map(\.id)
-                canvas.selectedIDs = Set(ids)
+                canvas.marqueeSelectedIDs = Set(ids)
             }
             return
         }
@@ -107,11 +107,21 @@ final class CanvasInteractionController {
             resetInteractionState()
             marqueeOrigin = nil
             marqueeRect = nil
+            canvas.marqueeSelectedIDs.removeAll()
             canvas.needsDisplay = true
         }
 
-        if !didMoveSignificantly, let newSel = tentativeSelection {
-            canvas.selectedIDs = newSel
+        if didMoveSignificantly {
+            if marqueeOrigin != nil {
+                // Finished a marquee selection
+                canvas.selectedIDs = canvas.marqueeSelectedIDs
+            }
+            // If marqueeOrigin is nil, it was an element drag, which is already handled.
+        } else {
+            // This was a click
+            if let newSel = tentativeSelection {
+                canvas.selectedIDs = newSel
+            }
         }
     }
 

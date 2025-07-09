@@ -18,17 +18,39 @@ final class ComponentDesignManager {
     var componentProperties: [ComponentProperty] = [ComponentProperty(key: nil, value: .single(nil), unit: .init())]
 
     // MARK: - Symbol
-    var symbolElements: [CanvasElement] = []
+    var symbolElements: [CanvasElement] = [] {
+        didSet {
+            updateSymbolIndexMap()
+        }
+    }
     var selectedSymbolElementIDs: Set<UUID> = []
     var selectedSymbolTool: AnyCanvasTool = AnyCanvasTool(CursorTool())
+    private var symbolElementIndexMap: [UUID: Int] = [:]
 
     // MARK: - Footprint
-    var footprintElements: [CanvasElement] = []
+    var footprintElements: [CanvasElement] = [] {
+        didSet {
+            updateFootprintIndexMap()
+        }
+    }
     var selectedFootprintElementIDs: Set<UUID> = []
     var selectedFootprintTool: AnyCanvasTool = AnyCanvasTool(CursorTool())
+    private var footprintElementIndexMap: [UUID: Int] = [:]
 
     var selectedFootprintLayer: CanvasLayer? = .layer0
     var layerAssignments: [UUID: CanvasLayer] = [:]
+
+    private func updateSymbolIndexMap() {
+        symbolElementIndexMap = Dictionary(
+            uniqueKeysWithValues: symbolElements.enumerated().map { ($1.id, $0) }
+        )
+    }
+
+    private func updateFootprintIndexMap() {
+        footprintElementIndexMap = Dictionary(
+            uniqueKeysWithValues: footprintElements.enumerated().map { ($1.id, $0) }
+        )
+    }
 
     // MARK: - Reset All State
     func resetAll() {
@@ -116,14 +138,9 @@ extension ComponentDesignManager {
     }
 
     func bindingForPin(with id: UUID) -> Binding<Pin>? {
-        guard let index = symbolElements.firstIndex(where: {
-            if case .pin(let pin) = $0 { return pin.id == id }
-            return false
-        }) else {
-            return nil
-        }
-
-        guard case .pin = symbolElements[index] else {
+        guard let index = symbolElementIndexMap[id],
+              case .pin = symbolElements[safe: index]
+        else {
             return nil
         }
 
@@ -132,7 +149,7 @@ extension ComponentDesignManager {
                 if case .pin(let pin) = self.symbolElements[safe: index] {
                     return pin
                 } else {
-                    return Pin(name: "T", number: 0, position: .zero, type: .unknown) // fallback (or throw)
+                    fatalError("Index map is out of sync or element is not a Pin.")
                 }
             },
             set: { newValue in
@@ -164,14 +181,9 @@ extension ComponentDesignManager {
     }
 
     func bindingForPad(with id: UUID) -> Binding<Pad>? {
-        guard let index = footprintElements.firstIndex(where: {
-            if case .pad(let pad) = $0 { return pad.id == id }
-            return false
-        }) else {
-            return nil
-        }
-
-        guard case .pad = footprintElements[safe: index] else {
+        guard let index = footprintElementIndexMap[id],
+              case .pad = footprintElements[safe: index]
+        else {
             return nil
         }
 
@@ -180,7 +192,7 @@ extension ComponentDesignManager {
                 if case .pad(let pad) = self.footprintElements[safe: index] {
                     return pad
                 } else {
-                    return Pad(number: 0, position: .zero) // fallback default or handle as needed
+                    fatalError("Index map is out of sync or element is not a Pad.")
                 }
             },
             set: { newValue in

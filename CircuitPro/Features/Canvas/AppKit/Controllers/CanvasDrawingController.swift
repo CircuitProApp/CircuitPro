@@ -21,12 +21,13 @@ final class CanvasDrawingController {
     }
     // MARK: - 1 elements
     private func drawElements(in ctx: CGContext) {
+        let allSelectedIDs = canvas.selectedIDs.union(canvas.marqueeSelectedIDs)
         for element in canvas.elements {
             if case .connection(let conn) = element {
                 // let the ConnectionElement itself handle “whole net” vs. “per‐edge” halos
-                conn.draw(in: ctx, with: canvas.selectedIDs)
+                conn.draw(in: ctx, with: allSelectedIDs)
             } else {
-                let isSelected = canvas.selectedIDs.contains(element.id)
+                let isSelected = allSelectedIDs.contains(element.id)
                 element.drawable.draw(in: ctx, selected: isSelected)
             }
         }

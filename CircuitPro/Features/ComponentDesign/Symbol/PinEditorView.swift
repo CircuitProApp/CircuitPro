@@ -13,6 +13,7 @@ struct PinEditorView: View {
     var body: some View {
         let pins = componentDesignManager.pins
         let selectedIDs = componentDesignManager.selectedSymbolElementIDs
+        let selectedPins = componentDesignManager.selectedPins.sorted { $0.number < $1.number }
 
         StageSidebarView {
             Text("Pins")
@@ -35,10 +36,10 @@ struct PinEditorView: View {
             }
             .scrollClipDisabled()
         } content: {
-            if !selectedIDs.isEmpty {
+            if !selectedPins.isEmpty {
                 Form {
-                    ForEach(Array(selectedIDs), id: \.self) { pinID in
-                        if let binding = componentDesignManager.bindingForPin(with: pinID) {
+                    ForEach(selectedPins) { pin in
+                        if let binding = componentDesignManager.bindingForPin(with: pin.id) {
                             Section("Pin \(binding.wrappedValue.number.description) Properties") {
                                 PinPropertiesView(pin: binding)
                             }

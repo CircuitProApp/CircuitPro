@@ -6,6 +6,7 @@ struct PadEditorView: View {
     var body: some View {
         let pads = componentDesignManager.pads
         let selectedIDs = componentDesignManager.selectedFootprintElementIDs
+        let selectedPads = componentDesignManager.selectedPads.sorted { $0.number < $1.number }
 
         StageSidebarView {
             Text("Pads")
@@ -28,10 +29,10 @@ struct PadEditorView: View {
             }
             .scrollClipDisabled()
         } content: {
-            if !selectedIDs.isEmpty {
+            if !selectedPads.isEmpty {
                 Form {
-                    ForEach(Array(selectedIDs), id: \.self) { padID in
-                        if let binding = componentDesignManager.bindingForPad(with: padID) {
+                    ForEach(selectedPads) { pad in
+                        if let binding = componentDesignManager.bindingForPad(with: pad.id) {
                             Section("Pad \(binding.wrappedValue.number) Properties") {
                                 PadPropertiesView(pad: binding)
                             }
