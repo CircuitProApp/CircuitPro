@@ -2,7 +2,7 @@ import Foundation
 import CoreGraphics
 
 /// Represents a vertex in the connection graph.
-public struct ConnectionVertex: Identifiable, Hashable {
+public class ConnectionVertex: Identifiable {
     public let id: UUID
     public var point: CGPoint
 
@@ -13,7 +13,7 @@ public struct ConnectionVertex: Identifiable, Hashable {
 }
 
 /// Represents an edge in the connection graph, connecting two vertices.
-public struct ConnectionEdge: Identifiable, Hashable {
+public class ConnectionEdge: Identifiable {
     public let id: UUID
     public let start: ConnectionVertex.ID
     public let end: ConnectionVertex.ID
@@ -121,71 +121,76 @@ public class ConnectionGraph {
     
     /// Simplifies the graph by merging collinear segments.
     public func simplifyCollinearSegments() {
-        var verticesToRemove: Set<ConnectionVertex.ID> = []
-        var edgesToAdd: [ConnectionEdge] = []
-        var edgesToRemove: Set<ConnectionEdge.ID> = []
-        
-        // Iterate through vertices to find candidates for removal
-        for (vertexID, vertex) in vertices {
-            let connectedEdgeIDs = adjacency[vertexID] ?? []
-            
-            // A vertex is a candidate for removal if it has exactly two connected edges
-            // and those edges are collinear.
-            if connectedEdgeIDs.count == 2 {
-                let edgeIDsArray = Array(connectedEdgeIDs)
-                let edge1ID = edgeIDsArray[0]
-                let edge2ID = edgeIDsArray[1]
-                
-                guard let edge1 = edges[edge1ID], let edge2 = edges[edge2ID] else { continue }
-                
-                // Determine the other endpoints of the two edges
-                let otherVertexID1 = (edge1.start == vertexID) ? edge1.end : edge1.start
-                let otherVertexID2 = (edge2.start == vertexID) ? edge2.end : edge2.start
-                
-                guard let otherVertex1 = vertices[otherVertexID1],
-                      let otherVertex2 = vertices[otherVertexID2] else { continue }
-                
-                // Check for collinearity of the three points: otherVertex1.point, vertex.point, otherVertex2.point
-                let p1 = otherVertex1.point
-                let p2 = vertex.point
-                let p3 = otherVertex2.point
-                
-                let isCollinear: Bool
-                // Assuming orthogonal lines for now
-                if (p1.x == p2.x && p2.x == p3.x) || (p1.y == p2.y && p2.y == p3.y) {
-                    isCollinear = true
-                } else {
-                    isCollinear = false
-                }
-                
-                if isCollinear {
-                    // Mark vertex and edges for removal
-                    verticesToRemove.insert(vertexID)
-                    edgesToRemove.insert(edge1ID)
-                    edgesToRemove.insert(edge2ID)
-                    
-                    // Create a new merged edge between the two outer vertices
-                    let newEdge = ConnectionEdge(start: otherVertexID1, end: otherVertexID2)
-                    edgesToAdd.append(newEdge)
+        var changed = true
+        while changed {
+            changed = false
+            var verticesToRemove: Set<ConnectionVertex.ID> = []
+            var edgesToAdd: [ConnectionEdge] = []
+            var edgesToRemove: Set<ConnectionEdge.ID> = []
+
+            // Iterate through vertices to find candidates for removal
+            for (vertexID, vertex) in vertices {
+                let connectedEdgeIDs = adjacency[vertexID] ?? []
+
+                // A vertex is a candidate for removal if it has exactly two connected edges
+                // and those edges are collinear.
+                if connectedEdgeIDs.count == 2 {
+                    let edgeIDsArray = Array(connectedEdgeIDs)
+                    let edge1ID = edgeIDsArray[0]
+                    let edge2ID = edgeIDsArray[1]
+
+                    guard let edge1 = edges[edge1ID], let edge2 = edges[edge2ID] else { continue }
+
+                    // Determine the other endpoints of the two edges
+                    let otherVertexID1 = (edge1.start == vertexID) ? edge1.end : edge1.start
+                    let otherVertexID2 = (edge2.start == vertexID) ? edge2.end : edge2.start
+
+                    guard let otherVertex1 = vertices[otherVertexID1],
+                          let otherVertex2 = vertices[otherVertexID2] else { continue }
+
+                    // Check for collinearity of the three points: otherVertex1.point, vertex.point, otherVertex2.point
+                    let p1 = otherVertex1.point
+                    let p2 = vertex.point
+                    let p3 = otherVertex2.point
+
+                    let isCollinear: Bool
+                    // Assuming orthogonal lines for now
+                    if (p1.x == p2.x && p2.x == p3.x) || (p1.y == p2.y && p2.y == p3.y) {
+                        isCollinear = true
+                    } else {
+                        isCollinear = false
+                    }
+
+                    if isCollinear {
+                        // Mark vertex and edges for removal
+                        verticesToRemove.insert(vertexID)
+                        edgesToRemove.insert(edge1ID)
+                        edgesToRemove.insert(edge2ID)
+
+                        // Create a new merged edge between the two outer vertices
+                        let newEdge = ConnectionEdge(start: otherVertexID1, end: otherVertexID2)
+                        edgesToAdd.append(newEdge)
+                        changed = true // Mark that a change occurred
+                    }
                 }
             }
-        }
-        
-        // Apply changes: remove old vertices and edges, add new merged edges
-        for vertexID in verticesToRemove {
-            vertices.removeValue(forKey: vertexID)
-            adjacency.removeValue(forKey: vertexID)
-        }
-        
-        for edgeID in edgesToRemove {
-            edges.removeValue(forKey: edgeID)
-        }
-        
-        for newEdge in edgesToAdd {
-            edges[newEdge.id] = newEdge
-            // Update adjacency for the new edge's endpoints
-            adjacency[newEdge.start, default: []].insert(newEdge.id)
-            adjacency[newEdge.end, default: []].insert(newEdge.id)
+
+            // Apply changes: remove old vertices and edges, add new merged edges
+            for vertexID in verticesToRemove {
+                vertices.removeValue(forKey: vertexID)
+                adjacency.removeValue(forKey: vertexID)
+            }
+
+            for edgeID in edgesToRemove {
+                edges.removeValue(forKey: edgeID)
+            }
+
+            for newEdge in edgesToAdd {
+                edges[newEdge.id] = newEdge
+                // Update adjacency for the new edge's endpoints
+                adjacency[newEdge.start, default: []].insert(newEdge.id)
+                adjacency[newEdge.end, default: []].insert(newEdge.id)
+            }
         }
     }
     
