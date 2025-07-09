@@ -20,7 +20,6 @@ struct ComponentPropertiesView: View {
             Table($componentProperties, selection: $selectedProperties) {
                 TableColumn("Key") { $property in
                     PropertyColumn(property: $property, allProperties: componentProperties)
-                        .validationStatus(validationState)
                 }
                 TableColumn("Value") { $property in
                     ValueColumn(property: $property)
@@ -36,6 +35,7 @@ struct ComponentPropertiesView: View {
             addOrRemoveProperty
         }
         .clipShape(.rect(cornerRadius: 10))
+        .validationStatus(validationState)
     }
 
     var addOrRemoveProperty: some View {

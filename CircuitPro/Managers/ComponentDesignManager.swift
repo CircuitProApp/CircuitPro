@@ -21,11 +21,11 @@ enum ComponentField: Hashable {
 @Observable
 final class ComponentDesignManager {
 
-    var componentName: String = ""
-    var componentAbbreviation: String = ""
-    var selectedCategory: ComponentCategory?
+    var componentName: String = "" { didSet { refreshValidation() } }
+    var componentAbbreviation: String = "" { didSet { refreshValidation() } }
+    var selectedCategory: ComponentCategory? { didSet { refreshValidation() } }
     var selectedPackageType: PackageType?
-    var componentProperties: [ComponentProperty] = [ComponentProperty(key: nil, value: .single(nil), unit: .init())]
+    var componentProperties: [ComponentProperty] = [ComponentProperty(key: nil, value: .single(nil), unit: .init())] { didSet { refreshValidation() } }
 
     // MARK: - Validation
     var validationSummary = ValidationSummary()
@@ -104,6 +104,29 @@ final class ComponentDesignManager {
         validationSummary = validate()
         showFieldErrors = true
         return validationSummary.isValid
+    }
+
+    func validationState(for field: ComponentField) -> ValidationState {
+        guard showFieldErrors else { return .valid }
+        if validationSummary.errors[field] != nil {
+            return .error
+        }
+        if validationSummary.warnings[field] != nil {
+            return .warning
+        }
+        return .valid
+    }
+
+    func validationState(for stage: ComponentDesignStage) -> ValidationState {
+        guard stage == .component else { return .valid }
+
+        if !validationSummary.errors.isEmpty {
+            return .error
+        } else if !validationSummary.warnings.isEmpty {
+            return .warning
+        } else {
+            return .valid
+        }
     }
 
     func validate() -> ValidationSummary {

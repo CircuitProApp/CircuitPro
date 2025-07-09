@@ -122,10 +122,9 @@ struct ComponentDesignView: View {
                     symbolCanvasManager.showDrawingSheet = false
                     footprintCanvasManager.showDrawingSheet = false
                 }
-                .onChange(of: componentDesignManager.componentName)         { componentDesignManager.refreshValidation() }
-                .onChange(of: componentDesignManager.componentAbbreviation) { componentDesignManager.refreshValidation() }
-                .onChange(of: componentDesignManager.selectedCategory)      { componentDesignManager.refreshValidation() }
-                .onChange(of: componentDesignManager.componentProperties) { componentDesignManager.refreshValidation() }
+                .onChange(of: componentDesignManager.componentProperties) {
+                    componentDesignManager.refreshValidation()
+                }
             }
         }
         .sheet(isPresented: $showFeedbackSheet) {
@@ -231,49 +230,14 @@ struct ComponentDesignView: View {
     private var stageIndicator: some View {
         HStack {
             ForEach(ComponentDesignStage.allCases) { stage in
-                StagePill(stage: stage,
-                          isSelected: currentStage == stage,
-                          hasErrors:   stage == .component &&
-                                       !componentDesignManager.validationSummary.errors.isEmpty,
-                          hasWarnings: stage == .component &&
-                                       componentDesignManager.validationSummary.errors.isEmpty &&
-                                       !componentDesignManager.validationSummary.warnings.isEmpty)
-                    .onTapGesture { currentStage = stage }
-
+                StagePill(
+                    stage: stage,
+                    isSelected: currentStage == stage,
+                    validationState: componentDesignManager.validationState(for: stage)
+                )
+                .onTapGesture { currentStage = stage }
             }
         }
-        .font(.headline)
         .padding()
     }
 }
-
-struct StagePill: View {
-    let stage: ComponentDesignStage
-    let isSelected: Bool
-    let hasErrors: Bool
-    let hasWarnings: Bool          // ← NEW
-
-    var body: some View {
-        Text(stage.label)
-            .padding(10)
-            .background(isSelected ? .blue : .clear)
-            .foregroundStyle(isSelected ? .white : .secondary)
-            .clipShape(.capsule)
-            .overlay(alignment: .topTrailing) {
-                if hasErrors {
-                    Image(systemName: "exclamationmark.circle.fill")   // red
-                        .symbolRenderingMode(.palette)
-                        .foregroundStyle(.white, .red)
-                        .offset(x: 6, y: -6)
-                } else if hasWarnings {
-                    Image(systemName: "exclamationmark.triangle.fill") // yellow
-                        .symbolRenderingMode(.palette)
-                        .foregroundStyle(.white, .yellow)
-                        .offset(x: 6, y: -6)
-                }
-            }
-    }
-}
-
-
-

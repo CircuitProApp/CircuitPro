@@ -26,7 +26,7 @@ struct ComponentDetailView: View {
                         .padding(10)
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
-                        .validationStatus(validationState(for: .name))
+                        .validationStatus(componentDesignManager.validationState(for: .name))
                 }
                 SectionView("Abbreviation") {
                     TextField("e.g. LED", text: $manager.componentAbbreviation)
@@ -36,7 +36,7 @@ struct ComponentDetailView: View {
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
                         .frame(width: 200)
-                        .validationStatus(validationState(for: .abbreviation))
+                        .validationStatus(componentDesignManager.validationState(for: .abbreviation))
                 }
             }
 
@@ -52,7 +52,7 @@ struct ComponentDetailView: View {
                     .pickerStyle(.menu)
                     .labelsHidden()
                     .frame(width: 300)
-                    .validationStatus(validationState(for: .category))
+                    .validationStatus(componentDesignManager.validationState(for: .category))
                 }
                 SectionView("Package Type") {
                     Picker("Package Type", selection: $manager.selectedPackageType) {
@@ -70,21 +70,10 @@ struct ComponentDetailView: View {
             SectionView("Properties") {
                 ComponentPropertiesView(
                     componentProperties: $manager.componentProperties,
-                    validationState: validationState(for: .properties)
+                    validationState: componentDesignManager.validationState(for: .properties)
                 )
             }
         }
-    }
-
-    private func validationState(for field: ComponentField) -> ValidationState {
-        guard componentDesignManager.showFieldErrors else { return .valid }
-        if componentDesignManager.validationSummary.errors[field] != nil {
-            return .error
-        }
-        if componentDesignManager.validationSummary.warnings[field] != nil {
-            return .warning
-        }
-        return .valid
     }
 }
 
