@@ -14,9 +14,6 @@ struct ComponentDesignView: View {
     @State private var currentStage: ComponentDesignStage = .component
     @State private var symbolCanvasManager = CanvasManager()
     @State private var footprintCanvasManager = CanvasManager()
-    
-    @State private var validationSummary = ValidationSummary()
-    @State private var showFieldErrors   = false   // toggled after “Create Component”
 
     @State private var showError   = false
     @State private var showWarning = false
@@ -71,10 +68,7 @@ struct ComponentDesignView: View {
                         center: {
                             switch currentStage {
                             case .component:
-                                ComponentDetailView(
-                                    showFieldErrors: $showFieldErrors,
-                                    validationSummary: validationSummary
-                                )
+                                ComponentDetailView()
                             case .symbol:
                                 SymbolDesignView()
                                     .environment(symbolCanvasManager)
@@ -128,9 +122,10 @@ struct ComponentDesignView: View {
                     symbolCanvasManager.showDrawingSheet = false
                     footprintCanvasManager.showDrawingSheet = false
                 }
-                .onChange(of: componentDesignManager.componentName)         { refreshFieldValidation() }
-                .onChange(of: componentDesignManager.componentAbbreviation) { refreshFieldValidation() }
-                .onChange(of: componentDesignManager.selectedCategory)      { refreshFieldValidation() }
+                .onChange(of: componentDesignManager.componentName)         { componentDesignManager.refreshValidation() }
+                .onChange(of: componentDesignManager.componentAbbreviation) { componentDesignManager.refreshValidation() }
+                .onChange(of: componentDesignManager.selectedCategory)      { componentDesignManager.refreshValidation() }
+                .onChange(of: componentDesignManager.componentProperties) { componentDesignManager.refreshValidation() }
             }
         }
         .sheet(isPresented: $showFeedbackSheet) {
@@ -162,21 +157,11 @@ struct ComponentDesignView: View {
           Text(messages.joined(separator: "\n"))
         })
     }
-    
-    private func refreshFieldValidation() {
-        guard showFieldErrors else { return }
-        validationSummary = componentDesignManager.validate()
-    }
 
     // 4. Build and insert component
     private func createComponent() {
-        let summary = componentDesignManager.validate()
-        self.validationSummary = summary
-        showFieldErrors = true
-
-        // Block on errors
-        if !summary.isValid {
-            let errorMessages = summary.errors.values.map { $0 }
+        if !componentDesignManager.validateForCreation() {
+            let errorMessages = componentDesignManager.validationSummary.errors.values.map { $0 }
             if !errorMessages.isEmpty {
                 messages = errorMessages
                 showError = true
@@ -185,7 +170,7 @@ struct ComponentDesignView: View {
         }
 
         // Surface warnings (non-blocking)
-        let warningMessages = summary.warnings.values.map { $0 }
+        let warningMessages = componentDesignManager.validationSummary.warnings.values.map { $0 }
         if !warningMessages.isEmpty {
             messages = warningMessages
             showWarning = true
@@ -194,7 +179,7 @@ struct ComponentDesignView: View {
 
         let anchor = CGPoint(x: 2_500, y: 2_500)
 
-        let rawPrimitives: [AnyPrimitive] =
+        let rawPrimitives: [AnyPrimitive] = 
             componentDesignManager.symbolElements.compactMap {
                 if case .primitive(let primitive) = $0 { return primitive }
                 return nil
@@ -249,10 +234,10 @@ struct ComponentDesignView: View {
                 StagePill(stage: stage,
                           isSelected: currentStage == stage,
                           hasErrors:   stage == .component &&
-                                       !validationSummary.errors.isEmpty,
+                                       !componentDesignManager.validationSummary.errors.isEmpty,
                           hasWarnings: stage == .component &&
-                                       validationSummary.errors.isEmpty &&
-                                       !validationSummary.warnings.isEmpty)
+                                       componentDesignManager.validationSummary.errors.isEmpty &&
+                                       !componentDesignManager.validationSummary.warnings.isEmpty)
                     .onTapGesture { currentStage = stage }
 
             }
@@ -291,31 +276,4 @@ struct StagePill: View {
 }
 
 
-struct ValidationStyle: ViewModifier {
-    let active: Bool
-    func body(content: Content) -> some View {
-        content
-            .overlay(
-                RoundedRectangle(cornerRadius: 7.5)
-                    .stroke(active ? Color.red : .clear, lineWidth: 2)
-            )
-    }
-}
-extension View {
-    func validationHighlight(_ active: Bool) -> some View {
-        modifier(ValidationStyle(active: active))
-    }
-}
 
-struct WarningStyle: ViewModifier {
-    let active: Bool
-    func body(content: Content) -> some View {
-        content.overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(active ? Color.yellow : .clear, style: StrokeStyle(lineWidth: 2, dash: [6]))
-        )
-    }
-}
-extension View { func warningHighlight(_ a: Bool) -> some View {
-    modifier(WarningStyle(active: a))
-}}

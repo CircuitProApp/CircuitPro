@@ -10,7 +10,7 @@ import SwiftUI
 struct ComponentPropertiesView: View {
 
     @Binding var componentProperties: [ComponentProperty]
-    var showWarning: Bool
+    var validationState: ValidationState
     
     @State private var selectedProperties: Set<ComponentProperty.ID> = []
     @State private var selectedValueType: PropertyValueType = .single
@@ -20,6 +20,7 @@ struct ComponentPropertiesView: View {
             Table($componentProperties, selection: $selectedProperties) {
                 TableColumn("Key") { $property in
                     PropertyColumn(property: $property, allProperties: componentProperties)
+                        .validationStatus(validationState)
                 }
                 TableColumn("Value") { $property in
                     ValueColumn(property: $property)
@@ -35,7 +36,6 @@ struct ComponentPropertiesView: View {
             addOrRemoveProperty
         }
         .clipShape(.rect(cornerRadius: 10))
-        .warningHighlight(showWarning)           // yellow outline
     }
 
     var addOrRemoveProperty: some View {

@@ -6,7 +6,7 @@
 //
 import SwiftUI
 
-struct ComponentProperty: Identifiable, Codable {
+struct ComponentProperty: Identifiable, Codable, Equatable {
     var id: UUID = UUID()
     var key: PropertyKey?
     var value: PropertyValue
@@ -181,7 +181,7 @@ extension PropertyKey {
     }
 }
 
-enum PropertyValue: Codable {
+enum PropertyValue: Codable, Equatable {
     case single(Double?)
     case range(min: Double?, max: Double?)
 

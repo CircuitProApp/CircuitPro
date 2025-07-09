@@ -7,13 +7,12 @@
 
 import SwiftUI
 
+import SwiftUI
+
 struct ComponentDetailView: View {
 
     @Environment(\.componentDesignManager)
     private var componentDesignManager
-    
-    @Binding var showFieldErrors: Bool
-    let validationSummary: ValidationSummary
 
     var body: some View {
         @Bindable var manager = componentDesignManager
@@ -27,7 +26,7 @@ struct ComponentDetailView: View {
                         .padding(10)
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
-                        .validationHighlight(showFieldErrors && validationSummary.errors[.name] != nil)
+                        .validationStatus(validationState(for: .name))
                 }
                 SectionView("Abbreviation") {
                     TextField("e.g. LED", text: $manager.componentAbbreviation)
@@ -37,7 +36,7 @@ struct ComponentDetailView: View {
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
                         .frame(width: 200)
-                        .validationHighlight(showFieldErrors && validationSummary.errors[.abbreviation] != nil)
+                        .validationStatus(validationState(for: .abbreviation))
                 }
             }
 
@@ -53,7 +52,7 @@ struct ComponentDetailView: View {
                     .pickerStyle(.menu)
                     .labelsHidden()
                     .frame(width: 300)
-                    .validationHighlight(showFieldErrors && validationSummary.errors[.category] != nil)
+                    .validationStatus(validationState(for: .category))
                 }
                 SectionView("Package Type") {
                     Picker("Package Type", selection: $manager.selectedPackageType) {
@@ -71,10 +70,21 @@ struct ComponentDetailView: View {
             SectionView("Properties") {
                 ComponentPropertiesView(
                     componentProperties: $manager.componentProperties,
-                    showWarning: showFieldErrors &&
-                                 validationSummary.warnings[.properties] != nil
+                    validationState: validationState(for: .properties)
                 )
             }
         }
     }
+
+    private func validationState(for field: ComponentField) -> ValidationState {
+        guard componentDesignManager.showFieldErrors else { return .valid }
+        if componentDesignManager.validationSummary.errors[field] != nil {
+            return .error
+        }
+        if componentDesignManager.validationSummary.warnings[field] != nil {
+            return .warning
+        }
+        return .valid
+    }
 }
+

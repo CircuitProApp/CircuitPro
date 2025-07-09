@@ -10,7 +10,7 @@ struct CanvasLayer: Hashable {
     /// Optional PCB-specific kind when applicable
     var kind: LayerKind?
 
-    init(zIndex: Int, color: Color = .gray, kind: LayerKind? = nil) {
+    init(zIndex: Int, color: Color = .blue, kind: LayerKind? = nil) {
         self.zIndex = zIndex
         self.color = color
         self.kind = kind

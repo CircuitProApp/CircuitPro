@@ -70,6 +70,9 @@ Issue Type: \(selectedIssueType.label)
 Additional Context: \(additionalContext ?? "N/A") 
 
 \(message)
+
+App Version: \(Bundle.main.appVersion)
+Build Version: \(Bundle.main.buildVersion)
 """
         let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""

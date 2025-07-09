@@ -27,6 +27,10 @@ final class ComponentDesignManager {
     var selectedPackageType: PackageType?
     var componentProperties: [ComponentProperty] = [ComponentProperty(key: nil, value: .single(nil), unit: .init())]
 
+    // MARK: - Validation
+    var validationSummary = ValidationSummary()
+    var showFieldErrors = false
+
     // MARK: - Symbol
     var symbolElements: [CanvasElement] = [] {
         didSet {
@@ -84,6 +88,22 @@ final class ComponentDesignManager {
         selectedFootprintTool = AnyCanvasTool(CursorTool())
         selectedFootprintLayer = .layer0
         layerAssignments = [:]
+
+        // 4. Validation
+        validationSummary = ValidationSummary()
+        showFieldErrors = false
+    }
+
+    func refreshValidation() {
+        guard showFieldErrors else { return }
+        validationSummary = validate()
+    }
+
+    @discardableResult
+    func validateForCreation() -> Bool {
+        validationSummary = validate()
+        showFieldErrors = true
+        return validationSummary.isValid
     }
 
     func validate() -> ValidationSummary {
