@@ -1,72 +1,74 @@
+//
 //  ConnectionElement.swift
 //  CircuitPro
 //
-//  Updated 09 Jul 2025 – compile fixes
-//  • Equatable now compares `id` only (removed tuple‑array equality issue)
-//  • `selectionPath` uses `.identity` transform instead of `nil`
-//
+
 import SwiftUI
 import AppKit
 
 struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
 
-    // MARK: ‑ Identity
+    // MARK: – Identity
     let id: UUID
 
-    // MARK: ‑ Geometry
-    /// List of straight‑line wire segments (local coordinate space).
-    let connectionPoints: [(CGPoint, CGPoint)]
+    // MARK: – Geometry
+    /// Straight-line wire segments expressed in *local* coordinates.
+    var segments: [ConnectionSegment]
 
-    // MARK: ‑ Transformable
+    // MARK: – Transformable
     var position: CGPoint
-    var rotation: CGFloat
+    var rotation: CGFloat         // in radians
 
-    // MARK: ‑ Private
-    /// Stable IDs for each wire segment (selection uses these).
+    // MARK: – Private
+    /// Stable IDs for per-segment selection.
     private let segmentIDs: [UUID]
 
-    // MARK: ‑ Init
+    // MARK: – Init
     init(
-        connectionPoints: [(CGPoint, CGPoint)],
+        id: UUID = .init(),
+        segments: [ConnectionSegment],
         position: CGPoint = .zero,
-        rotation: CGFloat = .zero,
-        id: UUID = UUID()
+        rotation: CGFloat = 0
     ) {
-        self.id = id
-        self.connectionPoints = connectionPoints
-        self.position = position
-        self.rotation = rotation
-        self.segmentIDs = connectionPoints.map { _ in UUID() }
+        self.id         = id
+        self.segments   = segments
+        self.position   = position
+        self.rotation   = rotation
+        // Preserve the UUID baked into each segment so selection never shifts.
+        self.segmentIDs = segments.map(\.id)
     }
 
-    // MARK: ‑ Derived geometry
+    // MARK: – Derived geometry
     var primitives: [AnyPrimitive] {
-        zip(segmentIDs, connectionPoints).map { (id, pair) in
+        zip(segmentIDs, segments).map { segID, seg in
             .line(
                 LinePrimitive(
-                    id: id,
-                    start: pair.0.applying(currentTransform),
-                    end: pair.1.applying(currentTransform),
-                    rotation: 0,
+                    id:          segID,
+                    start:       seg.start,
+                    end:         seg.end,
+                    rotation:    0,              // LinePrimitive is drawn in this element’s space;
+                                                // we apply the whole element’s transform later.
                     strokeWidth: 1,
-                    color: SDColor(color: .blue)
+                    color:       SDColor(color: .blue)
                 )
             )
         }
     }
 
+    /// This element’s local-to-world transform.
     private var currentTransform: CGAffineTransform {
         CGAffineTransform(translationX: position.x, y: position.y)
             .rotated(by: rotation)
     }
 
-    // MARK: ‑ Drawable
+    // MARK: – Drawable
     func draw(in ctx: CGContext, with selection: Set<UUID>) {
         drawSelection(in: ctx, selection: selection)
         drawBody(in: ctx)
     }
 
     private func drawSelection(in ctx: CGContext, selection: Set<UUID>) {
+        // 1. Whole-connection selected?
         if selection.contains(id), let outline = selectionPath() {
             ctx.saveGState()
             ctx.setStrokeColor(NSColor(.blue.opacity(0.3)).cgColor)
@@ -79,6 +81,7 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
             return
         }
 
+        // 2. Individual segments selected?
         let selectedPath = CGMutablePath()
         var hasSelection = false
         for primitive in primitives where selection.contains(primitive.id) {
@@ -96,27 +99,29 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
         }
     }
 
-    func drawBody(in ctx: CGContext) {
+    internal func drawBody(in ctx: CGContext) {
+        // Draw the wires
         primitives.forEach { $0.drawBody(in: ctx) }
 
-        // Junctions (≥ 3 connections)
-        let vertexCounts = connectionPoints
-            .flatMap { [$0.0, $0.1] }
-            .reduce(into: [CGPoint: Int]()) { counts, point in
-                let p = point.applying(currentTransform)
-                counts[p, default: 0] += 1
+        // Draw junction dots (≥ 3 wires share the same vertex *after* transform)
+        let vertexCounts = segments
+            .flatMap { [$0.start, $0.end] }
+            .reduce(into: [CGPoint: Int]()) { counts, localPoint in
+                let worldPoint = localPoint.applying(currentTransform)
+                counts[worldPoint, default: 0] += 1
             }
-        let d: CGFloat = 6
+
         ctx.saveGState()
         ctx.setFillColor(NSColor(.blue).cgColor)
+        let d: CGFloat = 6
         for (p, n) in vertexCounts where n > 2 {
-            let r = CGRect(x: p.x - d/2, y: p.y - d/2, width: d, height: d)
+            let r = CGRect(x: p.x - d / 2, y: p.y - d / 2, width: d, height: d)
             ctx.fillEllipse(in: r)
         }
         ctx.restoreGState()
     }
 
-    // MARK: ‑ Hittable
+    // MARK: – Hittable
     func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> Bool {
         primitives.contains { $0.hitTest(point, tolerance: tolerance) }
     }
@@ -125,7 +130,7 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
         primitives.first { $0.hitTest(point, tolerance: tolerance) }?.id
     }
 
-    // MARK: ‑ Selection helpers
+    // MARK: – Selection helpers
     func selectionPath() -> CGPath? {
         let path = CGMutablePath()
         primitives.forEach { path.addPath($0.makePath()) }
@@ -139,11 +144,8 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
     }
 }
 
-// MARK: ‑ Hashable & Equatable
+// MARK: – Hashable & Equatable
 extension ConnectionElement: Hashable, Equatable {
-    static func == (lhs: ConnectionElement, rhs: ConnectionElement) -> Bool {
-        lhs.id == rhs.id
-    }
-
+    static func == (lhs: ConnectionElement, rhs: ConnectionElement) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
