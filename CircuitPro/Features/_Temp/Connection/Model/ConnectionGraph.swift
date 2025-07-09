@@ -77,22 +77,18 @@ public class ConnectionGraph {
 
     
     /// Merges another graph into this one.
-    /// Vertex uniqueness is determined by their ID. A more sophisticated implementation
-    /// might unify vertices based on proximity.
+    /// Vertex uniqueness is determined by their ID.
     public func merge(with other: ConnectionGraph) {
-        let tolerance: CGFloat = 0.01 // Tolerance for unifying points
         var remappedVertexIDs: [ConnectionVertex.ID: ConnectionVertex.ID] = [:]
         
         // First, process vertices from the other graph
         other.vertices.values.forEach { otherVertex in
-            // Check if a vertex with a similar point already exists in self
-            if let existingVertex = vertices.values.first(where: {
-                hypot($0.point.x - otherVertex.point.x, $0.point.y - otherVertex.point.y) < tolerance
-            }) {
-                // If a similar vertex exists, map the otherVertex.id to the existingVertex.id
+            // Check if a vertex with the same point already exists in self
+            if let existingVertex = vertices.values.first(where: { $0.point == otherVertex.point }) {
+                // If a vertex with the same point exists, map the otherVertex.id to the existingVertex.id
                 remappedVertexIDs[otherVertex.id] = existingVertex.id
             } else {
-                // If no similar vertex exists, add the otherVertex to self
+                // If no vertex with the same point exists, add the otherVertex to self
                 vertices[otherVertex.id] = otherVertex
                 adjacency[otherVertex.id] = other.adjacency[otherVertex.id] ?? []
                 remappedVertexIDs[otherVertex.id] = otherVertex.id // Map to itself
