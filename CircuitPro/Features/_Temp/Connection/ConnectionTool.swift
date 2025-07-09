@@ -30,14 +30,63 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     mutating func handleTap(at loc: CGPoint,
                             context: CanvasToolContext) -> CanvasElement? {
 
-        guard let lastVertex = points.last else {
+        // Handle the very first click
+        guard let firstVertex = points.first, let lastVertex = points.last else {
             points.append(loc)
             return nil
         }
 
-        // Finish drawing on a click close to the last vertex.
-        let distance = hypot(loc.x - lastVertex.x, loc.y - lastVertex.y)
-        if distance < 5 {
+        // Determine if the user is trying to close a loop or end the line
+        let distanceToLast = hypot(loc.x - lastVertex.x, loc.y - lastVertex.y)
+        let distanceToFirst = hypot(loc.x - firstVertex.x, loc.y - firstVertex.y)
+
+        let shouldFinalize = distanceToLast < 5 || distanceToFirst < 5
+
+        // If closing a loop, ensure the points array is correctly set up
+        if distanceToFirst < 5 {
+            // If the current click is near the first point, and the last point
+            // is not already the first point, we need to add the first point
+            // to the sequence to close the loop.
+            if lastVertex != firstVertex {
+                // We need to ensure the L-shape logic is applied to reach the firstVertex
+                // from the lastVertex, if necessary.
+                let startsWithHorizontal: Bool
+                if let lastOrientation = self.lastSegmentOrientation {
+                    startsWithHorizontal = (lastOrientation == .vertical)
+                } else {
+                    startsWithHorizontal = true
+                }
+
+                let corner = startsWithHorizontal ? CGPoint(x: firstVertex.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: firstVertex.y)
+
+                if corner != lastVertex {
+                    points.append(corner)
+                }
+                // points.append(firstVertex) // REMOVED: Explicitly add the first vertex to close the loop
+            }
+        } else if distanceToLast >= 5 { // Only add L-shape points if not finalizing by proximity to last/first
+            // 1. Decide next L-shape orientation
+            let startsWithHorizontal: Bool
+            if let lastOrientation = self.lastSegmentOrientation {
+                startsWithHorizontal = (lastOrientation == .vertical) // Start perpendicular
+            } else {
+                // First segment always starts horizontal, as requested.
+                startsWithHorizontal = true
+            }
+
+            // 2. Add points for L-shape
+            let corner = startsWithHorizontal ? CGPoint(x: loc.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: loc.y)
+
+            if corner != lastVertex {
+                points.append(corner)
+            }
+            if loc != corner {
+                points.append(loc)
+            }
+        }
+
+        // Finalize the graph if the conditions are met
+        if shouldFinalize {
             guard points.count >= 2 else {
                 points.removeAll()
                 return nil
@@ -48,34 +97,33 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
             // Create a ConnectionGraph from the simplified points.
             let graph = ConnectionGraph()
-            let vertices = simplifiedPoints.map { graph.addVertex(at: $0) }
-
-            for (startVertex, endVertex) in zip(vertices, vertices.dropFirst()) {
-                graph.addEdge(from: startVertex.id, to: endVertex.id)
+            var createdVertices: [ConnectionVertex] = []
+            for p in simplifiedPoints {
+                createdVertices.append(graph.addVertex(at: p))
             }
+
+            // Add edges between consecutive vertices
+            for i in 0..<(createdVertices.count - 1) {
+                graph.addEdge(from: createdVertices[i].id, to: createdVertices[i+1].id)
+            }
+
+            // If it's a closed loop, add the final edge from last to first vertex
+            // This is now handled by ensuring the firstVertex is appended to points
+            // if closing a loop, so the last segment in simplifiedPoints will connect
+            // back to the first.
+            if distanceToFirst < 5 && createdVertices.count >= 2 {
+                // Ensure the last point in the simplified sequence is indeed the first point
+                // This handles cases where simplifyCollinear might have removed the last point
+                // if it was collinear with the second to last and the first.
+                // We explicitly add an edge from the last created vertex to the first created vertex
+                // to ensure the loop is closed in the graph.
+                graph.addEdge(from: createdVertices.last!.id, to: createdVertices.first!.id)
+            }
+
 
             let conn = ConnectionElement(graph: graph)
             points.removeAll()
             return .connection(conn)
-        }
-
-        // 1. Decide next L-shape orientation
-        let startsWithHorizontal: Bool
-        if let lastOrientation = self.lastSegmentOrientation {
-            startsWithHorizontal = (lastOrientation == .vertical) // Start perpendicular
-        } else {
-            // First segment always starts horizontal, as requested.
-            startsWithHorizontal = true
-        }
-
-        // 2. Add points for L-shape
-        let corner = startsWithHorizontal ? CGPoint(x: loc.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: loc.y)
-        
-        if corner != lastVertex {
-            points.append(corner)
-        }
-        if loc != corner {
-            points.append(loc)
         }
 
         return nil
