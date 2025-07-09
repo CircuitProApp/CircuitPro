@@ -3,7 +3,6 @@ import AppKit
 final class CanvasInteractionController {
 
     unowned let canvas: CoreGraphicsCanvasView
-    private let repository = NetRepository()
 
     private var dragOrigin: CGPoint?
     private var tentativeSelection: Set<UUID>?
@@ -269,15 +268,8 @@ final class CanvasInteractionController {
                 switch newElement {
 
                 case .connection(let conn):
-                    // CHANGE: The call to merge is now cleaner.
-                    // The static function on ConnectionTool will contain the complex
-                    // graph logic for finding and merging with existing nets.
-                    let merged = ConnectionTool.merge(
-                        conn,
-                        into: &canvas.elements,
-                        repository: repository
-                    )
-                    canvas.elements.append(.connection(merged))
+
+                    canvas.elements.append(.connection(conn))
 
                 default:
                     canvas.elements.append(newElement)

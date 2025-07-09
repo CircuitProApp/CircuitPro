@@ -170,20 +170,9 @@ final class CoreGraphicsCanvasView: NSView {
 
             switch element {
 
-            // 1 ─ connections: remove only the selected segments
             case .connection(let conn):
-                // If the entire connection is selected, drop it completely.
-                guard !selectedIDs.contains(conn.id) else { continue }
 
-                let edgeIDs = Set(conn.net.edges.compactMap { selectedIDs.contains($0.id) ? $0.id : nil })
-                if edgeIDs.isEmpty {
-                    out.append(element)
-                } else {
-                    let nets = conn.net.deletingEdges(withIDs: edgeIDs)
-                    out.append(contentsOf: nets.map { .connection(ConnectionElement(id: $0.id, net: $0)) })
-                }
-
-            // 2 ─ anything else: drop the whole object when its id is selected
+                print("Delete connection")
             default:
                 if !selectedIDs.contains(element.id) { out.append(element) }
             }
