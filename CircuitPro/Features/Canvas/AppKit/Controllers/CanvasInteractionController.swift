@@ -299,12 +299,14 @@ final class CanvasInteractionController {
                     if indicesToMerge.isEmpty {
                         // No overlap – simply add the new connection element.
                         canvas.elements.append(.connection(newConn))
+                        newConn.graph.simplifyCollinearSegments() // Simplify after adding
                     } else {
                         // Merge into the first matching existing connection.
                         let primaryIdx = indicesToMerge.first!
 
                         if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
                             primaryConn.graph.merge(with: newConn.graph)
+                            primaryConn.graph.simplifyCollinearSegments() // Simplify after merge
                         }
 
                         // Merge additional overlapping connection elements into the primary one.
@@ -318,6 +320,10 @@ final class CanvasInteractionController {
                                 }
                             }
                             canvas.elements.remove(at: idx)
+                        }
+                        // Ensure the primary connection is simplified after all merges
+                        if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
+                            primaryConn.graph.simplifyCollinearSegments()
                         }
                     }
 

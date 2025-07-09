@@ -43,9 +43,12 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
                 return nil
             }
 
-            // Create a ConnectionGraph from the drawn points.
+            // Simplify the points to remove collinear intermediates
+            let simplifiedPoints = ConnectionTool.simplifyCollinear(points)
+
+            // Create a ConnectionGraph from the simplified points.
             let graph = ConnectionGraph()
-            let vertices = points.map { graph.addVertex(at: $0) }
+            let vertices = simplifiedPoints.map { graph.addVertex(at: $0) }
 
             for (startVertex, endVertex) in zip(vertices, vertices.dropFirst()) {
                 graph.addEdge(from: startVertex.id, to: endVertex.id)
@@ -131,4 +134,40 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     // MARK: – Equatable & Hashable
     static func == (lhs: ConnectionTool, rhs: ConnectionTool) -> Bool { lhs.id == rhs.id }
     func hash(into h: inout Hasher) { h.combine(id) }
+
+    // MARK: - Private Helpers
+    private static func simplifyCollinear(_ points: [CGPoint]) -> [CGPoint] {
+        guard points.count > 2 else { return points }
+
+        var simplified: [CGPoint] = [points[0]] // Start with the first point
+
+        for i in 1..<points.count {
+            let p1 = simplified.last! // Last point added to simplified
+            let p2 = points[i]        // Current point from original list
+
+            // If we have at least two points in simplified, check for collinearity with the previous segment
+            if simplified.count >= 2 {
+                let p0 = simplified[simplified.count - 2] // Point before the last in simplified
+
+                // Check for collinearity (assuming orthogonal lines)
+                let isCollinear: Bool
+                if p0.x == p1.x && p1.x == p2.x { // Vertical line
+                    isCollinear = true
+                } else if p0.y == p1.y && p1.y == p2.y { // Horizontal line
+                    isCollinear = true
+                } else {
+                    isCollinear = false
+                }
+
+                if isCollinear {
+                    // If p0, p1, p2 are collinear, replace p1 with p2 (extend the segment)
+                    simplified[simplified.count - 1] = p2
+                    continue // Skip appending, as p2 replaced p1
+                }
+            }
+            // Not collinear, or not enough points to check collinearity, append p2
+            simplified.append(p2)
+        }
+        return simplified
+    }
 }
