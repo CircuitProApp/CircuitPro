@@ -66,6 +66,16 @@ public class ConnectionGraph {
         return edge
     }
     
+    
+    private func rebuildAdjacency() {
+        adjacency = [:]
+        for (edgeID, edge) in edges {
+            adjacency[edge.start, default: []].insert(edgeID)
+            adjacency[edge.end, default: []].insert(edgeID)
+        }
+    }
+
+    
     /// Merges another graph into this one.
     /// Vertex uniqueness is determined by their ID. A more sophisticated implementation
     /// might unify vertices based on proximity.
@@ -191,6 +201,7 @@ public class ConnectionGraph {
                 adjacency[newEdge.start, default: []].insert(newEdge.id)
                 adjacency[newEdge.end, default: []].insert(newEdge.id)
             }
+            rebuildAdjacency()
         }
     }
     
