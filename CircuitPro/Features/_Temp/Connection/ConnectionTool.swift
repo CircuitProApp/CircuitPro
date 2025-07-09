@@ -10,29 +10,33 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     let label      = "Connection"
 
     // MARK: – Internal drawing state
-    private enum Orientation { case horizontal, vertical }
-    private var vertices: [CGPoint] = []     // click history
-    private var lastSegmentOrientation: Orientation?
+    private var points: [CGPoint] = []     // click history
+
+    private var lastSegmentOrientation: ConnectionSegment.Orientation? {
+        guard points.count >= 2 else { return nil }
+        let p1 = points[points.count - 2]
+        let p2 = points.last!
+        return ConnectionSegment(id: .init(), start: p1, end: p2).orientation
+    }
 
     // MARK: – CanvasTool conformance
     mutating func handleTap(at loc: CGPoint,
                             context: CanvasToolContext) -> CanvasElement? {
 
-        guard let lastVertex = vertices.last else {
-            vertices.append(loc)
+        guard let lastVertex = points.last else {
+            points.append(loc)
             return nil
         }
 
         // Finish drawing on a click close to the last vertex.
         let distance = hypot(loc.x - lastVertex.x, loc.y - lastVertex.y)
         if distance < 5 {
-            guard vertices.count >= 2 else {
-                vertices.removeAll()
-                lastSegmentOrientation = nil
+            guard points.count >= 2 else {
+                points.removeAll()
                 return nil
             }
 
-            let segments = zip(vertices, vertices.dropFirst()).map {
+            let segments = zip(points, points.dropFirst()).map {
                 ConnectionSegment(id: .init(), start: $0, end: $1)
             }
             let conn = ConnectionElement(
@@ -40,8 +44,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
                 position: .zero,
                 rotation: 0
             )
-            vertices.removeAll()
-            lastSegmentOrientation = nil
+            points.removeAll()
             return .connection(conn)
         }
 
@@ -58,18 +61,10 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         let corner = startsWithHorizontal ? CGPoint(x: loc.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: loc.y)
         
         if corner != lastVertex {
-            vertices.append(corner)
+            points.append(corner)
         }
         if loc != corner {
-            vertices.append(loc)
-        }
-
-        // 3. Update state for next time
-        let p_before_loc = vertices.count > 1 ? vertices[vertices.count - 2] : lastVertex
-        if loc.y == p_before_loc.y {
-            self.lastSegmentOrientation = .horizontal
-        } else if loc.x == p_before_loc.x {
-            self.lastSegmentOrientation = .vertical
+            points.append(loc)
         }
 
         return nil
@@ -79,7 +74,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
                               mouse: CGPoint,
                               context: CanvasToolContext) {
 
-        guard let lastVertex = vertices.last else { return }
+        guard let lastVertex = points.last else { return }
 
         ctx.saveGState()
         defer { ctx.restoreGState() }
@@ -90,8 +85,8 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         ctx.setStrokeColor(NSColor(.blue).cgColor)
         
         ctx.beginPath()
-        ctx.move(to: vertices[0])
-        for p in vertices.dropFirst() {
+        ctx.move(to: points[0])
+        for p in points.dropFirst() {
             ctx.addLine(to: p)
         }
         ctx.strokePath()
@@ -118,16 +113,11 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     // MARK: – Keyboard helpers
     mutating func handleEscape() {
-        vertices.removeAll()
-        lastSegmentOrientation = nil
+        points.removeAll()
     }
 
     mutating func handleBackspace() {
-        _ = vertices.popLast()
-        // After popping, we lose the context of the last segment's orientation.
-        // Resetting it will force the next segment's orientation to be
-        // determined by the mouse direction, which is a reasonable recovery.
-        lastSegmentOrientation = nil
+        _ = points.popLast()
     }
 
     // MARK: – Equatable & Hashable
