@@ -12,11 +12,18 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     // MARK: – Internal drawing state
     private var points: [CGPoint] = []     // click history
 
-    private var lastSegmentOrientation: ConnectionSegment.Orientation? {
+    private var lastSegmentOrientation: LineOrientation? {
         guard points.count >= 2 else { return nil }
         let p1 = points[points.count - 2]
         let p2 = points.last!
-        return ConnectionSegment(id: .init(), start: p1, end: p2).orientation
+        
+        // A segment is considered vertical if the x-coordinates are the same.
+        // Otherwise, it's horizontal. This assumes segments are always orthogonal.
+        if p1.x == p2.x {
+            return .vertical
+        } else {
+            return .horizontal
+        }
     }
 
     // MARK: – CanvasTool conformance
@@ -36,14 +43,15 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
                 return nil
             }
 
-            let segments = zip(points, points.dropFirst()).map {
-                ConnectionSegment(id: .init(), start: $0, end: $1)
+            // Create a ConnectionGraph from the drawn points.
+            let graph = ConnectionGraph()
+            let vertices = points.map { graph.addVertex(at: $0) }
+
+            for (startVertex, endVertex) in zip(vertices, vertices.dropFirst()) {
+                graph.addEdge(from: startVertex.id, to: endVertex.id)
             }
-            let conn = ConnectionElement(
-                segments: segments,
-                position: .zero,
-                rotation: 0
-            )
+
+            let conn = ConnectionElement(graph: graph)
             points.removeAll()
             return .connection(conn)
         }

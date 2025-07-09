@@ -267,9 +267,59 @@ final class CanvasInteractionController {
 
                 switch newElement {
 
-                case .connection(let conn):
+                case .connection(let newConn):
 
-                    canvas.elements.append(.connection(conn))
+                    // Attempt to merge the newly created connection into an
+                    // existing one that shares a vertex.
+
+                    // 1) Collect indices of existing connection elements that
+                    //    share at least one vertex position with the new
+                    //    connection (within a small tolerance).
+                    var indicesToMerge: [Int] = []
+
+                    let tolerance: CGFloat = 0.01
+
+                    outer: for (index, element) in canvas.elements.enumerated() {
+                        guard case .connection(let existingConn) = element else { continue }
+
+                        for vNew in newConn.graph.vertices.values {
+                            for vOld in existingConn.graph.vertices.values {
+                                let dx = vNew.point.x - vOld.point.x
+                                let dy = vNew.point.y - vOld.point.y
+                                if abs(dx) <= tolerance && abs(dy) <= tolerance {
+                                    indicesToMerge.append(index)
+                                    // We found at least one shared vertex; no
+                                    // need to continue comparing this pair.
+                                    continue outer
+                                }
+                            }
+                        }
+                    }
+
+                    if indicesToMerge.isEmpty {
+                        // No overlap – simply add the new connection element.
+                        canvas.elements.append(.connection(newConn))
+                    } else {
+                        // Merge into the first matching existing connection.
+                        let primaryIdx = indicesToMerge.first!
+
+                        if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
+                            primaryConn.graph.merge(with: newConn.graph)
+                        }
+
+                        // Merge additional overlapping connection elements into the primary one.
+                        // Remove them from the canvas afterwards to avoid duplicates.
+                        // NOTE: indicesToMerge is sorted ascending because we collected via enumerate.
+                        // We'll iterate from the back to keep indices valid when removing.
+                        for idx in indicesToMerge.dropFirst().sorted(by: >) {
+                            if case .connection(let extraConn) = canvas.elements[idx] {
+                                if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
+                                    primaryConn.graph.merge(with: extraConn.graph)
+                                }
+                            }
+                            canvas.elements.remove(at: idx)
+                        }
+                    }
 
                 default:
                     canvas.elements.append(newElement)

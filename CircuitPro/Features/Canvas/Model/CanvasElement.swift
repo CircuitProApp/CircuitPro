@@ -72,13 +72,17 @@ enum CanvasElement: Identifiable, Hashable {
 }
 
 extension CanvasElement {
-    var transformable: Transformable {
+    /// Returns the transformable properties of the element, if available.
+    /// Note: `ConnectionElement` is not considered transformable as a whole,
+    /// as a complex net does not have a single position or rotation.
+    /// It can be moved, but this is handled by translating all its vertices.
+    var transformable: Transformable? {
         switch self {
         case .primitive(let primitive): return primitive
         case .pin(let pin): return pin
         case .pad(let pad): return pad
         case .symbol(let symbol): return symbol
-        case .connection(let connection): return connection
+        case .connection: return nil
         }
     }
 }
@@ -145,14 +149,9 @@ extension CanvasElement {
             pad.position = orig + delta; self = .pad(pad)
         case .symbol(var symbol):
             symbol.position = orig + delta; self = .symbol(symbol)
-        case .connection(var connection):
-//            c.segments = c.segments.map { seg in
-//                let start = seg.0 + delta
-//                let end   = seg.1 + delta
-//                return (start, end)
-//            }
-//            self = .connection(c)
-            print("implementationOnly: moveTo not implemented for .connection")
+        case .connection(let connection):
+            // For a connection, we translate all vertices in its graph.
+            connection.graph.translate(by: delta)
         }
     }
 }
@@ -164,11 +163,12 @@ extension CanvasElement {
         case .pin(var pin): pin.rotation = angle; self = .pin(pin)
         case .pad(var pad): pad.rotation = angle; self = .pad(pad)
         case .symbol(var symbol): symbol.rotation = angle; self = .symbol(symbol)
-        case .connection(var connection):
-            // connection needs a custom implementation because it has no single
-            // rotation property; delegate to a method you put on Connection itself
-            connection.rotation = angle
-            self = .connection(connection)
+        case .connection:
+            // Rotation of a whole net via a single angle is not a well-defined
+            // operation without a clear pivot point. This is intentionally a no-op.
+            // More specific rotation logic (e.g. rotating a selection of vertices)
+            // would be handled differently.
+            break
         }
     }
 }

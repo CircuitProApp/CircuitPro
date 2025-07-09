@@ -6,48 +6,49 @@
 import SwiftUI
 import AppKit
 
-struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
+// Note: Transformable conformance has been removed. See comments below.
+struct ConnectionElement: Identifiable, Drawable, Hittable {
 
     // MARK: – Identity
     let id: UUID
 
-    // MARK: – Geometry
-    /// Straight-line wire segments expressed in *local* coordinates.
-    var segments: [ConnectionSegment]
-
-    // MARK: – Transformable
-    var position: CGPoint
-    var rotation: CGFloat         // in radians
-
-    // MARK: – Private
-    /// Stable IDs for per-segment selection.
-    private let segmentIDs: [UUID]
+    // MARK: - Data Model
+    /// The underlying graph representing the connection net.
+    /// Using a class for ConnectionGraph allows for reference semantics,
+    /// where multiple elements could potentially share and manipulate the same net.
+    let graph: ConnectionGraph
 
     // MARK: – Init
     init(
         id: UUID = .init(),
-        segments: [ConnectionSegment],
-        position: CGPoint = .zero,
-        rotation: CGFloat = 0
+        graph: ConnectionGraph
     ) {
-        self.id         = id
-        self.segments   = segments
-        self.position   = position
-        self.rotation   = rotation
-        // Preserve the UUID baked into each segment so selection never shifts.
-        self.segmentIDs = segments.map(\.id)
+        self.id = id
+        self.graph = graph
     }
 
     // MARK: – Derived geometry
+    
+    /// The segments of the connection, derived from the graph model.
+    /// These segments are in the world coordinate space.
+    var segments: [ConnectionSegment] {
+        graph.edges.values.compactMap { edge in
+            guard let startVertex = graph.vertices[edge.start],
+                  let endVertex = graph.vertices[edge.end] else {
+                return nil
+            }
+            return ConnectionSegment(id: edge.id, start: startVertex.point, end: endVertex.point)
+        }
+    }
+    
     var primitives: [AnyPrimitive] {
-        zip(segmentIDs, segments).map { segID, seg in
+        segments.map { seg in
             .line(
                 LinePrimitive(
-                    id:          segID,
+                    id:          seg.id,
                     start:       seg.start,
                     end:         seg.end,
-                    rotation:    0,              // LinePrimitive is drawn in this element’s space;
-                                                // we apply the whole element’s transform later.
+                    rotation:    0,
                     strokeWidth: 1,
                     color:       SDColor(color: .blue)
                 )
@@ -55,11 +56,12 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
         }
     }
 
-    /// This element’s local-to-world transform.
-    private var currentTransform: CGAffineTransform {
-        CGAffineTransform(translationX: position.x, y: position.y)
-            .rotated(by: rotation)
-    }
+    /// With the removal of Transformable, the concept of a local-to-world transform
+    /// for the entire element is no longer applicable. All geometry in the
+    /// ConnectionGraph is stored in world coordinates. This simplifies merging
+    /// and manipulation of complex nets, as we no longer need to bake-in transforms.
+    /// Individual vertices or segments can still be transformed by directly
+    /// manipulating the data in the ConnectionGraph.
 
     // MARK: – Drawable
     func draw(in ctx: CGContext, with selection: Set<UUID>) {
@@ -103,12 +105,13 @@ struct ConnectionElement: Identifiable, Drawable, Hittable, Transformable {
         // Draw the wires
         primitives.forEach { $0.drawBody(in: ctx) }
 
-        // Draw junction dots (≥ 3 wires share the same vertex *after* transform)
+        // Draw junction dots (≥ 3 wires share the same vertex)
+        // This logic now correctly handles complex junctions because it operates
+        // on a unified graph in world coordinates.
         let vertexCounts = segments
             .flatMap { [$0.start, $0.end] }
-            .reduce(into: [CGPoint: Int]()) { counts, localPoint in
-                let worldPoint = localPoint.applying(currentTransform)
-                counts[worldPoint, default: 0] += 1
+            .reduce(into: [CGPoint: Int]()) { counts, point in
+                counts[point, default: 0] += 1
             }
 
         ctx.saveGState()

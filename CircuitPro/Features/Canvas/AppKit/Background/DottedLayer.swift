@@ -92,11 +92,13 @@ final class DottedLayer: BaseGridLayer {
                     let cx = CGFloat(i) * s + s * 0.5
                     for j in 0..<N {
                         let cy = CGFloat(j) * s + s * 0.5
-                        let isMajor = (i % N == 0) || (j % N == 0)
-                        let α: CGFloat = isMajor ? 0.7 : 0.3
-                        ctx.setFillColor(NSColor.gray.withAlphaComponent(α).cgColor)
-                        ctx.fillEllipse(in: CGRect(x: cx - r, y: cy - r,
-                                                   width: r * 2, height: r * 2))
+                        let isMajor = (i == 0) || (j == 0)   // i % N == 0 simplifies to i == 0
+                        ctx.setFillColor(gray: 0.5,            // 0.5 = 50 % gray
+                                         alpha: isMajor ? 0.7 : 0.3)
+                        ctx.fillEllipse(in: CGRect(x: cx - r,
+                                                   y: cy - r,
+                                                   width: r * 2,
+                                                   height: r * 2))
                     }
                 }
             },
