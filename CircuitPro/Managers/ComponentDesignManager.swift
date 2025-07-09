@@ -8,6 +8,16 @@
 import SwiftUI
 import Observation
 
+struct ValidationSummary {
+    var errors:   [ComponentField : String] = [:]
+    var warnings: [ComponentField : String] = [:]
+    var isValid:  Bool { errors.isEmpty }
+}
+
+enum ComponentField: Hashable {
+    case name, abbreviation, category, properties, symbol, pins
+}
+
 @Observable
 final class ComponentDesignManager {
 
@@ -76,19 +86,18 @@ final class ComponentDesignManager {
         layerAssignments = [:]
     }
 
-    func validate() -> ValidationResult {
-        var errors   = [String]()
-        var warnings = [String]()
+    func validate() -> ValidationSummary {
+        var summary = ValidationSummary()
 
         // 1. Errors on missing core fields
         if componentName.trimmingCharacters(in: .whitespaces).isEmpty {
-            errors.append("Component must have a name.")
+            summary.errors[.name] = "Component name is required."
         }
         if componentAbbreviation.trimmingCharacters(in: .whitespaces).isEmpty {
-            errors.append("Component must have an abbreviation.")
+            summary.errors[.abbreviation] = "Abbreviation is required."
         }
         if selectedCategory == nil {
-            errors.append("Component must have a category.")
+            summary.errors[.category] = "Choose a category."
         }
 
         // 2. Errors on symbol/primitives & pins
@@ -102,19 +111,19 @@ final class ComponentDesignManager {
         }
 
         if primitives.isEmpty {
-            errors.append("No symbol created.")
+            summary.errors[.symbol] = "No symbol created."
         }
         if pins.isEmpty {
-            errors.append("No pins added to symbol.")
+            summary.errors[.pins] = "No pins added to symbol."
         }
 
         // 3. Warning if no property has a key
         let hasAnyKey = componentProperties.contains { $0.key != nil }
         if !hasAnyKey {
-            warnings.append("At least one property should have a key.")
+            summary.errors[.properties] = "At least one property should have a key."
         }
 
-        return ValidationResult(errors: errors, warnings: warnings)
+        return summary
     }
 }
 
@@ -201,43 +210,5 @@ extension ComponentDesignManager {
                 }
             }
         )
-    }
-}
-
-// MARK: - Which fields can have errors
-struct ValidationSummary {
-    var errors:   [ComponentField : String] = [:]     // blocking
-    var warnings: [ComponentField : String] = [:]     // non-blocking
-    var isValid:  Bool { errors.isEmpty }             // only errors block
-}
-
-enum ComponentField: Hashable {
-    case name, abbreviation, category, packageType, properties
-}
-
-extension ComponentDesignManager {
-    func validateDetails() -> ValidationSummary {
-        var summary = ValidationSummary()
-
-        if componentName.trimmingCharacters(in: .whitespaces).isEmpty {
-            summary.errors[.name] = "Component name is required."
-        }
-        if componentAbbreviation.trimmingCharacters(in: .whitespaces).isEmpty {
-            summary.errors[.abbreviation] = "Abbreviation is required."
-        }
-        if selectedCategory == nil {
-            summary.errors[.category] = "Choose a category."
-        }
-        if selectedPackageType == nil {
-            summary.errors[.packageType] = "Choose a package type."
-        }
-
-        // NEW –– property-key rule → *warning*
-        let hasAnyKey = componentProperties.contains { $0.key != nil }
-        if !hasAnyKey {
-            summary.warnings[.properties] =
-              "At least one property should have a key."
-        }
-        return summary
     }
 }

@@ -1,11 +1,5 @@
 import SwiftUI
 
-struct ValidationResult {
-    let errors: [String]
-    let warnings: [String]
-    var isValid: Bool { errors.isEmpty }
-}
-
 struct ComponentDesignView: View {
 
     @Environment(\.dismissWindow)
@@ -134,10 +128,9 @@ struct ComponentDesignView: View {
                     symbolCanvasManager.showDrawingSheet = false
                     footprintCanvasManager.showDrawingSheet = false
                 }
-                .onChange(of: componentDesignManager.componentName)         { _ in refreshFieldValidation() }
-                .onChange(of: componentDesignManager.componentAbbreviation) { _ in refreshFieldValidation() }
-                .onChange(of: componentDesignManager.selectedCategory)      { _ in refreshFieldValidation() }
-                .onChange(of: componentDesignManager.selectedPackageType)   { _ in refreshFieldValidation() }
+                .onChange(of: componentDesignManager.componentName)         { refreshFieldValidation() }
+                .onChange(of: componentDesignManager.componentAbbreviation) { refreshFieldValidation() }
+                .onChange(of: componentDesignManager.selectedCategory)      { refreshFieldValidation() }
             }
         }
         .sheet(isPresented: $showFeedbackSheet) {
@@ -171,34 +164,32 @@ struct ComponentDesignView: View {
     }
     
     private func refreshFieldValidation() {
-        guard showFieldErrors                               // only once the user pressed “Create Component”
-        else { return }
-
-        validationSummary = componentDesignManager.validateDetails()
+        guard showFieldErrors else { return }
+        validationSummary = componentDesignManager.validate()
     }
 
     // 4. Build and insert component
     private func createComponent() {
+        let summary = componentDesignManager.validate()
+        self.validationSummary = summary
+        showFieldErrors = true
 
-        validationSummary = componentDesignManager.validateDetails()
-        showFieldErrors = true                          // turn on UI highlights
-
-        guard validationSummary.isValid else { return } // abort if errors
-        
-        let result = componentDesignManager.validate()
-
-        // 1 Block on errors
-        if !result.isValid {
-          messages = result.errors
-          showError = true
-          return
+        // Block on errors
+        if !summary.isValid {
+            let errorMessages = summary.errors.values.map { $0 }
+            if !errorMessages.isEmpty {
+                messages = errorMessages
+                showError = true
+            }
+            return
         }
 
-        // 2 Surface warnings (non-blocking)
-        if !result.warnings.isEmpty {
-          messages = result.warnings
-          showWarning = true
-          return
+        // Surface warnings (non-blocking)
+        let warningMessages = summary.warnings.values.map { $0 }
+        if !warningMessages.isEmpty {
+            messages = warningMessages
+            showWarning = true
+            return
         }
 
         let anchor = CGPoint(x: 2_500, y: 2_500)

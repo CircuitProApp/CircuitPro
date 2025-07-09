@@ -66,7 +66,6 @@ struct ComponentDetailView: View {
                     .pickerStyle(.menu)
                     .labelsHidden()
                     .frame(width: 300)
-                    .validationHighlight(showFieldErrors && validationSummary.errors[.packageType] != nil)
                 }
             }
             SectionView("Properties") {
