@@ -13,6 +13,12 @@ struct StageIndicatorView: View {
                     validationState: validationProvider(stage)
                 )
                 .onTapGesture { currentStage = stage }
+                if stage != .footprint {
+                    Image(systemName: CircuitProSymbols.Generic.chevronRight)
+                        .imageScale(.large)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
         .padding()

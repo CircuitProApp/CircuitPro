@@ -7,8 +7,12 @@
 
 import SwiftUI
 
-enum ValidationState {
-    case valid, warning, error
+struct ValidationState: OptionSet {
+    let rawValue: Int
+
+    static let valid = ValidationState([])
+    static let warning = ValidationState(rawValue: 1 << 0)
+    static let error = ValidationState(rawValue: 1 << 1)
 }
 
 struct ValidationHighlightModifier: ViewModifier {
@@ -19,28 +23,27 @@ struct ValidationHighlightModifier: ViewModifier {
         content.overlay(
             RoundedRectangle(cornerRadius: 7.5)
                 .stroke(strokeColor, style: strokeStyle)
+                .animation(.default, value: state)
         )
     }
 
     private var strokeColor: Color {
-        switch state {
-        case .valid:
-            return .clear
-        case .warning:
-            return .yellow
-        case .error:
+        if state.contains(.error) {
             return .red
+        } else if state.contains(.warning) {
+            return .yellow
+        } else {
+            return .clear
         }
     }
 
     private var strokeStyle: StrokeStyle {
-        switch state {
-        case .valid:
-            return StrokeStyle(lineWidth: 0)
-        case .warning:
-            return StrokeStyle(lineWidth: 2, dash: [6])
-        case .error:
+        if state.contains(.error) {
             return StrokeStyle(lineWidth: 2)
+        } else if state.contains(.warning) {
+            return StrokeStyle(lineWidth: 2, dash: [6])
+        } else {
+            return StrokeStyle(lineWidth: 0)
         }
     }
 }

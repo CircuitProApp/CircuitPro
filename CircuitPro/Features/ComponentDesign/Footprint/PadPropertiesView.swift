@@ -41,6 +41,7 @@ struct PadPropertiesView: View {
                                 Text("Drill diameter exceeds pad size.")
                                     .padding(7.5)
                             }
+                            .transition(.opacity.combined(with: .scale))
                     }
                     fieldWithUnit {
                         DoubleField(

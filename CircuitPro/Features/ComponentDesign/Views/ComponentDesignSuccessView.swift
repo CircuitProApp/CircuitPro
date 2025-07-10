@@ -5,11 +5,10 @@ struct ComponentDesignSuccessView: View {
     var onCreateAnother: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: CircuitProSymbols.Generic.checkmark)
-                .resizable()
-                .frame(width: 80, height: 80)
-                .foregroundStyle(.primary, .green.gradient)
+        VStack(spacing: 26) {
+            Image(systemName: CircuitProSymbols.Generic.checkmark.appending(".seal.fill"))
+                .font(.system(size: 100))
+                .foregroundStyle(.white, .green.gradient)
             Text("Component created successfully")
                 .font(.title)
                 .foregroundStyle(.primary)

@@ -17,15 +17,13 @@ struct StagePill: View {
         HStack {
             Text(stage.label)
 
-            switch validationState {
-            case .error:
+            if validationState.contains(.error) {
                 Image(systemName: "exclamationmark.circle.fill")
                     .foregroundStyle(.white, .red)
-            case .warning:
+            }
+            if validationState.contains(.warning) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.white, .yellow)
-            case .valid:
-                EmptyView()
             }
         }
         .padding(10)

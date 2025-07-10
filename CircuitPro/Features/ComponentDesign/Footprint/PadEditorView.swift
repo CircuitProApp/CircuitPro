@@ -50,6 +50,7 @@ struct PadEditorView: View {
                 Spacer()
             }
         }
+        .validationStatus(componentDesignManager.validationState(for: ComponentDesignStage.FootprintRequirement.padDrillSize))
     }
 
     private func togglePadSelection(pad: Pad) {

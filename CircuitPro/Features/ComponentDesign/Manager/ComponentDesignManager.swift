@@ -101,25 +101,27 @@ final class ComponentDesignManager {
     func validationState(for requirement: any StageRequirement) -> ValidationState {
         guard showFieldErrors else { return .valid }
         let key = AnyHashable(requirement)
+        var state: ValidationState = .valid
         if validationSummary.requirementErrors[key] != nil {
-            return .error
+            state.insert(.error)
         }
         if validationSummary.requirementWarnings[key] != nil {
-            return .warning
+            state.insert(.warning)
         }
-        return .valid
+        return state
     }
 
     func validationState(for stage: ComponentDesignStage) -> ValidationState {
         guard showFieldErrors else { return .valid }
 
+        var state: ValidationState = .valid
         if !(validationSummary.errors[stage]?.isEmpty ?? true) {
-            return .error
+            state.insert(.error)
         }
         if !(validationSummary.warnings[stage]?.isEmpty ?? true) {
-            return .warning
+            state.insert(.warning)
         }
-        return .valid
+        return state
     }
 
     func validate() -> ValidationSummary {

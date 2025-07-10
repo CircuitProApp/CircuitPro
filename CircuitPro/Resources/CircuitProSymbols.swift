@@ -36,6 +36,7 @@ extension CircuitProSymbols {
         static let tray = "tray"
         static let eye = "eye"
         static let chevronDown = "chevron.down"
+        static let chevronRight = "chevron.right"
         static let checkmark = "checkmark"
         static let arrowUpRight = "arrow.up.right"
         static let questionmark = "questionmark"

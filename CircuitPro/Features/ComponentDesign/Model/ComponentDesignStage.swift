@@ -29,13 +29,13 @@ enum ComponentDesignStage: String, Displayable, CaseIterable {
         case primitives, pins
     }
     enum FootprintRequirement: StageRequirement {
-        case pads // Example
+        case pads, padDrillSize
     }
 
     // MARK: - Validation
     func validate(manager: ComponentDesignManager) -> (errors: [StageValidationError], warnings: [StageValidationError]) {
         var errors: [StageValidationError] = []
-        let warnings: [StageValidationError] = []
+        var warnings: [StageValidationError] = []
 
         switch self {
         case .component:
@@ -59,8 +59,26 @@ enum ComponentDesignStage: String, Displayable, CaseIterable {
                 errors.append(.init(message: "No pins added to symbol.", requirement: SymbolRequirement.pins))
             }
         case .footprint:
-            // TODO: Add footprint validation logic
-            break
+            if manager.footprintElements.compactMap({ $0.primitive }).isEmpty {
+                errors.append(.init(message: "No footprint created.", requirement: SymbolRequirement.primitives))
+            }
+            if manager.pads.isEmpty {
+                errors.append(.init(message: "No pads added to footprint.", requirement: FootprintRequirement.pads))
+            }
+            for pad in manager.pads {
+                if let drillDiameter = pad.drillDiameter {
+                    let isTooLarge: Bool
+                    switch pad.shape {
+                    case .circle(let radius):
+                        isTooLarge = drillDiameter > radius
+                    case .rect(let width, let height):
+                        isTooLarge = drillDiameter > width || drillDiameter > height
+                    }
+                    if isTooLarge {
+                        warnings.append(.init(message: "Drill diameter for pad \(pad.number) exceeds its size.", requirement: FootprintRequirement.padDrillSize))
+                    }
+                }
+            }
         }
         return (errors, warnings)
     }
