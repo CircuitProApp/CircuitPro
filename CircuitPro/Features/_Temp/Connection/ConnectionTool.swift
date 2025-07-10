@@ -74,7 +74,15 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
                     let corner = startsWithHorizontal ? CGPoint(x: firstVertex.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: firstVertex.y)
 
-                    if corner != lastVertex {
+                    // Only insert the auto-generated corner if it is truly a new
+                    // intermediate point – i.e. distinct from both the
+                    // previous vertex and the first vertex.  Without this check
+                    // a duplicate of the starting point (when closing a loop
+                    // by clicking exactly on the first vertex) would be
+                    // appended, creating two coincident vertices that later
+                    // manifest as a zero-length edge and the apparent
+                    // disappearance of the first and last real segments.
+                    if corner != lastVertex && corner != firstVertex {
                         points.append(corner)
                     }
                 }
