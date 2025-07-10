@@ -24,35 +24,22 @@ struct ComponentDesignView: View {
     var body: some View {
         Group {
             if didCreateComponent {
-                // 2. Success screen
-                VStack(spacing: 20) {
-                    Image(systemName: CircuitProSymbols.Generic.checkmark)
-                        .resizable()
-                        .frame(width: 80, height: 80)
-                        .foregroundStyle(.primary, .green.gradient)
-                    Text("Component created successfully")
-                        .font(.title)
-                        .foregroundStyle(.primary)
-                    HStack {
-                        Button {
-                            dismissWindow.callAsFunction()
-                            resetForNewComponent()
-                        } label: {
-                            Text("Close Window")
-                        }
-
-                        Button("Create Another") {
-                            resetForNewComponent()
-                        }
-                        .buttonStyle(.borderedProminent)
+                ComponentDesignSuccessView(
+                    onClose: {
+                        dismissWindow.callAsFunction()
+                        resetForNewComponent()
+                    },
+                    onCreateAnother: {
+                        resetForNewComponent()
                     }
-                }
-                .padding()
+                )
                 .navigationTitle("Component Designer")
             } else {
-                // 3. Original design UI
                 VStack {
-                    stageIndicator
+                    StageIndicatorView(
+                        currentStage: $currentStage,
+                        validationProvider: componentDesignManager.validationState
+                    )
                     Spacer()
                     StageContentView(
                         left: {
@@ -227,17 +214,4 @@ struct ComponentDesignView: View {
         didCreateComponent = false
     }
 
-    private var stageIndicator: some View {
-        HStack {
-            ForEach(ComponentDesignStage.allCases) { stage in
-                StagePill(
-                    stage: stage,
-                    isSelected: currentStage == stage,
-                    validationState: componentDesignManager.validationState(for: stage)
-                )
-                .onTapGesture { currentStage = stage }
-            }
-        }
-        .padding()
-    }
 }
