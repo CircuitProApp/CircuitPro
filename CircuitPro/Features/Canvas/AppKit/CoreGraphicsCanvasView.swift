@@ -191,8 +191,13 @@ final class CoreGraphicsCanvasView: NSView {
                     // Remove the selected segments and get the resulting components
                     let newGraphs = conn.graph.removeEdges(withIDs: Set(selectedSegmentIDs))
 
-                    // Create new ConnectionElements for each resulting graph
+                    // Simplify each graph so that any newly-formed collinear
+                    // segments are merged (e.g. two collinear stubs left after
+                    // deleting the third leg of a junction).
                     for newGraph in newGraphs {
+                        newGraph.simplifyCollinearSegments()
+
+                        // Create a new ConnectionElement for the simplified graph
                         out.append(.connection(ConnectionElement(graph: newGraph)))
                     }
                 } else {
