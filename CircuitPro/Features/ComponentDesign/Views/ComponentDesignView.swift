@@ -147,7 +147,10 @@ struct ComponentDesignView: View {
     // 4. Build and insert component
     private func createComponent() {
         if !componentDesignManager.validateForCreation() {
-            let errorMessages = componentDesignManager.validationSummary.errors.values.map { $0 }
+            let errorMessages = componentDesignManager.validationSummary.errors.values
+                .flatMap { $0 }
+                .map { $0.message }
+
             if !errorMessages.isEmpty {
                 messages = errorMessages
                 showError = true
@@ -156,7 +159,10 @@ struct ComponentDesignView: View {
         }
 
         // Surface warnings (non-blocking)
-        let warningMessages = componentDesignManager.validationSummary.warnings.values.map { $0 }
+        let warningMessages = componentDesignManager.validationSummary.warnings.values
+            .flatMap { $0 }
+            .map { $0.message }
+            
         if !warningMessages.isEmpty {
             messages = warningMessages
             showWarning = true

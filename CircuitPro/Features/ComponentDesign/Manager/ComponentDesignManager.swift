@@ -25,6 +25,7 @@ final class ComponentDesignManager {
     var symbolElements: [CanvasElement] = [] {
         didSet {
             updateSymbolIndexMap()
+            refreshValidation()
         }
     }
     var selectedSymbolElementIDs: Set<UUID> = []
@@ -35,6 +36,7 @@ final class ComponentDesignManager {
     var footprintElements: [CanvasElement] = [] {
         didSet {
             updateFootprintIndexMap()
+            refreshValidation()
         }
     }
     var selectedFootprintElementIDs: Set<UUID> = []
@@ -96,64 +98,43 @@ final class ComponentDesignManager {
         return validationSummary.isValid
     }
 
-    func validationState(for field: ComponentField) -> ValidationState {
+    func validationState(for requirement: any StageRequirement) -> ValidationState {
         guard showFieldErrors else { return .valid }
-        if validationSummary.errors[field] != nil {
+        let key = AnyHashable(requirement)
+        if validationSummary.requirementErrors[key] != nil {
             return .error
         }
-        if validationSummary.warnings[field] != nil {
+        if validationSummary.requirementWarnings[key] != nil {
             return .warning
         }
         return .valid
     }
 
     func validationState(for stage: ComponentDesignStage) -> ValidationState {
-        guard stage == .component else { return .valid }
+        guard showFieldErrors else { return .valid }
 
-        if !validationSummary.errors.isEmpty {
+        if !(validationSummary.errors[stage]?.isEmpty ?? true) {
             return .error
-        } else if !validationSummary.warnings.isEmpty {
-            return .warning
-        } else {
-            return .valid
         }
+        if !(validationSummary.warnings[stage]?.isEmpty ?? true) {
+            return .warning
+        }
+        return .valid
     }
 
     func validate() -> ValidationSummary {
         var summary = ValidationSummary()
 
-        // 1. Errors on missing core fields
-        if componentName.trimmingCharacters(in: .whitespaces).isEmpty {
-            summary.errors[.name] = "Component name is required."
-        }
-        if componentAbbreviation.trimmingCharacters(in: .whitespaces).isEmpty {
-            summary.errors[.abbreviation] = "Abbreviation is required."
-        }
-        if selectedCategory == nil {
-            summary.errors[.category] = "Choose a category."
-        }
+        for stage in ComponentDesignStage.allCases {
+            let stageResult = stage.validate(manager: self)
 
-        // 2. Errors on symbol/primitives & pins
-        let primitives = symbolElements.compactMap { elem -> AnyPrimitive? in
-            if case .primitive(let primitive) = elem { return primitive }
-            return nil
-        }
-        let pins = symbolElements.compactMap { elem -> Pin? in
-            if case .pin(let pin) = elem { return pin }
-            return nil
-        }
+            if !stageResult.errors.isEmpty {
+                summary.errors[stage] = stageResult.errors
+            }
 
-        if primitives.isEmpty {
-            summary.errors[.symbol] = "No symbol created."
-        }
-        if pins.isEmpty {
-            summary.errors[.pins] = "No pins added to symbol."
-        }
-
-        // 3. Warning if no property has a key
-        let hasAnyKey = componentProperties.contains { $0.key != nil }
-        if !hasAnyKey {
-            summary.errors[.properties] = "At least one property should have a key."
+            if !stageResult.warnings.isEmpty {
+                summary.warnings[stage] = stageResult.warnings
+            }
         }
 
         return summary
@@ -181,21 +162,22 @@ extension ComponentDesignManager {
 
     func bindingForPin(with id: UUID) -> Binding<Pin>? {
         guard let index = symbolElementIndexMap[id],
-              case .pin = symbolElements[safe: index]
+              case .pin(let pin) = symbolElements[safe: index]
         else {
             return nil
         }
 
         return Binding<Pin>(
             get: {
-                if case .pin(let pin) = self.symbolElements[safe: index] {
-                    return pin
-                } else {
-                    fatalError("Index map is out of sync or element is not a Pin.")
-                }
+                guard let index = self.symbolElementIndexMap[id],
+                      case .pin(let p) = self.symbolElements[safe: index]
+                else { return pin }
+                return p
             },
             set: { newValue in
-                if self.symbolElements.indices.contains(index) {
+                if let index = self.symbolElementIndexMap[id],
+                   self.symbolElements.indices.contains(index)
+                {
                     self.symbolElements[index] = .pin(newValue)
                 }
             }
@@ -224,21 +206,22 @@ extension ComponentDesignManager {
 
     func bindingForPad(with id: UUID) -> Binding<Pad>? {
         guard let index = footprintElementIndexMap[id],
-              case .pad = footprintElements[safe: index]
+              case .pad(let pad) = footprintElements[safe: index]
         else {
             return nil
         }
 
         return Binding<Pad>(
             get: {
-                if case .pad(let pad) = self.footprintElements[safe: index] {
-                    return pad
-                } else {
-                    fatalError("Index map is out of sync or element is not a Pad.")
-                }
+                guard let index = self.footprintElementIndexMap[id],
+                      case .pad(let p) = self.footprintElements[safe: index]
+                else { return pad }
+                return p
             },
             set: { newValue in
-                if self.footprintElements.indices.contains(index) {
+                if let index = self.footprintElementIndexMap[id],
+                   self.footprintElements.indices.contains(index)
+                {
                     self.footprintElements[index] = .pad(newValue)
                 }
             }

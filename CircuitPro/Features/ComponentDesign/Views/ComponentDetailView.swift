@@ -24,7 +24,7 @@ struct ComponentDetailView: View {
                         .padding(10)
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
-                        .validationStatus(componentDesignManager.validationState(for: .name))
+                        .validationStatus(componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.name))
                 }
                 SectionView("Abbreviation") {
                     TextField("e.g. LED", text: $manager.componentAbbreviation)
@@ -34,7 +34,7 @@ struct ComponentDetailView: View {
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
                         .frame(width: 200)
-                        .validationStatus(componentDesignManager.validationState(for: .abbreviation))
+                        .validationStatus(componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.abbreviation))
                 }
             }
 
@@ -50,7 +50,7 @@ struct ComponentDetailView: View {
                     .pickerStyle(.menu)
                     .labelsHidden()
                     .frame(width: 300)
-                    .validationStatus(componentDesignManager.validationState(for: .category))
+                    .validationStatus(componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.category))
                 }
                 SectionView("Package Type") {
                     Picker("Package Type", selection: $manager.selectedPackageType) {
@@ -68,7 +68,7 @@ struct ComponentDetailView: View {
             SectionView("Properties") {
                 ComponentPropertiesView(
                     componentProperties: $manager.componentProperties,
-                    validationState: componentDesignManager.validationState(for: .properties)
+                    validationState: componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.properties)
                 )
             }
         }

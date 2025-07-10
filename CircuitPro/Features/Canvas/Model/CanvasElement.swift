@@ -26,6 +26,11 @@ enum CanvasElement: Identifiable, Hashable {
         }
     }
 
+    var primitive: AnyPrimitive? {
+        guard case .primitive(let primitive) = self else { return nil }
+        return primitive
+    }
+
     // MARK: Primitives
     var primitives: [AnyPrimitive] {
         switch self {
