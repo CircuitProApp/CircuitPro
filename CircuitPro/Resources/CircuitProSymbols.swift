@@ -71,6 +71,10 @@ extension CircuitProSymbols {
         static let layoutNets = "point.3.connected.trianglepath.dotted"
     }
     
+    enum Schematic {
+        static let connectionWire = "connection.wire"
+    }
+    
     enum Graphic {
         static let line = "line.diagonal"
         static let rectangle = "rectangle"

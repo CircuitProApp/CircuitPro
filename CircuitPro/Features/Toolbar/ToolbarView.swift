@@ -69,10 +69,16 @@ struct ToolbarView<Tool: CanvasTool>: View {
             selectedTool = tool
             onToolSelected(tool)
         } label: {
-            Image(systemName: imageName(tool))
-                .font(.system(size: 16))
-                .frame(width: 22, height: 22)
-                .foregroundStyle(selectedTool == tool ? .blue : .secondary)
+            Group {
+                if tool.id == "connection" {
+                    Image(imageName(tool))
+                } else {
+                    Image(systemName: imageName(tool))
+                }
+            }
+            .font(.system(size: 16))
+            .frame(width: 22, height: 22)
+            .foregroundStyle(selectedTool == tool ? .blue : .secondary)
         }
         .if(index < 9) { view in
             view.keyboardShortcut(

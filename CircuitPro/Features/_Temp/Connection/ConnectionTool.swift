@@ -6,7 +6,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     // MARK: – Metadata required by CanvasTool
     let id         = "connection"
-    let symbolName = CircuitProSymbols.Graphic.line
+    let symbolName = CircuitProSymbols.Schematic.connectionWire
     let label      = "Connection"
 
     // MARK: – Internal drawing state
