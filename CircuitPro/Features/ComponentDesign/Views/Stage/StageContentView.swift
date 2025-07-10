@@ -40,21 +40,3 @@ struct StageContentView<Left: View, Center: View, Right: View>: View {
         }
     }
 }
-
-struct StageSidebarView<Header: View, Content: View>: View {
-    @ViewBuilder let header: Header
-    @ViewBuilder let content: Content
-    var body: some View {
-        VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 10) {
-                header
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-//            .border(edge: .bottom, style: .gray.opacity(0.3))
-            content
-        }
-        .frame(maxHeight: .infinity)
-        .clipAndStroke(with: RoundedRectangle(cornerRadius: 15))
-    }
-}

@@ -7,8 +7,6 @@
 
 import SwiftUI
 
-import SwiftUI
-
 struct ComponentDetailView: View {
 
     @Environment(\.componentDesignManager)
