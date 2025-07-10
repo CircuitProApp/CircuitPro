@@ -283,8 +283,13 @@ final class CanvasInteractionController {
                     // existing one that shares a vertex.
 
                     // 1) Collect indices of existing connection elements that
-                    //    share at least one vertex position with the new
-                    //    connection (within a small tolerance).
+                    //    either share a vertex with the new connection *or*
+                    //    have an edge that is intersected orthogonally by a
+                    //    vertex of the new connection.  In the latter case we
+                    //    first split that edge so that the two connections now
+                    //    share an explicit vertex, allowing a straightforward
+                    //    merge of their graphs.
+
                     var indicesToMerge: [Int] = []
 
                     let tolerance: CGFloat = 0.01
@@ -292,17 +297,61 @@ final class CanvasInteractionController {
                     outer: for (index, element) in canvas.elements.enumerated() {
                         guard case .connection(let existingConn) = element else { continue }
 
-                        for vNew in newConn.graph.vertices.values {
+                        var shareVertex = false
+
+                        // a) Direct vertex overlap check.
+                        vertexLoop: for vNew in newConn.graph.vertices.values {
                             for vOld in existingConn.graph.vertices.values {
                                 let dx = vNew.point.x - vOld.point.x
                                 let dy = vNew.point.y - vOld.point.y
                                 if abs(dx) <= tolerance && abs(dy) <= tolerance {
-                                    indicesToMerge.append(index)
-                                    // We found at least one shared vertex; no
-                                    // need to continue comparing this pair.
-                                    continue outer
+                                    shareVertex = true
+                                    break vertexLoop
                                 }
                             }
+                        }
+
+                        // b) If no vertex overlap, check if any vertex of the
+                        //    new connection lies on an edge of the existing
+                        //    connection (within tolerance).  If so we split
+                        //    that edge at the intersection, effectively
+                        //    creating a shared vertex.
+
+                        if !shareVertex {
+                            intersectionCheck: for vNew in newConn.graph.vertices.values {
+                                let p = vNew.point
+                                for (edgeID, edge) in existingConn.graph.edges {
+                                    guard let start = existingConn.graph.vertices[edge.start]?.point,
+                                          let end   = existingConn.graph.vertices[edge.end]?.point else { continue }
+
+                                    let isVertical   = start.x == end.x
+                                    let isHorizontal = start.y == end.y
+
+                                    if isVertical {
+                                        // Check x alignment and y within range
+                                        if abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance {
+                                            // Ensure not at endpoints
+                                            if !(abs(p.y - start.y) <= tolerance) && !(abs(p.y - end.y) <= tolerance) {
+                                                _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
+                                            }
+                                            shareVertex = true
+                                            break intersectionCheck
+                                        }
+                                    } else if isHorizontal {
+                                        if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
+                                            if !(abs(p.x - start.x) <= tolerance) && !(abs(p.x - end.x) <= tolerance) {
+                                                _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
+                                            }
+                                            shareVertex = true
+                                            break intersectionCheck
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if shareVertex {
+                            indicesToMerge.append(index)
                         }
                     }
 

@@ -124,6 +124,68 @@ public class ConnectionGraph {
             vertices[id]?.point.y += offset.y
         }
     }
+
+    // MARK: – Vertex helpers
+
+    /// Ensures there is a vertex at the specified point (within the given tolerance).
+    ///
+    /// - If a vertex already exists at that location, the existing instance is returned.
+    /// - Otherwise a new vertex is inserted, added to the vertex store and returned.
+    ///
+    /// The adjacency list is initialised for newly-created vertices.
+    @discardableResult
+    public func ensureVertex(at point: CGPoint, tolerance: CGFloat = 0.01) -> ConnectionVertex {
+        if let existing = vertices.values.first(where: { hypot($0.point.x - point.x, $0.point.y - point.y) <= tolerance }) {
+            return existing
+        }
+
+        let v = ConnectionVertex(point: point)
+        vertices[v.id] = v
+        adjacency[v.id] = []
+        return v
+    }
+
+    /// Splits the specified edge by inserting a vertex at `point`.
+    ///
+    /// If the point coincides (within tolerance) with either endpoint, the graph is left unmodified and that endpoint
+    /// is returned.  Otherwise the edge is removed and two new edges are created, effectively forming a junction.
+    ///
+    /// The function is idempotent – repeated calls with the same parameters will not create duplicate edges.
+    @discardableResult
+    public func splitEdge(_ edgeID: ConnectionEdge.ID, at point: CGPoint, tolerance: CGFloat = 0.01) -> ConnectionVertex? {
+        guard let edge = edges[edgeID],
+              let startVertex = vertices[edge.start],
+              let endVertex   = vertices[edge.end] else { return nil }
+
+        // If point is on either endpoint, nothing to do.
+        let onStart = abs(startVertex.point.x - point.x) <= tolerance && abs(startVertex.point.y - point.y) <= tolerance
+        let onEnd   = abs(endVertex.point.x   - point.x) <= tolerance && abs(endVertex.point.y   - point.y) <= tolerance
+
+        if onStart { return startVertex }
+        if onEnd   { return endVertex }
+
+        // Ensure vertex exists (will create if required)
+        let junction = ensureVertex(at: point, tolerance: tolerance)
+
+        // Remove the original edge (if still present – idempotency)
+        if edges.removeValue(forKey: edgeID) != nil {
+            adjacency[edge.start]?.remove(edgeID)
+            adjacency[edge.end]?.remove(edgeID)
+        }
+
+        // Add the two replacement edges if they don't already exist.
+        func addUniqueEdge(from a: ConnectionVertex.ID, to b: ConnectionVertex.ID) {
+            // Guard against existing identical edge (in either direction)
+            if !edges.values.contains(where: { ($0.start == a && $0.end == b) || ($0.start == b && $0.end == a) }) {
+                _ = addEdge(from: a, to: b)
+            }
+        }
+
+        addUniqueEdge(from: startVertex.id, to: junction.id)
+        addUniqueEdge(from: junction.id, to: endVertex.id)
+
+        return junction
+    }
     
     /// Simplifies the graph by merging collinear segments.
     public func simplifyCollinearSegments() {

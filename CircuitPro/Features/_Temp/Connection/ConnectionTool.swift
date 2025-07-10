@@ -59,11 +59,39 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         let distanceToLast = hypot(loc.x - lastVertex.x, loc.y - lastVertex.y)
         let distanceToFirst = hypot(loc.x - firstVertex.x, loc.y - firstVertex.y)
 
-        let shouldFinalize = distanceToLast < 5 || distanceToFirst < 5
+        // Check for self-intersection. A click is considered an intersection if it lands on any
+        // existing segment of the poly-line being drawn, excluding the most recent segment.
+        var intersectionInfo: (point: CGPoint, segmentIndex: Int)?
+        if points.count >= 3 { // Need at least two segments (3 points) to intersect with.
+            for i in 0..<(points.count - 2) {
+                let start = points[i]
+                let end = points[i+1]
+                let tolerance: CGFloat = 0.01
+
+                let isVertical = abs(start.x - end.x) < tolerance
+                let isHorizontal = abs(start.y - end.y) < tolerance
+
+                if isVertical {
+                    if abs(loc.x - start.x) < tolerance && loc.y >= min(start.y, end.y) - tolerance && loc.y <= max(start.y, end.y) + tolerance {
+                        intersectionInfo = (point: CGPoint(x: start.x, y: loc.y), segmentIndex: i)
+                        break
+                    }
+                } else if isHorizontal {
+                    if abs(loc.y - start.y) < tolerance && loc.x >= min(start.x, end.x) - tolerance && loc.x <= max(start.x, end.x) + tolerance {
+                        intersectionInfo = (point: CGPoint(x: loc.x, y: start.y), segmentIndex: i)
+                        break
+                    }
+                }
+            }
+        }
+
+        let shouldFinalize = distanceToLast < 5 || distanceToFirst < 5 || intersectionInfo != nil
 
         if shouldFinalize {
+            let finalLoc = intersectionInfo?.point ?? loc
+
             // If closing a loop, ensure the points array is correctly set up
-            if distanceToFirst < 5 {
+            if distanceToFirst < 5 && intersectionInfo == nil {
                 if lastVertex != firstVertex {
                     let startsWithHorizontal: Bool
                     if let lastOrientation = self.lastSegmentOrientation {
@@ -74,20 +102,11 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
                     let corner = startsWithHorizontal ? CGPoint(x: firstVertex.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: firstVertex.y)
 
-                    // Only insert the auto-generated corner if it is truly a new
-                    // intermediate point – i.e. distinct from both the
-                    // previous vertex and the first vertex.  Without this check
-                    // a duplicate of the starting point (when closing a loop
-                    // by clicking exactly on the first vertex) would be
-                    // appended, creating two coincident vertices that later
-                    // manifest as a zero-length edge and the apparent
-                    // disappearance of the first and last real segments.
                     if corner != lastVertex && corner != firstVertex {
                         points.append(corner)
                     }
                 }
-            } else { // Not closing a loop, but finalizing by proximity to last
-                // Add L-shape points for the last segment if not already added
+            } else { // Not closing a loop, or self-intersecting
                 let startsWithHorizontal: Bool
                 if let lastOrientation = self.lastSegmentOrientation {
                     startsWithHorizontal = (lastOrientation == .vertical)
@@ -95,13 +114,13 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
                     startsWithHorizontal = true
                 }
 
-                let corner = startsWithHorizontal ? CGPoint(x: loc.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: loc.y)
+                let corner = startsWithHorizontal ? CGPoint(x: finalLoc.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: finalLoc.y)
 
                 if corner != lastVertex {
                     points.append(corner)
                 }
-                if loc != corner {
-                    points.append(loc)
+                if finalLoc != corner {
+                    points.append(finalLoc)
                 }
             }
 
@@ -112,25 +131,51 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
                 return nil
             }
 
-            // Simplify the points to remove collinear intermediates
-            let simplifiedPoints = ConnectionTool.simplifyCollinear(points)
-
-            // Create a ConnectionGraph from the simplified points.
+            // Create a ConnectionGraph from the points.
+            // We do not simplify here, as we need the original indices for intersection logic.
             let graph = ConnectionGraph()
             var createdVertices: [ConnectionVertex] = []
-            for p in simplifiedPoints {
-                createdVertices.append(graph.addVertex(at: p))
+            for p in points {
+                // Use ensureVertex to handle cases where points might be at the same location (e.g., closing a loop)
+                createdVertices.append(graph.ensureVertex(at: p))
             }
 
             // Add edges between consecutive vertices
             for i in 0..<(createdVertices.count - 1) {
-                graph.addEdge(from: createdVertices[i].id, to: createdVertices[i+1].id)
+                if createdVertices[i].id != createdVertices[i+1].id {
+                    graph.addEdge(from: createdVertices[i].id, to: createdVertices[i+1].id)
+                }
             }
 
             // If it's a closed loop, add the final edge from last to first vertex
             if distanceToFirst < 5 && createdVertices.count >= 2 {
-                graph.addEdge(from: createdVertices.last!.id, to: createdVertices.first!.id)
+                let firstV = createdVertices.first!
+                let lastV = createdVertices.last!
+                if firstV.id != lastV.id {
+                    graph.addEdge(from: lastV.id, to: firstV.id)
+                }
             }
+
+            // If we detected a self-intersection, we need to split the intersected edge.
+            if let info = intersectionInfo {
+                let startVertex = createdVertices[info.segmentIndex]
+                let endVertex = createdVertices[info.segmentIndex + 1]
+
+                // Find the edge in the graph that corresponds to the intersected segment.
+                if let edgeToSplit = graph.edges.values.first(where: {
+                    ($0.start == startVertex.id && $0.end == endVertex.id) ||
+                    ($0.start == endVertex.id && $0.end == startVertex.id)
+                }) {
+                    // `splitEdge` will find/create a vertex at the intersection point and connect
+                    // the split segments to it. Because we already added the intersection point
+                    // to our `points` array, `ensureVertex` inside `splitEdge` will find the
+                    // existing vertex, correctly forming the junction.
+                    graph.splitEdge(edgeToSplit.id, at: info.point)
+                }
+            }
+
+            // Now that the topology is correct, simplify the graph to merge any collinear segments.
+            graph.simplifyCollinearSegments()
 
             let conn = ConnectionElement(graph: graph)
             points.removeAll()
