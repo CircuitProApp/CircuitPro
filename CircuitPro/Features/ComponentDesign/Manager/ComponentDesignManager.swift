@@ -8,16 +8,6 @@
 import SwiftUI
 import Observation
 
-struct ValidationSummary {
-    var errors:   [ComponentField : String] = [:]
-    var warnings: [ComponentField : String] = [:]
-    var isValid:  Bool { errors.isEmpty }
-}
-
-enum ComponentField: Hashable {
-    case name, abbreviation, category, properties, symbol, pins
-}
-
 @Observable
 final class ComponentDesignManager {
 
