@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/CodeEditApp/AboutWindow",
       "state" : {
-        "revision" : "79c7c01fb739d024a3ca07fe153a068339213baf",
-        "version" : "1.0.0"
+        "revision" : "bdec18efb0dbee79613e7efa446ed3cc8e834842",
+        "version" : "1.0.1"
       }
     },
     {
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/CodeEditApp/CodeEditWelcomeWindow",
       "state" : {
-        "revision" : "5168cf1ce9579b35ad00706fafef441418d8011f",
-        "version" : "1.0.0"
+        "revision" : "a23cb09e34e781079981260aaa576e7e18969737",
+        "version" : "1.0.1"
       }
     },
     {
