@@ -248,71 +248,64 @@ public class ConnectionGraph {
     }
     
     public func removeEdges(withIDs edgeIDsToRemove: Set<ConnectionEdge.ID>) -> [ConnectionGraph] {
-        // 1. Create a mutable copy of the current graph's data
-        var currentVertices = self.vertices
-        var currentEdges = self.edges
-        var currentAdjacency = self.adjacency
-        
-        // 2. Remove specified edges and update adjacency
-        for edgeID in edgeIDsToRemove {
-            if let edge = currentEdges[edgeID] {
-                currentEdges.removeValue(forKey: edgeID)
-                currentAdjacency[edge.start]?.remove(edgeID)
-                currentAdjacency[edge.end]?.remove(edgeID)
-            }
+        // 1. Create a new graph state with the specified edges removed.
+        var remainingEdges = self.edges
+        edgeIDsToRemove.forEach { remainingEdges.removeValue(forKey: $0) }
+
+        if remainingEdges.isEmpty {
+            return []
         }
-        
-        // 3. Remove isolated vertices (vertices with no connected edges)
-        //    and identify connected components
+
+        // 2. Determine the set of vertices that are still part of the graph.
+        let activeVertexIDs = Set(remainingEdges.values.flatMap { [$0.start, $0.end] })
+
+        // 3. Find all connected components in the remaining graph.
         var visitedVertices: Set<ConnectionVertex.ID> = []
         var components: [ConnectionGraph] = []
-        
-        for (vertexID, _) in currentVertices {
-            // Only process unvisited vertices that still have edges connected to them
-            if !visitedVertices.contains(vertexID) && (currentAdjacency[vertexID]?.isEmpty == false || currentEdges.values.contains(where: { $0.start == vertexID || $0.end == vertexID })) {
-                // Start a new BFS/DFS from this unvisited vertex to find a component
+
+        for vertexID in activeVertexIDs {
+            if !visitedVertices.contains(vertexID) {
+                // This vertex is part of an unvisited component. Start a traversal.
+                var componentVertices: [ConnectionVertex.ID: ConnectionVertex] = [:]
+                var componentEdges: [ConnectionEdge.ID: ConnectionEdge] = [:]
                 var queue: [ConnectionVertex.ID] = [vertexID]
-                var currentComponentVertices: [ConnectionVertex.ID: ConnectionVertex] = [:]
-                var currentComponentEdges: [ConnectionEdge.ID: ConnectionEdge] = [:]
-                var currentComponentAdjacency: [ConnectionVertex.ID: Set<ConnectionEdge.ID>] = [:]
-                
                 visitedVertices.insert(vertexID)
-                currentComponentVertices[vertexID] = currentVertices[vertexID]
-                
+
                 var head = 0
                 while head < queue.count {
-                    let uID = queue[head]
+                    let currentVertexID = queue[head]
                     head += 1
-                    
-                    // Add uID to current component's adjacency list if it has edges
-                    if let connectedEdges = currentAdjacency[uID], !connectedEdges.isEmpty {
-                        currentComponentAdjacency[uID] = Set<ConnectionEdge.ID>()
-                        for edgeID in connectedEdges {
-                            if let edge = currentEdges[edgeID] {
-                                currentComponentEdges[edgeID] = edge
-                                currentComponentAdjacency[uID]?.insert(edgeID)
-                                
-                                let vID = (edge.start == uID) ? edge.end : edge.start
-                                
-                                if !visitedVertices.contains(vID) {
-                                    visitedVertices.insert(vID)
-                                    currentComponentVertices[vID] = currentVertices[vID]
-                                    queue.append(vID)
+
+                    if let vertex = self.vertices[currentVertexID] {
+                        componentVertices[currentVertexID] = vertex
+                    }
+
+                    // Find all connected edges from the original graph that are still in remainingEdges.
+                    if let originalConnectedEdgeIDs = self.adjacency[currentVertexID] {
+                        for edgeID in originalConnectedEdgeIDs {
+                            if let edge = remainingEdges[edgeID], componentEdges[edgeID] == nil {
+                                componentEdges[edgeID] = edge
+
+                                // Add the neighbor to the queue if it hasn't been visited.
+                                let neighborID = (edge.start == currentVertexID) ? edge.end : edge.start
+                                if !visitedVertices.contains(neighborID) {
+                                    visitedVertices.insert(neighborID)
+                                    queue.append(neighborID)
                                 }
                             }
                         }
-                    } else if currentAdjacency[uID]?.isEmpty == true && !currentEdges.values.contains(where: { $0.start == uID || $0.end == uID }) {
-                        // If a vertex has no connected edges after removal, it's isolated. Don't add to component.
-                        // This case is handled by the outer loop's `if !visitedVertices.contains(vertexID)`
-                        // and the condition `(currentAdjacency[vertexID]?.isEmpty == false || currentEdges.values.contains(where: { $0.start == vertexID || $0.end == vertexID }))`
                     }
                 }
-                // Only add component if it has vertices (i.e., not an isolated vertex that was skipped)
-                if !currentComponentVertices.isEmpty {
-                    components.append(ConnectionGraph(vertices: currentComponentVertices, edges: currentComponentEdges, adjacency: currentComponentAdjacency))
+
+                // 4. Create a new ConnectionGraph for the found component.
+                if !componentEdges.isEmpty {
+                    let newGraph = ConnectionGraph(vertices: componentVertices, edges: componentEdges)
+                    newGraph.rebuildAdjacency()
+                    components.append(newGraph)
                 }
             }
         }
+
         return components
     }
 }
