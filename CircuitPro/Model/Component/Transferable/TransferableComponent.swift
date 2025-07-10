@@ -13,12 +13,12 @@ struct TransferableComponent: Transferable, Codable {
     let symbolUUID: UUID
     let properties: [ComponentProperty]
     init?(component: Component) {
-         guard let symbol = component.symbol else { return nil }
-         componentUUID = component.uuid
-         symbolUUID    = symbol.uuid
-         properties    = component.properties
-     }
-
+        guard let symbol = component.symbol else { return nil }
+        componentUUID = component.uuid
+        symbolUUID    = symbol.uuid
+        properties    = component.properties
+    }
+    
     static var transferRepresentation: some TransferRepresentation {
         CodableRepresentation(contentType: .transferableComponent)
     }
@@ -33,7 +33,7 @@ struct DraggableModifier: ViewModifier {
     func body(content: Content) -> some View {
         if let transferable = TransferableComponent(component: component) {
             content
-              .draggable(transferable)
+                .draggable(transferable)
         } else {
             content
         }
@@ -41,12 +41,16 @@ struct DraggableModifier: ViewModifier {
 }
 
 extension View {
-  @ViewBuilder
-  func draggableIfPresent<T: Transferable>(_ item: T?) -> some View {
-    if let item = item {
-      self.draggable(item)
-    } else {
-      self
+    @ViewBuilder
+    func draggableIfPresent<T: Transferable>(_ item: T?, symbol: Symbol?) -> some View {
+        if let item, let symbol {
+            self.draggable(item) {
+               SymbolThumbnail(symbol: symbol)
+            }
+        } else if let item {
+            self.draggable(item)
+        } else {
+            self
+        }
     }
-  }
 }
