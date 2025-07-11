@@ -204,3 +204,15 @@ The Connection behavior code is delegated through two stages, one within Connect
 - Precondition: Result of Test 1 (the H-Junction)  
 - Action: T6(25,0) DT(25,100)  
 - Result: Two vertical Edges at x=25 and x=50 connecting the same horizontal Edges, forming a double-barred “H” pattern
+
+## Branch on Closed Loop
+
+- Scope: Tool & Post  
+- Logic: Edge Split & Vertex Merge (branch on loop)  
+- Precondition: Closed-loop Connection  
+  - E1 from (0,100) to (0,0)  
+  - E2 from (0,0) to (100,0)  
+  - E3 from (100,0) to (100,100)  
+  - E4 from (100,100) to (0,100)  
+- Action: T1(200,0) T2(100,0)  
+- Result: All four original Edges remain intact, with a new Edge from (200,0) to (100,0) merging at the existing Vertex (100,0), creating a new junction (branch) off the loop without breaking it.  

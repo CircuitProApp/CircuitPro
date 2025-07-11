@@ -90,7 +90,7 @@ public class ConnectionGraph {
             } else {
                 // If no vertex with the same point exists, add the otherVertex to self
                 vertices[otherVertex.id] = otherVertex
-                adjacency[otherVertex.id] = other.adjacency[otherVertex.id] ?? []
+                adjacency[otherVertex.id] = []
                 remappedVertexIDs[otherVertex.id] = otherVertex.id // Map to itself
             }
         }
