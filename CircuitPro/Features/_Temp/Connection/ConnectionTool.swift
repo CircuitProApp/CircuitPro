@@ -15,25 +15,11 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     // MARK: – CanvasTool conformance
     mutating func handleTap(at loc: CGPoint,
                             context: CanvasToolContext) -> CanvasElement? {
-        guard let hitTarget = context.hitTarget else {
-            self.state = .idle
-            return nil
-        }
-
-        // If the tool is idle, this tap will start a drawing session.
+        // If the tool is idle, this tap starts a new drawing session.
         if case .idle = state {
-            let initialGraph = context.graphToModify ?? ConnectionGraph()
-            let startVertex: ConnectionVertex
-            
-            // If the graph is new, add a vertex. If we're extending an existing
-            // graph, find the vertex we should start from.
-            if let existingVertex = initialGraph.vertex(at: loc) {
-                startVertex = existingVertex
-            } else {
-                startVertex = initialGraph.addVertex(at: loc)
-            }
-            
-            self.state = .drawing(graph: initialGraph, lastVertexID: startVertex.id)
+            let newGraph = ConnectionGraph()
+            let startVertex = newGraph.addVertex(at: loc)
+            self.state = .drawing(graph: newGraph, lastVertexID: startVertex.id)
             return nil // Don't return an element yet.
         }
 
@@ -44,30 +30,26 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             return nil
         }
 
-        // Add the L-bend from the last point to the current one.
+        // Always add the next segment to the in-progress graph.
         addOrthogonalSegment(to: graph, from: lastVertex.point, to: loc)
 
-        // Check if this tap finalizes the connection.
-        switch hitTarget {
-        case .vertex, .edge:
-            // If the tap landed on an existing vertex or edge, we finalize.
-            // The key is to merge our in-progress graph with the one from the context if it exists.
-            let finalGraph: ConnectionGraph
-            if let targetGraph = context.graphToModify {
-                targetGraph.merge(with: graph)
-                finalGraph = targetGraph
-            } else {
-                finalGraph = graph
+        // Check for finalization conditions.
+        // The tool finalizes if the user clicks on an existing element (external hit)
+        // or if the line intersects with itself.
+        let selfHit = graph.hitTest(at: loc, tolerance: 5.0 / context.magnification)
+        let isExternalHit = context.hitTarget.map { if case .emptySpace = $0 { return false } else { return true } } ?? false
+        
+        if isExternalHit || (selfHit != .emptySpace) {
+            // Finalize the connection.
+            if case .edge(let edgeID, let point) = selfHit {
+                graph.splitEdge(edgeID, at: point)
             }
-            
-            finalGraph.simplifyCollinearSegments()
-            let finalElement = ConnectionElement(graph: finalGraph)
+            graph.simplifyCollinearSegments()
+            let finalElement = ConnectionElement(graph: graph)
             self.state = .idle // Reset for the next connection.
             return .connection(finalElement)
-            
-        case .emptySpace:
-            // We clicked in empty space, so we keep drawing.
-            // Update the `lastVertexID` to the new end of the line.
+        } else {
+            // Not finalizing, just update the last vertex and continue.
             if let newLastVertex = graph.vertex(at: loc) {
                 self.state = .drawing(graph: graph, lastVertexID: newLastVertex.id)
             }

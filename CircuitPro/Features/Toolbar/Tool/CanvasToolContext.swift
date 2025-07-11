@@ -13,5 +13,4 @@ struct CanvasToolContext {
     var selectedLayer: CanvasLayer = .layer0
     var magnification: CGFloat = 1.0
     var hitTarget: ConnectionHitTarget?
-    var graphToModify: ConnectionGraph?
 }

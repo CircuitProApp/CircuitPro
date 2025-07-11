@@ -1,7 +1,7 @@
 import Foundation
 import CoreGraphics
 
-public enum GraphHitResult {
+public enum GraphHitResult: Equatable {
     case emptySpace
     case vertex(id: UUID)
     case edge(id: UUID, point: CGPoint)
