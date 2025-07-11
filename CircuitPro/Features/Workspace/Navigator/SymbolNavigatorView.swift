@@ -15,25 +15,24 @@ struct SymbolNavigatorView: View {
 
     @Query private var components: [Component]
 
-    @State private var selectedComponentIDs: Set<UUID> = []
 
     var document: CircuitProjectDocument
 
     // 1. Delete logic, deferred to avoid exclusivity violations
-    private func performDelete(on designComponent: DesignComponent) {
+    private func performDelete(on designComponent: DesignComponent, selected: inout Set<UUID>) {
         // 1.1 Determine what to remove at the model level
         let instancesToRemove: [ComponentInstance]
 
-        let isMultiSelect = selectedComponentIDs.contains(designComponent.id) && selectedComponentIDs.count > 1
+        let isMultiSelect = selected.contains(designComponent.id) && selected.count > 1
 
         if isMultiSelect {
             instancesToRemove = projectManager.designComponents
-                .filter { selectedComponentIDs.contains($0.id) }
+                .filter { selected.contains($0.id) }
                 .map(\.instance)
-            selectedComponentIDs.removeAll()
+            selected.removeAll()
         } else {
             instancesToRemove = [designComponent.instance]
-            selectedComponentIDs.remove(designComponent.id)
+            selected.remove(designComponent.id)
         }
 
         // 1.2 Remove from the selected design
@@ -48,10 +47,12 @@ struct SymbolNavigatorView: View {
     }
 
     var body: some View {
+        @Bindable var bindableProjectManager = projectManager
+
         List(
             projectManager.designComponents,
             id: \.id,
-            selection: $selectedComponentIDs
+            selection: $bindableProjectManager.selectedComponentIDs
         ) { designComponent in
             HStack {
                 Text(designComponent.definition.name)
@@ -64,12 +65,12 @@ struct SymbolNavigatorView: View {
             .frame(height: 14)
             .listRowSeparator(.hidden)
             .contextMenu {
-                let multi = selectedComponentIDs.contains(designComponent.id) && selectedComponentIDs.count > 1
+                let multi = bindableProjectManager.selectedComponentIDs.contains(designComponent.id) && bindableProjectManager.selectedComponentIDs.count > 1
                 Button(role: .destructive) {
-                    performDelete(on: designComponent)
+                    performDelete(on: designComponent, selected: &bindableProjectManager.selectedComponentIDs)
                 } label: {
                     Text(multi
-                         ? "Delete Selected (\(selectedComponentIDs.count))"
+                         ? "Delete Selected (\(bindableProjectManager.selectedComponentIDs.count))"
                          : "Delete")
                 }
             }
