@@ -190,61 +190,98 @@ public class ConnectionGraph {
     /// Simplifies the graph by merging collinear segments.
     public func simplifyCollinearSegments() {
         while true {
-            guard let (vertex, edge1, edge2) = findCollinearVertex() else {
-                // No more collinear vertices to process.
-                break
+            var didSimplify = false
+            let vertexIDs = Array(vertices.keys)
+
+            for vertexID in vertexIDs {
+                guard let vertex = vertices[vertexID] else { continue }
+                guard let connectedEdgeIDs = adjacency[vertexID], connectedEdgeIDs.count >= 2 else { continue }
+
+                let connectedEdges = connectedEdgeIDs.compactMap { edges[$0] }
+                if connectedEdges.count != connectedEdgeIDs.count {
+                    rebuildAdjacency()
+                    didSimplify = true
+                    break
+                }
+
+                var horizontalNeighbors: [ConnectionVertex.ID: ConnectionVertex] = [:]
+                var verticalNeighbors: [ConnectionVertex.ID: ConnectionVertex] = [:]
+                var allNeighbors: [ConnectionVertex.ID: ConnectionVertex] = [:]
+
+                for edge in connectedEdges {
+                    let neighborID = (edge.start == vertex.id) ? edge.end : edge.start
+                    guard let neighbor = vertices[neighborID] else { continue }
+                    allNeighbors[neighborID] = neighbor
+                    if abs(neighbor.point.y - vertex.point.y) < 0.01 { horizontalNeighbors[neighborID] = neighbor }
+                    if abs(neighbor.point.x - vertex.point.x) < 0.01 { verticalNeighbors[neighborID] = neighbor }
+                }
+
+                if horizontalNeighbors.count >= 2 && horizontalNeighbors.count == allNeighbors.count {
+                    let allLineVertices = Array(horizontalNeighbors.values) + [vertex]
+                    let points = allLineVertices.map { $0.point }
+                    guard let minX = points.map({ $0.x }).min(), let maxX = points.map({ $0.x }).max(), minX != maxX else { continue }
+
+                    guard let leftEnd = allLineVertices.first(where: { $0.point.x == minX }),
+                          let rightEnd = allLineVertices.first(where: { $0.point.x == maxX }) else { continue }
+
+                    let toRemove = allLineVertices.filter { $0.id != leftEnd.id && $0.id != rightEnd.id }
+                    for v in toRemove {
+                        if let edgesToRemove = adjacency[v.id] {
+                            for edgeID in edgesToRemove {
+                                if let edge = edges.removeValue(forKey: edgeID) {
+                                    let neighborID = (edge.start == v.id) ? edge.end : edge.start
+                                    adjacency[neighborID]?.remove(edgeID)
+                                }
+                            }
+                        }
+                        vertices.removeValue(forKey: v.id)
+                        adjacency.removeValue(forKey: v.id)
+                    }
+
+                    addUniqueEdge(from: leftEnd.id, to: rightEnd.id)
+                    didSimplify = true
+                    break
+                }
+
+                if verticalNeighbors.count >= 2 && verticalNeighbors.count == allNeighbors.count {
+                    let allLineVertices = Array(verticalNeighbors.values) + [vertex]
+                    let points = allLineVertices.map { $0.point }
+                    guard let minY = points.map({ $0.y }).min(), let maxY = points.map({ $0.y }).max(), minY != maxY else { continue }
+
+                    guard let bottomEnd = allLineVertices.first(where: { $0.point.y == minY }),
+                          let topEnd = allLineVertices.first(where: { $0.point.y == maxY }) else { continue }
+
+                    let toRemove = allLineVertices.filter { $0.id != bottomEnd.id && $0.id != topEnd.id }
+                    for v in toRemove {
+                        if let edgesToRemove = adjacency[v.id] {
+                            for edgeID in edgesToRemove {
+                                if let edge = edges.removeValue(forKey: edgeID) {
+                                    let neighborID = (edge.start == v.id) ? edge.end : edge.start
+                                    adjacency[neighborID]?.remove(edgeID)
+                                }
+                            }
+                        }
+                        vertices.removeValue(forKey: v.id)
+                        adjacency.removeValue(forKey: v.id)
+                    }
+
+                    addUniqueEdge(from: bottomEnd.id, to: topEnd.id)
+                    didSimplify = true
+                    break
+                }
             }
 
-            // Get the endpoints of the new merged edge.
-            let otherVertex1ID = (edge1.start == vertex.id) ? edge1.end : edge1.start
-            let otherVertex2ID = (edge2.start == vertex.id) ? edge2.end : edge2.start
-
-            // Remove the vertex and the two old edges.
-            vertices.removeValue(forKey: vertex.id)
-            edges.removeValue(forKey: edge1.id)
-            edges.removeValue(forKey: edge2.id)
-
-            // Update adjacency lists for the endpoints of the removed edges.
-            adjacency[edge1.start]?.remove(edge1.id)
-            adjacency[edge1.end]?.remove(edge1.id)
-            adjacency[edge2.start]?.remove(edge2.id)
-            adjacency[edge2.end]?.remove(edge2.id)
-            adjacency.removeValue(forKey: vertex.id)
-
-            // Add the new merged edge.
-            addEdge(from: otherVertex1ID, to: otherVertex2ID)
+            if !didSimplify {
+                break
+            }
         }
     }
 
-    /// Finds a vertex that connects two collinear edges.
-    private func findCollinearVertex() -> (ConnectionVertex, ConnectionEdge, ConnectionEdge)? {
-        for vertex in vertices.values {
-            guard let connectedEdgeIDs = adjacency[vertex.id], connectedEdgeIDs.count == 2 else {
-                continue
-            }
-
-            let edgeIDs = Array(connectedEdgeIDs)
-            guard let edge1 = edges[edgeIDs[0]], let edge2 = edges[edgeIDs[1]] else {
-                continue
-            }
-
-            let otherVertex1ID = (edge1.start == vertex.id) ? edge1.end : edge1.start
-            let otherVertex2ID = (edge2.start == vertex.id) ? edge2.end : edge2.start
-
-            guard let otherVertex1 = vertices[otherVertex1ID], let otherVertex2 = vertices[otherVertex2ID] else {
-                continue
-            }
-
-            let p1 = otherVertex1.point
-            let p2 = vertex.point
-            let p3 = otherVertex2.point
-
-            // Check for collinearity (assuming orthogonal lines).
-            if (p1.x == p2.x && p2.x == p3.x) || (p1.y == p2.y && p2.y == p3.y) {
-                return (vertex, edge1, edge2)
-            }
+    private func addUniqueEdge(from a: ConnectionVertex.ID, to b: ConnectionVertex.ID) {
+        guard a != b else { return }
+        if !edges.values.contains(where: { ($0.start == a && $0.end == b) || ($0.start == b && $0.end == a) }) {
+            _ = addEdge(from: a, to: b)
         }
-        return nil
     }
     
     public func removeEdges(withIDs edgeIDsToRemove: Set<ConnectionEdge.ID>) -> [ConnectionGraph] {
