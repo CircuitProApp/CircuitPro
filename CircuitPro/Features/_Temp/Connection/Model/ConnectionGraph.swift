@@ -1,6 +1,12 @@
 import Foundation
 import CoreGraphics
 
+public enum GraphHitResult {
+    case emptySpace
+    case vertex(id: UUID)
+    case edge(id: UUID, point: CGPoint)
+}
+
 /// Represents a vertex in the connection graph.
 public class ConnectionVertex: Identifiable {
     public let id: UUID
@@ -186,6 +192,102 @@ public class ConnectionGraph {
         return v
     }
 
+    public func vertex(at point: CGPoint, tolerance: CGFloat = 0.01) -> ConnectionVertex? {
+        vertices.values.first { v in
+            hypot(v.point.x - point.x, v.point.y - point.y) <= tolerance
+        }
+    }
+
+    /// Determines the orientation of the last segment leading to a given vertex.
+    public func lastSegmentOrientation(before vertexID: UUID) -> LineOrientation? {
+        guard let lastVertex = vertices[vertexID],
+              let connectedEdges = adjacency[vertexID],
+              connectedEdges.count == 1,
+              let edgeID = connectedEdges.first,
+              let edge = edges[edgeID] else {
+            return nil
+        }
+
+        let neighborID = (edge.start == vertexID) ? edge.end : edge.start
+        guard let neighbor = vertices[neighborID] else {
+            return nil
+        }
+
+        if abs(lastVertex.point.x - neighbor.point.x) < 0.01 {
+            return .vertical
+        } else {
+            return .horizontal
+        }
+    }
+
+    public func isCollinear(with other: ConnectionGraph, tolerance: CGFloat = 0.01) -> Bool {
+        for edge1 in self.edges.values {
+            guard let s1 = self.vertices[edge1.start]?.point, let e1 = self.vertices[edge1.end]?.point else { continue }
+            
+            for edge2 in other.edges.values {
+                guard let s2 = other.vertices[edge2.start]?.point, let e2 = other.vertices[edge2.end]?.point else { continue }
+
+                let isHorizontal1 = abs(s1.y - e1.y) < tolerance
+                let isHorizontal2 = abs(s2.y - e2.y) < tolerance
+                
+                if isHorizontal1 && isHorizontal2 && abs(s1.y - s2.y) < tolerance {
+                    let range1 = min(s1.x, e1.x)...max(s1.x, e1.x)
+                    let range2 = min(s2.x, e2.x)...max(s2.x, e2.x)
+                    if range1.overlaps(range2) { return true }
+                }
+
+                let isVertical1 = abs(s1.x - e1.x) < tolerance
+                let isVertical2 = abs(s2.x - e2.x) < tolerance
+
+                if isVertical1 && isVertical2 && abs(s1.x - s2.x) < tolerance {
+                    let range1 = min(s1.y, e1.y)...max(s1.y, e1.y)
+                    let range2 = min(s2.y, e2.y)...max(s2.y, e2.y)
+                    if range1.overlaps(range2) { return true }
+                }
+            }
+        }
+        return false
+    }
+
+    public func hitTest(at point: CGPoint, tolerance: CGFloat) -> GraphHitResult {
+        // Vertex check
+        for vertex in vertices.values {
+            if hypot(point.x - vertex.point.x, point.y - vertex.point.y) <= tolerance {
+                return .vertex(id: vertex.id)
+            }
+        }
+
+        // Edge check
+        for (edgeID, edge) in edges {
+            guard let start = vertices[edge.start]?.point,
+                  let end = vertices[edge.end]?.point else { continue }
+            
+            let minX = min(start.x, end.x) - tolerance
+            let maxX = max(start.x, end.x) + tolerance
+            let minY = min(start.y, end.y) - tolerance
+            let maxY = max(start.y, end.y) + tolerance
+
+            guard point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY else {
+                continue
+            }
+
+            let isVertical = abs(start.x - end.x) < tolerance
+            let isHorizontal = abs(start.y - end.y) < tolerance
+
+            if isVertical {
+                if abs(point.x - start.x) < tolerance {
+                    return .edge(id: edgeID, point: CGPoint(x: start.x, y: point.y))
+                }
+            } else if isHorizontal {
+                if abs(point.y - start.y) < tolerance {
+                    return .edge(id: edgeID, point: CGPoint(x: point.x, y: start.y))
+                }
+            }
+        }
+
+        return .emptySpace
+    }
+    
     /// Splits the specified edge by inserting a vertex at `point`.
     ///
     /// If the point coincides (within tolerance) with either endpoint, the graph is left unmodified and that endpoint

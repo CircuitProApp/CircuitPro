@@ -12,5 +12,6 @@ struct CanvasToolContext {
     var existingPadCount: Int = 0
     var selectedLayer: CanvasLayer = .layer0
     var magnification: CGFloat = 1.0
-    var hitSegmentID: UUID?
+    var hitTarget: ConnectionHitTarget?
+    var graphToModify: ConnectionGraph?
 }

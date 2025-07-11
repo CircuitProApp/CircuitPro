@@ -10,194 +10,66 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     let label      = "Connection"
 
     // MARK: – Internal drawing state
-    private var points: [CGPoint] = []     // click history
     private var state: ConnectionToolState = .idle
-
-    private var lastSegmentOrientation: LineOrientation? {
-        guard points.count >= 2 else { return nil }
-        let p1 = points[points.count - 2]
-        let p2 = points.last!
-        
-        // A segment is considered vertical if the x-coordinates are the same.
-        // Otherwise, it's horizontal. This assumes segments are always orthogonal.
-        if p1.x == p2.x {
-            return .vertical
-        } else {
-            return .horizontal
-        }
-    }
 
     // MARK: – CanvasTool conformance
     mutating func handleTap(at loc: CGPoint,
                             context: CanvasToolContext) -> CanvasElement? {
-        switch state {
-        case .idle:
-            points.append(loc)
-            state = .drawing
-            return nil
-
-        case .drawing:
-            return handleTapInDrawingState(at: loc, context: context)
-
-        case .finished:
-            // This state should be transient, handleTap should not be called in this state
-            // or it means the previous call returned a connection and state was not reset.
-            points.removeAll()
-            state = .idle
-            return nil
-        }
-    }
-
-    private mutating func handleTapInDrawingState(at loc: CGPoint, context: CanvasToolContext) -> CanvasElement? {
-        guard let firstVertex = points.first, let lastVertex = points.last else {
-            // This case should ideally not happen if state is .drawing
-            points.removeAll()
-            state = .idle
+        guard let hitTarget = context.hitTarget else {
+            self.state = .idle
             return nil
         }
 
-        let distanceToLast = hypot(loc.x - lastVertex.x, loc.y - lastVertex.y)
-        let distanceToFirst = hypot(loc.x - firstVertex.x, loc.y - firstVertex.y)
-
-        // Check for self-intersection. A click is considered an intersection if it lands on any
-        // existing segment of the poly-line being drawn, excluding the most recent segment.
-        var intersectionInfo: (point: CGPoint, segmentIndex: Int)?
-        if points.count >= 3 { // Need at least two segments (3 points) to intersect with.
-            for i in 0..<(points.count - 2) {
-                let start = points[i]
-                let end = points[i+1]
-                let tolerance: CGFloat = 0.01
-
-                let isVertical = abs(start.x - end.x) < tolerance
-                let isHorizontal = abs(start.y - end.y) < tolerance
-
-                if isVertical {
-                    if abs(loc.x - start.x) < tolerance && loc.y >= min(start.y, end.y) - tolerance && loc.y <= max(start.y, end.y) + tolerance {
-                        intersectionInfo = (point: CGPoint(x: start.x, y: loc.y), segmentIndex: i)
-                        break
-                    }
-                } else if isHorizontal {
-                    if abs(loc.y - start.y) < tolerance && loc.x >= min(start.x, end.x) - tolerance && loc.x <= max(start.x, end.x) + tolerance {
-                        intersectionInfo = (point: CGPoint(x: loc.x, y: start.y), segmentIndex: i)
-                        break
-                    }
-                }
-            }
-        }
-
-        let shouldFinalize = distanceToLast < 5 || distanceToFirst < 5 || intersectionInfo != nil || context.hitSegmentID != nil
-
-        if shouldFinalize {
-            let finalLoc = intersectionInfo?.point ?? loc
-
-            // If closing a loop, ensure the points array is correctly set up
-            if distanceToFirst < 5 && intersectionInfo == nil {
-                if lastVertex != firstVertex {
-                    let startsWithHorizontal: Bool
-                    if let lastOrientation = self.lastSegmentOrientation {
-                        startsWithHorizontal = (lastOrientation == .vertical)
-                    } else {
-                        startsWithHorizontal = true
-                    }
-
-                    let corner = startsWithHorizontal ? CGPoint(x: firstVertex.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: firstVertex.y)
-
-                    if corner != lastVertex && corner != firstVertex {
-                        points.append(corner)
-                    }
-                }
-            } else { // Not closing a loop, or self-intersecting
-                let startsWithHorizontal: Bool
-                if let lastOrientation = self.lastSegmentOrientation {
-                    startsWithHorizontal = (lastOrientation == .vertical)
-                } else {
-                    startsWithHorizontal = true
-                }
-
-                let corner = startsWithHorizontal ? CGPoint(x: finalLoc.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: finalLoc.y)
-
-                if corner != lastVertex {
-                    points.append(corner)
-                }
-                if finalLoc != corner {
-                    points.append(finalLoc)
-                }
-            }
-
-            // Finalize the graph
-            guard points.count >= 2 else {
-                points.removeAll()
-                state = .idle
-                return nil
-            }
-
-            // Create a ConnectionGraph from the points.
-            // We do not simplify here, as we need the original indices for intersection logic.
-            let graph = ConnectionGraph()
-            var createdVertices: [ConnectionVertex] = []
-            for p in points {
-                // Use ensureVertex to handle cases where points might be at the same location (e.g., closing a loop)
-                createdVertices.append(graph.ensureVertex(at: p))
-            }
-
-            // Add edges between consecutive vertices
-            for i in 0..<(createdVertices.count - 1) {
-                if createdVertices[i].id != createdVertices[i+1].id {
-                    graph.addEdge(from: createdVertices[i].id, to: createdVertices[i+1].id)
-                }
-            }
-
-            // If it's a closed loop, add the final edge from last to first vertex
-            if distanceToFirst < 5 && createdVertices.count >= 2 {
-                let firstV = createdVertices.first!
-                let lastV = createdVertices.last!
-                if firstV.id != lastV.id {
-                    graph.addEdge(from: lastV.id, to: firstV.id)
-                }
-            }
-
-            // If we detected a self-intersection, we need to split the intersected edge.
-            if let info = intersectionInfo {
-                let startVertex = createdVertices[info.segmentIndex]
-                let endVertex = createdVertices[info.segmentIndex + 1]
-
-                // Find the edge in the graph that corresponds to the intersected segment.
-                if let edgeToSplit = graph.edges.values.first(where: {
-                    ($0.start == startVertex.id && $0.end == endVertex.id) ||
-                    ($0.start == endVertex.id && $0.end == startVertex.id)
-                }) {
-                    // `splitEdge` will find/create a vertex at the intersection point and connect
-                    // the split segments to it. Because we already added the intersection point
-                    // to our `points` array, `ensureVertex` inside `splitEdge` will find the
-                    // existing vertex, correctly forming the junction.
-                    graph.splitEdge(edgeToSplit.id, at: info.point)
-                }
-            }
-
-            // Now that the topology is correct, simplify the graph to merge any collinear segments.
-            graph.simplifyCollinearSegments()
-
-            let conn = ConnectionElement(graph: graph)
-            points.removeAll()
-            state = .idle // Reset state after finishing
-            return .connection(conn)
-
-        } else { // Still drawing, not finalizing
-            // Apply L-shape logic
-            let startsWithHorizontal: Bool
-            if let lastOrientation = self.lastSegmentOrientation {
-                startsWithHorizontal = (lastOrientation == .vertical)
+        // If the tool is idle, this tap will start a drawing session.
+        if case .idle = state {
+            let initialGraph = context.graphToModify ?? ConnectionGraph()
+            let startVertex: ConnectionVertex
+            
+            // If the graph is new, add a vertex. If we're extending an existing
+            // graph, find the vertex we should start from.
+            if let existingVertex = initialGraph.vertex(at: loc) {
+                startVertex = existingVertex
             } else {
-                startsWithHorizontal = true
+                startVertex = initialGraph.addVertex(at: loc)
             }
+            
+            self.state = .drawing(graph: initialGraph, lastVertexID: startVertex.id)
+            return nil // Don't return an element yet.
+        }
 
-            let corner = startsWithHorizontal ? CGPoint(x: loc.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: loc.y)
+        // If we are already drawing, this tap adds a segment or finishes the connection.
+        guard case .drawing(let graph, let lastVertexID) = state,
+              let lastVertex = graph.vertices[lastVertexID] else {
+            self.state = .idle
+            return nil
+        }
 
-            if corner != lastVertex {
-                points.append(corner)
+        // Add the L-bend from the last point to the current one.
+        addOrthogonalSegment(to: graph, from: lastVertex.point, to: loc)
+
+        // Check if this tap finalizes the connection.
+        switch hitTarget {
+        case .vertex, .edge:
+            // If the tap landed on an existing vertex or edge, we finalize.
+            // The key is to merge our in-progress graph with the one from the context if it exists.
+            let finalGraph: ConnectionGraph
+            if let targetGraph = context.graphToModify {
+                targetGraph.merge(with: graph)
+                finalGraph = targetGraph
+            } else {
+                finalGraph = graph
             }
-            if loc != corner {
-                points.append(loc)
+            
+            finalGraph.simplifyCollinearSegments()
+            let finalElement = ConnectionElement(graph: finalGraph)
+            self.state = .idle // Reset for the next connection.
+            return .connection(finalElement)
+            
+        case .emptySpace:
+            // We clicked in empty space, so we keep drawing.
+            // Update the `lastVertexID` to the new end of the line.
+            if let newLastVertex = graph.vertex(at: loc) {
+                self.state = .drawing(graph: graph, lastVertexID: newLastVertex.id)
             }
             return nil
         }
@@ -206,82 +78,62 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     mutating func drawPreview(in ctx: CGContext,
                               mouse: CGPoint,
                               context: CanvasToolContext) {
-
-        guard let lastVertex = points.last else { return }
+        guard case .drawing(let graph, let lastVertexID) = state,
+              let lastVertex = graph.vertices[lastVertexID] else { return }
 
         ctx.saveGState()
         defer { ctx.restoreGState() }
 
-        // 1. Draw existing poly-line (solid)
+        // 1. Draw the existing, committed part of the graph (solid)
         ctx.setLineWidth(1)
         ctx.setLineCap(.round)
-        ctx.setStrokeColor(NSColor(.blue).cgColor)
-        
+        ctx.setStrokeColor(NSColor.controlAccentColor.cgColor)
         ctx.beginPath()
-        ctx.move(to: points[0])
-        for p in points.dropFirst() {
-            ctx.addLine(to: p)
+        for edge in graph.edges.values {
+            guard let start = graph.vertices[edge.start]?.point,
+                  let end = graph.vertices[edge.end]?.point else { continue }
+            ctx.move(to: start)
+            ctx.addLine(to: end)
         }
         ctx.strokePath()
-        
-        // 2. Draw the preview L-shape (dotted)
+
+        // 2. Draw the preview L-shape to the mouse cursor (dotted, gray)
+        ctx.setStrokeColor(NSColor.gray.withAlphaComponent(0.7).cgColor)
         ctx.setLineDash(phase: 0, lengths: [4])
         
-        let startsWithHorizontal: Bool
-        if let lastOrientation = self.lastSegmentOrientation {
-            startsWithHorizontal = (lastOrientation == .vertical)
-        } else {
-            // First segment always starts horizontal, as requested.
-            startsWithHorizontal = true
-        }
-        
-        let corner = startsWithHorizontal ? CGPoint(x: mouse.x, y: lastVertex.y) : CGPoint(x: lastVertex.x, y: mouse.y)
+        let previewGraph = ConnectionGraph()
+        addOrthogonalSegment(to: previewGraph, from: lastVertex.point, to: mouse)
         
         ctx.beginPath()
-        ctx.move(to: lastVertex)
-        ctx.addLine(to: corner)
-        ctx.addLine(to: mouse)
+        for edge in previewGraph.edges.values {
+            guard let start = previewGraph.vertices[edge.start]?.point,
+                  let end = previewGraph.vertices[edge.end]?.point else { continue }
+            ctx.move(to: start)
+            ctx.addLine(to: end)
+        }
         ctx.strokePath()
     }
 
     // MARK: – Keyboard helpers
     mutating func handleEscape() {
-        points.removeAll()
-        state = .idle // Reset state on escape
+        state = .idle
     }
 
     mutating func handleBackspace() {
-        _ = points.popLast()
-        if points.isEmpty {
-            state = .idle // Go back to idle if all points are removed
-        }
+        // This needs a more robust implementation that can track previous states.
+        // For now, simply resetting is the safest option.
+        state = .idle
     }
 
     mutating func handleReturn() -> CanvasElement? {
-        guard state == .drawing, points.count >= 2 else {
-            points.removeAll()
+        guard case .drawing(let graph, _) = state, !graph.edges.isEmpty else {
             state = .idle
             return nil
         }
-
-        let graph = ConnectionGraph()
-        var createdVertices: [ConnectionVertex] = []
-        for p in points {
-            createdVertices.append(graph.ensureVertex(at: p))
-        }
-
-        for i in 0..<(createdVertices.count - 1) {
-            if createdVertices[i].id != createdVertices[i+1].id {
-                graph.addEdge(from: createdVertices[i].id, to: createdVertices[i+1].id)
-            }
-        }
-
         graph.simplifyCollinearSegments()
-
-        let conn = ConnectionElement(graph: graph)
-        points.removeAll()
+        let finalElement = ConnectionElement(graph: graph)
         state = .idle
-        return .connection(conn)
+        return .connection(finalElement)
     }
 
     // MARK: – Equatable & Hashable
@@ -289,44 +141,28 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     func hash(into h: inout Hasher) { h.combine(id) }
 
     // MARK: - Private Helpers
-    private static func simplifyCollinear(_ points: [CGPoint]) -> [CGPoint] {
-        guard points.count > 2 else { return points }
-
-        var simplified: [CGPoint] = [points[0]] // Start with the first point
-
-        for i in 1..<points.count {
-            let p1 = simplified.last! // Last point added to simplified
-            let p2 = points[i]        // Current point from original list
-
-            // If we have at least two points in simplified, check for collinearity with the previous segment
-            if simplified.count >= 2 {
-                let p0 = simplified[simplified.count - 2] // Point before the last in simplified
-
-                // Check for collinearity (assuming orthogonal lines)
-                let isCollinear: Bool
-                if p0.x == p1.x && p1.x == p2.x { // Vertical line
-                    isCollinear = true
-                } else if p0.y == p1.y && p1.y == p2.y { // Horizontal line
-                    isCollinear = true
-                } else {
-                    isCollinear = false
-                }
-
-                if isCollinear {
-                    // If p0, p1, p2 are collinear, replace p1 with p2 (extend the segment)
-                    simplified[simplified.count - 1] = p2
-                    continue // Skip appending, as p2 replaced p1
-                }
-            }
-            // Not collinear, or not enough points to check collinearity, append p2
-            simplified.append(p2)
+    private func addOrthogonalSegment(to graph: ConnectionGraph, from p1: CGPoint, to p2: CGPoint) {
+        let startVertex = graph.ensureVertex(at: p1)
+        let lastSegmentOrientation = graph.lastSegmentOrientation(before: startVertex.id)
+        
+        let startsWithHorizontal = (lastSegmentOrientation == .vertical || lastSegmentOrientation == nil)
+        
+        let cornerPoint = startsWithHorizontal ? CGPoint(x: p2.x, y: p1.y) : CGPoint(x: p1.x, y: p2.y)
+        
+        if cornerPoint != p1 {
+            let cornerVertex = graph.ensureVertex(at: cornerPoint)
+            graph.addEdge(from: startVertex.id, to: cornerVertex.id)
         }
-        return simplified
+        
+        if cornerPoint != p2 {
+            let endVertex = graph.ensureVertex(at: p2)
+            let cornerVertex = graph.ensureVertex(at: cornerPoint)
+            graph.addEdge(from: cornerVertex.id, to: endVertex.id)
+        }
     }
 }
 
 enum ConnectionToolState {
     case idle
-    case drawing
-    case finished
+    case drawing(graph: ConnectionGraph, lastVertexID: UUID)
 }
