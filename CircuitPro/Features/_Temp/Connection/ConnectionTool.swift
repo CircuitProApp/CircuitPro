@@ -30,31 +30,53 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             return nil
         }
 
-        // Always add the next segment to the in-progress graph.
-        addOrthogonalSegment(to: graph, from: lastVertex.point, to: loc)
+        // Always add the next segment to the in-progress graph, capturing the new vertex for tap-ignore.
+        let newLastVertexID = addOrthogonalSegment(to: graph, from: lastVertex.point, to: loc)
 
-        // Check for finalization conditions.
-        // The tool finalizes if the user clicks on an existing element (external hit)
-        // or if the line intersects with itself.
-        let selfHit = graph.hitTest(at: loc, tolerance: 5.0 / context.magnification)
+        // Determine whether to finalize:
+        // - Double-tap on empty space.
+        // - Tapping an existing connection element (external hit).
+        // - Hitting an existing edge or vertex in the in-progress graph (excluding the new vertex).
+        let emptyHit = context.hitTarget.map { if case .emptySpace = $0 { return true } else { return false } } ?? true
+        let isDoubleTapEmpty = (context.clickCount > 1 && emptyHit)
         let isExternalHit = context.hitTarget.map { if case .emptySpace = $0 { return false } else { return true } } ?? false
-        
-        if isExternalHit || (selfHit != .emptySpace) {
+
+        let selfHit = graph.hitTest(at: loc, tolerance: 5.0 / context.magnification)
+        let isSelfExistingEdge: Bool
+        let isSelfExistingVertex: Bool
+        switch selfHit {
+        case .edge:
+            isSelfExistingEdge = true
+            isSelfExistingVertex = false
+        case .vertex(let id):
+            isSelfExistingVertex = (id != newLastVertexID)
+            isSelfExistingEdge = false
+        case .emptySpace:
+            isSelfExistingEdge = false
+            isSelfExistingVertex = false
+        }
+
+        if isDoubleTapEmpty || isExternalHit || isSelfExistingEdge || isSelfExistingVertex {
             // Finalize the connection.
-            if case .edge(let edgeID, let point) = selfHit {
+            if isSelfExistingEdge, case .edge(let edgeID, let point) = selfHit {
                 graph.splitEdge(edgeID, at: point)
+            } else if isExternalHit, let hit = context.hitTarget {
+                switch hit {
+                case .edge(let edgeID, _, let point):
+                    graph.splitEdge(edgeID, at: point)
+                default:
+                    break
+                }
             }
             graph.simplifyCollinearSegments()
             let finalElement = ConnectionElement(graph: graph)
-            self.state = .idle // Reset for the next connection.
+            state = .idle
             return .connection(finalElement)
-        } else {
-            // Not finalizing, just update the last vertex and continue.
-            if let newLastVertex = graph.vertex(at: loc) {
-                self.state = .drawing(graph: graph, lastVertexID: newLastVertex.id)
-            }
-            return nil
         }
+
+        // Continue drawing: update the last vertex to the one we just added.
+        state = .drawing(graph: graph, lastVertexID: newLastVertexID)
+        return nil
     }
 
     mutating func drawPreview(in ctx: CGContext,
@@ -84,7 +106,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         ctx.setLineDash(phase: 0, lengths: [4])
         
         let previewGraph = ConnectionGraph()
-        addOrthogonalSegment(to: previewGraph, from: lastVertex.point, to: mouse)
+        _ = addOrthogonalSegment(to: previewGraph, from: lastVertex.point, to: mouse)
         
         ctx.beginPath()
         for edge in previewGraph.edges.values {
@@ -123,7 +145,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     func hash(into h: inout Hasher) { h.combine(id) }
 
     // MARK: - Private Helpers
-    private func addOrthogonalSegment(to graph: ConnectionGraph, from p1: CGPoint, to p2: CGPoint) {
+    private func addOrthogonalSegment(to graph: ConnectionGraph, from p1: CGPoint, to p2: CGPoint) -> ConnectionVertex.ID {
         let startVertex = graph.ensureVertex(at: p1)
         let lastSegmentOrientation = graph.lastSegmentOrientation(before: startVertex.id)
         
@@ -136,11 +158,15 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             graph.addEdge(from: startVertex.id, to: cornerVertex.id)
         }
         
+        var endVertex: ConnectionVertex
         if cornerPoint != p2 {
-            let endVertex = graph.ensureVertex(at: p2)
+            endVertex = graph.ensureVertex(at: p2)
             let cornerVertex = graph.ensureVertex(at: cornerPoint)
             graph.addEdge(from: cornerVertex.id, to: endVertex.id)
+        } else {
+            endVertex = graph.ensureVertex(at: p2)
         }
+        return endVertex.id
     }
 }
 

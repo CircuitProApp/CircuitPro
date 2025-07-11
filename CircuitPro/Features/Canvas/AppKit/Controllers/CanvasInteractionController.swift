@@ -301,6 +301,8 @@ final class CanvasInteractionController {
         if tool.id == "connection" {
             context.hitTarget = hitTestController.hitTestForConnection(at: snapped)
         }
+        // Propagate click count for double-tap handling.
+        context.clickCount = event.clickCount
 
         if let newElement = tool.handleTap(at: snapped, context: context) {
             if case .connection(let newConn) = newElement {
