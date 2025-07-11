@@ -18,6 +18,7 @@ struct AnyCanvasTool: CanvasTool {
     private let _handleEscape: () -> Void
     private let _handleBackspace: () -> Void
     private let _handleRotate: () -> Void
+    private let _handleReturn: () -> CanvasElement?
     private let box: ToolBoxBase          // <— keeps the ToolBox alive
 
      init<T: CanvasTool>(_ tool: T) {
@@ -63,6 +64,14 @@ struct AnyCanvasTool: CanvasTool {
             inner.handleRotate()
             storage.tool = inner
         }
+
+        // ----- handleReturn -------------------------------------------------
+        _handleReturn = {
+            var inner = storage.tool
+            let element = inner.handleReturn()
+            storage.tool = inner
+            return element
+        }
      }
 
      // simple forwarders -------------------------------------------------------
@@ -83,6 +92,10 @@ struct AnyCanvasTool: CanvasTool {
 
     mutating func handleRotate() {
         _handleRotate()
+    }
+
+    mutating func handleReturn() -> CanvasElement? {
+        _handleReturn()
     }
 
     static func == (lhs: AnyCanvasTool, rhs: AnyCanvasTool) -> Bool { lhs.id == rhs.id }

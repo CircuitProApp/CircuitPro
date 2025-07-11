@@ -145,6 +145,11 @@ final class CoreGraphicsCanvasView: NSView {
                 interaction.enterRotationMode(around: center)
             }
 
+        case "\r", "\u{3}": // Return or Enter
+            print("Key Pressed!")
+            interaction.handleReturnKeyPress()
+            needsDisplay = true
+
         case "\u{1b}":
             if var tool = selectedTool, tool.id != "cursor" {
                 tool.handleEscape()

@@ -278,142 +278,7 @@ final class CanvasInteractionController {
                 switch newElement {
 
                 case .connection(let newConn):
-
-                    // Attempt to merge the newly created connection into an
-                    // existing one that shares a vertex.
-
-                    // 1) Collect indices of existing connection elements that
-                    //    either share a vertex with the new connection *or*
-                    //    have an edge that is intersected orthogonally by a
-                    //    vertex of the new connection.  In the latter case we
-                    //    first split that edge so that the two connections now
-                    //    share an explicit vertex, allowing a straightforward
-                    //    merge of their graphs.
-
-                    var indicesToMerge: [Int] = []
-
-                    let tolerance: CGFloat = 0.01
-
-                    outer: for (index, element) in canvas.elements.enumerated() {
-                        guard case .connection(let existingConn) = element else { continue }
-
-                        var shareVertex = false
-
-                        // a) Direct vertex overlap check.
-                        vertexLoop: for vNew in newConn.graph.vertices.values {
-                            for vOld in existingConn.graph.vertices.values {
-                                let dx = vNew.point.x - vOld.point.x
-                                let dy = vNew.point.y - vOld.point.y
-                                if abs(dx) <= tolerance && abs(dy) <= tolerance {
-                                    shareVertex = true
-                                    break vertexLoop
-                                }
-                            }
-                        }
-
-                        // b) If no vertex overlap, check if any vertex of the
-                        //    new connection lies on an edge of the existing
-                        //    connection (within tolerance).  If so we split
-                        //    that edge at the intersection, effectively
-                        //    creating a shared vertex.
-
-                        if !shareVertex {
-                            intersectionCheck: for vNew in newConn.graph.vertices.values {
-                                let p = vNew.point
-                                for (edgeID, edge) in existingConn.graph.edges {
-                                    guard let start = existingConn.graph.vertices[edge.start]?.point,
-                                          let end   = existingConn.graph.vertices[edge.end]?.point else { continue }
-
-                                    let isVertical   = start.x == end.x
-                                    let isHorizontal = start.y == end.y
-
-                                    if isVertical {
-                                        // Check x alignment and y within range
-                                        if abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance {
-                                            // Ensure not at endpoints
-                                            if !(abs(p.y - start.y) <= tolerance) && !(abs(p.y - end.y) <= tolerance) {
-                                                _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
-                                            }
-                                            shareVertex = true
-                                        }
-                                    } else if isHorizontal {
-                                        if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
-                                            if !(abs(p.x - start.x) <= tolerance) && !(abs(p.x - end.x) <= tolerance) {
-                                                _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
-                                            }
-                                            shareVertex = true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // c) Also check if any vertex of the existing connection
-                        //    lies on an edge of the new one.
-                        if !shareVertex {
-                            reverseIntersectionCheck: for vOld in existingConn.graph.vertices.values {
-                                let p = vOld.point
-                                for (edgeID, edge) in newConn.graph.edges {
-                                    guard let start = newConn.graph.vertices[edge.start]?.point,
-                                          let end   = newConn.graph.vertices[edge.end]?.point else { continue }
-
-                                    let isVertical   = start.x == end.x
-                                    let isHorizontal = start.y == end.y
-
-                                    if isVertical {
-                                        if abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance {
-                                            if !(abs(p.y - start.y) <= tolerance) && !(abs(p.y - end.y) <= tolerance) {
-                                                _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
-                                            }
-                                            shareVertex = true
-                                        }
-                                    } else if isHorizontal {
-                                        if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
-                                            if !(abs(p.x - start.x) <= tolerance) && !(abs(p.x - end.x) <= tolerance) {
-                                                _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
-                                            }
-                                            shareVertex = true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        if shareVertex {
-                            indicesToMerge.append(index)
-                        }
-                    }
-
-                    if indicesToMerge.isEmpty {
-                        // No overlap – simply add the new connection element.
-                        canvas.elements.append(.connection(newConn))
-                        newConn.graph.simplifyCollinearSegments() // Simplify after adding
-                    } else {
-                        // Merge into the first matching existing connection.
-                        let primaryIdx = indicesToMerge.first!
-
-                        if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
-                            primaryConn.graph.merge(with: newConn.graph)
-                            primaryConn.graph.simplifyCollinearSegments() // Simplify after merge
-                        }
-
-                        // Merge additional overlapping connection elements into the primary one.
-                        // Remove them from the canvas afterwards to avoid duplicates.
-                        // NOTE: indicesToMerge is sorted ascending because we collected via enumerate.
-                        // We'll iterate from the back to keep indices valid when removing.
-                        for idx in indicesToMerge.dropFirst().sorted(by: >) {
-                            if case .connection(let extraConn) = canvas.elements[idx] {
-                                if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
-                                    primaryConn.graph.merge(with: extraConn.graph)
-                                }
-                            }
-                            canvas.elements.remove(at: idx)
-                        }
-                        // Ensure the primary connection is simplified after all merges
-                        if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
-                            primaryConn.graph.simplifyCollinearSegments()
-                        }
-                    }
+                    mergeConnection(newConn)
 
                 default:
                     canvas.elements.append(newElement)
@@ -432,5 +297,155 @@ final class CanvasInteractionController {
             return true
         }
         return false
+    }
+
+    func handleReturnKeyPress() {
+        guard var tool = canvas.selectedTool, tool.id == "connection" else { return }
+        print("passed return")
+        if let newElement = tool.handleReturn(), case .connection(let newConn) = newElement {
+            print("new connection")
+            mergeConnection(newConn)
+            canvas.onUpdate?(canvas.elements)
+        }
+        // Crucially, assign the mutated tool back to canvas.selectedTool
+        canvas.selectedTool = tool
+    }
+
+    private func mergeConnection(_ newConn: ConnectionElement) {
+        // Attempt to merge the newly created connection into an
+        // existing one that shares a vertex.
+
+        // 1) Collect indices of existing connection elements that
+        //    either share a vertex with the new connection *or*
+        //    have an edge that is intersected orthogonally by a
+        //    vertex of the new connection.  In the latter case we
+        //    first split that edge so that the two connections now
+        //    share an explicit vertex, allowing a straightforward
+        //    merge of their graphs.
+
+        var indicesToMerge: [Int] = []
+
+        let tolerance: CGFloat = 0.01
+
+        outer: for (index, element) in canvas.elements.enumerated() {
+            guard case .connection(let existingConn) = element else { continue }
+
+            var shareVertex = false
+
+            // a) Direct vertex overlap check.
+            vertexLoop: for vNew in newConn.graph.vertices.values {
+                for vOld in existingConn.graph.vertices.values {
+                    let dx = vNew.point.x - vOld.point.x
+                    let dy = vNew.point.y - vOld.point.y
+                    if abs(dx) <= tolerance && abs(dy) <= tolerance {
+                        shareVertex = true
+                        break vertexLoop
+                    }
+                }
+            }
+
+            // b) If no vertex overlap, check if any vertex of the
+            //    new connection lies on an edge of the existing
+            //    connection (within tolerance).  If so we split
+            //    that edge at the intersection, effectively
+            //    creating a shared vertex.
+
+            if !shareVertex {
+                intersectionCheck: for vNew in newConn.graph.vertices.values {
+                    let p = vNew.point
+                    for (edgeID, edge) in existingConn.graph.edges {
+                        guard let start = existingConn.graph.vertices[edge.start]?.point,
+                              let end   = existingConn.graph.vertices[edge.end]?.point else { continue }
+
+                        let isVertical   = start.x == end.x
+                        let isHorizontal = start.y == end.y
+
+                        if isVertical {
+                            // Check x alignment and y within range
+                            if abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance {
+                                // Ensure not at endpoints
+                                if !(abs(p.y - start.y) <= tolerance) && !(abs(p.y - end.y) <= tolerance) {
+                                    _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
+                                }
+                                shareVertex = true
+                            }
+                        } else if isHorizontal {
+                            if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
+                                if !(abs(p.x - start.x) <= tolerance) && !(abs(p.x - end.x) <= tolerance) {
+                                    _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
+                                }
+                                shareVertex = true
+                            }
+                        }
+                    }
+                }
+            }
+
+            // c) Also check if any vertex of the existing connection
+            //    lies on an edge of the new one.
+            if !shareVertex {
+                reverseIntersectionCheck: for vOld in existingConn.graph.vertices.values {
+                    let p = vOld.point
+                    for (edgeID, edge) in newConn.graph.edges {
+                        guard let start = newConn.graph.vertices[edge.start]?.point,
+                              let end   = newConn.graph.vertices[edge.end]?.point else { continue }
+
+                        let isVertical   = start.x == end.x
+                        let isHorizontal = start.y == end.y
+
+                        if isVertical {
+                            if abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance {
+                                if !(abs(p.y - start.y) <= tolerance) && !(abs(p.y - end.y) <= tolerance) {
+                                    _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
+                                }
+                                shareVertex = true
+                            }
+                        } else if isHorizontal {
+                            if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
+                                if !(abs(p.x - start.x) <= tolerance) && !(abs(p.x - end.x) <= tolerance) {
+                                    _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
+                                }
+                                shareVertex = true
+                            }
+                        }
+                    }
+                }
+            }
+
+            if shareVertex {
+                indicesToMerge.append(index)
+            }
+        }
+
+        if indicesToMerge.isEmpty {
+            // No overlap – simply add the new connection element.
+            canvas.elements.append(.connection(newConn))
+            newConn.graph.simplifyCollinearSegments() // Simplify after adding
+        } else {
+            // Merge into the first matching existing connection.
+            let primaryIdx = indicesToMerge.first!
+
+            if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
+                primaryConn.graph.merge(with: newConn.graph)
+                primaryConn.graph.simplifyCollinearSegments() // Simplify after merge
+            }
+
+            // Merge additional overlapping connection elements into the primary one.
+            // Remove them from the canvas afterwards to avoid duplicates.
+            // NOTE: indicesToMerge is sorted ascending because we collected via enumerate.
+            // We'll iterate from the back to keep indices valid when removing.
+            for idx in indicesToMerge.dropFirst().sorted(by: >) {
+                if case .connection(let extraConn) = canvas.elements[idx] {
+                    if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
+                        primaryConn.graph.merge(with: extraConn.graph)
+                    }
+                }
+                canvas.elements.remove(at: idx)
+            }
+            // Ensure the primary connection is simplified after all merges
+            if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
+                primaryConn.graph.simplifyCollinearSegments()
+            }
+        }
     }
 }

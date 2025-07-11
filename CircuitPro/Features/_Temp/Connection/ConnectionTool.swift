@@ -257,6 +257,34 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         }
     }
 
+    mutating func handleReturn() -> CanvasElement? {
+        print("handleReturn called. State: \(state), Points count: \(points.count)")
+        guard state == .drawing, points.count >= 2 else {
+            points.removeAll()
+            state = .idle
+            return nil
+        }
+
+        let graph = ConnectionGraph()
+        var createdVertices: [ConnectionVertex] = []
+        for p in points {
+            createdVertices.append(graph.ensureVertex(at: p))
+        }
+
+        for i in 0..<(createdVertices.count - 1) {
+            if createdVertices[i].id != createdVertices[i+1].id {
+                graph.addEdge(from: createdVertices[i].id, to: createdVertices[i+1].id)
+            }
+        }
+
+        graph.simplifyCollinearSegments()
+
+        let conn = ConnectionElement(graph: graph)
+        points.removeAll()
+        state = .idle
+        return .connection(conn)
+    }
+
     // MARK: – Equatable & Hashable
     static func == (lhs: ConnectionTool, rhs: ConnectionTool) -> Bool { lhs.id == rhs.id }
     func hash(into h: inout Hasher) { h.combine(id) }

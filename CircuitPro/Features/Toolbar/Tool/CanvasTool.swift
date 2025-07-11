@@ -28,6 +28,10 @@ protocol CanvasTool: Hashable {
     /// Called when the R key is pressed. Tools can use this to cycle through
     /// discrete rotation states or otherwise adjust orientation.
     mutating func handleRotate()
+
+    /// Called when the Return key is pressed. Tools should commit the
+    /// existing steps if possible.
+    mutating func handleReturn() -> CanvasElement?
 }
 
 extension CanvasTool {
@@ -40,4 +44,8 @@ extension CanvasTool {
     mutating func handleBackspace() {}
 
     mutating func handleRotate() {}
+
+    /// Called when the Return key is pressed. Tools should commit the
+    /// existing steps if possible.
+    mutating func handleReturn() -> CanvasElement? { nil }
 }
