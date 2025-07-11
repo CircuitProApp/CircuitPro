@@ -37,7 +37,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             return nil
 
         case .drawing:
-            return handleTapInDrawingState(at: loc)
+            return handleTapInDrawingState(at: loc, context: context)
 
         case .finished:
             // This state should be transient, handleTap should not be called in this state
@@ -48,7 +48,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         }
     }
 
-    private mutating func handleTapInDrawingState(at loc: CGPoint) -> CanvasElement? {
+    private mutating func handleTapInDrawingState(at loc: CGPoint, context: CanvasToolContext) -> CanvasElement? {
         guard let firstVertex = points.first, let lastVertex = points.last else {
             // This case should ideally not happen if state is .drawing
             points.removeAll()
@@ -85,7 +85,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             }
         }
 
-        let shouldFinalize = distanceToLast < 5 || distanceToFirst < 5 || intersectionInfo != nil
+        let shouldFinalize = distanceToLast < 5 || distanceToFirst < 5 || intersectionInfo != nil || context.hitSegmentID != nil
 
         if shouldFinalize {
             let finalLoc = intersectionInfo?.point ?? loc
