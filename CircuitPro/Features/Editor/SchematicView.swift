@@ -113,37 +113,113 @@ struct SchematicView: View {
         rebuildCanvasElements()
     }
 
-    /// Builds [CanvasElement] from in-memory DesignComponents — no DB round-trip.
+    /// Builds [CanvasElement] from the project manager's data model.
     private func rebuildCanvasElements() {
-        canvasElements = projectManager.designComponents.map { designComponent in
+        // 1. Rebuild SymbolElements from ComponentInstances
+        let symbolElements = projectManager.designComponents.map { designComponent -> CanvasElement in
             let elem = SymbolElement(
                 id: designComponent.instance.id,
                 instance: designComponent.instance.symbolInstance,
-                symbol: designComponent.definition.symbol!      // already prefetched
+                symbol: designComponent.definition.symbol! // already prefetched
             )
             return .symbol(elem)
+        }
+
+        // 2. Rebuild ConnectionElements from Wires
+        let connectionElements = projectManager.wires.map { wire -> CanvasElement in
+            let graph = ConnectionGraph()
+            for segment in wire.segments {
+                let startPoint = resolveAttachmentPoint(segment.start)
+                let endPoint = resolveAttachmentPoint(segment.end)
+
+                let startVertex = graph.ensureVertex(at: startPoint)
+                let endVertex = graph.ensureVertex(at: endPoint)
+                graph.addEdge(from: startVertex.id, to: endVertex.id)
+            }
+            graph.simplifyCollinearSegments()
+            let connElement = ConnectionElement(id: wire.id, graph: graph)
+            return .connection(connElement)
+        }
+
+        // 3. Combine and update the canvas
+        canvasElements = symbolElements + connectionElements
+    }
+
+    /// Resolves an AttachmentPoint from the data model into a world-space CGPoint for drawing.
+    private func resolveAttachmentPoint(_ attachment: AttachmentPoint) -> CGPoint {
+        switch attachment {
+        case .free(let point):
+            return point
+        case .pin(let componentInstanceID, let pinID):
+            // Find the component instance and its definition
+            guard let component = projectManager.designComponents.first(where: { $0.instance.id == componentInstanceID }),
+                  let symbol = component.definition.symbol,
+                  let pin = symbol.pins.first(where: { $0.id == pinID })
+            else {
+                // This should not happen in a valid document. Return a default point.
+                return .zero
+            }
+            // Calculate the pin's world position
+            return component.instance.symbolInstance.position + pin.position.rotated(by: component.instance.symbolInstance.rotation)
         }
     }
 
     private func syncCanvasToModel(_ elements: [CanvasElement]) {
-        guard let design = projectManager.selectedDesign else { return }
+        // --- Sync ComponentInstances ---
+        let symbolElements = elements.compactMap { element -> SymbolElement? in
+            if case .symbol(let symbol) = element { return symbol }
+            return nil
+        }
+        var compInsts = projectManager.componentInstances
+        let remainingSymbolIDs = Set(symbolElements.map(\.id))
+        compInsts.removeAll { !remainingSymbolIDs.contains($0.id) }
 
-        var compInsts = design.componentInstances
-
-        // 1 ─ delete instances that no longer have a matching element on canvas
-        let remainingIDs = Set(elements.map(\.id))
-        compInsts.removeAll { !remainingIDs.contains($0.id) }
-
-        // 2 ─ update positions and rotations of the remaining instances
-        for element in elements {
-            guard case .symbol(let symbolElement) = element else { continue }
+        for symbolElement in symbolElements {
             if let idx = compInsts.firstIndex(where: { $0.id == symbolElement.id }) {
                 compInsts[idx].symbolInstance.position = symbolElement.instance.position
                 compInsts[idx].symbolInstance.cardinalRotation = symbolElement.instance.cardinalRotation
             }
         }
+        projectManager.componentInstances = compInsts
 
-        design.componentInstances = compInsts
+        // --- Sync Wires ---
+        let connectionElements = elements.compactMap { element -> ConnectionElement? in
+            if case .connection(let connection) = element { return connection }
+            return nil
+        }
+        var newWires: [Wire] = []
+
+        for connElement in connectionElements {
+            var segments: [WireSegment] = []
+            for edge in connElement.graph.edges.values {
+                guard let startVertex = connElement.graph.vertices[edge.start],
+                      let endVertex = connElement.graph.vertices[edge.end] else { continue }
+
+                let startAttachment = resolvePointToAttachment(startVertex.point, in: symbolElements)
+                let endAttachment = resolvePointToAttachment(endVertex.point, in: symbolElements)
+
+                let segment = WireSegment(id: edge.id, start: startAttachment, end: endAttachment)
+                segments.append(segment)
+            }
+            if !segments.isEmpty {
+                newWires.append(Wire(id: connElement.id, segments: segments))
+            }
+        }
+        projectManager.wires = newWires
+
         document.updateChangeCount(.changeDone)
+    }
+
+    /// Resolves a world-space CGPoint from the canvas back into a semantic AttachmentPoint for saving.
+    private func resolvePointToAttachment(_ point: CGPoint, in symbolElements: [SymbolElement]) -> AttachmentPoint {
+        for symbolElement in symbolElements {
+            for pin in symbolElement.symbol.pins {
+                let pinPos = symbolElement.instance.position + pin.position.rotated(by: symbolElement.instance.rotation)
+                if hypot(point.x - pinPos.x, point.y - pinPos.y) < 0.01 {
+                    return .pin(componentInstanceID: symbolElement.id, pinID: pin.id)
+                }
+            }
+        }
+        return .free(point: point)
     }
 }

@@ -28,7 +28,13 @@ final class ProjectManager {
 
     // 1. Convenience
     var componentInstances: [ComponentInstance] {
-        selectedDesign?.componentInstances ?? []
+        get { selectedDesign?.componentInstances ?? [] }
+        set { selectedDesign?.componentInstances = newValue }
+    }
+
+    var wires: [Wire] {
+        get { selectedDesign?.wires ?? [] }
+        set { selectedDesign?.wires = newValue }
     }
 
     // 2. Centralised lookup

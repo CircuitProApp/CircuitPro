@@ -36,8 +36,8 @@ struct LinePrimitive: GraphicPrimitive {
 
     func handles() -> [Handle] {
         let mid = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
-        let rotatedStart = rotate1(point: start, around: mid, by: rotation)
-        let rotatedEnd = rotate1(point: end, around: mid, by: rotation)
+        let rotatedStart = start.rotated(around: mid, by: rotation)
+        let rotatedEnd = end.rotated(around: mid, by: rotation)
         return [
             Handle(kind: .lineStart, position: rotatedStart),
             Handle(kind: .lineEnd, position: rotatedEnd)
@@ -60,8 +60,8 @@ struct LinePrimitive: GraphicPrimitive {
             x: (dragWorld.x + oppWorld.x) / 2,
             y: (dragWorld.y + oppWorld.y) / 2
         )
-        let dragLocal = unrotate1(point: dragWorld, around: mid, by: rotation)
-        let oppLocal  = unrotate1(point: oppWorld, around: mid, by: rotation)
+        let dragLocal = dragWorld.rotated(around: mid, by: -rotation)
+        let oppLocal  = oppWorld.rotated(around: mid, by: -rotation)
 
         switch kind {
         case .lineStart: start = dragLocal; end = oppLocal

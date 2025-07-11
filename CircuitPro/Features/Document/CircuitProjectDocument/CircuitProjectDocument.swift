@@ -55,19 +55,27 @@ final class CircuitProjectDocument: NSDocument {
         let headerData = try Data(contentsOf: headerURL)
         model = try JSONDecoder().decode(CircuitProject.self, from: headerData)
 
-        // — components.json of every design ------------------------------
+        // — components.json and wires.json of every design ----------------
         for index in model.designs.indices {
-            let design       = model.designs[index]
-            let compsURL = url
+            let design = model.designs[index]
+            let designDirURL = url
                 .appendingPathComponent("Designs")
                 .appendingPathComponent(design.directoryName)
-                .appendingPathComponent("components.json")
 
+            // Read components
+            let compsURL = designDirURL.appendingPathComponent("components.json")
             if FileManager.default.fileExists(atPath: compsURL.path),
                let data = try? Data(contentsOf: compsURL),
-               let instances = try? JSONDecoder()
-                                    .decode([ComponentInstance].self, from: data) {
+               let instances = try? JSONDecoder().decode([ComponentInstance].self, from: data) {
                 model.designs[index].componentInstances = instances
+            }
+
+            // Read wires
+            let wiresURL = designDirURL.appendingPathComponent("wires.json")
+            if FileManager.default.fileExists(atPath: wiresURL.path),
+               let data = try? Data(contentsOf: wiresURL),
+               let wires = try? JSONDecoder().decode([Wire].self, from: data) {
+                model.designs[index].wires = wires
             }
         }
     }
@@ -87,19 +95,25 @@ final class CircuitProjectDocument: NSDocument {
         }
         model = try JSONDecoder().decode(CircuitProject.self, from: headerData)
 
-        // — components.json of every design
+        // — components.json and wires.json of every design
         guard let designsDir = fileWrapper.fileWrappers?["Designs"] else { return }
 
         for index in model.designs.indices {
             let design = model.designs[index]
+            guard let designDir = designsDir.fileWrappers?[design.directoryName] else { continue }
 
-            if  let designDir   = designsDir.fileWrappers?[design.directoryName],
-                let compsWrapper = designDir.fileWrappers?["components.json"],
-                let data         = compsWrapper.regularFileContents,
-                let instances    = try? JSONDecoder()
-                                       .decode([ComponentInstance].self, from: data) {
-
+            // Read components
+            if let compsWrapper = designDir.fileWrappers?["components.json"],
+               let data = compsWrapper.regularFileContents,
+               let instances = try? JSONDecoder().decode([ComponentInstance].self, from: data) {
                 model.designs[index].componentInstances = instances
+            }
+
+            // Read wires
+            if let wiresWrapper = designDir.fileWrappers?["wires.json"],
+               let data = wiresWrapper.regularFileContents,
+               let wires = try? JSONDecoder().decode([Wire].self, from: data) {
+                model.designs[index].wires = wires
             }
         }
     }
@@ -138,11 +152,18 @@ final class CircuitProjectDocument: NSDocument {
                 preferredFilename: "layout.pcb"
             )
 
-            // 2.2     REAL DATA  ← here is the new part
+            // 2.2 Components data
             let compsData = try JSONEncoder().encode(design.componentInstances)
             designDir.addRegularFile(
                 withContents: compsData,
                 preferredFilename: "components.json"
+            )
+
+            // 2.3 Wires data
+            let wiresData = try JSONEncoder().encode(design.wires)
+            designDir.addRegularFile(
+                withContents: wiresData,
+                preferredFilename: "wires.json"
             )
 
             designsDir.addFileWrapper(designDir)

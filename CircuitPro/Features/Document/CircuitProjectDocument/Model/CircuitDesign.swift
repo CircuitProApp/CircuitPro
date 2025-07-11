@@ -14,20 +14,23 @@ class CircuitDesign: Codable, Identifiable {
     var id: UUID
     var name: String
     var componentInstances: [ComponentInstance] = []
+    var wires: [Wire] = []
 
     var directoryName: String {
         id.uuidString
     }
 
-    init(id: UUID = UUID(), name: String, componentInstances: [ComponentInstance] = []) {
+    init(id: UUID = UUID(), name: String, componentInstances: [ComponentInstance] = [], wires: [Wire] = []) {
         self.id = id
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.componentInstances = componentInstances
+        self.wires = wires
     }
 
     enum CodingKeys: String, CodingKey {
         case _id = "id"
         case _name = "name"
+        case _wires = "wires"
     }
 }
 

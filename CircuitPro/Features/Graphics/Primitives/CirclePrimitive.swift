@@ -19,7 +19,7 @@ struct CirclePrimitive: GraphicPrimitive {
 
     func handles() -> [Handle] {
         let rawPoint = CGPoint(x: position.x + radius, y: position.y)
-        let rotated = rotate1(point: rawPoint, around: position, by: rotation)
+        let rotated = rawPoint.rotated(around: position, by: rotation)
         return [Handle(kind: .circleRadius, position: rotated)]
     }
 

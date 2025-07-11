@@ -30,19 +30,19 @@ struct RectanglePrimitive: GraphicPrimitive {
         return [
             Handle(
                 kind: .rectTopLeft,
-                position: rotate1(point: topLeft, around: position, by: rotation)
+                position: topLeft.rotated(around: position, by: rotation)
             ),
             Handle(
                 kind: .rectTopRight,
-                position: rotate1(point: topRight, around: position, by: rotation)
+                position: topRight.rotated(around: position, by: rotation)
             ),
             Handle(
                 kind: .rectBottomRight,
-                position: rotate1(point: bottomRight, around: position, by: rotation)
+                position: bottomRight.rotated(around: position, by: rotation)
             ),
             Handle(
                 kind: .rectBottomLeft,
-                position: rotate1(point: bottomLeft, around: position, by: rotation)
+                position: bottomLeft.rotated(around: position, by: rotation)
             )
         ]
     }
