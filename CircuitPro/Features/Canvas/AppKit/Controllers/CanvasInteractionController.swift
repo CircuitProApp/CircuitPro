@@ -350,6 +350,39 @@ final class CanvasInteractionController {
                             }
                         }
 
+                        // c) Also check if any vertex of the existing connection
+                        //    lies on an edge of the new one.
+                        if !shareVertex {
+                            reverseIntersectionCheck: for vOld in existingConn.graph.vertices.values {
+                                let p = vOld.point
+                                for (edgeID, edge) in newConn.graph.edges {
+                                    guard let start = newConn.graph.vertices[edge.start]?.point,
+                                          let end   = newConn.graph.vertices[edge.end]?.point else { continue }
+
+                                    let isVertical   = start.x == end.x
+                                    let isHorizontal = start.y == end.y
+
+                                    if isVertical {
+                                        if abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance {
+                                            if !(abs(p.y - start.y) <= tolerance) && !(abs(p.y - end.y) <= tolerance) {
+                                                _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
+                                            }
+                                            shareVertex = true
+                                            break reverseIntersectionCheck
+                                        }
+                                    } else if isHorizontal {
+                                        if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
+                                            if !(abs(p.x - start.x) <= tolerance) && !(abs(p.x - end.x) <= tolerance) {
+                                                _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
+                                            }
+                                            shareVertex = true
+                                            break reverseIntersectionCheck
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         if shareVertex {
                             indicesToMerge.append(index)
                         }
