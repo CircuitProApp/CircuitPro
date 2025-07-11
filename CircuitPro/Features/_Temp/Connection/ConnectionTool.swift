@@ -87,7 +87,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         // 1. Draw the existing, committed part of the graph (solid)
         ctx.setLineWidth(1)
         ctx.setLineCap(.round)
-        ctx.setStrokeColor(NSColor.controlAccentColor.cgColor)
+        ctx.setStrokeColor(NSColor(.blue).cgColor)
         ctx.beginPath()
         for edge in graph.edges.values {
             guard let start = graph.vertices[edge.start]?.point,
@@ -98,7 +98,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         ctx.strokePath()
 
         // 2. Draw the preview L-shape to the mouse cursor (dotted, gray)
-        ctx.setStrokeColor(NSColor.gray.withAlphaComponent(0.7).cgColor)
+        ctx.setStrokeColor(NSColor(.blue.opacity(0.7)).cgColor)
         ctx.setLineDash(phase: 0, lengths: [4])
         
         let previewGraph = ConnectionGraph()
