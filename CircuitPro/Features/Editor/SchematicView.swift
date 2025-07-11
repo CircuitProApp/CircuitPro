@@ -16,6 +16,9 @@ struct SchematicView: View {
 
     @State private var debugString: String?
 
+    @State private var showDebugPanel: Bool = false
+
+    
     var body: some View {
         @Bindable var bindableProjectManager = projectManager
 
@@ -34,11 +37,41 @@ struct SchematicView: View {
                 .padding(16)
         }
         .overlay(alignment: .bottomLeading) {
-            VStack {
-                Text(debugString ?? "No connection elements")
+            VStack(spacing: 5) {
+                HStack {
+                    Spacer()
+ 
+                    Button {
+                        showDebugPanel.toggle()
+                    } label: {
+                        Image(systemName: "chevron.compact.down")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+         
+                if showDebugPanel {
+                    VStack(spacing: 0) {
+                        ScrollView(.vertical) {
+                            Text(debugString ?? "No connection elements")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(8)
+                        }
+                        
+                    }
+                    .frame(height: 200)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(8)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray))
+             
+
+                }
             }
             .padding(10)
+        
+                
+            
         }
+
         .onAppear { rebuildCanvasElements() }
         // If the list of instances in the design changes -> rebuild
         .onChange(of: projectManager.componentInstances) { _ in
@@ -53,17 +86,25 @@ struct SchematicView: View {
 
     // 2 Connection debug
     private func connectionElements() -> String? {
-        // 2.1 Filter out only the .connection cases, map to their UUID strings
-        let ids = canvasElements.compactMap { element -> String? in
-            if case .connection(let connectionElement) = element {
-                return connectionElement.id.uuidString
-            }
-            return nil
+        let connections = canvasElements.compactMap { element -> String? in
+            guard case .connection(let connectionElement) = element else { return nil }
+            let idString = "Connection ID: \(connectionElement.id.uuidString)"
+
+            let edgeLines = connectionElement.graph.edges.map { (id, edge) in
+                "   Edge \(id)"
+            }.joined(separator: "\n")
+            
+            let vertexLines = connectionElement.graph.vertices.map { (id, vertex) in
+                "       Vertex: (\(vertex.point.x), \(vertex.point.y))"
+            }.joined(separator: "\n")
+
+            return "\(idString)\n\(edgeLines)\n\(vertexLines)"
         }
-        // 2.2 If there are none, return nil; otherwise join them with commas (or newlines)
-        guard !ids.isEmpty else { return nil }
-        return ids.joined(separator: ", ")
+
+        guard !connections.isEmpty else { return nil }
+        return connections.joined(separator: "\n\n") // separates each connection with a blank line
     }
+
 
     // 1. Component drop: Add Components with Incremental Reference Number
     // Adds the dropped components and assigns a reference number that

@@ -29,8 +29,19 @@ ConnectionElement is the highest level Connection representation that holds Conn
 - Precondition: An existing L-Shape Connection:
     - E1 from (0,100) to (0,0)
     - E2 from (0,0) to (100,0)
-- Action: Drag E1 
-- Result: E1 (vertical) can only move separately freely along X axis since it's constrained by E2, However you can still move E1 along Y axis, it will move the whole E2
+
+### Test 1 
+- Action: Drag E1 by -100 across X 
+- Result: E1 moves freely while E2 stretches with its endpoint (100,0) is anchored 
+
+### Test 2
+- Action: Drag E1 by 200 across X 
+- Result: E1 moves freely while E2 shrinks with its endpoint (100,0) is anchored, we receive the mirrored shape of the original L
+
+### Test 3 Merge
+- Action: Drag E1 by 100 across X
+- Result: E1 moves freely and while E2 collapses with only E1 left
+
 *Addendum: Applies to the most of shapes like C-Shapes, G-shapes, O-Shape etc.*
 
 ## G-Shape Edge Collapse

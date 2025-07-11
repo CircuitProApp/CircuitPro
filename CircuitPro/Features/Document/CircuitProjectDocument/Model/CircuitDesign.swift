@@ -30,7 +30,6 @@ class CircuitDesign: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case _id = "id"
         case _name = "name"
-        case _wires = "wires"
     }
 }
 
