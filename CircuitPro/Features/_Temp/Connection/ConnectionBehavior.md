@@ -131,3 +131,25 @@ The connection behavior code is delegated through two stages, one within Connect
 - Action: Draw a new segment that starts inside E1 and ends on its start vertex  
     - T1@ 50,0 T2@ 0,0   
 - Result: One continuous edge from (0,0) to (100,0), with the overlapping half merged seamlessly, and the 0,0 vertex unified  
+
+## Collinear Merge on T-Junction
+- Scope: Tool & Post
+- Logic: Edge Merge + Vertex Merge (collinear on junction)
+- Precondition: An existing T-junction consisting of  
+    - E1 from (0,0) to (100,0)  
+    - E2 from (100,100) to (100,0)  
+    - E3 from (200,0) to (100,0)  
+- Action: Draw a new segment extending the horizontal line, ending on the junction vertex  
+    - T1@ 300,0 DT@ 100,0  
+- Result: One continuous horizontal edge from (0,0) to (300,0), with the new segment merged into the existing chain and the vertical branch at (100,0) preserved  
+
+## Collinear Merge on T-Junction (Reverse Endpoint)
+- Scope: Tool & Post
+- Logic: Edge Merge + Vertex Merge (collinear on junction)
+- Precondition: An existing T-junction consisting of  
+    - E1 from (0,0) to (100,0)  
+    - E2 from (100,100) to (100,0)  
+    - E3 from (200,0) to (100,0)  
+- Action: Draw a new segment extending the horizontal line, ending on the startpoint of E1 
+    - T1@ 300,0 DT@ 0,0  
+- Result: One continuous horizontal edge from (0,0) to (300,0), with the entire original E1 merged and both endpoints unified into the existing vertex at (0,0) and the vertical branch still attached at (100,0)  
