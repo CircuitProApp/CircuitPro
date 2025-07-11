@@ -65,14 +65,19 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
 
     // MARK: – Drawable
     func draw(in ctx: CGContext, with selection: Set<UUID>, allPinPositions: [CGPoint]) {
+        // Draw the main body of the connection, respecting selection for draw order.
+        // Selected segments will be drawn on top of junctions.
+        drawBody(in: ctx, with: selection, allPinPositions: allPinPositions)
+
+        // Draw the selection highlights on top of everything.
         drawSelection(in: ctx, selection: selection)
-        drawBody(in: ctx, allPinPositions: allPinPositions)
     }
 
     private func drawSelection(in ctx: CGContext, selection: Set<UUID>) {
         // 1. Whole-connection selected?
         if selection.contains(id), let outline = selectionPath() {
             ctx.saveGState()
+            ctx.setBlendMode(.screen)
             ctx.setStrokeColor(NSColor(.blue.opacity(0.3)).cgColor)
             ctx.setLineWidth(4)
             ctx.setLineCap(.round)
@@ -83,18 +88,45 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
             return
         }
 
-        // 2. Individual segments selected?
+        // 2. Individual segments and their free ends selected?
         let selectedPath = CGMutablePath()
         var hasSelection = false
+        var freeEndVertexIDs = Set<UUID>()
+
+        // Collect selected segments and their free ends
         for primitive in primitives where selection.contains(primitive.id) {
             selectedPath.addPath(primitive.makePath())
             hasSelection = true
+
+            guard let edge = graph.edges[primitive.id] else { continue }
+            for vertexID in [edge.start, edge.end] {
+                if let adjacency = graph.adjacency[vertexID], adjacency.count == 1 {
+                    freeEndVertexIDs.insert(vertexID)
+                }
+            }
         }
+
+        // If segments are selected, add their free-end vertices to the path
         if hasSelection {
+            let endpointDiameter: CGFloat = 8
+            for vertexID in freeEndVertexIDs {
+                guard let vertex = graph.vertices[vertexID] else { continue }
+                let r = CGRect(
+                    x: vertex.point.x - endpointDiameter / 2,
+                    y: vertex.point.y - endpointDiameter / 2,
+                    width: endpointDiameter,
+                    height: endpointDiameter
+                )
+                selectedPath.addEllipse(in: r)
+            }
+
+            // Stroke the combined path for a unified highlight
             ctx.saveGState()
+            ctx.setBlendMode(.screen)
             ctx.setStrokeColor(NSColor(.blue.opacity(0.3)).cgColor)
             ctx.setLineWidth(4)
             ctx.setLineCap(.round)
+            ctx.setLineJoin(.round)
             ctx.addPath(selectedPath)
             ctx.strokePath()
             ctx.restoreGState()
@@ -102,18 +134,20 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
     }
 
     func drawBody(in ctx: CGContext) {
-        drawBody(in: ctx, allPinPositions: [])
+        drawBody(in: ctx, with: [], allPinPositions: [])
     }
 
-    internal func drawBody(in ctx: CGContext, allPinPositions: [CGPoint]) {
-        // Draw the wires
-        primitives.forEach { $0.drawBody(in: ctx) }
+    internal func drawBody(in ctx: CGContext, with selection: Set<UUID> = [], allPinPositions: [CGPoint]) {
+        // 1. Draw unselected wires
+        primitives
+            .filter { !selection.contains($0.id) }
+            .forEach { $0.drawBody(in: ctx) }
 
-        // Draw junction dots and endpoints
+        // 2. Draw junction dots and endpoints
         ctx.saveGState()
         ctx.setFillColor(NSColor(.blue).cgColor)
         let junctionDiameter: CGFloat = 6
-        let endpointDiameter: CGFloat = 4
+        let endpointDiameter: CGFloat = 8
 
         for (vertexID, edgeIDs) in graph.adjacency {
             guard let vertex = graph.vertices[vertexID] else { continue }
@@ -140,10 +174,22 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
                         width: endpointDiameter,
                         height: endpointDiameter
                     )
-                    ctx.fillEllipse(in: r)
+                    
+                    ctx.setLineWidth(1.0) // Optional: adjust stroke width
+                    ctx.setStrokeColor(NSColor(.blue).cgColor) // Optional: set stroke color
+                    ctx.strokeEllipse(in: r)
                 }
             }
         }
+        ctx.restoreGState()
+        
+        // 3. Draw selected wires on top of junctions using a blend mode
+        // to make them visually distinct.
+        ctx.saveGState()
+        ctx.setBlendMode(.screen)
+        primitives
+            .filter { selection.contains($0.id) }
+            .forEach { $0.drawBody(in: ctx) }
         ctx.restoreGState()
     }
 
