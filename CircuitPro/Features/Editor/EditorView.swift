@@ -44,7 +44,11 @@ struct EditorView: View {
                 }
 
             } dividerView: {
-                StatusBarView(canvasManager: selectedCanvasManager, showUtilityArea: $showUtilityArea)
+                StatusBarView(
+                    canvasManager: selectedCanvasManager,
+                    editorType: selectedEditor,
+                    showUtilityArea: $showUtilityArea
+                )
             } bottomView: {
                 UtilityAreaView()
             }
