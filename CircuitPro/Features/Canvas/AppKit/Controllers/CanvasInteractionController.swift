@@ -328,7 +328,7 @@ final class CanvasInteractionController {
         outer: for (index, element) in canvas.elements.enumerated() {
             guard case .connection(let existingConn) = element else { continue }
 
-            var shareVertex = false
+            var isRelated = false
 
             // a) Direct vertex overlap check.
             vertexLoop: for vNew in newConn.graph.vertices.values {
@@ -336,81 +336,70 @@ final class CanvasInteractionController {
                     let dx = vNew.point.x - vOld.point.x
                     let dy = vNew.point.y - vOld.point.y
                     if abs(dx) <= tolerance && abs(dy) <= tolerance {
-                        shareVertex = true
+                        isRelated = true
                         break vertexLoop
                     }
                 }
             }
 
-            // b) If no vertex overlap, check if any vertex of the
-            //    new connection lies on an edge of the existing
-            //    connection (within tolerance).  If so we split
-            //    that edge at the intersection, effectively
-            //    creating a shared vertex.
+            // b) Check if any vertex of the new connection lies on an edge of the existing one.
+            //    This must run regardless of direct vertex overlap.
+            intersectionCheck: for vNew in newConn.graph.vertices.values {
+                let p = vNew.point
+                for (edgeID, edge) in existingConn.graph.edges {
+                    guard let start = existingConn.graph.vertices[edge.start]?.point,
+                          let end   = existingConn.graph.vertices[edge.end]?.point else { continue }
 
-            if !shareVertex {
-                intersectionCheck: for vNew in newConn.graph.vertices.values {
-                    let p = vNew.point
-                    for (edgeID, edge) in existingConn.graph.edges {
-                        guard let start = existingConn.graph.vertices[edge.start]?.point,
-                              let end   = existingConn.graph.vertices[edge.end]?.point else { continue }
+                    let isVertical   = start.x == end.x
+                    let isHorizontal = start.y == end.y
 
-                        let isVertical   = start.x == end.x
-                        let isHorizontal = start.y == end.y
-
-                        if isVertical {
-                            // Check x alignment and y within range
-                            if abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance {
-                                // Ensure not at endpoints
-                                if !(abs(p.y - start.y) <= tolerance) && !(abs(p.y - end.y) <= tolerance) {
-                                    _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
-                                }
-                                shareVertex = true
+                    if isVertical {
+                        if abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance {
+                            if !(abs(p.y - start.y) <= tolerance) && !(abs(p.y - end.y) <= tolerance) {
+                                _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
                             }
-                        } else if isHorizontal {
-                            if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
-                                if !(abs(p.x - start.x) <= tolerance) && !(abs(p.x - end.x) <= tolerance) {
-                                    _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
-                                }
-                                shareVertex = true
+                            isRelated = true
+                        }
+                    } else if isHorizontal {
+                        if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
+                            if !(abs(p.x - start.x) <= tolerance) && !(abs(p.x - end.x) <= tolerance) {
+                                _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
                             }
+                            isRelated = true
                         }
                     }
                 }
             }
 
-            // c) Also check if any vertex of the existing connection
-            //    lies on an edge of the new one.
-            if !shareVertex {
-                reverseIntersectionCheck: for vOld in existingConn.graph.vertices.values {
-                    let p = vOld.point
-                    for (edgeID, edge) in newConn.graph.edges {
-                        guard let start = newConn.graph.vertices[edge.start]?.point,
-                              let end   = newConn.graph.vertices[edge.end]?.point else { continue }
+            // c) Also check if any vertex of the existing connection lies on an edge of the new one.
+            reverseIntersectionCheck: for vOld in existingConn.graph.vertices.values {
+                let p = vOld.point
+                for (edgeID, edge) in newConn.graph.edges {
+                    guard let start = newConn.graph.vertices[edge.start]?.point,
+                          let end   = newConn.graph.vertices[edge.end]?.point else { continue }
 
-                        let isVertical   = start.x == end.x
-                        let isHorizontal = start.y == end.y
+                    let isVertical   = start.x == end.x
+                    let isHorizontal = start.y == end.y
 
-                        if isVertical {
-                            if abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance {
-                                if !(abs(p.y - start.y) <= tolerance) && !(abs(p.y - end.y) <= tolerance) {
-                                    _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
-                                }
-                                shareVertex = true
+                    if isVertical {
+                        if abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance {
+                            if !(abs(p.y - start.y) <= tolerance) && !(abs(p.y - end.y) <= tolerance) {
+                                _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
                             }
-                        } else if isHorizontal {
-                            if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
-                                if !(abs(p.x - start.x) <= tolerance) && !(abs(p.x - end.x) <= tolerance) {
-                                    _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
-                                }
-                                shareVertex = true
+                            isRelated = true
+                        }
+                    } else if isHorizontal {
+                        if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
+                            if !(abs(p.x - start.x) <= tolerance) && !(abs(p.x - end.x) <= tolerance) {
+                                _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
                             }
+                            isRelated = true
                         }
                     }
                 }
             }
 
-            if shareVertex {
+            if isRelated {
                 indicesToMerge.append(index)
             }
         }

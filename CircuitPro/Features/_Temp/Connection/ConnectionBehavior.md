@@ -107,6 +107,17 @@ The Connection behavior code is delegated through two stages, one within Connect
 - Action: T1(50,0) DT(50,100)  
 - Result: One uniform Connection with a T Junction where three Edges share one Vertex
 
+## Mid-Segment T-Junction Creation
+
+- Scope: Tool & Post  
+- Logic: Edge Split  
+- Precondition: Existing Connection with Edges  
+  - E1 from (50,100) to (0,100)  
+  - E2 from (0,100) to (0,0)  
+  - E3 from (0,0) to (100,0)  
+- Action: T1(50,0) DT(50,100)  
+- Result: The horizontal Edge E3 from (0,0) to (100,0) is split into two segments from (0,0) to (50,0) and from (50,0) to (100,0), with a new junction created at (50,0)
+
 ## T-Junction Dismantling
 
 - Scope: Post  
