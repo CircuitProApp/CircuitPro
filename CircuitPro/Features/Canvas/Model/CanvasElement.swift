@@ -154,9 +154,11 @@ extension CanvasElement {
             pad.position = orig + delta; self = .pad(pad)
         case .symbol(var symbol):
             symbol.position = orig + delta; self = .symbol(symbol)
-        case .connection(let connection):
-            // For a connection, we translate all vertices in its graph.
+        case .connection(var connection):
+            // For a connection, translate all vertices and mark dirty.
             connection.graph.translate(by: delta)
+            connection.markChanged()
+            self = .connection(connection)
         }
     }
 }
