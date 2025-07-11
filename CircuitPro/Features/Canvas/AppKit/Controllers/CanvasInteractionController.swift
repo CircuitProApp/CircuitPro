@@ -301,9 +301,7 @@ final class CanvasInteractionController {
 
     func handleReturnKeyPress() {
         guard var tool = canvas.selectedTool, tool.id == "connection" else { return }
-        print("passed return")
         if let newElement = tool.handleReturn(), case .connection(let newConn) = newElement {
-            print("new connection")
             mergeConnection(newConn)
             canvas.onUpdate?(canvas.elements)
         }

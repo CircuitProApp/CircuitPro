@@ -146,7 +146,6 @@ final class CoreGraphicsCanvasView: NSView {
             }
 
         case "\r", "\u{3}": // Return or Enter
-            print("Key Pressed!")
             interaction.handleReturnKeyPress()
             needsDisplay = true
 

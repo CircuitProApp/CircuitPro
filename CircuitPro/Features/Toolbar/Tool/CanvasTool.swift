@@ -45,7 +45,5 @@ extension CanvasTool {
 
     mutating func handleRotate() {}
 
-    /// Called when the Return key is pressed. Tools should commit the
-    /// existing steps if possible.
     mutating func handleReturn() -> CanvasElement? { nil }
 }

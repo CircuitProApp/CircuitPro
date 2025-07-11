@@ -258,7 +258,6 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     mutating func handleReturn() -> CanvasElement? {
-        print("handleReturn called. State: \(state), Points count: \(points.count)")
         guard state == .drawing, points.count >= 2 else {
             points.removeAll()
             state = .idle
