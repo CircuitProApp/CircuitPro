@@ -11,12 +11,16 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
 
     // MARK: – Identity
     let id: UUID
+    private(set) var revision: Int = 0
 
     // MARK: - Data Model
     /// The underlying graph representing the connection net.
     /// Using a class for ConnectionGraph allows for reference semantics,
     /// where multiple elements could potentially share and manipulate the same net.
     let graph: ConnectionGraph
+
+    // Bump this whenever the underlying graph changes so SwiftUI detects updates
+    mutating func markChanged() { revision &+= 1 }
 
     // MARK: – Init
     init(
@@ -25,6 +29,7 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
     ) {
         self.id = id
         self.graph = graph
+        self.revision = 0
     }
 
     // MARK: – Derived geometry
@@ -218,6 +223,11 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
 
 // MARK: – Hashable & Equatable
 extension ConnectionElement: Hashable, Equatable {
-    static func == (lhs: ConnectionElement, rhs: ConnectionElement) -> Bool { lhs.id == rhs.id }
-    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+    static func == (lhs: ConnectionElement, rhs: ConnectionElement) -> Bool {
+        lhs.id == rhs.id && lhs.revision == rhs.revision
+    }
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(revision)
+    }
 }

@@ -412,9 +412,11 @@ final class CanvasInteractionController {
             // Merge into the first matching existing connection.
             let primaryIdx = indicesToMerge.first!
 
-            if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
+            if case .connection(var primaryConn) = canvas.elements[primaryIdx] {
                 primaryConn.graph.merge(with: newConn.graph)
                 primaryConn.graph.simplifyCollinearSegments() // Simplify after merge
+                primaryConn.markChanged()
+                canvas.elements[primaryIdx] = .connection(primaryConn)
             }
 
             // Merge additional overlapping connection elements into the primary one.
@@ -423,15 +425,19 @@ final class CanvasInteractionController {
             // We'll iterate from the back to keep indices valid when removing.
             for idx in indicesToMerge.dropFirst().sorted(by: >) {
                 if case .connection(let extraConn) = canvas.elements[idx] {
-                    if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
+                    if case .connection(var primaryConn) = canvas.elements[primaryIdx] {
                         primaryConn.graph.merge(with: extraConn.graph)
+                        primaryConn.markChanged()
+                        canvas.elements[primaryIdx] = .connection(primaryConn)
                     }
                 }
                 canvas.elements.remove(at: idx)
             }
             // Ensure the primary connection is simplified after all merges
-            if case .connection(let primaryConn) = canvas.elements[primaryIdx] {
+            if case .connection(var primaryConn) = canvas.elements[primaryIdx] {
                 primaryConn.graph.simplifyCollinearSegments()
+                primaryConn.markChanged()
+                canvas.elements[primaryIdx] = .connection(primaryConn)
             }
         }
     }
