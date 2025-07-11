@@ -8,7 +8,7 @@ struct EditorView: View {
 
     var document: CircuitProjectDocument
 
-    @State private var showUtilityArea: Bool = true
+    @State private var showUtilityArea: Bool = false
 
     @State private var selectedEditor: EditorType = .schematic
 

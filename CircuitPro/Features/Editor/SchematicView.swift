@@ -16,7 +16,7 @@ struct SchematicView: View {
 
     @State private var debugString: String?
 
-    @State private var showDebugPanel: Bool = false
+    @State private var showDebugPanel: Bool = true
 
     
     var body: some View {
