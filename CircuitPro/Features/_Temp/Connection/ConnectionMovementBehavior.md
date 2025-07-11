@@ -21,6 +21,13 @@ The Connection behavior code is delegated through two stages, one within Connect
 
 # Tests:
 
+## Simple Connection Drag
+
+- Precondition: An existing Connection: 
+    - E1 from (0,0) to (100,0)
+- Action: Drag E1 by (100,100)
+- Result: E1 from (100,100) to (200,100)
+
 ## Simple Connection Creation
 
 - Scope: Tool  
