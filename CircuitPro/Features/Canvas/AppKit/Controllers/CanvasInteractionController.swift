@@ -8,6 +8,9 @@ final class CanvasInteractionController {
     private var tentativeSelection: Set<UUID>?
     private var originalPositions: [UUID: CGPoint] = [:]
     private var activeHandle: (UUID, Handle.Kind)?
+    private var activeSegment: (connectionID: UUID, edgeID: UUID)?
+    private var originalSegmentVertexPositions: (start: CGPoint, end: CGPoint)?
+    private var affectedVertices: [UUID: CGPoint] = [:]
     private var frozenOppositeWorld: CGPoint?
     private var didMoveSignificantly = false
     private let dragThreshold: CGFloat = 4.0
@@ -77,6 +80,7 @@ final class CanvasInteractionController {
 
         if canvas.selectedTool?.id == "cursor",
            activeHandle == nil,
+           activeSegment == nil,
            canvas.hitRects.hitTest(at: loc) == nil {
             marqueeOrigin = loc
             marqueeRect = nil
@@ -98,6 +102,7 @@ final class CanvasInteractionController {
             return
         }
 
+        if handleDraggingSegment(to: loc) { return }
         if handleDraggingHandle(to: loc) { return }
         handleDraggingSelection(to: loc, from: origin)
     }
@@ -115,8 +120,22 @@ final class CanvasInteractionController {
             if marqueeOrigin != nil {
                 // Finished a marquee selection
                 canvas.selectedIDs = canvas.marqueeSelectedIDs
+            } else if let activeSegment = activeSegment {
+                // Finished a segment drag, now simplify the graph
+                if let connIndex = canvas.elements.firstIndex(where: { $0.id == activeSegment.connectionID }),
+                   case .connection(var conn) = canvas.elements[connIndex] {
+                    conn.graph.simplifyCollinearSegments()
+                    conn.markChanged()
+                    var updated = canvas.elements
+                    updated[connIndex] = .connection(conn)
+                    canvas.elements = updated
+                    canvas.onUpdate?(updated)
+                }
+
+                if let newSel = tentativeSelection {
+                    canvas.selectedIDs = newSel
+                }
             }
-            // If marqueeOrigin is nil, it was an element drag, which is already handled.
         } else {
             // This was a click
             if let newSel = tentativeSelection {
@@ -133,8 +152,14 @@ final class CanvasInteractionController {
         originalPositions.removeAll()
         frozenOppositeWorld = nil
         activeHandle = nil
+        activeSegment = nil
+        originalSegmentVertexPositions = nil
 
         if tryBeginHandleInteraction(at: loc) {
+            return
+        }
+
+        if tryBeginSegmentDragInteraction(at: loc) {
             return
         }
 
@@ -157,6 +182,49 @@ final class CanvasInteractionController {
             }
         }
 
+        return false
+    }
+
+    private func tryBeginSegmentDragInteraction(at loc: CGPoint) -> Bool {
+        let tolerance = 5.0 / canvas.magnification
+        for element in canvas.elements.reversed() {
+            guard case .connection(let conn) = element else { continue }
+            if let edgeID = conn.hitSegmentID(at: loc, tolerance: tolerance) {
+                activeSegment = (connectionID: conn.id, edgeID: edgeID)
+
+                guard let edge = conn.graph.edges[edgeID],
+                      let startVertex = conn.graph.vertices[edge.start],
+                      let endVertex = conn.graph.vertices[edge.end] else {
+                    activeSegment = nil
+                    return false
+                }
+
+                originalPositions[conn.id] = .zero // Prevents whole-element drag
+                originalSegmentVertexPositions = (start: startVertex.point, end: endVertex.point)
+
+                // Store original positions of the dragged segment's vertices and their immediate neighbors.
+                affectedVertices.removeAll()
+                affectedVertices[startVertex.id] = startVertex.point
+                affectedVertices[endVertex.id] = endVertex.point
+
+                func cacheNeighbors(for vertex: ConnectionVertex) {
+                    guard let neighborEdges = conn.graph.adjacency[vertex.id] else { return }
+                    for neighborEdgeID in neighborEdges where neighborEdgeID != edgeID {
+                        guard let neighborEdge = conn.graph.edges[neighborEdgeID] else { continue }
+                        let neighborID = (neighborEdge.start == vertex.id) ? neighborEdge.end : neighborEdge.start
+                        if let neighborVertex = conn.graph.vertices[neighborID] {
+                            affectedVertices[neighborVertex.id] = neighborVertex.point
+                        }
+                    }
+                }
+
+                cacheNeighbors(for: startVertex)
+                cacheNeighbors(for: endVertex)
+
+                tentativeSelection = [edgeID]
+                return true
+            }
+        }
         return false
     }
 
@@ -222,6 +290,62 @@ final class CanvasInteractionController {
         return false
     }
 
+    private func handleDraggingSegment(to loc: CGPoint) -> Bool {
+        guard let activeSegment = activeSegment,
+              let origin = dragOrigin,
+              let originalPositions = originalSegmentVertexPositions else { return false }
+
+        guard let connIndex = canvas.elements.firstIndex(where: { $0.id == activeSegment.connectionID }),
+              case .connection(var conn) = canvas.elements[connIndex] else {
+            return false
+        }
+
+        let deltaX = loc.x - origin.x
+        let deltaY = loc.y - origin.y
+
+        let snappedDeltaX = canvas.snapDelta(deltaX)
+        let snappedDeltaY = canvas.snapDelta(deltaY)
+
+        // Restore original state before applying new delta
+        for (vertexID, originalPos) in affectedVertices {
+            conn.graph.vertices[vertexID]?.point = originalPos
+        }
+
+        guard let draggedEdge = conn.graph.edges[activeSegment.edgeID] else { return false }
+
+        let isDraggedEdgeHorizontal = abs(originalPositions.start.y - originalPositions.end.y) < 0.01
+
+        // Decompose the drag delta into parallel and perpendicular components
+        let parallelDeltaX = isDraggedEdgeHorizontal ? snappedDeltaX : 0
+        let parallelDeltaY = isDraggedEdgeHorizontal ? 0 : snappedDeltaY
+        let perpendicularDeltaX = isDraggedEdgeHorizontal ? 0 : snappedDeltaX
+        let perpendicularDeltaY = isDraggedEdgeHorizontal ? snappedDeltaY : 0
+
+        // Update all affected vertices based on the new logic
+        for (vertexID, originalPos) in affectedVertices {
+            guard let vertex = conn.graph.vertices[vertexID] else { continue }
+
+            let isDraggedSegmentVertex = (vertexID == draggedEdge.start || vertexID == draggedEdge.end)
+
+            if isDraggedSegmentVertex {
+                // Vertices of the dragged segment move by the full delta
+                vertex.point = CGPoint(x: originalPos.x + snappedDeltaX, y: originalPos.y + snappedDeltaY)
+            } else {
+                // Neighbor vertices only move by the parallel component of the drag
+                vertex.point = CGPoint(x: originalPos.x + parallelDeltaX, y: originalPos.y + parallelDeltaY)
+            }
+        }
+
+        conn.markChanged()
+
+        var updated = canvas.elements
+        updated[connIndex] = .connection(conn)
+        canvas.elements = updated
+        canvas.onUpdate?(updated)
+
+        return true
+    }
+
     private func handleDraggingSelection(to loc: CGPoint, from origin: CGPoint) {
         guard !originalPositions.isEmpty else { return }
 
@@ -246,6 +370,8 @@ final class CanvasInteractionController {
         didMoveSignificantly = false
         activeHandle = nil
         frozenOppositeWorld = nil
+        activeSegment = nil
+        originalSegmentVertexPositions = nil
     }
 
     private func handleToolTap(at loc: CGPoint) -> Bool {

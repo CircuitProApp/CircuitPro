@@ -125,10 +125,51 @@ public class ConnectionGraph {
         }
     }
 
+    /// Finds all vertices that are part of a continuous straight line (horizontal or vertical)
+    /// connected to a given starting vertex.
+    public func findCollinearVertices(startingFrom startVertexID: ConnectionVertex.ID, axis: LineOrientation) -> [ConnectionVertex] {
+        guard let startVertex = vertices[startVertexID] else { return [] }
+
+        var collinearVertices: [ConnectionVertex] = []
+        var queue: [ConnectionVertex] = [startVertex]
+        var visitedInSearch: Set<ConnectionVertex.ID> = [startVertex.id]
+
+        var head = 0
+        while head < queue.count {
+            let currentVertex = queue[head]
+            head += 1
+            collinearVertices.append(currentVertex)
+
+            guard let connectedEdgeIDs = adjacency[currentVertex.id] else { continue }
+
+            for edgeID in connectedEdgeIDs {
+                guard let edge = edges[edgeID] else { continue }
+                let neighborID = (edge.start == currentVertex.id) ? edge.end : edge.start
+
+                if visitedInSearch.contains(neighborID) { continue }
+                guard let neighbor = vertices[neighborID] else { continue }
+
+                // Check if neighbor is on the same axis relative to the current vertex
+                let isCollinear: Bool
+                if axis == .horizontal {
+                    isCollinear = abs(neighbor.point.y - currentVertex.point.y) < 0.01
+                } else { // Vertical
+                    isCollinear = abs(neighbor.point.x - currentVertex.point.x) < 0.01
+                }
+
+                if isCollinear {
+                    visitedInSearch.insert(neighborID)
+                    queue.append(neighbor)
+                }
+            }
+        }
+        return collinearVertices
+    }
+
     // MARK: – Vertex helpers
 
     /// Ensures there is a vertex at the specified point (within the given tolerance).
-    ///
+    ///""
     /// - If a vertex already exists at that location, the existing instance is returned.
     /// - Otherwise a new vertex is inserted, added to the vertex store and returned.
     ///

@@ -15,14 +15,14 @@ final class CanvasHitTestController {
     }
 
     func hitTest(at point: CGPoint) -> UUID? {
+        let tolerance = 5.0 / canvas.magnification
         // This logic remains sound. We iterate through elements and give connections
         // a chance to return a more specific ID (an edge's ID) before falling back.
         for element in canvas.elements.reversed() { // NOTE: Reversed to hit topmost elements first
 
             // 1 — Check for a specific segment hit within a connection.
             if case .connection(let conn) = element,
-               let edgeID = conn.hitSegmentID(at: point, tolerance: 5) {
-                print(edgeID)
+               let edgeID = conn.hitSegmentID(at: point, tolerance: tolerance) {
                 return edgeID
             }
 
