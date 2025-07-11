@@ -12,16 +12,17 @@ struct SchematicView: View {
 
     // canvas state
     @State private var canvasElements: [CanvasElement] = []
-    @State private var selectedIDs: Set<UUID> = []
     @State private var selectedTool: AnyCanvasTool = .init(CursorTool())
 
     @State private var debugString: String?
 
     var body: some View {
+        @Bindable var bindableProjectManager = projectManager
+
         CanvasView(
             manager: canvasManager,
             elements: $canvasElements,
-            selectedIDs: $selectedIDs,
+            selectedIDs: $bindableProjectManager.selectedComponentIDs,
             selectedTool: $selectedTool
         )
         .dropDestination(for: TransferableComponent.self) { dropped, loc in
