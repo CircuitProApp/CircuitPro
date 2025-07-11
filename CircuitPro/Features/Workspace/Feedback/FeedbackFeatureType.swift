@@ -1,3 +1,12 @@
+//
+//  FeedbackFeatureType.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 7/11/25.
+//
+
+import SwiftUI
+
 enum FeedbackFeatureType: Displayable {
     case connectionCreation
     case navigatorView

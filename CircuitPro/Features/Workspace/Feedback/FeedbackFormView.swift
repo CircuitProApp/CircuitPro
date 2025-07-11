@@ -13,6 +13,7 @@ struct FeedbackFormView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedIssueType: FeedbackIssueType = .bug
+    @State private var selectedFeatureType: FeedbackFeatureType?
     @State private var message: String = ""
     
     var additionalContext: String?
@@ -25,6 +26,13 @@ struct FeedbackFormView: View {
 
             Picker("Issue Type", selection: $selectedIssueType) {
                 ForEach(FeedbackIssueType.allCases, id: \.self) { type in
+                    Text(type.label)
+                }
+            }
+            .pickerStyle(.menu)
+            .frame(maxWidth: 300)
+            Picker("Feature Type (optional)", selection: $selectedFeatureType) {
+                ForEach(FeedbackFeatureType.allCases, id: \.self) { type in
                     Text(type.label)
                 }
             }
@@ -66,7 +74,7 @@ struct FeedbackFormView: View {
         let body =
 """
 Issue Type: \(selectedIssueType.label)
-
+Feature Type: \(selectedFeatureType?.label ?? "N/A")
 Additional Context: \(additionalContext ?? "N/A") 
 
 \(message)
