@@ -10,6 +10,7 @@ import SwiftUI
 struct StatusBarView: View {
 
     var canvasManager: CanvasManager
+    var editorType: EditorType
 
     @Binding var showUtilityArea: Bool
 
@@ -29,10 +30,12 @@ struct StatusBarView: View {
             .foregroundStyle(.secondary)
 
             Spacer()
-            GridSpacingControlView()
-            Divider()
-                .foregroundStyle(.quinary)
-                .frame(height: 12)
+            if editorType != .schematic {
+                GridSpacingControlView()
+                Divider()
+                    .foregroundStyle(.quinary)
+                    .frame(height: 12)
+            }
             ZoomControlView()
             Divider()
                 .foregroundStyle(.quinary)
@@ -55,5 +58,5 @@ struct StatusBarView: View {
 }
 
 #Preview {
-    StatusBarView(canvasManager: .init(), showUtilityArea: .constant(true))
+    StatusBarView(canvasManager: .init(), editorType: .schematic, showUtilityArea: .constant(true))
 }
