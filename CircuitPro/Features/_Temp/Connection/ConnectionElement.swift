@@ -75,19 +75,45 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
         drawBody(in: ctx, with: selection, allPinPositions: allPinPositions)
 
         // Draw the selection highlights on top of everything.
-        drawSelection(in: ctx, selection: selection)
+        drawSelection(in: ctx, selection: selection, allPinPositions: allPinPositions)
     }
 
-    private func drawSelection(in ctx: CGContext, selection: Set<UUID>) {
+    private func drawSelection(in ctx: CGContext, selection: Set<UUID>, allPinPositions: [CGPoint]) {
         // 1. Whole-connection selected?
         if selection.contains(id), let outline = selectionPath() {
+            let combinedPath = CGMutablePath()
+            combinedPath.addPath(outline)
+
+            let endpointDiameter: CGFloat = 8
+            for (vertexID, edgeIDs) in graph.adjacency {
+                guard let vertex = graph.vertices[vertexID] else { continue }
+                let connectionCount = edgeIDs.count
+
+                if connectionCount == 1 { // Potential free-floating endpoint
+                    // Check if this vertex is on a pin
+                    let isAttached = allPinPositions.contains { pinPos in
+                        hypot(vertex.point.x - pinPos.x, vertex.point.y - pinPos.y) < 0.01
+                    }
+
+                    if !isAttached {
+                        let r = CGRect(
+                            x: vertex.point.x - endpointDiameter / 2,
+                            y: vertex.point.y - endpointDiameter / 2,
+                            width: endpointDiameter,
+                            height: endpointDiameter
+                        )
+                        combinedPath.addEllipse(in: r)
+                    }
+                }
+            }
+
             ctx.saveGState()
             ctx.setBlendMode(.screen)
             ctx.setStrokeColor(NSColor(.blue.opacity(0.3)).cgColor)
             ctx.setLineWidth(4)
             ctx.setLineCap(.round)
             ctx.setLineJoin(.round)
-            ctx.addPath(outline)
+            ctx.addPath(combinedPath)
             ctx.strokePath()
             ctx.restoreGState()
             return
