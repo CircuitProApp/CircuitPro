@@ -36,6 +36,22 @@ final class CanvasHitTestController {
         return nil
     }
 
+    func hitTestForConnection(at point: CGPoint) -> ConnectionHitTarget {
+        let tolerance = 5.0 / canvas.magnification
+        for element in canvas.elements.reversed() {
+            guard case .connection(let conn) = element else { continue }
+            for vertex in conn.graph.vertices.values {
+                if hypot(point.x - vertex.point.x, point.y - vertex.point.y) < tolerance {
+                    return .vertex(vertexID: vertex.id, onConnection: conn.id)
+                }
+            }
+            if let edgeID = conn.hitSegmentID(at: point, tolerance: tolerance) {
+                return .edge(edgeID: edgeID, onConnection: conn.id, at: point)
+            }
+        }
+        return .emptySpace(point: point)
+    }
+
     /// Returns the Pin that sits under `point` or nil.
     func pin(at point: CGPoint) -> Pin? {
 

@@ -3,6 +3,7 @@ import AppKit
 final class CanvasInteractionController {
 
     unowned let canvas: CoreGraphicsCanvasView
+    unowned let hitTestController: CanvasHitTestController
 
     private var dragOrigin: CGPoint?
     private var tentativeSelection: Set<UUID>?
@@ -27,8 +28,9 @@ final class CanvasInteractionController {
 
     var isRotating: Bool { isRotatingViaMouse }
 
-    init(canvas: CoreGraphicsCanvasView) {
+    init(canvas: CoreGraphicsCanvasView, hitTestController: CanvasHitTestController) {
         self.canvas = canvas
+        self.hitTestController = hitTestController
     }
 
     func enterRotationMode(around point: CGPoint) {
@@ -297,7 +299,7 @@ final class CanvasInteractionController {
         )
 
         if tool.id == "connection" {
-            context.hitTarget = hitTestForConnection(at: snapped)
+            context.hitTarget = hitTestController.hitTestForConnection(at: snapped)
         }
 
         if let newElement = tool.handleTap(at: snapped, context: context) {
@@ -315,22 +317,6 @@ final class CanvasInteractionController {
 
         canvas.selectedTool = tool
         return true
-    }
-
-    private func hitTestForConnection(at point: CGPoint) -> ConnectionHitTarget {
-        let tolerance = 5.0 / canvas.magnification
-        for element in canvas.elements.reversed() {
-            guard case .connection(let conn) = element else { continue }
-            for vertex in conn.graph.vertices.values {
-                if hypot(point.x - vertex.point.x, point.y - vertex.point.y) < tolerance {
-                    return .vertex(vertexID: vertex.id, onConnection: conn.id)
-                }
-            }
-            if let edgeID = conn.hitSegmentID(at: point, tolerance: tolerance) {
-                return .edge(edgeID: edgeID, onConnection: conn.id, at: point)
-            }
-        }
-        return .emptySpace(point: point)
     }
 
     func handleReturnKeyPress() {

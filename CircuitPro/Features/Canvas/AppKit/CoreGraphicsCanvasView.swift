@@ -42,9 +42,11 @@ final class CoreGraphicsCanvasView: NSView {
     var onPinHoverChange: ((UUID?) -> Void)?
 
     // MARK: Private Controllers
-    private lazy var interaction = CanvasInteractionController(canvas: self)
     private lazy var drawing = CanvasDrawingController(canvas: self)
     private lazy var hitTesting = CanvasHitTestController(canvas: self)
+    private lazy var interaction: CanvasInteractionController = {
+        CanvasInteractionController(canvas: self, hitTestController: self.hitTesting)
+    }()
 
     var selectedTool: AnyCanvasTool?
     var selectedLayer: CanvasLayer = .layer0

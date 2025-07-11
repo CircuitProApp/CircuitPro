@@ -88,23 +88,28 @@ struct SchematicView: View {
     private func connectionElements() -> String? {
         let connections = canvasElements.compactMap { element -> String? in
             guard case .connection(let connectionElement) = element else { return nil }
-            let idString = "Connection ID: \(connectionElement.id.uuidString)"
-
-            let edgeLines = connectionElement.graph.edges.map { (id, edge) in
+            
+            let edgeCount = connectionElement.graph.edges.count
+            let vertexCount = connectionElement.graph.vertices.count
+            
+            let edgeLines = connectionElement.graph.edges.map { (id, _) in
                 "   Edge \(id)"
             }.joined(separator: "\n")
             
             let vertexLines = connectionElement.graph.vertices.map { (id, vertex) in
-                "       Vertex: (\(vertex.point.x), \(vertex.point.y))"
+                "   Vertex \(id): (\(vertex.point.x), \(vertex.point.y))"
             }.joined(separator: "\n")
-
-            return "\(idString)\n\(edgeLines)\n\(vertexLines)"
+            
+            return """
+            Connection: \(edgeCount) Edges, \(vertexCount) Vertices
+            \(edgeLines)
+            \(vertexLines)
+            """
         }
-
+        
         guard !connections.isEmpty else { return nil }
-        return connections.joined(separator: "\n\n") // separates each connection with a blank line
+        return connections.joined(separator: "\n\n")
     }
-
 
     // 1. Component drop: Add Components with Incremental Reference Number
     // Adds the dropped components and assigns a reference number that
