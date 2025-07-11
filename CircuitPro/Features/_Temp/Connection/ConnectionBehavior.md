@@ -184,3 +184,23 @@ The Connection behavior code is delegated through two stages, one within Connect
   - E3 from (200,0) to (100,0)  
 - Action: T1(300,0) DT(0,0)  
 - Result: One continuous horizontal Edge from (0,0) to (300,0), with the entire original E1 merged, both endpoints unified into the existing Vertex at (0,0), and the vertical branch still attached at (100,0)
+
+## H-Junction Creation
+
+- Scope: Tool & Post
+
+### Test 1
+
+- Logic: Multi-Junction (H pattern)  
+- Precondition: Existing horizontal Edges  
+  - E1 from (0,0) to (100,0)  
+  - E2 from (0,100) to (100,100)  
+- Action: T1(50,0) DT(50,100)  
+- Result: A Connection in the shape of an "H", where the newly created vertical Edge intersects both horizontals at (50,0) and (50,100)
+
+### Test 2 (Variant: Additional Vertical Bar)
+
+- Logic: Multi-Junction Extension  
+- Precondition: Result of Test 1 (the H-Junction)  
+- Action: T6(25,0) DT(25,100)  
+- Result: Two vertical Edges at x=25 and x=50 connecting the same horizontal Edges, forming a double-barred “H” pattern

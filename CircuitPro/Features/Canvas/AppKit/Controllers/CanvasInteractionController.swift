@@ -335,7 +335,6 @@ final class CanvasInteractionController {
                                                 _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
                                             }
                                             shareVertex = true
-                                            break intersectionCheck
                                         }
                                     } else if isHorizontal {
                                         if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
@@ -343,7 +342,6 @@ final class CanvasInteractionController {
                                                 _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
                                             }
                                             shareVertex = true
-                                            break intersectionCheck
                                         }
                                     }
                                 }
@@ -368,7 +366,6 @@ final class CanvasInteractionController {
                                                 _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
                                             }
                                             shareVertex = true
-                                            break reverseIntersectionCheck
                                         }
                                     } else if isHorizontal {
                                         if abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance {
@@ -376,7 +373,6 @@ final class CanvasInteractionController {
                                                 _ = newConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
                                             }
                                             shareVertex = true
-                                            break reverseIntersectionCheck
                                         }
                                     }
                                 }
