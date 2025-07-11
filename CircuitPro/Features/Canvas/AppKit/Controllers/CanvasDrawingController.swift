@@ -22,10 +22,21 @@ final class CanvasDrawingController {
     // MARK: - 1 elements
     private func drawElements(in ctx: CGContext) {
         let allSelectedIDs = canvas.selectedIDs.union(canvas.marqueeSelectedIDs)
+        
+        let allPinPositions = canvas.elements.compactMap { element -> SymbolElement? in
+            if case .symbol(let symbol) = element { return symbol }
+            return nil
+        }.flatMap { symbolElement -> [CGPoint] in
+            symbolElement.symbol.pins.map { pin in
+                // Calculate the pin's world position
+                return symbolElement.instance.position + pin.position.rotated(by: symbolElement.instance.rotation)
+            }
+        }
+        
         for element in canvas.elements {
             if case .connection(let conn) = element {
                 // let the ConnectionElement itself handle “whole net” vs. “per‐edge” halos
-                conn.draw(in: ctx, with: allSelectedIDs)
+                conn.draw(in: ctx, with: allSelectedIDs, allPinPositions: allPinPositions)
             } else {
                 let isSelected = allSelectedIDs.contains(element.id)
                 element.drawable.draw(in: ctx, selected: isSelected)

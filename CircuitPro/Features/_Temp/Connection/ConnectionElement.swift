@@ -64,9 +64,9 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
     /// manipulating the data in the ConnectionGraph.
 
     // MARK: – Drawable
-    func draw(in ctx: CGContext, with selection: Set<UUID>) {
+    func draw(in ctx: CGContext, with selection: Set<UUID>, allPinPositions: [CGPoint]) {
         drawSelection(in: ctx, selection: selection)
-        drawBody(in: ctx)
+        drawBody(in: ctx, allPinPositions: allPinPositions)
     }
 
     private func drawSelection(in ctx: CGContext, selection: Set<UUID>) {
@@ -101,25 +101,48 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
         }
     }
 
-    internal func drawBody(in ctx: CGContext) {
+    func drawBody(in ctx: CGContext) {
+        drawBody(in: ctx, allPinPositions: [])
+    }
+
+    internal func drawBody(in ctx: CGContext, allPinPositions: [CGPoint]) {
         // Draw the wires
         primitives.forEach { $0.drawBody(in: ctx) }
 
-        // Draw junction dots (≥ 3 wires share the same vertex)
-        // This logic now correctly handles complex junctions because it operates
-        // on a unified graph in world coordinates.
-        let vertexCounts = segments
-            .flatMap { [$0.start, $0.end] }
-            .reduce(into: [CGPoint: Int]()) { counts, point in
-                counts[point, default: 0] += 1
-            }
-
+        // Draw junction dots and endpoints
         ctx.saveGState()
         ctx.setFillColor(NSColor(.blue).cgColor)
-        let d: CGFloat = 6
-        for (p, n) in vertexCounts where n > 2 {
-            let r = CGRect(x: p.x - d / 2, y: p.y - d / 2, width: d, height: d)
-            ctx.fillEllipse(in: r)
+        let junctionDiameter: CGFloat = 6
+        let endpointDiameter: CGFloat = 4
+
+        for (vertexID, edgeIDs) in graph.adjacency {
+            guard let vertex = graph.vertices[vertexID] else { continue }
+            let connectionCount = edgeIDs.count
+
+            if connectionCount > 2 { // Junction
+                let r = CGRect(
+                    x: vertex.point.x - junctionDiameter / 2,
+                    y: vertex.point.y - junctionDiameter / 2,
+                    width: junctionDiameter,
+                    height: junctionDiameter
+                )
+                ctx.fillEllipse(in: r)
+            } else if connectionCount == 1 { // Potential free-floating endpoint
+                // Check if this vertex is on a pin
+                let isAttached = allPinPositions.contains { pinPos in
+                    hypot(vertex.point.x - pinPos.x, vertex.point.y - pinPos.y) < 0.01
+                }
+
+                if !isAttached {
+                    let r = CGRect(
+                        x: vertex.point.x - endpointDiameter / 2,
+                        y: vertex.point.y - endpointDiameter / 2,
+                        width: endpointDiameter,
+                        height: endpointDiameter
+                    )
+                    ctx.fillEllipse(in: r)
+                }
+            }
         }
         ctx.restoreGState()
     }
