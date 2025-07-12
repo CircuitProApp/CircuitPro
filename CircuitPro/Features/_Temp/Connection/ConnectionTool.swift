@@ -196,41 +196,36 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     private func addOrthogonalSegment(to graph: ConnectionGraph, from p1: CGPoint, to p2: CGPoint, givenOrientation: LineOrientation? = nil) -> [ConnectionVertex.ID] {
         var newVertexIDs: [UUID] = []
         let startVertex = graph.ensureVertex(at: p1)
-        
-        // Use the given orientation if provided; otherwise, calculate it from the graph.
-        // This is crucial for generating an accurate preview.
+
+        // If start and end points are the same, do nothing.
+        if p1 == p2 {
+            return []
+        }
+
         let lastSegmentOrientation = givenOrientation ?? graph.lastSegmentOrientation(before: startVertex.id)
-        
         let startsWithHorizontal = (lastSegmentOrientation == .vertical || lastSegmentOrientation == nil)
-        
+
         let cornerPoint = startsWithHorizontal ? CGPoint(x: p2.x, y: p1.y) : CGPoint(x: p1.x, y: p2.y)
-        
+
+        // First segment: from p1 to cornerPoint
         if cornerPoint != p1 {
             let cornerVertex = graph.ensureVertex(at: cornerPoint)
             graph.addEdge(from: startVertex.id, to: cornerVertex.id)
-            newVertexIDs.append(cornerVertex.id)
+            if !newVertexIDs.contains(cornerVertex.id) {
+                newVertexIDs.append(cornerVertex.id)
+            }
         }
-        
+
+        // Second segment: from cornerPoint to p2
         if cornerPoint != p2 {
-            let endVertex = graph.ensureVertex(at: p2)
             let cornerVertex = graph.ensureVertex(at: cornerPoint)
-            graph.addEdge(from: cornerVertex.id, to: endVertex.id)
-            newVertexIDs.append(endVertex.id)
-        } else {
-            // p2 is the corner point.
             let endVertex = graph.ensureVertex(at: p2)
-            // If it wasn't added as a corner, add it now.
+            graph.addEdge(from: cornerVertex.id, to: endVertex.id)
             if !newVertexIDs.contains(endVertex.id) {
                 newVertexIDs.append(endVertex.id)
             }
         }
-        
-        var uniqueIDs = [UUID]()
-        for id in newVertexIDs {
-            if !uniqueIDs.contains(id) {
-                uniqueIDs.append(id)
-            }
-        }
-        return uniqueIDs
+
+        return newVertexIDs
     }
 }

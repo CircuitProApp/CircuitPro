@@ -381,105 +381,74 @@ public class ConnectionGraph {
     
     /// Simplifies the graph by merging collinear segments, correctly handling T-junctions and complex overlaps.
     public func simplifyCollinearSegments() {
-        while true {
-            var wasSimplified = false
+        // Helper function to check for paths, making the simplification cycle-aware.
+        func pathExists(from startID: UUID, to endID: UUID, ignoringVertex vertexToIgnore: UUID) -> Bool {
+            var queue: [UUID] = [startID]
+            var visited: Set<UUID> = [startID, vertexToIgnore]
 
-            for axis in [LineOrientation.horizontal, .vertical] {
-                // Group all vertices by their coordinate on the perpendicular axis.
-                // This allows us to find all potentially collinear vertices, even if they are not connected.
-                let tolerance = 0.01
-                let groups = Dictionary(grouping: vertices.values, by: {
-                    axis == .horizontal ? round($0.point.y / tolerance) * tolerance : round($0.point.x / tolerance) * tolerance
-                })
-
-                for (_, collinearVertices) in groups where collinearVertices.count >= 2 {
-                    // We need at least 2 vertices to form a line, and potentially simplify something.
-
-                    // 2. Identify which of these vertices are junctions (have perpendicular attachments).
-                    var junctionVertices: [ConnectionVertex] = []
-                    for v_collinear in collinearVertices {
-                        guard let v_edges = adjacency[v_collinear.id] else { continue }
-                        for edge_id in v_edges {
-                            guard let edge = edges[edge_id] else { continue }
-                            let neighbor_id = (edge.start == v_collinear.id) ? edge.end : edge.start
-                            // If the neighbor is NOT part of the current collinear set, it's a perpendicular junction.
-                            if !collinearVertices.contains(where: { $0.id == neighbor_id }) {
-                                junctionVertices.append(v_collinear)
-                                break
-                            }
-                        }
-                    }
-
-                    // 3. Find the endpoints of the entire collinear segment.
-                    let endpoints: (ConnectionVertex, ConnectionVertex)
-                    if axis == .horizontal {
-                        guard let minX = collinearVertices.map({ $0.point.x }).min(), let maxX = collinearVertices.map({ $0.point.x }).max(), abs(maxX - minX) > tolerance,
-                              let p1 = collinearVertices.first(where: { abs($0.point.x - minX) < tolerance }),
-                              let p2 = collinearVertices.first(where: { abs($0.point.x - maxX) < tolerance }) else { continue }
-                        endpoints = (p1, p2)
-                    } else { // Vertical
-                        guard let minY = collinearVertices.map({ $0.point.y }).min(), let maxY = collinearVertices.map({ $0.point.y }).max(), abs(maxY - minY) > tolerance,
-                              let p1 = collinearVertices.first(where: { abs($0.point.y - minY) < tolerance }),
-                              let p2 = collinearVertices.first(where: { abs($0.point.y - maxY) < tolerance }) else { continue }
-                        endpoints = (p1, p2)
-                    }
-
-                    // 4. Determine which vertices to keep and if simplification is possible.
-                    var verticesToKeep = junctionVertices
-                    verticesToKeep.append(endpoints.0)
-                    verticesToKeep.append(endpoints.1)
-                    let uniqueKeptIDs = Set(verticesToKeep.map { $0.id })
-
-                    if uniqueKeptIDs.count >= collinearVertices.count {
-                        continue // No intermediate vertices to remove.
-                    }
-
-                    // 5. Perform the simplification.
-                    // Remove all edges that are internal to the collinear set.
-                    var edgesToRemove: [ConnectionEdge.ID] = []
-                    for v_collinear in collinearVertices {
-                        if let connectedEdgeIDs = adjacency[v_collinear.id] {
-                            for edgeID in connectedEdgeIDs {
-                                guard let edge = edges[edgeID] else { continue }
-                                let neighborID = (edge.start == v_collinear.id) ? edge.end : edge.start
-                                if collinearVertices.contains(where: { $0.id == neighborID }) {
-                                    edgesToRemove.append(edgeID)
-                                }
-                            }
-                        }
-                    }
-                    for edgeID in Set(edgesToRemove) {
-                        if let edge = edges.removeValue(forKey: edgeID) {
-                            adjacency[edge.start]?.remove(edgeID)
-                            adjacency[edge.end]?.remove(edgeID)
-                        }
-                    }
-
-                    // Remove intermediate vertices that are not endpoints or junctions.
-                    for v_collinear in collinearVertices {
-                        if !uniqueKeptIDs.contains(v_collinear.id) {
-                            vertices.removeValue(forKey: v_collinear.id)
-                            adjacency.removeValue(forKey: v_collinear.id)
-                        }
-                    }
-
-                    // Sort the kept vertices and create new edges to connect them in a line.
-                    let sortedKeptVertices = Array(uniqueKeptIDs).compactMap({ vertices[$0] }).sorted(by: {
-                        axis == .horizontal ? $0.point.x < $1.point.x : $0.point.y < $1.point.y
-                    })
-
-                    for i in 0..<(sortedKeptVertices.count - 1) {
-                        addUniqueEdge(from: sortedKeptVertices[i].id, to: sortedKeptVertices[i+1].id)
-                    }
-
-                    wasSimplified = true
-                    break // Restart the main simplification loop for this axis
+            while !queue.isEmpty {
+                let currentID = queue.removeFirst()
+                if currentID == endID {
+                    return true
                 }
-                if wasSimplified { break } // Restart the axis loop
-            }
 
-            if !wasSimplified {
-                break // Exit while loop if no simplifications were made in a full pass
+                // Using the main graph's adjacency and vertices collections
+                for edgeID in self.adjacency[currentID, default: []] {
+                    guard let edge = self.edges[edgeID] else { continue }
+                    let neighborID = edge.start == currentID ? edge.end : edge.start
+                    if !visited.contains(neighborID) {
+                        visited.insert(neighborID)
+                        queue.append(neighborID)
+                    }
+                }
+            }
+            return false
+        }
+
+        var wasSimplified = true
+        while wasSimplified {
+            wasSimplified = false
+            
+            // Only vertices with exactly two connections are candidates for removal.
+            let candidates = vertices.values.filter { self.adjacency[$0.id]?.count == 2 }
+
+            for candidate in candidates {
+                // The vertex might have been removed in a previous pass of the loop.
+                guard let candidateVertex = self.vertices[candidate.id] else { continue }
+                
+                let neighborEdges = self.adjacency[candidate.id]!.compactMap { self.edges[$0] }
+                let neighborIDs = neighborEdges.map { $0.start == candidate.id ? $0.end : $0.start }
+
+                guard neighborIDs.count == 2,
+                      let n1 = self.vertices[neighborIDs[0]],
+                      let n2 = self.vertices[neighborIDs[1]] else {
+                    continue
+                }
+
+                let p0 = candidateVertex.point
+                let p1 = n1.point
+                let p2 = n2.point
+
+                // Check if the candidate and its two neighbors are collinear.
+                let tolerance: CGFloat = 0.01
+                let isHorizontal = abs(p0.y - p1.y) < tolerance && abs(p0.y - p2.y) < tolerance
+                let isVertical = abs(p0.x - p1.x) < tolerance && abs(p0.x - p2.x) < tolerance
+
+                if isHorizontal || isVertical {
+                    // This is a collinear vertex. Before removing it, we must ensure
+                    // that doing so doesn't collapse a cycle into parallel edges.
+                    // We check if the two neighbors are already connected by another path.
+                    if pathExists(from: n1.id, to: n2.id, ignoringVertex: candidate.id) {
+                        continue // This would collapse a cycle. Do not simplify.
+                    }
+
+                    // The vertex is redundant. Remove it and connect its neighbors directly.
+                    self.removeVertex(id: candidate.id)
+                    self.addUniqueEdge(from: n1.id, to: n2.id)
+                    
+                    wasSimplified = true
+                    break // Restart the simplification process from the beginning.
+                }
             }
         }
     }

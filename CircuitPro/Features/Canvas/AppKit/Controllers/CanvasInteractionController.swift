@@ -8,8 +8,12 @@ final class CanvasInteractionController {
     private var dragOrigin: CGPoint?
     private var tentativeSelection: Set<UUID>?
     private var originalPositions: [UUID: CGPoint] = [:]
-    private var originalVertexPositions: [UUID: CGPoint] = [:]
-    private var draggedEdgeOrientation: LineOrientation?
+
+    // Connection Dragging State
+    private var activeConnectionID: UUID?
+    private var draggedEdgeID: UUID?
+    private var originalGraphVertexPositions: [UUID: CGPoint]?
+
     private var activeHandle: (UUID, Handle.Kind)?
     private var frozenOppositeWorld: CGPoint?
     private var didMoveSignificantly = false
@@ -120,10 +124,10 @@ final class CanvasInteractionController {
         didMoveSignificantly = false
         tentativeSelection = nil
         originalPositions.removeAll()
-        originalVertexPositions.removeAll()
-        draggedEdgeOrientation = nil
         frozenOppositeWorld = nil
         activeHandle = nil
+        
+        resetConnectionDragState()
 
         if tryBeginHandleInteraction(at: loc) { return }
         tryUpdateTentativeSelection(at: loc, with: event)
@@ -146,8 +150,6 @@ final class CanvasInteractionController {
 
     private func tryUpdateTentativeSelection(at loc: CGPoint, with event: NSEvent) {
         let shift = event.modifierFlags.contains(.shift)
-        // The original code used canvas.hitRects.hitTest(at: loc).
-        // We now use the controller to get edge hits.
         let hitID = hitTestController.hitTest(at: loc)
 
         guard let id = hitID else {
@@ -159,27 +161,14 @@ final class CanvasInteractionController {
 
         // Prioritize edge hits for drag operations.
         for element in canvas.elements {
-            if case .connection(let conn) = element, let edge = conn.graph.edges[id] {
-                // This is an edge. For simplicity, we'll make it the only selection.
-                // This starts a drag operation for this edge only.
-                tentativeSelection = [id]
-                if let startVertex = conn.graph.vertices[edge.start],
-                   let endVertex = conn.graph.vertices[edge.end] {
-                    originalVertexPositions[startVertex.id] = startVertex.point
-                    originalVertexPositions[endVertex.id] = endVertex.point
-
-                    // Determine and store orientation
-                    let tolerance: CGFloat = 0.01
-                    if abs(startVertex.point.x - endVertex.point.x) < tolerance {
-                        self.draggedEdgeOrientation = .vertical
-                    } else if abs(startVertex.point.y - endVertex.point.y) < tolerance {
-                        self.draggedEdgeOrientation = .horizontal
-                    } else {
-                        self.draggedEdgeOrientation = nil // Diagonal
-                    }
-                }
-                return // Handled
-            }
+            guard case .connection(let conn) = element, conn.graph.edges[id] != nil else { continue }
+            
+            // This is an edge. Start a drag operation for this connection.
+            tentativeSelection = [id]
+            activeConnectionID = conn.id
+            draggedEdgeID = id
+            originalGraphVertexPositions = conn.graph.vertices.mapValues { $0.point }
+            return // Handled
         }
 
         // If no edge was hit, it must be an element. Fall back to original logic.
@@ -227,47 +216,57 @@ final class CanvasInteractionController {
     }
 
     private func handleDraggingConnectionEdge(to loc: CGPoint, from origin: CGPoint) -> Bool {
-        guard !originalVertexPositions.isEmpty else { return false }
-
-        var delta = CGPoint(x: canvas.snapDelta(loc.x - origin.x), y: canvas.snapDelta(loc.y - origin.y))
-
-        // Constrain delta for orthogonal edge drags
-        if let orientation = draggedEdgeOrientation {
-            switch orientation {
-            case .horizontal:
-                delta.x = 0 // Horizontal edges are dragged vertically
-            case .vertical:
-                delta.y = 0 // Vertical edges are dragged horizontally
-            }
+        guard let activeConnectionID = self.activeConnectionID,
+              let draggedEdgeID = self.draggedEdgeID,
+              let originalGraphPositions = self.originalGraphVertexPositions,
+              let elementIndex = canvas.elements.firstIndex(where: { $0.id == activeConnectionID }),
+              case .connection(var conn) = canvas.elements[elementIndex],
+              let draggedEdge = conn.graph.edges[draggedEdgeID]
+        else {
+            return false
         }
 
-        var updated = canvas.elements
-        var didUpdate = false
+        let delta = CGPoint(x: canvas.snapDelta(loc.x - origin.x), y: canvas.snapDelta(loc.y - origin.y))
+        var vertexDeltas: [UUID: CGPoint] = [:]
 
-        for i in updated.indices {
-            guard case .connection(var conn) = updated[i] else { continue }
+        // The dragged edge's vertices move by the full delta.
+        vertexDeltas[draggedEdge.start] = delta
+        vertexDeltas[draggedEdge.end] = delta
 
-            var connectionWasModified = false
-            for (vertexID, originalPos) in originalVertexPositions {
-                if conn.graph.vertices[vertexID] != nil {
-                    conn.graph.vertices[vertexID]?.point = CGPoint(x: originalPos.x + delta.x, y: originalPos.y + delta.y)
-                    connectionWasModified = true
+        // For each vertex of the dragged edge, find adjacent orthogonal edges and constrain their far-end movement.
+        for vertexID in [draggedEdge.start, draggedEdge.end] {
+            guard let adjacentEdgeIDs = conn.graph.adjacency[vertexID] else { continue }
+            
+            for adjacentEdgeID in adjacentEdgeIDs where adjacentEdgeID != draggedEdgeID {
+                guard let adjacentEdge = conn.graph.edges[adjacentEdgeID],
+                      let startPos = originalGraphPositions[adjacentEdge.start],
+                      let endPos = originalGraphPositions[adjacentEdge.end]
+                else { continue }
+
+                let farVertexID = (adjacentEdge.start == vertexID) ? adjacentEdge.end : adjacentEdge.start
+                
+                // Determine orientation from original positions
+                let tolerance: CGFloat = 0.01
+                if abs(startPos.x - endPos.x) < tolerance { // Vertical
+                    vertexDeltas[farVertexID] = CGPoint(x: delta.x, y: 0)
+                } else if abs(startPos.y - endPos.y) < tolerance { // Horizontal
+                    vertexDeltas[farVertexID] = CGPoint(x: 0, y: delta.y)
                 }
             }
-
-            if connectionWasModified {
-                conn.markChanged()
-                updated[i] = .connection(conn)
-                didUpdate = true
+        }
+        
+        // Apply the calculated deltas to the graph
+        for (vertexID, vertexDelta) in vertexDeltas {
+            if let originalPos = originalGraphPositions[vertexID] {
+                conn.graph.vertices[vertexID]?.point = CGPoint(x: originalPos.x + vertexDelta.x, y: originalPos.y + vertexDelta.y)
             }
         }
+        
+        conn.markChanged()
+        canvas.elements[elementIndex] = .connection(conn)
+        canvas.onUpdate?(canvas.elements)
 
-        if didUpdate {
-            canvas.elements = updated
-            canvas.onUpdate?(updated)
-        }
-
-        return didUpdate
+        return true
     }
 
     private func handleDraggingSelection(to loc: CGPoint, from origin: CGPoint) {
@@ -285,11 +284,16 @@ final class CanvasInteractionController {
     private func resetInteractionState() {
         dragOrigin = nil
         originalPositions.removeAll()
-        originalVertexPositions.removeAll()
-        draggedEdgeOrientation = nil
         didMoveSignificantly = false
         activeHandle = nil
         frozenOppositeWorld = nil
+        resetConnectionDragState()
+    }
+    
+    private func resetConnectionDragState() {
+        activeConnectionID = nil
+        draggedEdgeID = nil
+        originalGraphVertexPositions = nil
     }
 
     private func handleToolTap(at loc: CGPoint, event: NSEvent) -> Bool {
@@ -468,7 +472,6 @@ final class CanvasInteractionController {
                 return
             }
 
-            // Pre-process graphs to split edges at intersection points before merging.
             let otherConnections = indicesToMerge.dropFirst().compactMap { idx -> ConnectionElement? in
                 guard case .connection(let conn) = canvas.elements[idx] else { return nil }
                 return conn
@@ -476,23 +479,6 @@ final class CanvasInteractionController {
             var allOtherGraphs = otherConnections.map { $0.graph }
             allOtherGraphs.append(newConn.graph)
 
-            for otherGraph in allOtherGraphs {
-                // Split edges in primaryConn based on otherGraph's vertices
-                for v in otherGraph.vertices.values {
-                    let hit = primaryConn.graph.hitTest(at: v.point, tolerance: tolerance)
-                    if case .edge(let edgeID, let point, _) = hit {
-                        primaryConn.graph.splitEdge(edgeID, at: point)
-                    }
-                }
-                // Split edges in otherGraph based on primaryConn's vertices
-                for v in primaryConn.graph.vertices.values {
-                    let hit = otherGraph.hitTest(at: v.point, tolerance: tolerance)
-                    if case .edge(let edgeID, let point, _) = hit {
-                        otherGraph.splitEdge(edgeID, at: point)
-                    }
-                }
-            }
-            
             // Merge all graphs into the primary one.
             for otherGraph in allOtherGraphs {
                 primaryConn.graph.merge(with: otherGraph)
