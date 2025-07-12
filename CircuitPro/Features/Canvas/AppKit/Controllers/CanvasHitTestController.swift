@@ -40,13 +40,18 @@ final class CanvasHitTestController {
         let tolerance = 5.0 / canvas.magnification
         for element in canvas.elements.reversed() {
             guard case .connection(let conn) = element else { continue }
-            for vertex in conn.graph.vertices.values {
-                if hypot(point.x - vertex.point.x, point.y - vertex.point.y) < tolerance {
-                    return .vertex(vertexID: vertex.id, onConnection: conn.id)
-                }
-            }
-            if let edgeID = conn.hitSegmentID(at: point, tolerance: tolerance) {
+            
+            // Use the graph's enriched hit-test result
+            let graphHit = conn.graph.hitTest(at: point, tolerance: tolerance)
+            
+            switch graphHit {
+            case .vertex(let vertexID, let position, let type):
+                return .vertex(vertexID: vertexID, onConnection: conn.id, position: position, type: type)
+            case .edge(let edgeID, _):
+                // We use the original point for the edge `at` parameter, as it's more precise
                 return .edge(edgeID: edgeID, onConnection: conn.id, at: point)
+            case .emptySpace:
+                continue
             }
         }
         return .emptySpace(point: point)

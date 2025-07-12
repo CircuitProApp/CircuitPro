@@ -48,7 +48,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         case .edge:
             isSelfExistingEdge = true
             isSelfExistingVertex = false
-        case .vertex(let id):
+        case .vertex(let id, _, _):
             isSelfExistingVertex = (id != newLastVertexID)
             isSelfExistingEdge = false
         case .emptySpace:

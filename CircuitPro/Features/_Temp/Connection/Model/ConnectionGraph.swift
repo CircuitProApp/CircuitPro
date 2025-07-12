@@ -3,7 +3,7 @@ import CoreGraphics
 
 public enum GraphHitResult: Equatable {
     case emptySpace
-    case vertex(id: UUID)
+    case vertex(id: UUID, position: CGPoint, type: VertexType)
     case edge(id: UUID, point: CGPoint)
 }
 
@@ -198,6 +198,23 @@ public class ConnectionGraph {
         }
     }
 
+    public func vertexType(for vertexID: ConnectionVertex.ID) -> VertexType? {
+        guard let edgeCount = adjacency[vertexID]?.count else {
+            return nil
+        }
+
+        switch edgeCount {
+        case 1:
+            return .endpoint
+        case 2:
+            return .corner
+        case 3...:
+            return .junction
+        default: // 0
+            return nil
+        }
+    }
+
     /// Determines the orientation of the last segment leading to a given vertex.
     public func lastSegmentOrientation(before vertexID: UUID) -> LineOrientation? {
         guard let lastVertex = vertices[vertexID],
@@ -253,7 +270,9 @@ public class ConnectionGraph {
         // Vertex check
         for vertex in vertices.values {
             if hypot(point.x - vertex.point.x, point.y - vertex.point.y) <= tolerance {
-                return .vertex(id: vertex.id)
+                if let vertexType = vertexType(for: vertex.id) {
+                    return .vertex(id: vertex.id, position: vertex.point, type: vertexType)
+                }
             }
         }
 
