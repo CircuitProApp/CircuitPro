@@ -9,6 +9,7 @@ final class CanvasInteractionController {
     private var tentativeSelection: Set<UUID>?
     private var originalPositions: [UUID: CGPoint] = [:]
     private var originalVertexPositions: [UUID: CGPoint] = [:]
+    private var draggedEdgeOrientation: LineOrientation?
     private var activeHandle: (UUID, Handle.Kind)?
     private var frozenOppositeWorld: CGPoint?
     private var didMoveSignificantly = false
@@ -120,6 +121,7 @@ final class CanvasInteractionController {
         tentativeSelection = nil
         originalPositions.removeAll()
         originalVertexPositions.removeAll()
+        draggedEdgeOrientation = nil
         frozenOppositeWorld = nil
         activeHandle = nil
 
@@ -161,11 +163,20 @@ final class CanvasInteractionController {
                 // This is an edge. For simplicity, we'll make it the only selection.
                 // This starts a drag operation for this edge only.
                 tentativeSelection = [id]
-                if let startVertex = conn.graph.vertices[edge.start] {
+                if let startVertex = conn.graph.vertices[edge.start],
+                   let endVertex = conn.graph.vertices[edge.end] {
                     originalVertexPositions[startVertex.id] = startVertex.point
-                }
-                if let endVertex = conn.graph.vertices[edge.end] {
                     originalVertexPositions[endVertex.id] = endVertex.point
+
+                    // Determine and store orientation
+                    let tolerance: CGFloat = 0.01
+                    if abs(startVertex.point.x - endVertex.point.x) < tolerance {
+                        self.draggedEdgeOrientation = .vertical
+                    } else if abs(startVertex.point.y - endVertex.point.y) < tolerance {
+                        self.draggedEdgeOrientation = .horizontal
+                    } else {
+                        self.draggedEdgeOrientation = nil // Diagonal
+                    }
                 }
                 return // Handled
             }
@@ -218,7 +229,18 @@ final class CanvasInteractionController {
     private func handleDraggingConnectionEdge(to loc: CGPoint, from origin: CGPoint) -> Bool {
         guard !originalVertexPositions.isEmpty else { return false }
 
-        let delta = CGPoint(x: canvas.snapDelta(loc.x - origin.x), y: canvas.snapDelta(loc.y - origin.y))
+        var delta = CGPoint(x: canvas.snapDelta(loc.x - origin.x), y: canvas.snapDelta(loc.y - origin.y))
+
+        // Constrain delta for orthogonal edge drags
+        if let orientation = draggedEdgeOrientation {
+            switch orientation {
+            case .horizontal:
+                delta.x = 0 // Horizontal edges are dragged vertically
+            case .vertical:
+                delta.y = 0 // Vertical edges are dragged horizontally
+            }
+        }
+
         var updated = canvas.elements
         var didUpdate = false
 
@@ -264,6 +286,7 @@ final class CanvasInteractionController {
         dragOrigin = nil
         originalPositions.removeAll()
         originalVertexPositions.removeAll()
+        draggedEdgeOrientation = nil
         didMoveSignificantly = false
         activeHandle = nil
         frozenOppositeWorld = nil
