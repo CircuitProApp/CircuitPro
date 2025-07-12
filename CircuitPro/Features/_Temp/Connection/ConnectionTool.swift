@@ -58,11 +58,11 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
         if isDoubleTapEmpty || isExternalHit || isSelfExistingEdge || isSelfExistingVertex {
             // Finalize the connection.
-            if isSelfExistingEdge, case .edge(let edgeID, let point) = selfHit {
+            if isSelfExistingEdge, case .edge(let edgeID, let point, _) = selfHit {
                 graph.splitEdge(edgeID, at: point)
             } else if isExternalHit, let hit = context.hitTarget {
                 switch hit {
-                case .edge(let edgeID, _, let point):
+                case .edge(let edgeID, _, let point, _):
                     graph.splitEdge(edgeID, at: point)
                 default:
                     break

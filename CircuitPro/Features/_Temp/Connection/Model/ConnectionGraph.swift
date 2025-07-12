@@ -4,7 +4,7 @@ import CoreGraphics
 public enum GraphHitResult: Equatable {
     case emptySpace
     case vertex(id: UUID, position: CGPoint, type: VertexType)
-    case edge(id: UUID, point: CGPoint)
+    case edge(id: UUID, point: CGPoint, orientation: LineOrientation)
 }
 
 /// Represents a vertex in the connection graph.
@@ -295,11 +295,11 @@ public class ConnectionGraph {
 
             if isVertical {
                 if abs(point.x - start.x) < tolerance {
-                    return .edge(id: edgeID, point: CGPoint(x: start.x, y: point.y))
+                    return .edge(id: edgeID, point: CGPoint(x: start.x, y: point.y), orientation: .vertical)
                 }
             } else if isHorizontal {
                 if abs(point.y - start.y) < tolerance {
-                    return .edge(id: edgeID, point: CGPoint(x: point.x, y: start.y))
+                    return .edge(id: edgeID, point: CGPoint(x: point.x, y: start.y), orientation: .horizontal)
                 }
             }
         }

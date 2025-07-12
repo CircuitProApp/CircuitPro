@@ -8,5 +8,5 @@ enum ConnectionHitTarget {
     /// A click landed on an existing vertex.
     case vertex(vertexID: UUID, onConnection: UUID, position: CGPoint, type: VertexType)
     /// A click landed on an existing edge.
-    case edge(edgeID: UUID, onConnection: UUID, at: CGPoint)
+    case edge(edgeID: UUID, onConnection: UUID, at: CGPoint, orientation: LineOrientation)
 }

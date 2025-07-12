@@ -229,10 +229,6 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
         primitives.contains { $0.hitTest(point, tolerance: tolerance) }
     }
 
-    func hitSegmentID(at point: CGPoint, tolerance: CGFloat = 5) -> UUID? {
-        primitives.first { $0.hitTest(point, tolerance: tolerance) }?.id
-    }
-
     // MARK: – Selection helpers
     func selectionPath() -> CGPath? {
         let path = CGMutablePath()

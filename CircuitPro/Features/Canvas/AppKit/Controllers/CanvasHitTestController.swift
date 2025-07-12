@@ -16,19 +16,16 @@ final class CanvasHitTestController {
 
     func hitTest(at point: CGPoint) -> UUID? {
         let tolerance = 5.0 / canvas.magnification
-        // This logic remains sound. We iterate through elements and give connections
-        // a chance to return a more specific ID (an edge's ID) before falling back.
-        for element in canvas.elements.reversed() { // NOTE: Reversed to hit topmost elements first
-
-            // 1 — Check for a specific segment hit within a connection.
-            if case .connection(let conn) = element,
-               let edgeID = conn.hitSegmentID(at: point, tolerance: tolerance) {
-                return edgeID
+        for element in canvas.elements.reversed() {
+            // If we hit a connection, we want to check for a specific edge hit first.
+            if case .connection(let conn) = element {
+                let graphHit = conn.graph.hitTest(at: point, tolerance: tolerance)
+                if case .edge(let edgeID, _, _) = graphHit {
+                    return edgeID // Return the specific edge ID
+                }
             }
 
-            // 2 — Fall back to hitting the element as a whole.
-            // This now works perfectly for connections, as their hitTest method
-            // checks all their constituent edges.
+            // Fall back to hitting the element as a whole.
             if element.hitTest(point) {
                 return element.id
             }
@@ -47,9 +44,9 @@ final class CanvasHitTestController {
             switch graphHit {
             case .vertex(let vertexID, let position, let type):
                 return .vertex(vertexID: vertexID, onConnection: conn.id, position: position, type: type)
-            case .edge(let edgeID, _):
+            case .edge(let edgeID, _, let orientation):
                 // We use the original point for the edge `at` parameter, as it's more precise
-                return .edge(edgeID: edgeID, onConnection: conn.id, at: point)
+                return .edge(edgeID: edgeID, onConnection: conn.id, at: point, orientation: orientation)
             case .emptySpace:
                 continue
             }
