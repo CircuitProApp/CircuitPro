@@ -16,7 +16,7 @@ struct StatusBarView: View {
 
     var body: some View {
         HStack {
-            CanvasControlView()
+            CanvasControlView(editorType: editorType)
             Divider()
                 .foregroundStyle(.quinary)
                 .frame(height: 12)

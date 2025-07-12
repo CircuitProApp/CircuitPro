@@ -10,6 +10,8 @@ struct CanvasControlView: View {
 
     @Environment(CanvasManager.self)
     private var canvasManager
+    
+    var editorType: EditorType 
 
     var body: some View {
         HStack(spacing: 15) {
@@ -26,14 +28,15 @@ struct CanvasControlView: View {
                     .frame(width: 13, height: 13)
                     .foregroundStyle(canvasManager.crosshairsStyle != .hidden ? .blue : .secondary)
             }
-            Button {
-                canvasManager.enableSnapping.toggle()
-            } label: {
-                Image(systemName: CircuitProSymbols.Canvas.snapping)
-                    .frame(width: 13, height: 13)
-                    .foregroundStyle(canvasManager.enableSnapping ? .blue : .secondary)
+            if editorType != .schematic {
+                Button {
+                    canvasManager.enableSnapping.toggle()
+                } label: {
+                    Image(systemName: CircuitProSymbols.Canvas.snapping)
+                        .frame(width: 13, height: 13)
+                        .foregroundStyle(canvasManager.enableSnapping ? .blue : .secondary)
+                }
             }
-
             Button {
                 canvasManager.enableAxesBackground.toggle()
             } label: {
