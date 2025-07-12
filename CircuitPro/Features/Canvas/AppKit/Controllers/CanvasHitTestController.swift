@@ -8,15 +8,15 @@ import AppKit
 
 // MARK: - CanvasHitTestController.swift
 final class CanvasHitTestController {
-    unowned let canvas: CoreGraphicsCanvasView
+    unowned let dataSource: CanvasHitTestControllerDataSource
 
-    init(canvas: CoreGraphicsCanvasView) {
-        self.canvas = canvas
+    init(dataSource: CanvasHitTestControllerDataSource) {
+        self.dataSource = dataSource
     }
 
     func hitTest(at point: CGPoint) -> UUID? {
-        let tolerance = 5.0 / canvas.magnification
-        for element in canvas.elements.reversed() {
+        let tolerance = 5.0 / dataSource.magnificationForHitTesting()
+        for element in dataSource.elementsForHitTesting().reversed() {
             // If we hit a connection, we want to check for a specific edge hit first.
             if case .connection(let conn) = element {
                 let graphHit = conn.graph.hitTest(at: point, tolerance: tolerance)
@@ -34,8 +34,8 @@ final class CanvasHitTestController {
     }
 
     func hitTestForConnection(at point: CGPoint) -> ConnectionHitTarget {
-        let tolerance = 5.0 / canvas.magnification
-        for element in canvas.elements.reversed() {
+        let tolerance = 5.0 / dataSource.magnificationForHitTesting()
+        for element in dataSource.elementsForHitTesting().reversed() {
             guard case .connection(let conn) = element else { continue }
             
             // Use the graph's enriched hit-test result
@@ -58,7 +58,7 @@ final class CanvasHitTestController {
     func pin(at point: CGPoint) -> Pin? {
 
         // 1 ─ stand-alone Pin elements -------------------------------------------------
-        for element in canvas.elements {
+        for element in dataSource.elementsForHitTesting() {
             if case .pin(let pin) = element,
                pin.hitTest(point) {
                 return pin
@@ -66,7 +66,7 @@ final class CanvasHitTestController {
         }
 
         // 2 ─ pins that are embedded inside a SymbolElement ---------------------------
-        for element in canvas.elements {
+        for element in dataSource.elementsForHitTesting() {
             guard case .symbol(let symbol) = element else { continue }
 
             // go into the symbol's local space first
