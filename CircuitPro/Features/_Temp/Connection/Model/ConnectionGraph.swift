@@ -71,6 +71,36 @@ public class ConnectionGraph {
         adjacency[endVertexID]?.insert(edge.id)
         return edge
     }
+
+    public func removeVertex(id: UUID) {
+        guard let edgeIDs = adjacency[id] else {
+            // If vertex has no edges, just remove it.
+            vertices.removeValue(forKey: id)
+            adjacency.removeValue(forKey: id)
+            return
+        }
+
+        // Remove all incident edges
+        for edgeID in edgeIDs {
+            if let edge = edges.removeValue(forKey: edgeID) {
+                // Remove edge from neighbor's adjacency list
+                let neighborID = (edge.start == id) ? edge.end : edge.start
+                adjacency[neighborID]?.remove(edgeID)
+            }
+        }
+
+        // Remove vertex and its adjacency list
+        adjacency.removeValue(forKey: id)
+        vertices.removeValue(forKey: id)
+    }
+
+    public func neighbors(of vertexID: ConnectionVertex.ID) -> [ConnectionVertex.ID] {
+        guard let edgeIDs = adjacency[vertexID] else { return [] }
+        return edgeIDs.compactMap { edgeID in
+            guard let edge = edges[edgeID] else { return nil }
+            return (edge.start == vertexID) ? edge.end : edge.start
+        }
+    }
     
     
     private func rebuildAdjacency() {

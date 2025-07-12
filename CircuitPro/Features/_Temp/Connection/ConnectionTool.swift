@@ -10,67 +10,79 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     let label      = "Connection"
 
     // MARK: – Internal drawing state
-    private var state: ConnectionToolState = .idle
+    private struct DrawingState {
+        var graph: ConnectionGraph
+        var vertexHistory: [UUID] // History of ALL vertices added, in order.
+        var lastVertexID: UUID { vertexHistory.last! }
+    }
+    private var drawingState: DrawingState?
 
     // MARK: – CanvasTool conformance
     mutating func handleTap(at loc: CGPoint,
                             context: CanvasToolContext) -> CanvasElement? {
-        // If the tool is idle, this tap starts a new drawing session.
-        if case .idle = state {
+        // If the tool is idle (no drawing state), this tap starts a new drawing session.
+        guard var currentDrawing = drawingState else {
             let newGraph = ConnectionGraph()
             let startVertex = newGraph.addVertex(at: loc)
-            self.state = .drawing(graph: newGraph, lastVertexID: startVertex.id)
+            self.drawingState = DrawingState(graph: newGraph, vertexHistory: [startVertex.id])
             return nil // Don't return an element yet.
         }
 
         // If we are already drawing, check for finalization conditions.
-        guard case .drawing(let graph, let lastVertexID) = state,
-              let lastVertex = graph.vertices[lastVertexID] else {
-            self.state = .idle
+        guard let lastVertex = currentDrawing.graph.vertices[currentDrawing.lastVertexID] else {
+            self.drawingState = nil // Reset state
             return nil
         }
 
         // --- Finalization Logic ---
         let isDoubleTap = context.clickCount > 1
-        let externalHitIsEmpty = context.hitTarget.map { if case .emptySpace = $0 { return true } else { return false } } ?? true
-        let selfHit = graph.hitTest(at: loc, tolerance: 5.0 / context.magnification)
-        let selfHitIsEmpty = { if case .emptySpace = selfHit { return true } else { return false } }()
 
-        let shouldFinalize: Bool
-        if isDoubleTap && externalHitIsEmpty && selfHitIsEmpty {
-            shouldFinalize = true
-        } else if !externalHitIsEmpty {
-            shouldFinalize = true
-        } else if !selfHitIsEmpty {
-            shouldFinalize = true
-        } else {
-            shouldFinalize = false
+        let externalHitIsEmpty: Bool
+        switch context.hitTarget {
+        case .some(.emptySpace), .none:
+            externalHitIsEmpty = true
+        default:
+            externalHitIsEmpty = false
         }
 
+        let selfHit = currentDrawing.graph.hitTest(at: loc, tolerance: 5.0 / context.magnification)
+        let selfHitIsEmpty: Bool
+        switch selfHit {
+        case .emptySpace:
+            selfHitIsEmpty = true
+        default:
+            selfHitIsEmpty = false
+        }
+
+        // Finalize on a double-tap, or a single-tap on an existing element or the connection itself.
+        // A single-tap in empty space continues drawing.
+        let shouldFinalize = isDoubleTap || !externalHitIsEmpty || !selfHitIsEmpty
+
         if shouldFinalize {
-            _ = addOrthogonalSegment(to: graph, from: lastVertex.point, to: loc)
+            _ = addOrthogonalSegment(to: currentDrawing.graph, from: lastVertex.point, to: loc)
 
             if case .edge(let edgeID, let point, _) = selfHit {
-                graph.splitEdge(edgeID, at: point)
+                currentDrawing.graph.splitEdge(edgeID, at: point)
             }
 
-            graph.simplifyCollinearSegments()
-            let finalElement = ConnectionElement(graph: graph)
-            state = .idle
+            currentDrawing.graph.simplifyCollinearSegments()
+            let finalElement = ConnectionElement(graph: currentDrawing.graph)
+            drawingState = nil
             return .connection(finalElement)
         }
 
         // --- Continue Drawing Logic ---
-        let newLastVertexID = addOrthogonalSegment(to: graph, from: lastVertex.point, to: loc)
-        state = .drawing(graph: graph, lastVertexID: newLastVertexID)
+        let newVertexIDs = addOrthogonalSegment(to: currentDrawing.graph, from: lastVertex.point, to: loc)
+        currentDrawing.vertexHistory.append(contentsOf: newVertexIDs)
+        self.drawingState = currentDrawing // Write back the modified state
         return nil
     }
 
-    mutating func drawPreview(in ctx: CGContext,
-                              mouse: CGPoint,
-                              context: CanvasToolContext) {
-        guard case .drawing(let graph, let lastVertexID) = state,
-              let lastVertex = graph.vertices[lastVertexID] else { return }
+    func drawPreview(in ctx: CGContext,
+                     mouse: CGPoint,
+                     context: CanvasToolContext) {
+        guard let drawingState = drawingState,
+              let lastVertex = drawingState.graph.vertices[drawingState.lastVertexID] else { return }
 
         ctx.saveGState()
         defer { ctx.restoreGState() }
@@ -80,9 +92,9 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         ctx.setLineCap(.round)
         ctx.setStrokeColor(NSColor(.blue).cgColor)
         ctx.beginPath()
-        for edge in graph.edges.values {
-            guard let start = graph.vertices[edge.start]?.point,
-                  let end = graph.vertices[edge.end]?.point else { continue }
+        for edge in drawingState.graph.edges.values {
+            guard let start = drawingState.graph.vertices[edge.start]?.point,
+                  let end = drawingState.graph.vertices[edge.end]?.point else { continue }
             ctx.move(to: start)
             ctx.addLine(to: end)
         }
@@ -107,23 +119,38 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     // MARK: – Keyboard helpers
     mutating func handleEscape() {
-        state = .idle
+        drawingState = nil
     }
 
     mutating func handleBackspace() {
-        // This needs a more robust implementation that can track previous states.
-        // For now, simply resetting is the safest option.
-        state = .idle
+        guard var currentDrawing = drawingState else { return }
+
+        // Can't undo if we only have the starting point.
+        guard currentDrawing.vertexHistory.count > 1 else {
+            drawingState = nil
+            return
+        }
+
+        let vertexToRemoveID = currentDrawing.vertexHistory.removeLast()
+        currentDrawing.graph.removeVertex(id: vertexToRemoveID)
+        
+        // If the graph becomes empty, reset.
+        if currentDrawing.vertexHistory.isEmpty {
+            drawingState = nil
+        } else {
+            self.drawingState = currentDrawing
+        }
     }
 
     mutating func handleReturn() -> CanvasElement? {
-        guard case .drawing(let graph, _) = state, !graph.edges.isEmpty else {
-            state = .idle
+        guard let drawingState = drawingState, !drawingState.graph.edges.isEmpty else {
+            self.drawingState = nil
             return nil
         }
+        let graph = drawingState.graph
         graph.simplifyCollinearSegments()
         let finalElement = ConnectionElement(graph: graph)
-        state = .idle
+        self.drawingState = nil
         return .connection(finalElement)
     }
 
@@ -132,7 +159,8 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     func hash(into h: inout Hasher) { h.combine(id) }
 
     // MARK: - Private Helpers
-    private func addOrthogonalSegment(to graph: ConnectionGraph, from p1: CGPoint, to p2: CGPoint) -> ConnectionVertex.ID {
+    private func addOrthogonalSegment(to graph: ConnectionGraph, from p1: CGPoint, to p2: CGPoint) -> [ConnectionVertex.ID] {
+        var newVertexIDs: [UUID] = []
         let startVertex = graph.ensureVertex(at: p1)
         let lastSegmentOrientation = graph.lastSegmentOrientation(before: startVertex.id)
         
@@ -143,21 +171,29 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         if cornerPoint != p1 {
             let cornerVertex = graph.ensureVertex(at: cornerPoint)
             graph.addEdge(from: startVertex.id, to: cornerVertex.id)
+            newVertexIDs.append(cornerVertex.id)
         }
         
-        var endVertex: ConnectionVertex
         if cornerPoint != p2 {
-            endVertex = graph.ensureVertex(at: p2)
+            let endVertex = graph.ensureVertex(at: p2)
             let cornerVertex = graph.ensureVertex(at: cornerPoint)
             graph.addEdge(from: cornerVertex.id, to: endVertex.id)
+            newVertexIDs.append(endVertex.id)
         } else {
-            endVertex = graph.ensureVertex(at: p2)
+            // p2 is the corner point.
+            let endVertex = graph.ensureVertex(at: p2)
+            // If it wasn't added as a corner, add it now.
+            if !newVertexIDs.contains(endVertex.id) {
+                newVertexIDs.append(endVertex.id)
+            }
         }
-        return endVertex.id
+        
+        var uniqueIDs = [UUID]()
+        for id in newVertexIDs {
+            if !uniqueIDs.contains(id) {
+                uniqueIDs.append(id)
+            }
+        }
+        return uniqueIDs
     }
-}
-
-enum ConnectionToolState {
-    case idle
-    case drawing(graph: ConnectionGraph, lastVertexID: UUID)
 }
