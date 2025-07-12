@@ -383,60 +383,17 @@ public class ConnectionGraph {
     public func simplifyCollinearSegments() {
         while true {
             var wasSimplified = false
-            var visitedVertices: Set<ConnectionVertex.ID> = []
 
-            // Iterate over a copy of IDs, as we will be modifying the dictionaries
-            for vertexID in vertices.keys {
-                if visitedVertices.contains(vertexID) {
-                    continue
-                }
-                guard let vertex = vertices[vertexID] else { continue }
+            for axis in [LineOrientation.horizontal, .vertical] {
+                // Group all vertices by their coordinate on the perpendicular axis.
+                // This allows us to find all potentially collinear vertices, even if they are not connected.
+                let tolerance = 0.01
+                let groups = Dictionary(grouping: vertices.values, by: {
+                    axis == .horizontal ? round($0.point.y / tolerance) * tolerance : round($0.point.x / tolerance) * tolerance
+                })
 
-                // For the current vertex, check for collinear segments along both axes
-                for axis in [LineOrientation.horizontal, .vertical] {
-
-                    // 1. Find all connected collinear vertices along the current axis using a traversal.
-                    var collinearVertices: [ConnectionVertex] = []
-                    var queue: [ConnectionVertex] = [vertex]
-                    var visitedInSearch: Set<ConnectionVertex.ID> = [vertex.id]
-
-                    var head = 0
-                    while head < queue.count {
-                        let currentVertex = queue[head]
-                        head += 1
-                        collinearVertices.append(currentVertex)
-
-                        guard let connectedEdgeIDs = adjacency[currentVertex.id] else { continue }
-
-                        for edgeID in connectedEdgeIDs {
-                            guard let edge = edges[edgeID] else { continue }
-                            let neighborID = (edge.start == currentVertex.id) ? edge.end : edge.start
-
-                            if visitedInSearch.contains(neighborID) { continue }
-                            guard let neighbor = vertices[neighborID] else { continue }
-
-                            // Check if neighbor is on the same axis relative to the current vertex
-                            let isCollinear: Bool
-                            if axis == .horizontal {
-                                isCollinear = abs(neighbor.point.y - currentVertex.point.y) < 0.01
-                            } else { // Vertical
-                                isCollinear = abs(neighbor.point.x - currentVertex.point.x) < 0.01
-                            }
-
-                            if isCollinear {
-                                visitedInSearch.insert(neighborID)
-                                queue.append(neighbor)
-                            }
-                        }
-                    }
-
-                    // We need at least 3 vertices to have an intermediate point to remove.
-                    if collinearVertices.count < 3 {
-                        continue
-                    }
-
-                    // Mark all found vertices as visited for the outer loop to avoid redundant checks.
-                    visitedVertices.formUnion(collinearVertices.map { $0.id })
+                for (_, collinearVertices) in groups where collinearVertices.count >= 2 {
+                    // We need at least 2 vertices to form a line, and potentially simplify something.
 
                     // 2. Identify which of these vertices are junctions (have perpendicular attachments).
                     var junctionVertices: [ConnectionVertex] = []
@@ -456,14 +413,14 @@ public class ConnectionGraph {
                     // 3. Find the endpoints of the entire collinear segment.
                     let endpoints: (ConnectionVertex, ConnectionVertex)
                     if axis == .horizontal {
-                        guard let minX = collinearVertices.map({ $0.point.x }).min(), let maxX = collinearVertices.map({ $0.point.x }).max(), minX != maxX,
-                              let p1 = collinearVertices.first(where: { $0.point.x == minX }),
-                              let p2 = collinearVertices.first(where: { $0.point.x == maxX }) else { continue }
+                        guard let minX = collinearVertices.map({ $0.point.x }).min(), let maxX = collinearVertices.map({ $0.point.x }).max(), abs(maxX - minX) > tolerance,
+                              let p1 = collinearVertices.first(where: { abs($0.point.x - minX) < tolerance }),
+                              let p2 = collinearVertices.first(where: { abs($0.point.x - maxX) < tolerance }) else { continue }
                         endpoints = (p1, p2)
                     } else { // Vertical
-                        guard let minY = collinearVertices.map({ $0.point.y }).min(), let maxY = collinearVertices.map({ $0.point.y }).max(), minY != maxY,
-                              let p1 = collinearVertices.first(where: { $0.point.y == minY }),
-                              let p2 = collinearVertices.first(where: { $0.point.y == maxY }) else { continue }
+                        guard let minY = collinearVertices.map({ $0.point.y }).min(), let maxY = collinearVertices.map({ $0.point.y }).max(), abs(maxY - minY) > tolerance,
+                              let p1 = collinearVertices.first(where: { abs($0.point.y - minY) < tolerance }),
+                              let p2 = collinearVertices.first(where: { abs($0.point.y - maxY) < tolerance }) else { continue }
                         endpoints = (p1, p2)
                     }
 
@@ -516,9 +473,9 @@ public class ConnectionGraph {
                     }
 
                     wasSimplified = true
-                    break // Restart the main simplification loop
+                    break // Restart the main simplification loop for this axis
                 }
-                if wasSimplified { break }
+                if wasSimplified { break } // Restart the axis loop
             }
 
             if !wasSimplified {

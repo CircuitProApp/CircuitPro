@@ -370,7 +370,8 @@ final class CanvasInteractionController {
 
         for (index, element) in canvas.elements.enumerated() {
             guard case .connection(let existingConn) = element else { continue }
-            if newConn.graph.isGeometricallyClose(to: existingConn.graph, tolerance: tolerance) {
+            if newConn.graph.isGeometricallyClose(to: existingConn.graph, tolerance: tolerance) ||
+               existingConn.graph.isGeometricallyClose(to: newConn.graph, tolerance: tolerance) {
                 indicesToMerge.append(index)
             }
         }
@@ -379,17 +380,48 @@ final class CanvasInteractionController {
             canvas.elements.append(.connection(newConn))
         } else {
             let primaryIdx = indicesToMerge.first!
-            if case .connection(var primaryConn) = canvas.elements[primaryIdx] {
-                primaryConn.graph.merge(with: newConn.graph)
-                
-                for idx in indicesToMerge.dropFirst().sorted(by: >) {
-                    if case .connection(let extraConn) = canvas.elements[idx] {
-                        primaryConn.graph.merge(with: extraConn.graph)
+            guard case .connection(var primaryConn) = canvas.elements[primaryIdx] else {
+                canvas.elements.append(.connection(newConn))
+                return
+            }
+
+            // Pre-process graphs to split edges at intersection points before merging.
+            let otherConnections = indicesToMerge.dropFirst().compactMap { idx -> ConnectionElement? in
+                guard case .connection(let conn) = canvas.elements[idx] else { return nil }
+                return conn
+            }
+            var allOtherGraphs = otherConnections.map { $0.graph }
+            allOtherGraphs.append(newConn.graph)
+
+            for otherGraph in allOtherGraphs {
+                // Split edges in primaryConn based on otherGraph's vertices
+                for v in otherGraph.vertices.values {
+                    let hit = primaryConn.graph.hitTest(at: v.point, tolerance: tolerance)
+                    if case .edge(let edgeID, let point, _) = hit {
+                        primaryConn.graph.splitEdge(edgeID, at: point)
                     }
-                    canvas.elements.remove(at: idx)
                 }
-                primaryConn.graph.simplifyCollinearSegments()
-                canvas.elements[primaryIdx] = .connection(primaryConn)
+                // Split edges in otherGraph based on primaryConn's vertices
+                for v in primaryConn.graph.vertices.values {
+                    let hit = otherGraph.hitTest(at: v.point, tolerance: tolerance)
+                    if case .edge(let edgeID, let point, _) = hit {
+                        otherGraph.splitEdge(edgeID, at: point)
+                    }
+                }
+            }
+            
+            // Merge all graphs into the primary one.
+            for otherGraph in allOtherGraphs {
+                primaryConn.graph.merge(with: otherGraph)
+            }
+
+            // Clean up topology and update canvas.
+            primaryConn.graph.simplifyCollinearSegments()
+            canvas.elements[primaryIdx] = .connection(primaryConn)
+
+            // Remove the other merged elements.
+            for idx in indicesToMerge.dropFirst().sorted(by: >) {
+                canvas.elements.remove(at: idx)
             }
         }
         canvas.onUpdate?(canvas.elements)
