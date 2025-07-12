@@ -18,12 +18,24 @@ struct SymbolDesignView: View {
             selectedIDs: $bindableComponentDesignManager.selectedSymbolElementIDs,
             selectedTool: $bindableComponentDesignManager.selectedSymbolTool
         )
-        .clipAndStroke(with: .rect(cornerRadius: 20))
-        .overlay {
-            CanvasOverlayView {
-                SymbolDesignToolbarView()
-            }
+
+        .overlay(alignment: .leading) {
+ 
+            SymbolDesignToolbarView()
+            
             .padding(10)
         }
+        .overlay(alignment: .bottom) {
+            HStack {
+                CanvasControlView(editorType: .layout)
+                Spacer()
+                GridSpacingControlView()
+                ZoomControlView()
+            }
+            .padding(10)
+            .background(.ultraThinMaterial)
+
+        }
+        .clipAndStroke(with: .rect(cornerRadius: 20))
     }
 }

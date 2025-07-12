@@ -23,58 +23,45 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             return nil // Don't return an element yet.
         }
 
-        // If we are already drawing, this tap adds a segment or finishes the connection.
+        // If we are already drawing, check for finalization conditions.
         guard case .drawing(let graph, let lastVertexID) = state,
               let lastVertex = graph.vertices[lastVertexID] else {
             self.state = .idle
             return nil
         }
 
-        // Always add the next segment to the in-progress graph, capturing the new vertex for tap-ignore.
-        let newLastVertexID = addOrthogonalSegment(to: graph, from: lastVertex.point, to: loc)
-
-        // Determine whether to finalize:
-        // - Double-tap on empty space.
-        // - Tapping an existing connection element (external hit).
-        // - Hitting an existing edge or vertex in the in-progress graph (excluding the new vertex).
-        let emptyHit = context.hitTarget.map { if case .emptySpace = $0 { return true } else { return false } } ?? true
-        let isDoubleTapEmpty = (context.clickCount > 1 && emptyHit)
-        let isExternalHit = context.hitTarget.map { if case .emptySpace = $0 { return false } else { return true } } ?? false
-
+        // --- Finalization Logic ---
+        let isDoubleTap = context.clickCount > 1
+        let externalHitIsEmpty = context.hitTarget.map { if case .emptySpace = $0 { return true } else { return false } } ?? true
         let selfHit = graph.hitTest(at: loc, tolerance: 5.0 / context.magnification)
-        let isSelfExistingEdge: Bool
-        let isSelfExistingVertex: Bool
-        switch selfHit {
-        case .edge:
-            isSelfExistingEdge = true
-            isSelfExistingVertex = false
-        case .vertex(let id, _, _):
-            isSelfExistingVertex = (id != newLastVertexID)
-            isSelfExistingEdge = false
-        case .emptySpace:
-            isSelfExistingEdge = false
-            isSelfExistingVertex = false
+        let selfHitIsEmpty = { if case .emptySpace = selfHit { return true } else { return false } }()
+
+        let shouldFinalize: Bool
+        if isDoubleTap && externalHitIsEmpty && selfHitIsEmpty {
+            shouldFinalize = true
+        } else if !externalHitIsEmpty {
+            shouldFinalize = true
+        } else if !selfHitIsEmpty {
+            shouldFinalize = true
+        } else {
+            shouldFinalize = false
         }
 
-        if isDoubleTapEmpty || isExternalHit || isSelfExistingEdge || isSelfExistingVertex {
-            // Finalize the connection.
-            if isSelfExistingEdge, case .edge(let edgeID, let point, _) = selfHit {
+        if shouldFinalize {
+            _ = addOrthogonalSegment(to: graph, from: lastVertex.point, to: loc)
+
+            if case .edge(let edgeID, let point, _) = selfHit {
                 graph.splitEdge(edgeID, at: point)
-            } else if isExternalHit, let hit = context.hitTarget {
-                switch hit {
-                case .edge(let edgeID, _, let point, _):
-                    graph.splitEdge(edgeID, at: point)
-                default:
-                    break
-                }
             }
+
             graph.simplifyCollinearSegments()
             let finalElement = ConnectionElement(graph: graph)
             state = .idle
             return .connection(finalElement)
         }
 
-        // Continue drawing: update the last vertex to the one we just added.
+        // --- Continue Drawing Logic ---
+        let newLastVertexID = addOrthogonalSegment(to: graph, from: lastVertex.point, to: loc)
         state = .drawing(graph: graph, lastVertexID: newLastVertexID)
         return nil
     }

@@ -237,30 +237,30 @@ public class ConnectionGraph {
         }
     }
 
-    public func isCollinear(with other: ConnectionGraph, tolerance: CGFloat = 0.01) -> Bool {
-        for edge1 in self.edges.values {
-            guard let s1 = self.vertices[edge1.start]?.point, let e1 = self.vertices[edge1.end]?.point else { continue }
-            
-            for edge2 in other.edges.values {
-                guard let s2 = other.vertices[edge2.start]?.point, let e2 = other.vertices[edge2.end]?.point else { continue }
+    /// Determines the orientation of the most recent segment in the graph.
+    /// This is useful for determining user intent when merging connections.
+    public func lastSegmentOrientation() -> LineOrientation? {
+        // This is a simplified heuristic. A more robust solution might involve
+        // tracking the actual last added edge. For now, we find an endpoint
+        // and check the orientation of the segment attached to it.
+        guard let endpointVertexID = adjacency.first(where: { $0.value.count == 1 })?.key else {
+            return nil // No endpoint found, might be a closed loop or empty graph
+        }
+        return lastSegmentOrientation(before: endpointVertexID)
+    }
 
-                let isHorizontal1 = abs(s1.y - e1.y) < tolerance
-                let isHorizontal2 = abs(s2.y - e2.y) < tolerance
-                
-                if isHorizontal1 && isHorizontal2 && abs(s1.y - s2.y) < tolerance {
-                    let range1 = min(s1.x, e1.x)...max(s1.x, e1.x)
-                    let range2 = min(s2.x, e2.x)...max(s2.x, e2.x)
-                    if range1.overlaps(range2) { return true }
+    public func isGeometricallyClose(to other: ConnectionGraph, tolerance: CGFloat = 0.01) -> Bool {
+        for vNew in self.vertices.values {
+            // Check against other's vertices
+            for vOld in other.vertices.values {
+                if abs(vNew.point.x - vOld.point.x) <= tolerance && abs(vNew.point.y - vOld.point.y) <= tolerance {
+                    return true
                 }
-
-                let isVertical1 = abs(s1.x - e1.x) < tolerance
-                let isVertical2 = abs(s2.x - e2.x) < tolerance
-
-                if isVertical1 && isVertical2 && abs(s1.x - s2.x) < tolerance {
-                    let range1 = min(s1.y, e1.y)...max(s1.y, e1.y)
-                    let range2 = min(s2.y, e2.y)...max(s2.y, e2.y)
-                    if range1.overlaps(range2) { return true }
-                }
+            }
+            // Check against other's edges
+            let hitResult = other.hitTest(at: vNew.point, tolerance: tolerance)
+            if case .edge = hitResult {
+                return true
             }
         }
         return false

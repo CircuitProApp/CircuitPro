@@ -213,16 +213,20 @@ final class CanvasInteractionController {
             magnification: canvas.magnification
         )
 
+        // For connections, we gather the specific hit target.
         if tool.id == "connection" {
             context.hitTarget = hitTestController.hitTestForConnection(at: snapped)
         }
-        // Propagate click count for double-tap handling.
         context.clickCount = event.clickCount
 
+        // The tool does its work and returns a new element, if any.
         if let newElement = tool.handleTap(at: snapped, context: context) {
+            // The controller now decides how to integrate the new element.
             if case .connection(let newConn) = newElement {
-                mergeConnection(newConn)
+                // If it's a connection, we use the hitTarget from our context to merge it.
+                mergeConnection(newConn, onto: context.hitTarget)
             } else {
+                // For any other element type, we just append it.
                 canvas.elements.append(newElement)
             }
             
@@ -240,7 +244,7 @@ final class CanvasInteractionController {
         guard var tool = canvas.selectedTool, tool.id == "connection" else { return }
         if let newElement = tool.handleReturn() {
             if case .connection(let newConn) = newElement {
-                mergeConnection(newConn)
+                mergeConnection(newConn, onto: nil) // No hit target on return
             } else {
                 canvas.elements.append(newElement)
             }
@@ -249,42 +253,80 @@ final class CanvasInteractionController {
         canvas.selectedTool = tool
     }
     
-    private func mergeConnection(_ newConn: ConnectionElement) {
+    private func mergeConnection(_ newConn: ConnectionElement, onto hitTarget: ConnectionHitTarget?) {
+        if let hit = hitTarget {
+            switch hit {
+            case .edge(_, let onConnectionID, _, _):
+                if let index = canvas.elements.firstIndex(where: { $0.id == onConnectionID }) {
+                    handleEdgeHit(newConnection: newConn, onExistingAtIndex: index, hit: hit)
+                    return
+                }
+            case .vertex(_, let onConnectionID, _, _):
+                if let index = canvas.elements.firstIndex(where: { $0.id == onConnectionID }) {
+                    handleVertexHit(newConnection: newConn, onExistingAtIndex: index, hit: hit)
+                    return
+                }
+            case .emptySpace:
+                break // Fall through to geometric merge
+            }
+        }
+        
+        // Fallback for empty space taps or if the target element wasn't found
+        performGeometricMerge(with: newConn)
+    }
+
+    /// Handles the case where a new connection is finalized on an existing edge.
+    private func handleEdgeHit(newConnection: ConnectionElement, onExistingAtIndex index: Int, hit: ConnectionHitTarget) {
+        guard case .connection(var existingConn) = canvas.elements[index],
+              case .edge(let edgeID, _, let point, let hitOrientation) = hit else {
+            return
+        }
+
+        // Determine the orientation of the new segment being added.
+        let newOrientation = newConnection.graph.lastSegmentOrientation()
+
+        // If the new segment is collinear with the hit edge, just merge and simplify.
+        // This handles extending lines correctly.
+        if newOrientation == hitOrientation {
+            existingConn.graph.merge(with: newConnection.graph)
+            existingConn.graph.simplifyCollinearSegments()
+        } else {
+            // Otherwise, it's a perpendicular hit, so create a T-junction.
+            existingConn.graph.splitEdge(edgeID, at: point)
+            existingConn.graph.merge(with: newConnection.graph)
+            existingConn.graph.simplifyCollinearSegments()
+        }
+
+        canvas.elements[index] = .connection(existingConn)
+        canvas.onUpdate?(canvas.elements)
+    }
+
+    /// Handles the case where a new connection is finalized on an existing vertex.
+    private func handleVertexHit(newConnection: ConnectionElement, onExistingAtIndex index: Int, hit: ConnectionHitTarget) {
+        guard case .connection(var existingConn) = canvas.elements[index] else {
+            return
+        }
+
+        // For any vertex hit, the primary action is to merge the graphs.
+        // The "straightening" of corners is handled implicitly by the simplification.
+        // If a new segment is added that is collinear with an existing one at a corner,
+        // the corner vertex will have two collinear edges after the merge, and
+        // `simplifyCollinearSegments` will automatically remove it.
+        existingConn.graph.merge(with: newConnection.graph)
+        existingConn.graph.simplifyCollinearSegments()
+
+        canvas.elements[index] = .connection(existingConn)
+        canvas.onUpdate?(canvas.elements)
+    }
+
+    /// Fallback merge logic based on geometric proximity.
+    private func performGeometricMerge(with newConn: ConnectionElement) {
         var indicesToMerge: [Int] = []
         let tolerance: CGFloat = 0.01
 
         for (index, element) in canvas.elements.enumerated() {
             guard case .connection(let existingConn) = element else { continue }
-            var isRelated = false
-
-            for vNew in newConn.graph.vertices.values {
-                for vOld in existingConn.graph.vertices.values {
-                    if abs(vNew.point.x - vOld.point.x) <= tolerance && abs(vNew.point.y - vOld.point.y) <= tolerance {
-                        isRelated = true
-                        break
-                    }
-                }
-                if isRelated { break }
-            }
-
-            if !isRelated {
-                for vNew in newConn.graph.vertices.values {
-                    let p = vNew.point
-                    for (edgeID, edge) in existingConn.graph.edges {
-                        guard let start = existingConn.graph.vertices[edge.start]?.point,
-                              let end = existingConn.graph.vertices[edge.end]?.point else { continue }
-                        if (abs(p.x - start.x) <= tolerance && p.y >= min(start.y, end.y) - tolerance && p.y <= max(start.y, end.y) + tolerance) ||
-                           (abs(p.y - start.y) <= tolerance && p.x >= min(start.x, end.x) - tolerance && p.x <= max(start.x, end.x) + tolerance) {
-                            _ = existingConn.graph.splitEdge(edgeID, at: p, tolerance: tolerance)
-                            isRelated = true
-                            break
-                        }
-                    }
-                    if isRelated { break }
-                }
-            }
-            
-            if isRelated {
+            if newConn.graph.isGeometricallyClose(to: existingConn.graph, tolerance: tolerance) {
                 indicesToMerge.append(index)
             }
         }
@@ -295,12 +337,10 @@ final class CanvasInteractionController {
             let primaryIdx = indicesToMerge.first!
             if case .connection(var primaryConn) = canvas.elements[primaryIdx] {
                 primaryConn.graph.merge(with: newConn.graph)
-                canvas.elements[primaryIdx] = .connection(primaryConn)
                 
                 for idx in indicesToMerge.dropFirst().sorted(by: >) {
                     if case .connection(let extraConn) = canvas.elements[idx] {
                         primaryConn.graph.merge(with: extraConn.graph)
-                        canvas.elements[primaryIdx] = .connection(primaryConn)
                     }
                     canvas.elements.remove(at: idx)
                 }
@@ -308,5 +348,6 @@ final class CanvasInteractionController {
                 canvas.elements[primaryIdx] = .connection(primaryConn)
             }
         }
+        canvas.onUpdate?(canvas.elements)
     }
 }

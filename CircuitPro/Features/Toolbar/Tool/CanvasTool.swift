@@ -35,8 +35,9 @@ protocol CanvasTool: Hashable {
 }
 
 extension CanvasTool {
-    mutating func handleTap(at location: CGPoint) -> CanvasElement? {
-        handleTap(at: location, context: CanvasToolContext())
+    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
+        // Default implementation that returns nil.
+        return nil
     }
 
     mutating func handleEscape() {}

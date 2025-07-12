@@ -28,12 +28,22 @@ struct FootprintDesignView: View {
                 layerAssignments: $bindableComponentDesignManager.layerAssignments
             )
         )
-        .clipAndStroke(with: .rect(cornerRadius: 20))
-        .overlay {
-            CanvasOverlayView {
-                FootprintDesignToolbarView()
+
+        .overlay(alignment: .leading) {
+            FootprintDesignToolbarView()
+                .padding(10)
+        }
+        .overlay(alignment: .bottom) {
+            HStack {
+                CanvasControlView(editorType: .layout)
+                Spacer()
+                GridSpacingControlView()
+                ZoomControlView()
             }
             .padding(10)
+            .background(.ultraThinMaterial)
+
         }
+        .clipAndStroke(with: .rect(cornerRadius: 20))
     }
 }
