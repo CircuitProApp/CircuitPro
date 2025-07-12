@@ -491,6 +491,78 @@ public class ConnectionGraph {
         }
     }
 
+    /// Performs a full cleanup and simplification of the graph.
+    /// This should be called after any operation that might leave the graph in a dirty state,
+    /// such as dragging vertices on top of each other.
+    public func cleanup() {
+        mergeOverlappingVertices()
+        simplifyCollinearSegments()
+    }
+
+    /// Merges vertices that are at the same or very close locations.
+    /// This is a critical cleanup step before simplifying collinear segments.
+    private func mergeOverlappingVertices(tolerance: CGFloat = 0.01) {
+        var wasModified = true
+        while wasModified {
+            wasModified = false
+            let allVertices = Array(self.vertices.values)
+            
+            var v_to_keep: ConnectionVertex?
+            var v_to_remove: ConnectionVertex?
+            
+            findPair: for i in 0..<allVertices.count {
+                for j in (i + 1)..<allVertices.count {
+                    let vA = allVertices[i]
+                    let vB = allVertices[j]
+                    if hypot(vA.point.x - vB.point.x, vA.point.y - vB.point.y) <= tolerance {
+                        v_to_keep = vA
+                        v_to_remove = vB
+                        break findPair
+                    }
+                }
+            }
+
+            if let keep = v_to_keep, let remove = v_to_remove {
+                // Get all edges connected to the vertex being removed.
+                let edgesToProcess = adjacency[remove.id, default: []]
+                
+                for edgeID in edgesToProcess {
+                    guard let edge = edges[edgeID] else { continue }
+                    
+                    // Determine the other vertex of the edge.
+                    let otherVertexID = (edge.start == remove.id) ? edge.end : edge.start
+                    
+                    // Remove the edge from the adjacency lists of its current vertices.
+                    adjacency[remove.id]?.remove(edgeID)
+                    adjacency[otherVertexID]?.remove(edgeID)
+                    
+                    // Create the new endpoints. One is the 'keep' vertex, the other is the original 'other' vertex.
+                    let newStart = (edge.start == remove.id) ? keep.id : edge.start
+                    let newEnd = (edge.end == remove.id) ? keep.id : edge.end
+                    
+                    if newStart == newEnd {
+                        // The edge has collapsed into a loop. Remove it from the graph.
+                        edges.removeValue(forKey: edgeID)
+                    } else {
+                        // The edge is still valid, just re-connected.
+                        // Update the edge with its new vertex.
+                        edges[edgeID] = ConnectionEdge(id: edge.id, start: newStart, end: newEnd)
+                        
+                        // Add the edge back to the adjacency lists of its new vertices.
+                        adjacency[newStart, default: []].insert(edgeID)
+                        adjacency[newEnd, default: []].insert(edgeID)
+                    }
+                }
+                
+                // The 'remove' vertex should now have no connections. Remove it.
+                vertices.removeValue(forKey: remove.id)
+                adjacency.removeValue(forKey: remove.id) // Should be empty, but remove for safety.
+                
+                wasModified = true // Restart the process to check for more merges.
+            }
+        }
+    }
+
     private func addUniqueEdge(from a: ConnectionVertex.ID, to b: ConnectionVertex.ID) {
         guard a != b else { return }
         if !edges.values.contains(where: { ($0.start == a && $0.end == b) || ($0.start == b && $0.end == a) }) {
@@ -552,6 +624,10 @@ public class ConnectionGraph {
                 if !componentEdges.isEmpty {
                     let newGraph = ConnectionGraph(vertices: componentVertices, edges: componentEdges)
                     newGraph.rebuildAdjacency()
+                    
+                    // 5. Simplify the new graph component before returning it.
+                    newGraph.simplifyCollinearSegments()
+                    
                     components.append(newGraph)
                 }
             }

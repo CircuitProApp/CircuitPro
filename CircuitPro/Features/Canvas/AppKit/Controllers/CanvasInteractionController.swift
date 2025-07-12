@@ -109,6 +109,19 @@ final class CanvasInteractionController {
         }
 
         if didMoveSignificantly {
+            // If a connection was being dragged, this is the place to finalize its state.
+            if let activeConnectionID = self.activeConnectionID,
+               let index = canvas.elements.firstIndex(where: { $0.id == activeConnectionID }),
+               case .connection(var conn) = canvas.elements[index] {
+                
+                // Cleanup and simplify the graph after the drag operation.
+                conn.graph.cleanup()
+                conn.markChanged()
+                
+                canvas.elements[index] = .connection(conn)
+                canvas.onUpdate?(canvas.elements)
+            }
+            
             if marqueeOrigin != nil {
                 canvas.selectedIDs = canvas.marqueeSelectedIDs
             }
@@ -221,15 +234,28 @@ final class CanvasInteractionController {
               let originalGraphPositions = self.originalGraphVertexPositions,
               let elementIndex = canvas.elements.firstIndex(where: { $0.id == activeConnectionID }),
               case .connection(var conn) = canvas.elements[elementIndex],
-              let draggedEdge = conn.graph.edges[draggedEdgeID]
+              let draggedEdge = conn.graph.edges[draggedEdgeID],
+              let startPos = originalGraphPositions[draggedEdge.start],
+              let endPos = originalGraphPositions[draggedEdge.end]
         else {
             return false
         }
 
-        let delta = CGPoint(x: canvas.snapDelta(loc.x - origin.x), y: canvas.snapDelta(loc.y - origin.y))
+        var delta = CGPoint(x: canvas.snapDelta(loc.x - origin.x), y: canvas.snapDelta(loc.y - origin.y))
+
+        // Determine orientation of the dragged edge and constrain delta to be perpendicular.
+        // This ensures that dragging a vertical line moves it horizontally, and vice-versa,
+        // preventing the line from becoming diagonal.
+        let tolerance: CGFloat = 0.01
+        if abs(startPos.x - endPos.x) < tolerance { // Dragging a vertical edge
+            delta.y = 0
+        } else if abs(startPos.y - endPos.y) < tolerance { // Dragging a horizontal edge
+            delta.x = 0
+        }
+
         var vertexDeltas: [UUID: CGPoint] = [:]
 
-        // The dragged edge's vertices move by the full delta.
+        // The dragged edge's vertices move by the constrained delta.
         vertexDeltas[draggedEdge.start] = delta
         vertexDeltas[draggedEdge.end] = delta
 
@@ -239,17 +265,16 @@ final class CanvasInteractionController {
             
             for adjacentEdgeID in adjacentEdgeIDs where adjacentEdgeID != draggedEdgeID {
                 guard let adjacentEdge = conn.graph.edges[adjacentEdgeID],
-                      let startPos = originalGraphPositions[adjacentEdge.start],
-                      let endPos = originalGraphPositions[adjacentEdge.end]
+                      let adjStartPos = originalGraphPositions[adjacentEdge.start],
+                      let adjEndPos = originalGraphPositions[adjacentEdge.end]
                 else { continue }
 
                 let farVertexID = (adjacentEdge.start == vertexID) ? adjacentEdge.end : adjacentEdge.start
                 
                 // Determine orientation from original positions
-                let tolerance: CGFloat = 0.01
-                if abs(startPos.x - endPos.x) < tolerance { // Vertical
+                if abs(adjStartPos.x - adjEndPos.x) < tolerance { // Adjacent is Vertical
                     vertexDeltas[farVertexID] = CGPoint(x: delta.x, y: 0)
-                } else if abs(startPos.y - endPos.y) < tolerance { // Horizontal
+                } else if abs(adjStartPos.y - adjEndPos.y) < tolerance { // Adjacent is Horizontal
                     vertexDeltas[farVertexID] = CGPoint(x: 0, y: delta.y)
                 }
             }
@@ -261,6 +286,10 @@ final class CanvasInteractionController {
                 conn.graph.vertices[vertexID]?.point = CGPoint(x: originalPos.x + vertexDelta.x, y: originalPos.y + vertexDelta.y)
             }
         }
+        
+        // After moving vertices, the graph might have collinear segments or overlapping vertices.
+        // Clean it up to provide correct visual feedback during the drag.
+        conn.graph.cleanup()
         
         conn.markChanged()
         canvas.elements[elementIndex] = .connection(conn)
