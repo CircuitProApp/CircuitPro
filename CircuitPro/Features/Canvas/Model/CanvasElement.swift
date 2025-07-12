@@ -156,8 +156,7 @@ extension CanvasElement {
             symbol.position = orig + delta; self = .symbol(symbol)
         case .connection(var connection):
             // For a connection, translate all vertices and mark dirty.
-            connection.graph.translate(by: delta)
-            connection.markChanged()
+
             self = .connection(connection)
         }
     }

@@ -182,7 +182,6 @@ struct SchematicView: View {
                 let endVertex = graph.ensureVertex(at: endPoint)
                 graph.addEdge(from: startVertex.id, to: endVertex.id)
             }
-            graph.simplifyCollinearSegments()
             let connElement = ConnectionElement(id: wire.id, graph: graph)
             return .connection(connElement)
         }

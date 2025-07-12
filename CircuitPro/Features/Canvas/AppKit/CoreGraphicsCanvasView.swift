@@ -178,48 +178,8 @@ final class CoreGraphicsCanvasView: NSView {
     private func deleteSelectedElements() {
         guard !selectedIDs.isEmpty else { return }
 
-        var out: [CanvasElement] = []
+        elements.removeAll { selectedIDs.contains($0.id) }
 
-        for element in elements {
-
-            switch element {
-
-            case .connection(let conn):
-                // If the entire connection element is selected, delete it.
-                if selectedIDs.contains(conn.id) {
-                    continue // Skip adding this connection to 'out'
-                }
-
-                // Otherwise, check if any of its segments are selected.
-                let selectedSegmentIDs = conn.segments.filter { selectedIDs.contains($0.id) }.map { $0.id }
-
-                if !selectedSegmentIDs.isEmpty {
-                    // Remove the selected segments and get the resulting components
-                    let newGraphs = conn.graph.removeEdges(withIDs: Set(selectedSegmentIDs))
-
-                    // Simplify each graph so that any newly-formed collinear
-                    // segments are merged (e.g. two collinear stubs left after
-                    // deleting the third leg of a junction).
-                    for newGraph in newGraphs {
-                        newGraph.simplifyCollinearSegments()
-
-                        // Create a new ConnectionElement for the simplified graph
-                        out.append(.connection(ConnectionElement(graph: newGraph)))
-                    }
-                } else {
-                    // No segments selected, keep the original connection
-                    out.append(element)
-                }
-
-            default:
-                // For other element types, delete if selected, otherwise keep.
-                if !selectedIDs.contains(element.id) {
-                    out.append(element)
-                }
-            }
-        }
-
-        elements = out
         selectedIDs.removeAll()
         onSelectionChange?(selectedIDs)
         onUpdate?(elements)
