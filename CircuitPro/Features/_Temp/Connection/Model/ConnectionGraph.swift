@@ -381,41 +381,84 @@ public class ConnectionGraph {
     
     /// Simplifies the graph by merging collinear segments, correctly handling T-junctions and complex overlaps.
     public func simplifyCollinearSegments() {
-        // Helper function to check for paths, making the simplification cycle-aware.
-        func pathExists(from startID: UUID, to endID: UUID, ignoringVertex vertexToIgnore: UUID) -> Bool {
-            var queue: [UUID] = [startID]
-            var visited: Set<UUID> = [startID, vertexToIgnore]
+        // This function now works in two passes within a loop to fully simplify the graph.
+        // 1. Normalization Pass: It first splits any edges that have vertices lying on them.
+        //    This creates the necessary degree-2 vertices that represent T-junctions or overlaps.
+        // 2. Simplification Pass: It then runs the original logic to merge adjacent collinear segments
+        //    by removing redundant degree-2 vertices.
+        // The process repeats until no more changes can be made to the graph.
 
-            while !queue.isEmpty {
-                let currentID = queue.removeFirst()
-                if currentID == endID {
-                    return true
-                }
+        var graphWasModified = true
+        while graphWasModified {
+            graphWasModified = false
 
-                // Using the main graph's adjacency and vertices collections
-                for edgeID in self.adjacency[currentID, default: []] {
-                    guard let edge = self.edges[edgeID] else { continue }
-                    let neighborID = edge.start == currentID ? edge.end : edge.start
-                    if !visited.contains(neighborID) {
-                        visited.insert(neighborID)
-                        queue.append(neighborID)
+            // Helper function to check for paths, making the simplification cycle-aware.
+            func pathExists(from startID: UUID, to endID: UUID, ignoringVertex vertexToIgnore: UUID) -> Bool {
+                var queue: [UUID] = [startID]
+                var visited: Set<UUID> = [startID, vertexToIgnore]
+
+                while !queue.isEmpty {
+                    let currentID = queue.removeFirst()
+                    if currentID == endID {
+                        return true
+                    }
+
+                    for edgeID in self.adjacency[currentID, default: []] {
+                        guard let edge = self.edges[edgeID] else { continue }
+                        let neighborID = edge.start == currentID ? edge.end : edge.start
+                        if !visited.contains(neighborID) {
+                            visited.insert(neighborID)
+                            queue.append(neighborID)
+                        }
                     }
                 }
+                return false
             }
-            return false
-        }
 
-        var wasSimplified = true
-        while wasSimplified {
-            wasSimplified = false
-            
-            // Only vertices with exactly two connections are candidates for removal.
+            // --- Pass 1: Normalization ---
+            // Find and perform one split, then restart the loop. This is safer than collecting all splits.
+            var splitFound = false
+            for edge in edges.values {
+                guard let startPoint = vertices[edge.start]?.point,
+                      let endPoint = vertices[edge.end]?.point else { continue }
+
+                for vertex in vertices.values {
+                    if vertex.id == edge.start || vertex.id == edge.end { continue }
+
+                    let point = vertex.point
+                    let tolerance: CGFloat = 0.01
+
+                    // Check if the vertex point lies on the line segment of the edge.
+                    let minX = min(startPoint.x, endPoint.x) - tolerance
+                    let maxX = max(startPoint.x, endPoint.x) + tolerance
+                    let minY = min(startPoint.y, endPoint.y) - tolerance
+                    let maxY = max(startPoint.y, endPoint.y) + tolerance
+
+                    if point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY {
+                        let crossProduct = (point.y - startPoint.y) * (endPoint.x - startPoint.x) - (point.x - startPoint.x) * (endPoint.y - startPoint.y)
+                        if abs(crossProduct) < 0.0001 { // Epsilon for floating point inaccuracies
+                            // The vertex is on the edge. Split the edge and restart.
+                            if splitEdge(edge.id, at: point) != nil {
+                                graphWasModified = true
+                            }
+                            splitFound = true
+                            break
+                        }
+                    }
+                }
+                if splitFound { break }
+            }
+
+            if graphWasModified {
+                continue // Restart the while loop to handle the modified graph from scratch.
+            }
+
+            // --- Pass 2: Simplification (Original Logic) ---
             let candidates = vertices.values.filter { self.adjacency[$0.id]?.count == 2 }
 
             for candidate in candidates {
-                // The vertex might have been removed in a previous pass of the loop.
                 guard let candidateVertex = self.vertices[candidate.id] else { continue }
-                
+
                 let neighborEdges = self.adjacency[candidate.id]!.compactMap { self.edges[$0] }
                 let neighborIDs = neighborEdges.map { $0.start == candidate.id ? $0.end : $0.start }
 
@@ -429,25 +472,20 @@ public class ConnectionGraph {
                 let p1 = n1.point
                 let p2 = n2.point
 
-                // Check if the candidate and its two neighbors are collinear.
                 let tolerance: CGFloat = 0.01
                 let isHorizontal = abs(p0.y - p1.y) < tolerance && abs(p0.y - p2.y) < tolerance
                 let isVertical = abs(p0.x - p1.x) < tolerance && abs(p0.x - p2.x) < tolerance
 
                 if isHorizontal || isVertical {
-                    // This is a collinear vertex. Before removing it, we must ensure
-                    // that doing so doesn't collapse a cycle into parallel edges.
-                    // We check if the two neighbors are already connected by another path.
                     if pathExists(from: n1.id, to: n2.id, ignoringVertex: candidate.id) {
-                        continue // This would collapse a cycle. Do not simplify.
+                        continue
                     }
 
-                    // The vertex is redundant. Remove it and connect its neighbors directly.
                     self.removeVertex(id: candidate.id)
                     self.addUniqueEdge(from: n1.id, to: n2.id)
-                    
-                    wasSimplified = true
-                    break // Restart the simplification process from the beginning.
+
+                    graphWasModified = true
+                    break // Restart the simplification process.
                 }
             }
         }
