@@ -8,6 +8,7 @@ final class CanvasInteractionController {
     private var dragOrigin: CGPoint?
     private var tentativeSelection: Set<UUID>?
     private var originalPositions: [UUID: CGPoint] = [:]
+    private var originalVertexPositions: [UUID: CGPoint] = [:]
     private var activeHandle: (UUID, Handle.Kind)?
     private var frozenOppositeWorld: CGPoint?
     private var didMoveSignificantly = false
@@ -89,6 +90,7 @@ final class CanvasInteractionController {
         }
 
         if handleDraggingHandle(to: loc) { return }
+        if handleDraggingConnectionEdge(to: loc, from: origin) { return }
         handleDraggingSelection(to: loc, from: origin)
     }
 
@@ -117,6 +119,7 @@ final class CanvasInteractionController {
         didMoveSignificantly = false
         tentativeSelection = nil
         originalPositions.removeAll()
+        originalVertexPositions.removeAll()
         frozenOppositeWorld = nil
         activeHandle = nil
 
@@ -141,32 +144,55 @@ final class CanvasInteractionController {
 
     private func tryUpdateTentativeSelection(at loc: CGPoint, with event: NSEvent) {
         let shift = event.modifierFlags.contains(.shift)
-        let hitID = canvas.hitRects.hitTest(at: loc)
-        if let id = hitID {
-            let wasSelected = canvas.selectedIDs.contains(id)
-            if wasSelected {
-                tentativeSelection = canvas.selectedIDs.subtracting([id])
-                if !shift {
-                    for element in canvas.elements where canvas.selectedIDs.contains(element.id) {
-                        let position: CGPoint
-                        if case .symbol(let symbol) = element { position = symbol.instance.position }
-                        else if let primitive = element.primitives.first { position = primitive.position }
-                        else { continue }
-                        originalPositions[element.id] = position
-                    }
+        // The original code used canvas.hitRects.hitTest(at: loc).
+        // We now use the controller to get edge hits.
+        let hitID = hitTestController.hitTest(at: loc)
+
+        guard let id = hitID else {
+            if !shift {
+                tentativeSelection = []
+            }
+            return
+        }
+
+        // Prioritize edge hits for drag operations.
+        for element in canvas.elements {
+            if case .connection(let conn) = element, let edge = conn.graph.edges[id] {
+                // This is an edge. For simplicity, we'll make it the only selection.
+                // This starts a drag operation for this edge only.
+                tentativeSelection = [id]
+                if let startVertex = conn.graph.vertices[edge.start] {
+                    originalVertexPositions[startVertex.id] = startVertex.point
                 }
-            } else {
-                tentativeSelection = shift ? canvas.selectedIDs.union([id]) : [id]
+                if let endVertex = conn.graph.vertices[edge.end] {
+                    originalVertexPositions[endVertex.id] = endVertex.point
+                }
+                return // Handled
             }
-            if let element = canvas.elements.first(where: { $0.id == id }) {
-                let position: CGPoint
-                if case .symbol(let symbol) = element { position = symbol.instance.position }
-                else if let primitive = element.primitives.first { position = primitive.position }
-                else { return }
-                originalPositions[id] = position
+        }
+
+        // If no edge was hit, it must be an element. Fall back to original logic.
+        let wasSelected = canvas.selectedIDs.contains(id)
+        if wasSelected {
+            tentativeSelection = canvas.selectedIDs.subtracting([id])
+            if !shift {
+                for element in canvas.elements where canvas.selectedIDs.contains(element.id) {
+                    let position: CGPoint
+                    if case .symbol(let symbol) = element { position = symbol.instance.position }
+                    else if let primitive = element.primitives.first { position = primitive.position }
+                    else { continue }
+                    originalPositions[element.id] = position
+                }
             }
-        } else if !shift {
-            tentativeSelection = []
+        } else {
+            tentativeSelection = shift ? canvas.selectedIDs.union([id]) : [id]
+        }
+        if let element = canvas.elements.first(where: { $0.id == id }) {
+            let position: CGPoint
+            if case .symbol(let symbol) = element { position = symbol.instance.position }
+            else if let primitive = element.primitives.first { position = primitive.position }
+            else { return }
+            originalPositions[id] = position
         }
     }
 
@@ -189,6 +215,39 @@ final class CanvasInteractionController {
         return false
     }
 
+    private func handleDraggingConnectionEdge(to loc: CGPoint, from origin: CGPoint) -> Bool {
+        guard !originalVertexPositions.isEmpty else { return false }
+
+        let delta = CGPoint(x: canvas.snapDelta(loc.x - origin.x), y: canvas.snapDelta(loc.y - origin.y))
+        var updated = canvas.elements
+        var didUpdate = false
+
+        for i in updated.indices {
+            guard case .connection(var conn) = updated[i] else { continue }
+
+            var connectionWasModified = false
+            for (vertexID, originalPos) in originalVertexPositions {
+                if conn.graph.vertices[vertexID] != nil {
+                    conn.graph.vertices[vertexID]?.point = CGPoint(x: originalPos.x + delta.x, y: originalPos.y + delta.y)
+                    connectionWasModified = true
+                }
+            }
+
+            if connectionWasModified {
+                conn.markChanged()
+                updated[i] = .connection(conn)
+                didUpdate = true
+            }
+        }
+
+        if didUpdate {
+            canvas.elements = updated
+            canvas.onUpdate?(updated)
+        }
+
+        return didUpdate
+    }
+
     private func handleDraggingSelection(to loc: CGPoint, from origin: CGPoint) {
         guard !originalPositions.isEmpty else { return }
         let delta = CGPoint(x: canvas.snapDelta(loc.x - origin.x), y: canvas.snapDelta(loc.y - origin.y))
@@ -204,6 +263,7 @@ final class CanvasInteractionController {
     private func resetInteractionState() {
         dragOrigin = nil
         originalPositions.removeAll()
+        originalVertexPositions.removeAll()
         didMoveSignificantly = false
         activeHandle = nil
         frozenOppositeWorld = nil
