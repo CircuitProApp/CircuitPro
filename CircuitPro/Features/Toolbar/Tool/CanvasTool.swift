@@ -12,6 +12,8 @@ protocol CanvasTool: Hashable {
     var symbolName: String { get }
     var label: String { get }
 
+    // MARK: - Connection Tool Properties
+
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement?
 
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext)

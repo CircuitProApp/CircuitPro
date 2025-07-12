@@ -35,6 +35,12 @@ The Connection behavior code is delegated through two stages, one within Connect
 - Action: T(0,0) DT(100,100)  
 - Result: Two orthogonal Edges joined by one Vertex at endpoints. S1 0,0 100,0 S2 100,0 100,100
 
+## L-shape Connection Creation Self Variant
+
+- Scope: Tool  
+- Action: T1(0,0) T2(100,0) T3(100,100) T4(100,0)
+- Result: An L-Shape connection E1 from (0,0) to (100,0) E2 from (100,0) to (100,100)
+
 ## Closed Connection Creation
 
 - Scope: Tool  

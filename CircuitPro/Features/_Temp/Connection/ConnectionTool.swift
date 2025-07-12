@@ -14,8 +14,17 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         var graph: ConnectionGraph
         var vertexHistory: [UUID] // History of ALL vertices added, in order.
         var lastVertexID: UUID { vertexHistory.last! }
+        var initialHitTarget: ConnectionHitTarget?
     }
     private var drawingState: DrawingState?
+    
+    public private(set) var initialHitTargetForMerge: ConnectionHitTarget?
+    
+    var isIdle: Bool { drawingState == nil }
+
+    mutating func resetMergeTarget() {
+        initialHitTargetForMerge = nil
+    }
 
     // MARK: – CanvasTool conformance
     mutating func handleTap(at loc: CGPoint,
@@ -24,13 +33,16 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         guard var currentDrawing = drawingState else {
             let newGraph = ConnectionGraph()
             let startVertex = newGraph.addVertex(at: loc)
-            self.drawingState = DrawingState(graph: newGraph, vertexHistory: [startVertex.id])
+            let hitTarget = context.hitTarget
+            self.drawingState = DrawingState(graph: newGraph, vertexHistory: [startVertex.id], initialHitTarget: hitTarget)
+            self.initialHitTargetForMerge = hitTarget
             return nil // Don't return an element yet.
         }
 
         // If we are already drawing, check for finalization conditions.
         guard let lastVertex = currentDrawing.graph.vertices[currentDrawing.lastVertexID] else {
             self.drawingState = nil // Reset state
+            self.initialHitTargetForMerge = nil
             return nil
         }
 
@@ -59,15 +71,30 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         let shouldFinalize = isDoubleTap || !externalHitIsEmpty || !selfHitIsEmpty
 
         if shouldFinalize {
-            _ = addOrthogonalSegment(to: currentDrawing.graph, from: lastVertex.point, to: loc)
+            // --- Finalization Behavior ---
+            var drawFinalSegment = true
+            if case .vertex(let hitVertexID, _, let type) = selfHit {
+                // If we clicked on a corner of the line we're currently drawing,
+                // we are just finalizing the shape, not closing a loop.
+                if type == .corner && currentDrawing.vertexHistory.contains(hitVertexID) {
+                    drawFinalSegment = false
+                }
+            }
 
+            if drawFinalSegment {
+                _ = addOrthogonalSegment(to: currentDrawing.graph, from: lastVertex.point, to: loc)
+            }
+
+            // If the final click was on an edge, we need to split that edge to form a T-junction.
             if case .edge(let edgeID, let point, _) = selfHit {
                 currentDrawing.graph.splitEdge(edgeID, at: point)
             }
 
+            // Clean up the graph and return the final element.
             currentDrawing.graph.simplifyCollinearSegments()
             let finalElement = ConnectionElement(graph: currentDrawing.graph)
             drawingState = nil
+            // Don't reset initialHitTargetForMerge here; the controller needs it.
             return .connection(finalElement)
         }
 
@@ -105,7 +132,9 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         ctx.setLineDash(phase: 0, lengths: [4])
         
         let previewGraph = ConnectionGraph()
-        _ = addOrthogonalSegment(to: previewGraph, from: lastVertex.point, to: mouse)
+        // Get the orientation from the *real* graph to ensure the preview is accurate.
+        let lastOrientation = drawingState.graph.lastSegmentOrientation(before: drawingState.lastVertexID)
+        _ = addOrthogonalSegment(to: previewGraph, from: lastVertex.point, to: mouse, givenOrientation: lastOrientation)
         
         ctx.beginPath()
         for edge in previewGraph.edges.values {
@@ -120,6 +149,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     // MARK: – Keyboard helpers
     mutating func handleEscape() {
         drawingState = nil
+        initialHitTargetForMerge = nil
     }
 
     mutating func handleBackspace() {
@@ -128,6 +158,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         // Can't undo if we only have the starting point.
         guard currentDrawing.vertexHistory.count > 1 else {
             drawingState = nil
+            initialHitTargetForMerge = nil
             return
         }
 
@@ -137,6 +168,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         // If the graph becomes empty, reset.
         if currentDrawing.vertexHistory.isEmpty {
             drawingState = nil
+            initialHitTargetForMerge = nil
         } else {
             self.drawingState = currentDrawing
         }
@@ -145,12 +177,14 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     mutating func handleReturn() -> CanvasElement? {
         guard let drawingState = drawingState, !drawingState.graph.edges.isEmpty else {
             self.drawingState = nil
+            self.initialHitTargetForMerge = nil
             return nil
         }
         let graph = drawingState.graph
         graph.simplifyCollinearSegments()
         let finalElement = ConnectionElement(graph: graph)
         self.drawingState = nil
+        // Don't reset initialHitTargetForMerge here; the controller needs it.
         return .connection(finalElement)
     }
 
@@ -159,10 +193,13 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     func hash(into h: inout Hasher) { h.combine(id) }
 
     // MARK: - Private Helpers
-    private func addOrthogonalSegment(to graph: ConnectionGraph, from p1: CGPoint, to p2: CGPoint) -> [ConnectionVertex.ID] {
+    private func addOrthogonalSegment(to graph: ConnectionGraph, from p1: CGPoint, to p2: CGPoint, givenOrientation: LineOrientation? = nil) -> [ConnectionVertex.ID] {
         var newVertexIDs: [UUID] = []
         let startVertex = graph.ensureVertex(at: p1)
-        let lastSegmentOrientation = graph.lastSegmentOrientation(before: startVertex.id)
+        
+        // Use the given orientation if provided; otherwise, calculate it from the graph.
+        // This is crucial for generating an accurate preview.
+        let lastSegmentOrientation = givenOrientation ?? graph.lastSegmentOrientation(before: startVertex.id)
         
         let startsWithHorizontal = (lastSegmentOrientation == .vertical || lastSegmentOrientation == nil)
         
