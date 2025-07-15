@@ -8,8 +8,12 @@
 import SwiftUI
 
 struct DesignComponent: Identifiable, Hashable {
-    let definition: Component          // library object (SwiftData)
-    let instance: ComponentInstance  // stored in the NSDocument
+
+    // library object (SwiftData)
+    let definition: Component
+
+    // stored in the NSDocument
+    let instance: ComponentInstance
 
     var id: UUID { instance.id }
 

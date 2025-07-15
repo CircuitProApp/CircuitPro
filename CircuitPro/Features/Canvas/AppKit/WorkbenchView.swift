@@ -18,12 +18,18 @@ final class WorkbenchView: NSView {
     private weak var marqueeView: MarqueeView?
     private weak var crosshairsView: CrosshairsView?
 
+    // MARK: - Sheet constraints
+    private var sheetWidthC: NSLayoutConstraint?
+    private var sheetHeightC: NSLayoutConstraint?
+    private var sheetLeadingC: NSLayoutConstraint?
+    private var sheetTopC: NSLayoutConstraint?
+
     // MARK: - State
     var elements: [CanvasElement] = [] {
         didSet {
             elementsView?.elements = elements
             handlesView?.elements = elements
-            previewView?.needsDisplay = true // Context for tools might have changed
+            previewView?.needsDisplay = true
         }
     }
     var selectedIDs: Set<UUID> = [] {
@@ -33,22 +39,14 @@ final class WorkbenchView: NSView {
         }
     }
     var marqueeSelectedIDs: Set<UUID> = [] {
-        didSet {
-            elementsView?.marqueeSelectedIDs = marqueeSelectedIDs
-        }
+        didSet { elementsView?.marqueeSelectedIDs = marqueeSelectedIDs }
     }
     var selectedTool: AnyCanvasTool? {
-        didSet {
-            previewView?.selectedTool = selectedTool
-        }
+        didSet { previewView?.selectedTool = selectedTool }
     }
     var selectedLayer: CanvasLayer = .layer0 {
-        didSet {
-            // When layer changes, preview might need to be redrawn
-            previewView?.needsDisplay = true
-        }
+        didSet { previewView?.needsDisplay = true }
     }
-    
     var magnification: CGFloat = 1.0 {
         didSet {
             backgroundView?.magnification = magnification
@@ -74,18 +72,22 @@ final class WorkbenchView: NSView {
         didSet { crosshairsView?.crosshairsStyle = crosshairsStyle }
     }
     var paperSize: PaperSize = .a4 {
-        didSet { sheetView?.sheetSize = paperSize }
+        didSet {
+            sheetView?.sheetSize = paperSize
+            refreshSheetSize()
+        }
     }
     var sheetOrientation: PaperOrientation = .landscape {
-        didSet { sheetView?.orientation = sheetOrientation }
+        didSet {
+            sheetView?.orientation = sheetOrientation
+            refreshSheetSize()
+        }
     }
     var sheetCellValues: [String: String] = [:] {
         didSet { sheetView?.cellValues = sheetCellValues }
     }
     var showDrawingSheet: Bool = false {
-        didSet {
-            sheetView?.isHidden = !showDrawingSheet
-        }
+        didSet { sheetView?.isHidden = !showDrawingSheet }
     }
 
     // MARK: - Callbacks
@@ -118,7 +120,6 @@ final class WorkbenchView: NSView {
     override var acceptsFirstResponder: Bool { true }
 
     // MARK: - Lifecycle
-    
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         setupViews()
@@ -128,49 +129,68 @@ final class WorkbenchView: NSView {
         super.init(coder: coder)
         setupViews()
     }
-    
+
+    // MARK: - Setup
     private func setupViews() {
-        // The order of creation determines the z-index (last is on top).
-        
+
+        // 1. Background
         let background = BackgroundView(frame: bounds)
         background.autoresizingMask = [.width, .height]
         addSubview(background)
         self.backgroundView = background
-        
-        let sheet = DrawingSheetView(frame: .zero) // Frame will be set by layout
+
+        // 2. Drawing sheet
+        let sheet = DrawingSheetView(frame: .zero)
         sheet.translatesAutoresizingMaskIntoConstraints = false
         addSubview(sheet)
         self.sheetView = sheet
-        NSLayoutConstraint.activate([
-            sheet.centerXAnchor.constraint(equalTo: centerXAnchor),
-            sheet.centerYAnchor.constraint(equalTo: centerYAnchor)
-        ])
-        
+
+        let size = sheet.intrinsicContentSize
+        sheetWidthC  = sheet.widthAnchor.constraint(equalToConstant: size.width)
+        sheetHeightC = sheet.heightAnchor.constraint(equalToConstant: size.height)
+        sheetLeadingC = sheet.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2500)
+        sheetTopC     = sheet.topAnchor.constraint(equalTo: topAnchor, constant: 2500)
+
+        NSLayoutConstraint.activate([sheetWidthC!, sheetHeightC!, sheetLeadingC!, sheetTopC!])
+
+        // 3. Elements
         let elements = ElementsView(frame: bounds)
         elements.autoresizingMask = [.width, .height]
         addSubview(elements)
         self.elementsView = elements
-        
+
+        // 4. Preview
         let preview = PreviewView(frame: bounds)
         preview.autoresizingMask = [.width, .height]
         preview.workbench = self
         addSubview(preview)
         self.previewView = preview
-        
+
+        // 5. Handles
         let handles = HandlesView(frame: bounds)
         handles.autoresizingMask = [.width, .height]
         addSubview(handles)
         self.handlesView = handles
-        
+
+        // 6. Marquee
         let marquee = MarqueeView(frame: bounds)
         marquee.autoresizingMask = [.width, .height]
         addSubview(marquee)
         self.marqueeView = marquee
-        
+
+        // 7. Crosshairs
         let crosshairs = CrosshairsView(frame: bounds)
         crosshairs.autoresizingMask = [.width, .height]
         addSubview(crosshairs)
         self.crosshairsView = crosshairs
+    }
+
+    // MARK: - Helpers
+    private func refreshSheetSize() {
+        guard let sheet = sheetView else { return }
+        let size = sheet.intrinsicContentSize
+        sheetWidthC?.constant = size.width
+        sheetHeightC?.constant = size.height
     }
 
     override func viewDidMoveToWindow() {
@@ -193,12 +213,7 @@ final class WorkbenchView: NSView {
         crosshairsView?.location = snapped
         onMouseMoved?(snapped)
 
-        // Figure out whether the mouse sits on a pin
-        // onPinHoverChange?(hitTesting.pin(at: location)?.id)
-
-        if isRotating {
-            updateRotation(to: location)
-        }
+        if isRotating { updateRotation(to: location) }
 
         previewView?.needsDisplay = true
     }
@@ -230,7 +245,7 @@ final class WorkbenchView: NSView {
             marqueeRect = CGRect(origin: origin, size: .zero).union(CGRect(origin: loc, size: .zero))
             if let rect = marqueeRect {
                 let ids = elements.filter { $0.boundingBox.intersects(rect) }.map(\CanvasElement.id)
-                self.marqueeSelectedIDs = Set(ids)
+                marqueeSelectedIDs = Set(ids)
             }
             return
         }
@@ -251,14 +266,13 @@ final class WorkbenchView: NSView {
 
         if didMoveSignificantly {
             if marqueeOrigin != nil {
-                self.selectedIDs = marqueeSelectedIDs
-                onSelectionChange?(self.selectedIDs)
+                selectedIDs = marqueeSelectedIDs
+                onSelectionChange?(selectedIDs)
             }
-        }
-        else {
+        } else {
             if let newSel = tentativeSelection {
-                self.selectedIDs = newSel
-                onSelectionChange?(self.selectedIDs)
+                selectedIDs = newSel
+                onSelectionChange?(selectedIDs)
             }
         }
     }
@@ -277,7 +291,7 @@ final class WorkbenchView: NSView {
                 enterRotationMode(around: center)
             }
 
-        case "\r", "\u{3}": // Return or Enter
+        case "\r", "\u{3}":
             handleReturnKeyPress()
             previewView?.needsDisplay = true
 
@@ -287,9 +301,7 @@ final class WorkbenchView: NSView {
                 selectedTool = tool
                 previewView?.needsDisplay = true
             }
-            else {
-                super.keyDown(with: event)
-            }
+            else { super.keyDown(with: event) }
 
         case String(UnicodeScalar(NSDeleteCharacter)!),
              String(UnicodeScalar(NSBackspaceCharacter)!):
@@ -298,9 +310,7 @@ final class WorkbenchView: NSView {
                 selectedTool = tool
                 previewView?.needsDisplay = true
             }
-            else {
-                deleteSelectedElements()
-            }
+            else { deleteSelectedElements() }
 
         default:
             super.keyDown(with: event)
@@ -322,7 +332,7 @@ final class WorkbenchView: NSView {
         return round(value / gridSize) * gridSize
     }
 
-    // MARK: - Interaction Logic (formerly CanvasInteractionController)
+    // MARK: - Interaction Logic
     func reset() {
         resetInteractionState()
     }
@@ -365,7 +375,8 @@ final class WorkbenchView: NSView {
         for element in elements where selectedIDs.contains(element.id) && element.isPrimitiveEditable {
             for handle in element.handles() where hypot(loc.x - handle.position.x, loc.y - handle.position.y) < tolerance {
                 activeHandle = (element.id, handle.kind)
-                if let oppositeKind = handle.kind.opposite, let opposite = element.handles().first(where: { $0.kind == oppositeKind }) {
+                if let oppositeKind = handle.kind.opposite,
+                   let opposite = element.handles().first(where: { $0.kind == oppositeKind }) {
                     frozenOppositeWorld = opposite.position
                 }
                 return true
@@ -379,9 +390,7 @@ final class WorkbenchView: NSView {
         let hitID = hitTesting.hitTest(at: loc)
 
         guard let id = hitID else {
-            if !shift {
-                tentativeSelection = []
-            }
+            if !shift { tentativeSelection = [] }
             return
         }
 
@@ -396,16 +405,14 @@ final class WorkbenchView: NSView {
                         position = symbol.instance.position
                     } else if let primitive = element.primitives.first {
                         position = primitive.position
-                    } else {
-                        continue
-                    }
+                    } else { continue }
                     originalPositions[element.id] = position
                 }
             }
-        }
-        else {
+        } else {
             tentativeSelection = shift ? selectedIDs.union([id]) : [id]
         }
+
         if let element = elements.first(where: { $0.id == id }) {
             if case .connection = element { return }
             let position: CGPoint
@@ -413,10 +420,7 @@ final class WorkbenchView: NSView {
                 position = symbol.instance.position
             } else if let primitive = element.primitives.first {
                 position = primitive.position
-            }
-            else {
-                return
-            }
+            } else { return }
             originalPositions[id] = position
         }
     }
@@ -462,9 +466,7 @@ final class WorkbenchView: NSView {
     }
 
     private func handleToolTap(at loc: CGPoint, event: NSEvent) -> Bool {
-        guard var tool = selectedTool, tool.id != "cursor" else {
-            return false
-        }
+        guard var tool = selectedTool, tool.id != "cursor" else { return false }
 
         let snapped = snap(loc)
         var context = CanvasToolContext(
@@ -510,11 +512,6 @@ final class WorkbenchView: NSView {
 }
 
 extension WorkbenchView: CanvasHitTestControllerDataSource {
-    func elementsForHitTesting() -> [CanvasElement] {
-        return elements
-    }
-
-    func magnificationForHitTesting() -> CGFloat {
-        return magnification
-    }
+    func elementsForHitTesting() -> [CanvasElement] { elements }
+    func magnificationForHitTesting() -> CGFloat { magnification }
 }
