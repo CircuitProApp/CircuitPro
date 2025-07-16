@@ -2,7 +2,7 @@
 //  ToolActionController.swift
 //  CircuitPro
 //
-//  Created by Giorgi Tchelidze on 7/15/25.
+//  Created by Giorgi Tchelidze on 7/16/25.
 //
 
 import AppKit
@@ -12,7 +12,7 @@ import AppKit
 final class ToolActionController {
 
     unowned let workbench: WorkbenchView
-    let hitTest: WorkbenchHitTestService
+    let hitTest: WorkbenchHitTestService   // kept for future use
 
     init(workbench: WorkbenchView,
          hitTest:   WorkbenchHitTestService) {
@@ -34,18 +34,11 @@ final class ToolActionController {
             selectedLayer:    workbench.selectedLayer,
             magnification:    workbench.magnification
         )
+        ctx.clickCount = event.clickCount      // no hitTarget logic here
 
-        if tool.id == "connection" {
-            ctx.hitTarget = hitTest.hitTestForConnection(
-                in:  workbench.elements,
-                at:  snapped,
-                magnification: workbench.magnification)
-        }
-        ctx.clickCount = event.clickCount
-
-        if let elt = tool.handleTap(at: snapped, context: ctx) {
-            workbench.elements.append(elt)
-            if case .primitive(let prim) = elt {
+        if let newElement = tool.handleTap(at: snapped, context: ctx) {
+            workbench.elements.append(newElement)
+            if case .primitive(let prim) = newElement {
                 workbench.onPrimitiveAdded?(prim.id, ctx.selectedLayer)
             }
             workbench.onUpdate?(workbench.elements)

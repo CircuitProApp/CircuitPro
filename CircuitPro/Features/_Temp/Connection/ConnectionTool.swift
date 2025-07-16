@@ -58,7 +58,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             // Return the final element.
             let finalElement = ConnectionElement(graph: currentDrawing.graph)
             drawingState = nil
-            return .connection(finalElement)
+            return  nil /*.connection(finalElement)*/
         }
 
         // --- Continue Drawing Logic ---
@@ -142,7 +142,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         let graph = drawingState.graph
         let finalElement = ConnectionElement(graph: graph)
         self.drawingState = nil
-        return .connection(finalElement)
+        return nil /*.connection(finalElement)*/
     }
 
     // MARK: – Equatable & Hashable

@@ -9,11 +9,11 @@ import AppKit
 
 final class WorkbenchInputCoordinator {
 
-    // MARK: Dependencies
+    // MARK: – Dependencies
     unowned let workbench: WorkbenchView
-    let hitTest: WorkbenchHitTestService
+    let      hitTest:  WorkbenchHitTestService
 
-    // MARK: Gesture helpers
+    // MARK: – Gesture helpers
     private lazy var rotation   = RotationGestureController(workbench: workbench)
     private lazy var marquee    = MarqueeSelectionGesture(workbench: workbench)
     private lazy var handleDrag = HandleDragGesture(workbench: workbench)
@@ -23,58 +23,60 @@ final class WorkbenchInputCoordinator {
     private lazy var keyCmds    = WorkbenchKeyCommandController(workbench: workbench,
                                                                 coordinator: self)
 
-    // The drag recogniser that currently owns the pointer, if any.
+    /// The drag recogniser that currently owns the pointer, if any.
     private var activeDrag: DragGesture?
 
-    // MARK: Init
-    init(workbench: WorkbenchView, hitTest: WorkbenchHitTestService) {
+    // MARK: – Init
+    init(workbench: WorkbenchView,
+         hitTest:   WorkbenchHitTestService) {
         self.workbench = workbench
         self.hitTest   = hitTest
     }
 
-    // MARK: Exposed state
+    // MARK: – Exposed state
     var isRotating: Bool { rotation.active }
 
-    // MARK: Keyboard
+    // MARK: – Keyboard
     func keyDown(_ e: NSEvent) -> Bool { keyCmds.handle(e) }
 
-    // MARK: Mouse – moved
+    // MARK: – Mouse-move
     func mouseMoved(_ e: NSEvent) {
         let p = workbench.convert(e.locationInWindow, from: nil)
 
-        // cross-hairs & coordinate read-out
-        workbench.crosshairsView?.location = workbench.snap(p)
-        workbench.onMouseMoved?(workbench.snap(p))
+        // Cross-hairs & coordinate read-out
+        let snapped = workbench.snap(p)
+        workbench.crosshairsView?.location = snapped
+        workbench.onMouseMoved?(snapped)
 
-        // update preview & live rotation
+        // Preview & live rotation
         rotation.update(to: p)
         workbench.previewView?.needsDisplay = true
     }
 
-    // MARK: Mouse – down
+    // MARK: – Mouse-down
     func mouseDown(_ e: NSEvent) {
 
-        // 1 ─ cancel a running rotation gesture
+        // 1 ─ cancel an in-progress rotation gesture
         if rotation.active { rotation.cancel(); return }
 
         let p = workbench.convert(e.locationInWindow, from: nil)
 
-        // 2 ─ give the active drawing tool first shot
+        // 2 ─ let the active drawing tool try to consume the click
         if toolTap.handleMouseDown(at: p, event: e) { return }
 
-        // 3 — Hit-test and handle selection / marquee
+        // 3 ─ hit-test for selection / marquee
         if workbench.selectedTool?.id == "cursor" {
             if let hitID = hitTest.hitTest(in: workbench.elements,
                                            at: p,
                                            magnification: workbench.magnification) {
-                // An item was hit. If not already selected, select it.
-                // This allows dragging of multi-selections.
+
+                // An element was hit. Select it if not already selected.
                 if !workbench.selectedIDs.contains(hitID) {
                     workbench.selectedIDs = [hitID]
                     workbench.onSelectionChange?(workbench.selectedIDs)
                 }
             } else {
-                // Nothing was hit. Clear selection and start marquee.
+                // Empty space: clear selection and start marquee.
                 if !workbench.selectedIDs.isEmpty {
                     workbench.selectedIDs.removeAll()
                     workbench.onSelectionChange?(workbench.selectedIDs)
@@ -92,7 +94,7 @@ final class WorkbenchInputCoordinator {
         }
     }
 
-    // MARK: Mouse – dragged
+    // MARK: – Mouse-dragged
     func mouseDragged(_ e: NSEvent) {
         let p = workbench.convert(e.locationInWindow, from: nil)
 
@@ -100,7 +102,7 @@ final class WorkbenchInputCoordinator {
         activeDrag?.drag(to: p)
     }
 
-    // MARK: Mouse – up
+    // MARK: – Mouse-up
     func mouseUp(_ e: NSEvent) {
 
         if marquee.active { marquee.end() }
@@ -111,15 +113,15 @@ final class WorkbenchInputCoordinator {
         workbench.handlesView?.needsDisplay  = true
     }
 
-    // MARK: Called by the key-command helper
+    // MARK: – Called by the key-command helper
     func enterRotationMode(around p: CGPoint) { rotation.begin(at: p) }
     func cancelRotation()                     { rotation.cancel()    }
 
-    // MARK: Helpers used by the key-command helper
+    // MARK: – Helpers for key-commands
     func handleReturnKeyPress() {
-        guard var tool = workbench.selectedTool,
-              tool.id == "connection" else { return }
+        guard var tool = workbench.selectedTool else { return }
 
+        // Generic “confirm” for any tool that supports it.
         if let newElement = tool.handleReturn() {
             workbench.elements.append(newElement)
             workbench.onUpdate?(workbench.elements)
@@ -135,7 +137,7 @@ final class WorkbenchInputCoordinator {
         workbench.onUpdate?(workbench.elements)
     }
 
-    // MARK: Public reset
+    // MARK: – Public reset
     func reset() {
         marquee.end()
         activeDrag?.end()
