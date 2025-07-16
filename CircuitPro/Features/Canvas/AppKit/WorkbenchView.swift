@@ -10,6 +10,7 @@ import AppKit
 final class WorkbenchView: NSView {
 
     // MARK: Sub-views
+    weak var backgroundView: DottedBackgroundView?
     weak var sheetView:      DrawingSheetView?
     weak var elementsView:   ElementsView?
     weak var previewView:    PreviewView?

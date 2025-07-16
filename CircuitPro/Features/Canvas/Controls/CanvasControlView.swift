@@ -37,41 +37,41 @@ struct CanvasControlView: View {
                         .foregroundStyle(canvasManager.enableSnapping ? .blue : .secondary)
                 }
             }
-            Button {
-                canvasManager.enableAxesBackground.toggle()
-            } label: {
-                Image(systemName: CircuitProSymbols.Canvas.axesBackground)
-                    .frame(width: 13, height: 13)
-                    .foregroundStyle(canvasManager.enableAxesBackground ? .blue : .secondary)
-            }
+//            Button {
+//                canvasManager.enableAxesBackground.toggle()
+//            } label: {
+//                Image(systemName: CircuitProSymbols.Canvas.axesBackground)
+//                    .frame(width: 13, height: 13)
+//                    .foregroundStyle(canvasManager.enableAxesBackground ? .blue : .secondary)
+//            }
 
-            Menu {
-                Button {
-                    canvasManager.backgroundStyle = .dotted
-                } label: {
-                    Label(
-                        "Dotted Background",
-                        systemImage: canvasManager.backgroundStyle == .dotted ?
-                        CircuitProSymbols.Generic.checkmark : CircuitProSymbols.Canvas.dottedBackground
-                    )
-                    .symbolVariant(canvasManager.backgroundStyle == .grid ? .circle.fill : .none)
-                    .labelStyle(.titleAndIcon)
-                }
-                Button {
-                    canvasManager.backgroundStyle = .grid
-                } label: {
-                    Label(
-                        "Grid Background",
-                        systemImage: canvasManager.backgroundStyle == .grid ?
-                        CircuitProSymbols.Generic.checkmark : CircuitProSymbols.Canvas.gridBackground
-                    )
-                    .symbolVariant(canvasManager.backgroundStyle == .grid ? .circle.fill : .none)
-                    .labelStyle(.titleAndIcon)
-                }
-            } label: {
-                Image(systemName: CircuitProSymbols.Canvas.backgroundType)
-                    .frame(width: 13, height: 13)
-            }
+//            Menu {
+//                Button {
+//                    canvasManager.backgroundStyle = .dotted
+//                } label: {
+//                    Label(
+//                        "Dotted Background",
+//                        systemImage: canvasManager.backgroundStyle == .dotted ?
+//                        CircuitProSymbols.Generic.checkmark : CircuitProSymbols.Canvas.dottedBackground
+//                    )
+//                    .symbolVariant(canvasManager.backgroundStyle == .grid ? .circle.fill : .none)
+//                    .labelStyle(.titleAndIcon)
+//                }
+//                Button {
+//                    canvasManager.backgroundStyle = .grid
+//                } label: {
+//                    Label(
+//                        "Grid Background",
+//                        systemImage: canvasManager.backgroundStyle == .grid ?
+//                        CircuitProSymbols.Generic.checkmark : CircuitProSymbols.Canvas.gridBackground
+//                    )
+//                    .symbolVariant(canvasManager.backgroundStyle == .grid ? .circle.fill : .none)
+//                    .labelStyle(.titleAndIcon)
+//                }
+//            } label: {
+//                Image(systemName: CircuitProSymbols.Canvas.backgroundType)
+//                    .frame(width: 13, height: 13)
+//            }
         }
         .buttonStyle(.plain)
     }
