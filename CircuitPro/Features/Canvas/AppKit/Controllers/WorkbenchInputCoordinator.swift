@@ -62,13 +62,26 @@ final class WorkbenchInputCoordinator {
         // 2 ─ give the active drawing tool first shot
         if toolTap.handleMouseDown(at: p, event: e) { return }
 
-        // 3 ─ start marquee if cursor tool and nothing under pointer
-        let nothingHit = hitTest.hitTest(in: workbench.elements,
-                                         at: p,
-                                         magnification: workbench.magnification) == nil
-        if workbench.selectedTool?.id == "cursor", nothingHit {
-            marquee.begin(at: p)
-            return
+        // 3 — Hit-test and handle selection / marquee
+        if workbench.selectedTool?.id == "cursor" {
+            if let hitID = hitTest.hitTest(in: workbench.elements,
+                                           at: p,
+                                           magnification: workbench.magnification) {
+                // An item was hit. If not already selected, select it.
+                // This allows dragging of multi-selections.
+                if !workbench.selectedIDs.contains(hitID) {
+                    workbench.selectedIDs = [hitID]
+                    workbench.onSelectionChange?(workbench.selectedIDs)
+                }
+            } else {
+                // Nothing was hit. Clear selection and start marquee.
+                if !workbench.selectedIDs.isEmpty {
+                    workbench.selectedIDs.removeAll()
+                    workbench.onSelectionChange?(workbench.selectedIDs)
+                }
+                marquee.begin(at: p)
+                return
+            }
         }
 
         // 4 ─ otherwise try handle-drag, then selection-drag

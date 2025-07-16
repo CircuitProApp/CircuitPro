@@ -73,9 +73,6 @@ struct CanvasView: NSViewRepresentable {
         workbench.snapGridSize = manager.gridSpacing.rawValue * 10.0
         
         // Pass configuration to Workbench
-        workbench.backgroundStyle = manager.backgroundStyle
-        workbench.showAxes = manager.enableAxesBackground
-        workbench.gridSpacing = manager.gridSpacing.rawValue * 10.0
         workbench.crosshairsStyle = manager.crosshairsStyle
         workbench.paperSize = manager.paperSize
         var cellValues = workbench.sheetCellValues
@@ -102,8 +99,9 @@ struct CanvasView: NSViewRepresentable {
         }
 
         // Update sheet visibility and centering
-        if workbench.showDrawingSheet != manager.showDrawingSheet {
-            workbench.showDrawingSheet = manager.showDrawingSheet
+        let showSheetChanged = workbench.showDrawingSheet != manager.showDrawingSheet
+        workbench.showDrawingSheet = manager.showDrawingSheet
+        if showSheetChanged {
             if manager.showDrawingSheet {
                 centerScrollView(on: workbench.sheetView, in: scrollView)
             } else {

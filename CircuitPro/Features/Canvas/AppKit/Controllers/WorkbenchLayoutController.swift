@@ -25,10 +25,10 @@ final class WorkbenchLayoutController {
     private func buildHierarchy() {
 
         // 1 Background
-        let background = BackgroundView(frame: workbench.bounds)
-        background.autoresizingMask = [.width, .height]
-        workbench.addSubview(background)
-        workbench.backgroundView = background
+        // let background = BackgroundView(frame: workbench.bounds)
+        // background.autoresizingMask = [.width, .height]
+        // workbench.addSubview(background)
+        // workbench.backgroundView = background
 
         // 2 Drawing sheet
         let sheet = DrawingSheetView(frame: .zero)

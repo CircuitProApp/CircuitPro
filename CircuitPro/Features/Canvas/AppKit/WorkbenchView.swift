@@ -10,7 +10,6 @@ import AppKit
 final class WorkbenchView: NSView {
 
     // MARK: Sub-views
-    weak var backgroundView: BackgroundView?
     weak var sheetView:      DrawingSheetView?
     weak var elementsView:   ElementsView?
     weak var previewView:    PreviewView?
@@ -49,7 +48,6 @@ final class WorkbenchView: NSView {
     var magnification: CGFloat = 1.0 {
         didSet {
             guard magnification != oldValue else { return }
-            backgroundView?.magnification = magnification
             crosshairsView?.magnification = magnification
             marqueeView?.magnification    = magnification
             previewView?.magnification    = magnification
@@ -59,18 +57,6 @@ final class WorkbenchView: NSView {
 
     var isSnappingEnabled: Bool = true
     var snapGridSize:      CGFloat = 10.0
-
-    var backgroundStyle: CanvasBackgroundStyle = .dotted {
-        didSet { backgroundView?.currentStyle = backgroundStyle }
-    }
-
-    var showAxes: Bool = true {
-        didSet { backgroundView?.showAxes = showAxes }
-    }
-
-    var gridSpacing: CGFloat = 10 {
-        didSet { backgroundView?.gridSpacing = gridSpacing }
-    }
 
     var crosshairsStyle: CrosshairsStyle = .centeredCross {
         didSet { crosshairsView?.crosshairsStyle = crosshairsStyle }
