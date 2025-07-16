@@ -29,6 +29,15 @@ final class DotTileLayer: CATiledLayer {
         dotRadius = baseDotRadius / max(magnification, 1)
     }
 
+    // MARK: – Helpers
+    /// Returns the first multiple of `step` that is **≤ value**.
+    /// Using this instead of `floor(value / step) * step` avoids a costly
+    /// division for every grid intersection.
+    private func previousMultiple(of step: CGFloat, beforeOrEqualTo value: CGFloat) -> CGFloat {
+        let quotient = Int(value / step)
+        return CGFloat(quotient) * step
+    }
+
     // Eliminate cross-fade when new tiles appear
     override class func fadeDuration() -> CFTimeInterval { 0 }
 
@@ -42,23 +51,32 @@ final class DotTileLayer: CATiledLayer {
         let rect = ctx.boundingBoxOfClipPath
 
         // Start at the first grid intersection **before** this tile
-        let startX = floor(rect.minX / spacing) * spacing
-        let startY = floor(rect.minY / spacing) * spacing
+        // Find the first grid intersection *before* the tile. Doing the maths with
+        // integers is noticeably cheaper than floating-point `floor` for the
+        // thousands of times this method gets called while scrolling/zooming.
+        let startX = previousMultiple(of: spacing, beforeOrEqualTo: rect.minX)
+        let startY = previousMultiple(of: spacing, beforeOrEqualTo: rect.minY)
 
         var y = startY
-        while y <= rect.maxY {
-            var x = startX
-            while x <= rect.maxX {
-                let xGridIndex = (x / spacing).rounded()
-                let yGridIndex = (y / spacing).rounded()
+        let maxY = rect.maxY
+        let maxX = rect.maxX
 
-                let isMajor = xGridIndex.truncatingRemainder(dividingBy: 10) == 0 ||
-                              yGridIndex.truncatingRemainder(dividingBy: 10) == 0
+        while y <= maxY {
+            var x = startX
+
+            // Calculate the row’s Y index once per row instead of per-dot
+            let yGridIndex = Int(round(y / spacing))
+            let yIsMajor   = yGridIndex % 10 == 0
+
+            while x <= maxX {
+                // Re-use the *integer* modulus to decide major/minor dots – much faster
+                let xGridIndex = Int(round(x / spacing))
+                let isMajor = yIsMajor || xGridIndex % 10 == 0
 
                 ctx.setFillColor(isMajor ? majorColor : minorColor)
                 ctx.fillEllipse(in: CGRect(x: x - radius,
                                            y: y - radius,
-                                           width:  radius * 2,       // diameter (fixed)
+                                           width:  radius * 2,
                                            height: radius * 2))
                 x += spacing
             }
@@ -118,9 +136,16 @@ final class DottedBackgroundView: NSView {
         let tileLayer            = DotTileLayer()
         tileLayer.unitSpacing    = unitSpacing
         tileLayer.magnification  = magnification
-        tileLayer.tileSize       = CGSize(width: 256, height: 256)   // NEW – bigger tile
-        tileLayer.levelsOfDetail = 4                                 // NEW – down-scales
-        tileLayer.levelsOfDetailBias = 4                             // NEW – up-scales
+        // Use larger tiles so fewer need to be generated while scrolling.
+        // A power-of-two keeps Core Animation happy.
+        tileLayer.tileSize           = CGSize(width: 512, height: 512)
+
+        // Enable asynchronous drawing so heavy grid generation doesn’t
+        // block the main thread while the user is scrolling/zooming.
+        tileLayer.drawsAsynchronously = true
+
+        tileLayer.levelsOfDetail      = 4  // down-scale quality levels
+        tileLayer.levelsOfDetailBias  = 4  // up-scale quality levels
         tileLayer.frame          = CGRect(x: 0, y: 0,
                                           width: 5_000, height: 5_000)
         return tileLayer
