@@ -49,6 +49,7 @@ final class WorkbenchView: NSView {
     var magnification: CGFloat = 1.0 {
         didSet {
             guard magnification != oldValue else { return }
+            backgroundView?.magnification = magnification
             crosshairsView?.magnification = magnification
             marqueeView?.magnification    = magnification
             previewView?.magnification    = magnification
@@ -57,7 +58,11 @@ final class WorkbenchView: NSView {
     }
 
     var isSnappingEnabled: Bool = true
-    var snapGridSize:      CGFloat = 10.0
+    var snapGridSize:      CGFloat = 10.0 {
+        didSet {
+            backgroundView?.unitSpacing = snapGridSize
+        }
+    }
 
     var crosshairsStyle: CrosshairsStyle = .centeredCross {
         didSet { crosshairsView?.crosshairsStyle = crosshairsStyle }
