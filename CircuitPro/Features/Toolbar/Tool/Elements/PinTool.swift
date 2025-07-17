@@ -15,7 +15,7 @@ struct PinTool: CanvasTool {
 
     private var rotation: CardinalRotation = .deg0
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
+    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
         let number = context.existingPinCount + 1
         let pin = Pin(
             name: "",
@@ -25,7 +25,7 @@ struct PinTool: CanvasTool {
             type: .unknown,
             lengthType: .long
         )
-        return .pin(pin)
+        return .element(.pin(pin))
     }
 
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {

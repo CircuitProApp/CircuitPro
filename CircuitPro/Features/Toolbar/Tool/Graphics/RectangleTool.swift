@@ -8,7 +8,7 @@ struct RectangleTool: CanvasTool {
 
     private var start: CGPoint?
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
+    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
         if let start {
             let rect = CGRect(origin: start, size: .zero).union(CGRect(origin: location, size: .zero))
             let center = CGPoint(x: rect.midX, y: rect.midY)
@@ -25,10 +25,10 @@ struct RectangleTool: CanvasTool {
                 color: .init(color: context.selectedLayer.color)
             )
             self.start = nil
-            return .primitive(.rectangle(rectangle))
+            return .element(.primitive(.rectangle(rectangle)))
         } else {
             self.start = location
-            return nil
+            return .noResult
         }
     }
 

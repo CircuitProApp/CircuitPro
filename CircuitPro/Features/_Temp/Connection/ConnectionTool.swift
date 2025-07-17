@@ -21,51 +21,9 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     // MARK: – CanvasTool conformance
     mutating func handleTap(at loc: CGPoint,
-                            context: CanvasToolContext) -> CanvasElement? {
-        // If the tool is idle (no drawing state), this tap starts a new drawing session.
-        guard var currentDrawing = drawingState else {
-            let newGraph = ConnectionGraph()
-            let startVertex = newGraph.addVertex(at: loc)
-            self.drawingState = DrawingState(graph: newGraph, vertexHistory: [startVertex.id])
-            return nil // Don't return an element yet.
-        }
-
-        // If we are already drawing, check for finalization conditions.
-        guard let lastVertex = currentDrawing.graph.vertices[currentDrawing.lastVertexID] else {
-            self.drawingState = nil // Reset state
-            return nil
-        }
-
-        // --- Finalization Logic ---
-        let isDoubleTap = context.clickCount > 1
-
-        let externalHitIsEmpty: Bool
-        switch context.hitTarget {
-        case .some(.emptySpace), .none:
-            externalHitIsEmpty = true
-        default:
-            externalHitIsEmpty = false
-        }
-
-        // Finalize on a double-tap, or a single-tap on an existing element.
-        // A single-tap in empty space continues drawing.
-        let shouldFinalize = isDoubleTap || !externalHitIsEmpty
-
-        if shouldFinalize {
-            // --- Finalization Behavior ---
-            _ = addOrthogonalSegment(to: currentDrawing.graph, from: lastVertex.point, to: loc)
-
-            // Return the final element.
-            let finalElement = ConnectionElement(graph: currentDrawing.graph)
-            drawingState = nil
-            return  nil /*.connection(finalElement)*/
-        }
-
-        // --- Continue Drawing Logic ---
-        let newVertexIDs = addOrthogonalSegment(to: currentDrawing.graph, from: lastVertex.point, to: loc)
-        currentDrawing.vertexHistory.append(contentsOf: newVertexIDs)
-        self.drawingState = currentDrawing // Write back the modified state
-        return nil
+                            context: CanvasToolContext) -> CanvasToolResult {
+      
+        return .noResult
     }
 
     func drawPreview(in ctx: CGContext,
@@ -134,15 +92,9 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         }
     }
 
-    mutating func handleReturn() -> CanvasElement? {
-        guard let drawingState = drawingState, !drawingState.graph.edges.isEmpty else {
-            self.drawingState = nil
-            return nil
-        }
-        let graph = drawingState.graph
-        let finalElement = ConnectionElement(graph: graph)
-        self.drawingState = nil
-        return nil /*.connection(finalElement)*/
+    mutating func handleReturn() -> CanvasToolResult {
+
+        return .noResult
     }
 
     // MARK: – Equatable & Hashable

@@ -15,7 +15,7 @@ struct RulerTool: CanvasTool {
     private var end: CGPoint?
     private var clicks: Int = 0
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
+    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
         switch clicks {
         case 0:
             start = location
@@ -33,7 +33,7 @@ struct RulerTool: CanvasTool {
             clicks = 0
         }
 
-        return nil
+        return .noResult
     }
 
     // swiftlint:disable:next function_body_length

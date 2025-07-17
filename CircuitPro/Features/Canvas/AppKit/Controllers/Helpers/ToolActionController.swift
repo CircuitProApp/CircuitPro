@@ -36,12 +36,20 @@ final class ToolActionController {
         )
         ctx.clickCount = event.clickCount      // no hitTarget logic here
 
-        if let newElement = tool.handleTap(at: snapped, context: ctx) {
+        let result = tool.handleTap(at: snapped, context: ctx)
+
+        switch result {
+        case .element(let newElement):
             workbench.elements.append(newElement)
             if case .primitive(let prim) = newElement {
                 workbench.onPrimitiveAdded?(prim.id, ctx.selectedLayer)
             }
             workbench.onUpdate?(workbench.elements)
+        case .connection:
+            // TODO: Handle connection element creation
+            break
+        case .noResult:
+            break
         }
 
         workbench.selectedTool = tool

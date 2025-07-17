@@ -122,9 +122,16 @@ final class WorkbenchInputCoordinator {
         guard var tool = workbench.selectedTool else { return }
 
         // Generic “confirm” for any tool that supports it.
-        if let newElement = tool.handleReturn() {
+        let result = tool.handleReturn()
+        switch result {
+        case .element(let newElement):
             workbench.elements.append(newElement)
             workbench.onUpdate?(workbench.elements)
+        case .connection:
+            // TODO: Handle connection element creation
+            break
+        case .noResult:
+            break
         }
         workbench.selectedTool = tool
     }

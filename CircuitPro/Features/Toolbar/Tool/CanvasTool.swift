@@ -14,7 +14,7 @@ protocol CanvasTool: Hashable {
 
     // MARK: - Connection Tool Properties
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement?
+    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult
 
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext)
 
@@ -33,13 +33,13 @@ protocol CanvasTool: Hashable {
 
     /// Called when the Return key is pressed. Tools should commit the
     /// existing steps if possible.
-    mutating func handleReturn() -> CanvasElement?
+    mutating func handleReturn() -> CanvasToolResult
 }
 
 extension CanvasTool {
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
-        // Default implementation that returns nil.
-        return nil
+    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
+        // Default implementation that returns .noResult.
+        return .noResult
     }
 
     mutating func handleEscape() {}
@@ -48,5 +48,5 @@ extension CanvasTool {
 
     mutating func handleRotate() {}
 
-    mutating func handleReturn() -> CanvasElement? { nil }
+    mutating func handleReturn() -> CanvasToolResult { .noResult }
 }

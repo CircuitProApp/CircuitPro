@@ -8,7 +8,7 @@ struct CircleTool: CanvasTool {
 
     private var center: CGPoint?
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
+    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
         if let center {
             let radius = hypot(location.x - center.x, location.y - center.y)
             let circle = CirclePrimitive(
@@ -21,10 +21,10 @@ struct CircleTool: CanvasTool {
                 filled: false
             )
             self.center = nil
-            return .primitive(.circle(circle))
+            return .element(.primitive(.circle(circle)))
         } else {
             self.center = location
-            return nil
+            return .noResult
         }
     }
 

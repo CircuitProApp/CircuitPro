@@ -13,12 +13,12 @@ struct AnyCanvasTool: CanvasTool {
     let symbolName: String
     let label: String
 
-    private let _handleTap: (CGPoint, CanvasToolContext) -> CanvasElement?
+    private let _handleTap: (CGPoint, CanvasToolContext) -> CanvasToolResult
     private let _drawPreview: (CGContext, CGPoint, CanvasToolContext) -> Void
     private let _handleEscape: () -> Void
     private let _handleBackspace: () -> Void
     private let _handleRotate: () -> Void
-    private let _handleReturn: () -> CanvasElement?
+    private let _handleReturn: () -> CanvasToolResult
     private let box: ToolBoxBase          // <— keeps the ToolBox alive
 
      init<T: CanvasTool>(_ tool: T) {
@@ -32,9 +32,9 @@ struct AnyCanvasTool: CanvasTool {
         // ----- handleTap ----------------------------------------------------
         _handleTap = { loc, ctx in
             var inner = storage.tool             // 1 – copy out
-            let element = inner.handleTap(at: loc, context: ctx) // 2 – mutate
+            let result = inner.handleTap(at: loc, context: ctx) // 2 – mutate
             storage.tool = inner                 // 3 – store back
-            return element                       // 4
+            return result                       // 4
         }
 
         // ----- drawPreview --------------------------------------------------
@@ -68,14 +68,14 @@ struct AnyCanvasTool: CanvasTool {
         // ----- handleReturn -------------------------------------------------
         _handleReturn = {
             var inner = storage.tool
-            let element = inner.handleReturn()
+            let result = inner.handleReturn()
             storage.tool = inner
-            return element
+            return result
         }
      }
 
      // simple forwarders -------------------------------------------------------
-     mutating func handleTap(at point: CGPoint, context: CanvasToolContext) -> CanvasElement? {
+     mutating func handleTap(at point: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
          _handleTap(point, context)
      }
     mutating func drawPreview(in cgCTX: CGContext, mouse: CGPoint, context: CanvasToolContext) {
@@ -94,7 +94,7 @@ struct AnyCanvasTool: CanvasTool {
         _handleRotate()
     }
 
-    mutating func handleReturn() -> CanvasElement? {
+    mutating func handleReturn() -> CanvasToolResult {
         _handleReturn()
     }
 

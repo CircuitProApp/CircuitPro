@@ -14,7 +14,7 @@ struct PadTool: CanvasTool {
 
     private var rotation: CardinalRotation = .deg0
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
+    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
         let number = context.existingPadCount + 1
         let pad = Pad(
             number: number,
@@ -24,7 +24,7 @@ struct PadTool: CanvasTool {
             type: .surfaceMount,
             drillDiameter: nil
         )
-        return .pad(pad)
+        return .element(.pad(pad))
     }
 
     mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {

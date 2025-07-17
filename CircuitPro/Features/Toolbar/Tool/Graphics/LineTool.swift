@@ -14,7 +14,7 @@ struct LineTool: CanvasTool {
 
     private var start: CGPoint?
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasElement? {
+    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
         if let start {
             defer { self.start = nil }
             let line = LinePrimitive(
@@ -25,10 +25,10 @@ struct LineTool: CanvasTool {
                 strokeWidth: 1,
                 color: .init(color: context.selectedLayer.color)
             )
-            return .primitive(.line(line))
+            return .element(.primitive(.line(line)))
         } else {
             self.start = location
-            return nil
+            return .noResult
         }
     }
 
