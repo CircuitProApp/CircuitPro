@@ -2,12 +2,6 @@ import Foundation
 import CoreGraphics
 import Observation
 
-public enum GraphHitResult: Equatable {
-    case emptySpace
-    case vertex(id: UUID, position: CGPoint, type: VertexType)
-    case edge(id: UUID, point: CGPoint, orientation: LineOrientation)
-}
-
 /// Represents a vertex in the connection graph.
 public class ConnectionVertex: Identifiable {
     public let id: UUID
@@ -155,41 +149,5 @@ public class ConnectionGraph {
         }
     }
 
-    public func hitTest(at point: CGPoint, tolerance: CGFloat) -> GraphHitResult {
-        // Check for vertex hits first
-        for vertex in vertices.values {
-            if hypot(point.x - vertex.point.x, point.y - vertex.point.y) <= tolerance {
-                let type = vertexType(for: vertex.id) ?? .corner // Default for safety
-                return .vertex(id: vertex.id, position: vertex.point, type: type)
-            }
-        }
-
-        // Then check for edge hits
-        for edge in edges.values {
-            guard let start = vertices[edge.start]?.point, let end = vertices[edge.end]?.point else { continue }
-
-            let dx = end.x - start.x
-            let dy = end.y - start.y
-
-            if dx == 0 && dy == 0 { continue }
-
-            let t = ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy)
-
-            let closestPoint: CGPoint
-            if t < 0 {
-                closestPoint = start
-            } else if t > 1 {
-                closestPoint = end
-            } else {
-                closestPoint = CGPoint(x: start.x + t * dx, y: start.y + t * dy)
-            }
-
-            if hypot(point.x - closestPoint.x, point.y - closestPoint.y) <= tolerance {
-                let orientation: LineOrientation = (abs(start.x - end.x) < 0.01) ? .vertical : .horizontal
-                return .edge(id: edge.id, point: point, orientation: orientation)
-            }
-        }
-
-        return .emptySpace
-    }
+    
 }

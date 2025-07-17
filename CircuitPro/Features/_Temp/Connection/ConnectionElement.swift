@@ -221,15 +221,41 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
 
     // MARK: – Hittable
     func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
-        let result = graph.hitTest(at: point, tolerance: tolerance)
-        switch result {
-        case .emptySpace:
-            return nil
-        case .vertex(let id, let position, let type):
-            return .connection(part: .vertex(id: id, connectionID: self.id, position: position, type: type))
-        case .edge(let id, let at, let orientation):
-            return .connection(part: .edge(id: id, connectionID: self.id, at: at, orientation: orientation))
+        // Check for vertex hits first
+        for vertex in graph.vertices.values {
+            if hypot(point.x - vertex.point.x, point.y - vertex.point.y) <= tolerance {
+                let type = graph.vertexType(for: vertex.id) ?? .corner // Default for safety
+                return .connection(part: .vertex(id: vertex.id, connectionID: self.id, position: vertex.point, type: type))
+            }
         }
+
+        // Then check for edge hits
+        for edge in graph.edges.values {
+            guard let start = graph.vertices[edge.start]?.point, let end = graph.vertices[edge.end]?.point else { continue }
+
+            let dx = end.x - start.x
+            let dy = end.y - start.y
+
+            if dx == 0 && dy == 0 { continue }
+
+            let t = ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy)
+
+            let closestPoint: CGPoint
+            if t < 0 {
+                closestPoint = start
+            } else if t > 1 {
+                closestPoint = end
+            } else {
+                closestPoint = CGPoint(x: start.x + t * dx, y: start.y + t * dy)
+            }
+
+            if hypot(point.x - closestPoint.x, point.y - closestPoint.y) <= tolerance {
+                let orientation: LineOrientation = (abs(start.x - end.x) < 0.01) ? .vertical : .horizontal
+                return .connection(part: .edge(id: edge.id, connectionID: self.id, at: point, orientation: orientation))
+            }
+        }
+
+        return nil
     }
 
     // MARK: – Selection helpers

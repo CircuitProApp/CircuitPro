@@ -23,6 +23,8 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     mutating func handleTap(at loc: CGPoint,
                             context: CanvasToolContext) -> CanvasToolResult {
         
+        print("ConnectionTool hit: \(context.hitTarget.debugDescription)")
+
         // Determine the precise location for the new vertex.
         // If we hit a pin or an existing vertex, snap to its exact position.
         let tapLocation: CGPoint
