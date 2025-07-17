@@ -43,6 +43,11 @@ final class WorkbenchLayoutController {
         let top      = sheet.topAnchor    .constraint(equalTo: workbench.topAnchor,    constant: 2500)
         NSLayoutConstraint.activate([sheetWidthC!, sheetHeightC!, leading, top])
 
+        let connections = ConnectionsView(frame: workbench.bounds)
+        connections.autoresizingMask = [.width, .height]
+        workbench.addSubview(connections)
+        workbench.connectionsView = connections
+        
         // 3 Elements
         let elements = ElementsView(frame: workbench.bounds)
         elements.autoresizingMask = [.width, .height]

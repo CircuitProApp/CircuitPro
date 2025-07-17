@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import Observation
 
 public enum GraphHitResult: Equatable {
     case emptySpace
@@ -34,6 +35,7 @@ public class ConnectionEdge: Identifiable {
 /// Represents a "net" as a graph of vertices and edges.
 /// This class manages the topology of a connection, allowing for complex networks
 /// and merging of different connection elements.
+@Observable
 public class ConnectionGraph {
     private(set) var vertices: [ConnectionVertex.ID: ConnectionVertex]
     private(set) var edges: [ConnectionEdge.ID: ConnectionEdge]

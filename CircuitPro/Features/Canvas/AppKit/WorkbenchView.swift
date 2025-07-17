@@ -13,6 +13,7 @@ final class WorkbenchView: NSView {
     weak var backgroundView: DottedBackgroundView?
     weak var sheetView:      DrawingSheetView?
     weak var elementsView:   ElementsView?
+    weak var connectionsView: ConnectionsView?
     weak var previewView:    PreviewView?
     weak var handlesView:    HandlesView?
     weak var marqueeView:    MarqueeView?
@@ -23,19 +24,26 @@ final class WorkbenchView: NSView {
         didSet {
             elementsView?.elements  = elements
             handlesView?.elements   = elements
+            connectionsView?.allPinPositions = pinPositions(from: elements) 
             previewView?.needsDisplay = true
         }
     }
+    
+    var netList: NetList = .init()
 
     var selectedIDs: Set<UUID> = [] {
         didSet {
             elementsView?.selectedIDs = selectedIDs
             handlesView?.selectedIDs  = selectedIDs
+            connectionsView?.selectedIDs  = selectedIDs
         }
     }
 
     var marqueeSelectedIDs: Set<UUID> = [] {
-        didSet { elementsView?.marqueeSelectedIDs = marqueeSelectedIDs }
+        didSet {
+            elementsView?.marqueeSelectedIDs = marqueeSelectedIDs
+            connectionsView?.marqueeSelectedIDs = marqueeSelectedIDs
+        }
     }
 
     var selectedTool: AnyCanvasTool? {
@@ -54,6 +62,7 @@ final class WorkbenchView: NSView {
             marqueeView?.magnification    = magnification
             previewView?.magnification    = magnification
             handlesView?.magnification    = magnification
+            connectionsView?.magnification = magnification
         }
     }
 
@@ -150,6 +159,18 @@ final class WorkbenchView: NSView {
     var snapService: SnapService {
         SnapService(gridSize: snapGridSize,
                     isEnabled: isSnappingEnabled)
+    }
+    
+    private func pinPositions(from elems: [CanvasElement]) -> [CGPoint] {
+        elems.compactMap { elem -> SymbolElement? in
+            if case .symbol(let s) = elem { return s }
+            return nil
+        }
+        .flatMap { sym -> [CGPoint] in
+            sym.symbol.pins.map { pin in
+                sym.instance.position + pin.position.rotated(by: sym.instance.rotation)
+            }
+        }
     }
 
     // old public helpers (still used by all gesture classes)

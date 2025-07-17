@@ -11,6 +11,7 @@ struct SchematicView: View {
     private var projectManager
 
     // Canvas state
+    @State private var netlist: NetList = .init()
     @State private var canvasElements: [CanvasElement] = []
     @State private var selectedTool: AnyCanvasTool = .init(CursorTool())
 
@@ -19,6 +20,7 @@ struct SchematicView: View {
 
         CanvasView(
             manager:      canvasManager,
+            netList: netlist,
             elements:     $canvasElements,
             selectedIDs:  $bindableProjectManager.selectedComponentIDs,
             selectedTool: $selectedTool
@@ -31,7 +33,9 @@ struct SchematicView: View {
             SchematicToolbarView(selectedSchematicTool: $selectedTool)
                 .padding(16)
         }
-        .onAppear { rebuildCanvasElements() }
+        .onAppear {
+            rebuildCanvasElements()
+        }
 
         // Rebuild when the data model changes
         .onChange(of: projectManager.componentInstances) { _ in

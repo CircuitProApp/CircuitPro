@@ -5,6 +5,7 @@ struct CanvasView: NSViewRepresentable {
 
     // MARK: – Bindings coming from the document
     @Bindable var manager: CanvasManager
+    @Bindable var netList: NetList
     @Binding var elements: [CanvasElement]
     @Binding var selectedIDs: Set<UUID>
     @Binding var selectedTool: AnyCanvasTool
@@ -66,6 +67,7 @@ struct CanvasView: NSViewRepresentable {
 
         // Pass state to Workbench
         workbench.elements = elements
+        workbench.netList  = netList
         workbench.selectedIDs = selectedIDs
         workbench.selectedTool = selectedTool
         workbench.magnification = manager.magnification
