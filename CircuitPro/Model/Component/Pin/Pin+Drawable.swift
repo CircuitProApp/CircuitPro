@@ -158,9 +158,9 @@ extension Pin: Drawable {
 // MARK: Hittable
 extension Pin: Hittable {
 
-    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> Bool {
+    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
         // 1. get the outline that selection/halo already uses
-        guard let shape = selectionPath() else { return false }
+        guard let shape = selectionPath() else { return nil }
 
         // 2. inflate it by the tolerance and ask Core Graphics
         let fat = shape.copy(
@@ -170,7 +170,10 @@ extension Pin: Hittable {
             miterLimit: 10
         )
 
-        return fat.contains(point)
+        if fat.contains(point) {
+            return .canvasElement(part: .pin(id: id, parentSymbolID: nil, position: position))
+        }
+        return nil
     }
 }
 

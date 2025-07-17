@@ -21,28 +21,31 @@ final class SelectionDragGesture: DragGesture {
 
     // MARK: – Begin
     func begin(at p: CGPoint, event: NSEvent) -> Bool {
+        let hitTarget = workbench.hitTestService.hitTest(
+            at: p,
+            elements: workbench.elements,
+            netlist: workbench.netlist,
+            magnification: workbench.magnification
+        )
 
         // Drag starts only if the hit element is already selected.
-        let hit = workbench.hitTestService
-            .hitTest(in: workbench.elements,
-                     at: p,
-                     magnification: workbench.magnification)
-
-        guard let id = hit, workbench.selectedIDs.contains(id) else { return false }
+        guard let hitTarget = hitTarget, workbench.selectedIDs.contains(hitTarget.selectableID) else {
+            return false
+        }
 
         origin = p
+        originalPositions.removeAll()
 
-        // Cache the original positions of all selected elements.
+        // Cache original positions of selected canvas elements.
         for elt in workbench.elements where workbench.selectedIDs.contains(elt.id) {
-            let pos: CGPoint
-            if case .symbol(let s) = elt {                 // symbols use the instance position
-                pos = s.instance.position
-            } else if let prim = elt.primitives.first {    // primitives use their own position
-                pos = prim.position
-            } else {
-                continue
+            originalPositions[elt.id] = elt.transformable.position
+        }
+
+        // Cache original positions of vertices in selected connections.
+        for conn in workbench.netlist.connections where workbench.selectedIDs.contains(conn.id) {
+            for vertex in conn.graph.vertices.values {
+                originalPositions[vertex.id] = vertex.point
             }
-            originalPositions[elt.id] = pos
         }
         return true
     }
@@ -58,13 +61,24 @@ final class SelectionDragGesture: DragGesture {
         let delta = CGPoint(x: workbench.snapDelta(p.x - o.x),
                             y: workbench.snapDelta(p.y - o.y))
 
-        var updated = workbench.elements
-        for i in updated.indices {
-            guard let base = originalPositions[updated[i].id] else { continue }
-            updated[i].moveTo(originalPosition: base, offset: delta)
+        // Move canvas elements
+        var updatedElements = workbench.elements
+        for i in updatedElements.indices {
+            guard let base = originalPositions[updatedElements[i].id] else { continue }
+            updatedElements[i].moveTo(originalPosition: base, offset: delta)
         }
-        workbench.elements = updated
-        workbench.onUpdate?(updated)
+        workbench.elements = updatedElements
+        workbench.onUpdate?(updatedElements)
+
+        // Move connection vertices
+        for conn in workbench.netlist.connections where workbench.selectedIDs.contains(conn.id) {
+            for vertex in conn.graph.vertices.values {
+                if let basePosition = originalPositions[vertex.id] {
+                    vertex.point = basePosition + delta
+                }
+            }
+        }
+        workbench.connectionsView?.needsDisplay = true
     }
 
     // MARK: – End

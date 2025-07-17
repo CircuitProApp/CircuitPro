@@ -122,7 +122,7 @@ extension CanvasElement {
 // MARK: – Hittable
 extension CanvasElement: Hittable {
 
-    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> Bool {
+    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
         switch self {
         case .primitive(let p): return p.hitTest(point, tolerance: tolerance)
         case .pin(let pin):     return pin.hitTest(point, tolerance: tolerance)

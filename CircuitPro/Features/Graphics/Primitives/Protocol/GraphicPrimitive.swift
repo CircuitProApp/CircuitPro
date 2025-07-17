@@ -36,17 +36,22 @@ extension GraphicPrimitive {
         }
     }
 
-    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> Bool {
+    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
         let path = makePath()
-        if filled { return path.contains(point) }
-
-        let stroke = path.copy(
-            strokingWithWidth: strokeWidth + tolerance,
-            lineCap: .round,
-            lineJoin: .round,
-            miterLimit: 10
-        )
-        return stroke.contains(point)
+        let wasHit: Bool
+        if filled {
+            wasHit = path.contains(point)
+        } else {
+            let stroke = path.copy(
+                strokingWithWidth: strokeWidth + tolerance,
+                lineCap: .round,
+                lineJoin: .round,
+                miterLimit: 10
+            )
+            wasHit = stroke.contains(point)
+        }
+        
+        return wasHit ? .canvasElement(part: .body(id: id)) : nil
     }
 
     var boundingBox: CGRect {

@@ -48,6 +48,9 @@ final class WorkbenchInputCoordinator {
         workbench.crosshairsView?.location = snapped
         workbench.onMouseMoved?(snapped)
 
+        // Live hit-testing for cursor feedback
+        updateCursor(at: p)
+
         // Preview & live rotation
         rotation.update(to: p)
         workbench.previewView?.needsDisplay = true
@@ -66,11 +69,16 @@ final class WorkbenchInputCoordinator {
 
         // 3 ─ hit-test for selection / marquee
         if workbench.selectedTool?.id == "cursor" {
-            if let hitID = hitTest.hitTest(in: workbench.elements,
-                                           at: p,
-                                           magnification: workbench.magnification) {
+            let hitTarget = hitTest.hitTest(
+                at: p,
+                elements: workbench.elements,
+                netlist: workbench.netlist,
+                magnification: workbench.magnification
+            )
 
+            if let hitTarget = hitTarget {
                 // An element was hit. Select it if not already selected.
+                let hitID = hitTarget.selectableID
                 if !workbench.selectedIDs.contains(hitID) {
                     workbench.selectedIDs = [hitID]
                     workbench.onSelectionChange?(workbench.selectedIDs)
@@ -127,13 +135,14 @@ final class WorkbenchInputCoordinator {
         case .element(let newElement):
             workbench.elements.append(newElement)
             workbench.onUpdate?(workbench.elements)
-        case .connection:
-            // TODO: Handle connection element creation
-            break
+        case .connection(let newConnection):
+            workbench.netlist.addConnection(newConnection)
+            workbench.connectionsView?.needsDisplay = true
         case .noResult:
             break
         }
         workbench.selectedTool = tool
+        workbench.previewView?.needsDisplay = true
     }
 
     func deleteSelectedElements() {
@@ -150,5 +159,38 @@ final class WorkbenchInputCoordinator {
         activeDrag?.end()
         activeDrag = nil
         rotation.cancel()
+    }
+
+    // MARK: - Private Helpers
+    private func updateCursor(at point: CGPoint) {
+        // Only change cursor when the select tool is active.
+        guard workbench.selectedTool?.id == "cursor" else {
+            NSCursor.arrow.set()
+            return
+        }
+
+        let hitTarget = hitTest.hitTest(
+            at: point,
+            elements: workbench.elements,
+            netlist: workbench.netlist,
+            magnification: workbench.magnification
+        )
+
+        switch hitTarget {
+        case .canvasElement(let part):
+            switch part {
+            case .pin, .pad:
+                NSCursor.crosshair.set()
+            case .body:
+                NSCursor.pointingHand.set()
+            }
+        case .connection(let part):
+            switch part {
+            case .vertex, .edge:
+                NSCursor.crosshair.set()
+            }
+        case nil:
+            NSCursor.arrow.set()
+        }
     }
 }

@@ -27,14 +27,23 @@ final class ToolActionController {
               tool.id != "cursor" else { return false }
 
         let snapped = workbench.snap(p)
+        
+        // Perform a hit-test to create a rich context for the tool.
+        let hitTarget = workbench.hitTestService.hitTest(
+            at: snapped,
+            elements: workbench.elements,
+            netlist: workbench.netlist,
+            magnification: workbench.magnification
+        )
 
         var ctx = CanvasToolContext(
             existingPinCount: workbench.elements.reduce(0) { $1.isPin ? $0 + 1 : $0 },
             existingPadCount: workbench.elements.reduce(0) { $1.isPad ? $0 + 1 : $0 },
             selectedLayer:    workbench.selectedLayer,
-            magnification:    workbench.magnification
+            magnification:    workbench.magnification,
+            hitTarget:        hitTarget,
+            clickCount:       event.clickCount
         )
-        ctx.clickCount = event.clickCount      // no hitTarget logic here
 
         let result = tool.handleTap(at: snapped, context: ctx)
 
@@ -45,9 +54,8 @@ final class ToolActionController {
                 workbench.onPrimitiveAdded?(prim.id, ctx.selectedLayer)
             }
             workbench.onUpdate?(workbench.elements)
-        case .connection:
-            // TODO: Handle connection element creation
-            break
+        case .connection(let newConnection):
+            workbench.netlist.addConnection(newConnection)
         case .noResult:
             break
         }

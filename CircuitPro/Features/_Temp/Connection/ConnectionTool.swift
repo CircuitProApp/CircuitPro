@@ -22,8 +22,70 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     // MARK: – CanvasTool conformance
     mutating func handleTap(at loc: CGPoint,
                             context: CanvasToolContext) -> CanvasToolResult {
-      
-        return .noResult
+        
+        // Determine the precise location for the new vertex.
+        // If we hit a pin or an existing vertex, snap to its exact position.
+        let tapLocation: CGPoint
+        if let hit = context.hitTarget {
+            switch hit {
+            case .canvasElement(let part):
+                if case .pin(_, _, let position) = part {
+                    tapLocation = position
+                } else {
+                    tapLocation = loc
+                }
+            case .connection(let part):
+                if case .vertex(_, _, let position, _) = part {
+                    tapLocation = position
+                } else {
+                    tapLocation = loc
+                }
+            }
+        } else {
+            tapLocation = loc
+        }
+
+        if var state = drawingState {
+            // Subsequent tap: add a segment to the existing graph.
+            guard let lastVertex = state.graph.vertices[state.lastVertexID] else {
+                drawingState = nil
+                return .noResult
+            }
+
+            let newVertexIDs = addOrthogonalSegment(
+                to: state.graph,
+                from: lastVertex.point,
+                to: tapLocation,
+                givenOrientation: state.graph.lastSegmentOrientation(before: state.lastVertexID)
+            )
+
+            if !newVertexIDs.isEmpty {
+                state.vertexHistory.append(contentsOf: newVertexIDs)
+            }
+
+            drawingState = state
+            
+            // If the user double-clicks or clicks on a pin, finish the connection.
+            if context.clickCount > 1 {
+                return handleReturn()
+            }
+            if case .canvasElement(part: .pin) = context.hitTarget {
+                return handleReturn()
+            }
+            
+            return .noResult
+
+        } else {
+            // First tap: start a new drawing.
+            var newGraph = ConnectionGraph()
+            let startVertex = newGraph.addVertex(at: tapLocation)
+
+            drawingState = DrawingState(
+                graph: newGraph,
+                vertexHistory: [startVertex.id]
+            )
+            return .noResult
+        }
     }
 
     func drawPreview(in ctx: CGContext,
@@ -93,8 +155,17 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     mutating func handleReturn() -> CanvasToolResult {
+        guard let state = drawingState else { return .noResult }
 
-        return .noResult
+        // Don't create an empty connection.
+        guard state.graph.edges.count > 0 else {
+            drawingState = nil
+            return .noResult
+        }
+
+        let newConnection = ConnectionElement(graph: state.graph)
+        drawingState = nil // Reset for the next connection.
+        return .connection(newConnection)
     }
 
     // MARK: – Equatable & Hashable

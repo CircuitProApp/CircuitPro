@@ -97,18 +97,36 @@ extension SymbolElement: Drawable {
 
 extension SymbolElement: Hittable {
 
-    func hitTest(_ worldPoint: CGPoint, tolerance: CGFloat = 5) -> Bool {
+    func hitTest(_ worldPoint: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
 
         // map the probe into the symbol’s local space
-        let local = worldPoint.applying(
+        let localPoint = worldPoint.applying(
             CGAffineTransform(translationX: position.x, y: position.y)
                 .rotated(by: rotation)
                 .inverted()
         )
 
-        return
-        symbol.primitives.contains { $0.hitTest(local, tolerance: tolerance) } ||
-        symbol.pins.contains { $0.hitTest(local, tolerance: tolerance) }
+        // 1. Check for pin hits first, as they are more specific.
+        for pin in symbol.pins {
+            if pin.hitTest(localPoint, tolerance: tolerance) != nil {
+                // A pin was hit. We need to transform its local position back to world space.
+                let worldPinPosition = pin.position.applying(
+                    CGAffineTransform(translationX: position.x, y: position.y)
+                    .rotated(by: rotation)
+                )
+                return .canvasElement(part: .pin(id: pin.id, parentSymbolID: id, position: worldPinPosition))
+            }
+        }
+
+        // 2. If no pin was hit, check the main body primitives.
+        for primitive in symbol.primitives {
+            if primitive.hitTest(localPoint, tolerance: tolerance) != nil {
+                return .canvasElement(part: .body(id: id))
+            }
+        }
+        
+        // 3. No hit.
+        return nil
     }
 }
 

@@ -94,8 +94,13 @@ extension Pad {
 // ═══════════════════════════════════════════════════════════════════════
 extension Pad: Hittable {
 
-    func hitTest(_ point: CGPoint, tolerance: CGFloat) -> Bool {
-        allPrimitives.contains { $0.hitTest(point, tolerance: tolerance) }
+    func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
+        for primitive in allPrimitives {
+            if primitive.hitTest(point, tolerance: tolerance) != nil {
+                return .canvasElement(part: .pad(id: id, position: position))
+            }
+        }
+        return nil
     }
 }
 

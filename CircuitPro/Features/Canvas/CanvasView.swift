@@ -67,7 +67,7 @@ struct CanvasView: NSViewRepresentable {
 
         // Pass state to Workbench
         workbench.elements = elements
-        workbench.netList  = netList
+        workbench.netlist  = netList
         workbench.selectedIDs = selectedIDs
         workbench.selectedTool = selectedTool
         workbench.magnification = manager.magnification

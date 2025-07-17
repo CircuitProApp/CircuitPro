@@ -29,7 +29,11 @@ final class WorkbenchView: NSView {
         }
     }
     
-    var netList: NetList = .init()
+    var netlist: NetList = .init() {
+        didSet {
+            connectionsView?.netlist = netlist
+        }
+    }
 
     var selectedIDs: Set<UUID> = [] {
         didSet {

@@ -38,22 +38,6 @@ class NetList {
         connections.removeAll { $0.id == id }
     }
 
-    // MARK: - Hit Testing
-
-    /// Finds the connection element that is hit by a given point.
-    /// - Parameters:
-    ///   - point: The point to test, in canvas coordinates.
-    ///   - tolerance: The tolerance for the hit test.
-    /// - Returns: The `ConnectionElement` that was hit, or `nil` if no connection was hit.
-    func hitTest(_ point: CGPoint, tolerance: CGFloat) -> ConnectionElement? {
-        for connection in connections {
-            if connection.hitTest(point, tolerance: tolerance) {
-                return connection
-            }
-        }
-        return nil
-    }
-    
     // MARK: - Drawing
     
     /// Draws all the connections in the netlist.

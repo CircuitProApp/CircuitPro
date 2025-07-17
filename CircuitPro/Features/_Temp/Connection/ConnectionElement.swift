@@ -220,8 +220,16 @@ struct ConnectionElement: Identifiable, Drawable, Hittable {
     }
 
     // MARK: – Hittable
-    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> Bool {
-        primitives.contains { $0.hitTest(point, tolerance: tolerance) }
+    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
+        let result = graph.hitTest(at: point, tolerance: tolerance)
+        switch result {
+        case .emptySpace:
+            return nil
+        case .vertex(let id, let position, let type):
+            return .connection(part: .vertex(id: id, connectionID: self.id, position: position, type: type))
+        case .edge(let id, let at, let orientation):
+            return .connection(part: .edge(id: id, connectionID: self.id, at: at, orientation: orientation))
+        }
     }
 
     // MARK: – Selection helpers

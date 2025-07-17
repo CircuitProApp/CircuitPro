@@ -7,44 +7,43 @@
 
 import AppKit
 
-/// Performs hit-testing for regular canvas elements
-/// (symbols, pads, pins, primitives).  No net / connection
-/// logic is included in this clean-sheet version.
+/// Performs detailed hit-testing for all interactive items on the workbench.
 struct WorkbenchHitTestService {
 
-    // 1. Element under the cursor
-    func hitTest(in elements: [CanvasElement],
-                 at point: CGPoint,
-                 magnification: CGFloat) -> UUID? {
+    /// Finds the most specific interactive element at a given point on the canvas.
+    ///
+    /// This method checks elements in reverse rendering order (top-most first) to ensure
+    /// the correct element is picked. It checks connections first, then standard canvas elements.
+    ///
+    /// - Parameters:
+    ///   - point: The point to test, in world coordinates.
+    ///   - elements: The array of all `CanvasElement` items on the workbench.
+    ///   - netlist: The `NetList` containing all connection elements.
+    ///   - magnification: The current zoom level of the canvas, used to adjust hit tolerance.
+    /// - Returns: A `CanvasHitTarget` describing the hit, or `nil` if nothing was hit.
+    func hitTest(
+        at point: CGPoint,
+        elements: [CanvasElement],
+        netlist: NetList,
+        magnification: CGFloat
+    ) -> CanvasHitTarget? {
+        let tolerance = 5.0 / magnification
 
-        let tol = 5.0 / magnification
+        // 1. Check connections first, as they often sit "on top" of pins.
+        for connection in netlist.connections.reversed() {
+            if let hit = connection.hitTest(point, tolerance: tolerance) {
+                return hit
+            }
+        }
+
+        // 2. Check standard canvas elements.
         for element in elements.reversed() {
-            if element.hitTest(point, tolerance: tol) {
-                return element.id
+            if let hit = element.hitTest(point, tolerance: tolerance) {
+                return hit
             }
         }
-        return nil
-    }
 
-    // 2. Pin under the cursor (stand-alone or inside a symbol)
-    func pin(in elements: [CanvasElement],
-             at point: CGPoint) -> Pin? {
-
-        // Stand-alone pins
-        if let p = elements.first(where: {
-            if case .pin(let pin) = $0 { return pin.hitTest(point) }
-            return false
-        }), case .pin(let pin) = p {
-            return pin
-        }
-
-        // Pins inside a symbol
-        for element in elements {
-            guard case .symbol(let sym) = element else { continue }
-            if let pin = sym.symbol.pins.first(where: { $0.hitTest(point) }) {
-                return pin
-            }
-        }
+        // 3. If nothing was hit, return nil. The caller can interpret this as .emptySpace.
         return nil
     }
 }
