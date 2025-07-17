@@ -56,6 +56,7 @@ final class ToolActionController {
             workbench.onUpdate?(workbench.elements)
         case .connection(let newConnection):
             workbench.netlist.addConnection(newConnection)
+            workbench.connectionsView?.needsDisplay = true
         case .noResult:
             break
         }
