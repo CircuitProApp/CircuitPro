@@ -8,13 +8,20 @@
 import Foundation
 import CoreGraphics
 
-/// Represents the specific part of a connection that was hit.
+/// Represents the specific part of a connection from the `SchematicGraph` that was hit.
+///
+/// The `connectionID` has been removed. With a unified graph, individual
+/// vertices and edges are the primary hittable objects, not a parent container.
 enum ConnectionPart {
-    case vertex(id: UUID, connectionID: UUID, position: CGPoint, type: VertexType)
-    case edge(id: UUID, connectionID: UUID, at: CGPoint, orientation: LineOrientation)
+    /// A vertex (a connection point, junction, or endpoint) was hit.
+    case vertex(id: UUID, position: CGPoint, type: VertexType)
+    
+    /// An edge (a wire segment) was hit.
+    case edge(id: UUID, at: CGPoint, orientation: LineOrientation)
 }
 
-/// Represents the specific part of a canvas element that was hit.
+/// Represents the specific part of a standard canvas element (e.g., a symbol) that was hit.
+/// This part of the enum remains unchanged.
 enum CanvasElementPart {
     case body(id: UUID)
     case pin(id: UUID, parentSymbolID: UUID?, position: CGPoint)
@@ -26,33 +33,62 @@ enum CanvasHitTarget {
     /// A part of a standard canvas element was hit.
     case canvasElement(part: CanvasElementPart)
 
-    /// A part of a connection net was hit.
+    /// A part of the schematic's connectivity graph was hit.
     case connection(part: ConnectionPart)
-
-    // Future cases can be added here, for example:
-    // case handle(ownerID: UUID, type: HandleType)
 }
 
+
+// MARK: - Helpers & Debugging
 extension CanvasHitTarget {
-    /// The ID of the top-level element that should be selected.
-    /// For example, if a pin inside a symbol is hit, this returns the symbol's ID.
+    
+    /// The ID of the specific primitive that should be added to the selection set.
+    /// In the new model, we select vertices and edges directly.
     var selectableID: UUID {
         switch self {
         case .canvasElement(let part):
             switch part {
             case .body(let id):
+                // Hitting the body of a symbol selects the symbol.
                 return id
             case .pin(let pinID, let parentSymbolID, _):
+                // Hitting a pin selects its parent symbol (if it has one).
                 return parentSymbolID ?? pinID
             case .pad(let id, _):
                 return id
             }
         case .connection(let part):
+            // The selectable item is now the primitive itself (the vertex or the edge).
+            // Your selection manager will now hold a set of vertex and edge IDs.
             switch part {
-            case .vertex(_, let connectionID, _, _):
-                return connectionID
-            case .edge(let connectionID, _, _, _):
-                return connectionID
+            case .vertex(let id, _, _):
+                return id
+            case .edge(let id, _, _):
+                return id
+            }
+        }
+    }
+    
+    /// A convenience property to check if the hit target was a component pin.
+    func hitTargetIsPin() -> Bool {
+        if case .canvasElement(part: .pin) = self {
+            return true
+        }
+        return false
+    }
+
+    /// A debug helper to easily identify what was hit.
+    var debugDescription: String {
+        switch self {
+        case .canvasElement(let part):
+            switch part {
+            case .body(let id): return "ElementBody(id: ...\(id.uuidString.suffix(4)))"
+            case .pin(let id, _, _): return "Pin(id: ...\(id.uuidString.suffix(4)))"
+            case .pad(let id, _): return "Pad(id: ...\(id.uuidString.suffix(4)))"
+            }
+        case .connection(let part):
+            switch part {
+            case .vertex(let id, _, let type): return "Vertex(\(type), id: ...\(id.uuidString.suffix(4)))"
+            case .edge(let id, _, _): return "Edge(id: ...\(id.uuidString.suffix(4)))"
             }
         }
     }

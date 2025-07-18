@@ -24,7 +24,7 @@ final class SelectionDragGesture: DragGesture {
         let hitTarget = workbench.hitTestService.hitTest(
             at: p,
             elements: workbench.elements,
-            netlist: workbench.netlist,
+            schematicGraph: workbench.schematicGraph,
             magnification: workbench.magnification
         )
 
@@ -41,12 +41,7 @@ final class SelectionDragGesture: DragGesture {
             originalPositions[elt.id] = elt.transformable.position
         }
 
-        // Cache original positions of vertices in selected connections.
-        for conn in workbench.netlist.connections where workbench.selectedIDs.contains(conn.id) {
-            for vertex in conn.graph.vertices.values {
-                originalPositions[vertex.id] = vertex.point
-            }
-        }
+
         return true
     }
 
@@ -70,14 +65,7 @@ final class SelectionDragGesture: DragGesture {
         workbench.elements = updatedElements
         workbench.onUpdate?(updatedElements)
 
-        // Move connection vertices
-        for conn in workbench.netlist.connections where workbench.selectedIDs.contains(conn.id) {
-            for vertex in conn.graph.vertices.values {
-                if let basePosition = originalPositions[vertex.id] {
-                    vertex.point = basePosition + delta
-                }
-            }
-        }
+
         workbench.connectionsView?.needsDisplay = true
     }
 

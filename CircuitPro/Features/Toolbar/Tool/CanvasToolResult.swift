@@ -9,6 +9,5 @@ import Foundation
 
 enum CanvasToolResult {
     case element(CanvasElement)
-    case connection(ConnectionElement)
     case noResult
 }

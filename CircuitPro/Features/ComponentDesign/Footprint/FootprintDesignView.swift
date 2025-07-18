@@ -19,7 +19,7 @@ struct FootprintDesignView: View {
         @Bindable var bindableComponentDesignManager = componentDesignManager
 
         CanvasView(
-            manager: canvasManager, netList: .init(),
+            manager: canvasManager, schematicGraph: .init(),
             elements: $bindableComponentDesignManager.footprintElements,
             selectedIDs: $bindableComponentDesignManager.selectedFootprintElementIDs,
             selectedTool: $bindableComponentDesignManager.selectedFootprintTool,

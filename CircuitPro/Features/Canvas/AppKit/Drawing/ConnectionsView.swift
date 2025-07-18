@@ -12,7 +12,7 @@ import AppKit
 final class ConnectionsView: NSView {
 
     // MARK: – Data pushed in by WorkbenchView
-    var netlist: NetList = .init()             { didSet { needsDisplay = true } }
+    var schematicGraph: SchematicGraph = .init()             { didSet { needsDisplay = true } }
     var selectedIDs: Set<UUID> = []            { didSet { needsDisplay = true } }
     var marqueeSelectedIDs: Set<UUID> = []     { didSet { needsDisplay = true } }
     var allPinPositions: [CGPoint] = []        { didSet { needsDisplay = true } }
@@ -28,6 +28,6 @@ final class ConnectionsView: NSView {
 
         let allSelected = selectedIDs.union(marqueeSelectedIDs)
 
-        netlist.draw(in: ctx, with: allSelected, allPinPositions: allPinPositions)
+
     }
 }

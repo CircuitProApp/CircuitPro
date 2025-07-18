@@ -29,9 +29,9 @@ final class WorkbenchView: NSView {
         }
     }
     
-    var netlist: NetList = .init() {
+    var schematicGraph: SchematicGraph = .init() {
         didSet {
-            connectionsView?.netlist = netlist
+            connectionsView?.schematicGraph = schematicGraph
         }
     }
 

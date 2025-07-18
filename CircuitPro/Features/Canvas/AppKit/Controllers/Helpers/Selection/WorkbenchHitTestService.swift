@@ -18,25 +18,18 @@ struct WorkbenchHitTestService {
     /// - Parameters:
     ///   - point: The point to test, in world coordinates.
     ///   - elements: The array of all `CanvasElement` items on the workbench.
-    ///   - netlist: The `NetList` containing all connection elements.
+    ///   - schematicGraph: The `SchematicGraph` containing all connection elements.
     ///   - magnification: The current zoom level of the canvas, used to adjust hit tolerance.
     /// - Returns: A `CanvasHitTarget` describing the hit, or `nil` if nothing was hit.
     func hitTest(
         at point: CGPoint,
         elements: [CanvasElement],
-        netlist: NetList,
+        schematicGraph: SchematicGraph,
         magnification: CGFloat
     ) -> CanvasHitTarget? {
         let tolerance = 5.0 / magnification
 
-        // 1. Check connections first, as they often sit "on top" of pins.
-        for connection in netlist.connections.reversed() {
-            if let hit = connection.hitTest(point, tolerance: tolerance) {
-                return hit
-            }
-        }
-
-        // 2. Check standard canvas elements.
+        
         for element in elements.reversed() {
             if let hit = element.hitTest(point, tolerance: tolerance) {
                 return hit

@@ -32,7 +32,7 @@ final class ToolActionController {
         let hitTarget = workbench.hitTestService.hitTest(
             at: snapped,
             elements: workbench.elements,
-            netlist: workbench.netlist,
+            schematicGraph: workbench.schematicGraph,
             magnification: workbench.magnification
         )
 
@@ -54,9 +54,6 @@ final class ToolActionController {
                 workbench.onPrimitiveAdded?(prim.id, ctx.selectedLayer)
             }
             workbench.onUpdate?(workbench.elements)
-        case .connection(let newConnection):
-            workbench.netlist.addConnection(newConnection)
-            workbench.connectionsView?.needsDisplay = true
         case .noResult:
             break
         }

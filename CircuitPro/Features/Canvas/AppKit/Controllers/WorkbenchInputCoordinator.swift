@@ -72,7 +72,7 @@ final class WorkbenchInputCoordinator {
             let hitTarget = hitTest.hitTest(
                 at: p,
                 elements: workbench.elements,
-                netlist: workbench.netlist,
+                schematicGraph: workbench.schematicGraph,
                 magnification: workbench.magnification
             )
 
@@ -135,9 +135,6 @@ final class WorkbenchInputCoordinator {
         case .element(let newElement):
             workbench.elements.append(newElement)
             workbench.onUpdate?(workbench.elements)
-        case .connection(let newConnection):
-            workbench.netlist.addConnection(newConnection)
-            workbench.connectionsView?.needsDisplay = true
         case .noResult:
             break
         }
@@ -172,7 +169,7 @@ final class WorkbenchInputCoordinator {
         let hitTarget = hitTest.hitTest(
             at: point,
             elements: workbench.elements,
-            netlist: workbench.netlist,
+            schematicGraph: workbench.schematicGraph,
             magnification: workbench.magnification
         )
 
