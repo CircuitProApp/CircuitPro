@@ -75,7 +75,6 @@ The Connection behavior code is delegated through two stages, one within Connect
 
 ## Collinear Edge Merge
 
-- Scope: Tool  
 - Logic: Edge Merge  
 - Action: T(0,0) T(100,0) DT(200,0)  
 - Result: A uniform Edge

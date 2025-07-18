@@ -106,6 +106,68 @@ class SchematicGraph {
         addEdge(from: cornerVertex.id, to: endID)
     }
     
+    /// Splits an existing edge by inserting a new vertex at a specific point.
+    /// - Parameters:
+    ///   - edgeID: The ID of the edge to split.
+    ///   - point: The location on the edge where the new vertex should be inserted.
+    /// - Returns: The ID of the newly created vertex, or `nil` if the edge doesn't exist.
+    @discardableResult
+    func splitEdgeAndInsertVertex(edgeID: UUID, at point: CGPoint) -> ConnectionVertex.ID? {
+        guard let edgeToSplit = edges[edgeID] else {
+            assertionFailure("Attempted to split a non-existent edge.")
+            return nil
+        }
+        
+        let startID = edgeToSplit.start
+        let endID = edgeToSplit.end
+        
+        // 1. Remove the old edge
+        removeEdge(id: edgeID)
+        
+        // 2. Create the new vertex (the junction)
+        let newVertex = addVertex(at: point)
+        
+        // 3. Create two new edges connecting the original vertices to the new one.
+        addEdge(from: startID, to: newVertex.id)
+        addEdge(from: newVertex.id, to: endID)
+        
+        return newVertex.id
+    }
+    
+    /// Removes a vertex and any edges connected to it from the graph.
+    func removeVertex(id: ConnectionVertex.ID) {
+        // First, remove all edges connected to this vertex.
+        if let connectedEdgeIDs = adjacency[id] {
+            // Make a copy, as removing edges will mutate the set.
+            for edgeID in Array(connectedEdgeIDs) {
+                removeEdge(id: edgeID)
+            }
+        }
+        
+        // Then, remove the vertex itself.
+        vertices.removeValue(forKey: id)
+        adjacency.removeValue(forKey: id)
+    }
+    
+    /// Removes an edge from the graph.
+    func removeEdge(id: ConnectionEdge.ID) {
+        guard let edge = edges.removeValue(forKey: id) else {
+            // Edge already removed, do nothing.
+            return
+        }
+        
+        // Remove the edge from the adjacency lists of its start and end vertices.
+        adjacency[edge.start]?.remove(id)
+        adjacency[edge.end]?.remove(id)
+    }
+    
+    /// Removes all vertices and edges from the graph.
+    func clear() {
+        vertices.removeAll()
+        edges.removeAll()
+        adjacency.removeAll()
+    }
+    
     // MARK: - Graph Analysis
     
     /// Finds all vertices and edges belonging to the same connected net as the starting vertex.

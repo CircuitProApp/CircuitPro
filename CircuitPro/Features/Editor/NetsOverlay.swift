@@ -1,12 +1,19 @@
 import SwiftUI
 
 struct NetsOverlay: View {
+    @Binding var graph: SchematicGraph
     let nets: [SchematicGraph.Net]
 
     var body: some View {
         VStack(alignment: .leading) {
-            Text("Disconnected Nets (\(nets.count))")
-                .font(.headline)
+            HStack {
+                Text("Disconnected Nets (\(nets.count))")
+                    .font(.headline)
+                Spacer()
+                Button("Clear All", role: .destructive) {
+                    graph.clear()
+                }
+            }
             
             ScrollView {
                 VStack(alignment: .leading) {

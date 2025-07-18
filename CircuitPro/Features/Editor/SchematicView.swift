@@ -36,7 +36,7 @@ struct SchematicView: View {
         }
         .overlay(alignment: .bottom) {
             if !nets.isEmpty {
-                NetsOverlay(nets: nets)
+                NetsOverlay(graph: $netlist, nets: nets)
             }
         }
         .onAppear {

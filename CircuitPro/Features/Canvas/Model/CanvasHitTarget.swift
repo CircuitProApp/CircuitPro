@@ -12,7 +12,7 @@ import CoreGraphics
 ///
 /// The `connectionID` has been removed. With a unified graph, individual
 /// vertices and edges are the primary hittable objects, not a parent container.
-enum ConnectionPart {
+enum ConnectionPart: Equatable, Hashable {
     /// A vertex (a connection point, junction, or endpoint) was hit.
     case vertex(id: UUID, position: CGPoint, type: VertexType)
     
@@ -22,14 +22,14 @@ enum ConnectionPart {
 
 /// Represents the specific part of a standard canvas element (e.g., a symbol) that was hit.
 /// This part of the enum remains unchanged.
-enum CanvasElementPart {
+enum CanvasElementPart: Equatable, Hashable {
     case body(id: UUID)
     case pin(id: UUID, parentSymbolID: UUID?, position: CGPoint)
     case pad(id: UUID, position: CGPoint)
 }
 
 /// A detailed result of a hit-test operation on the canvas.
-enum CanvasHitTarget {
+enum CanvasHitTarget: Equatable, Hashable {
     /// A part of a standard canvas element was hit.
     case canvasElement(part: CanvasElementPart)
 
