@@ -76,16 +76,28 @@ final class WorkbenchInputCoordinator {
                 magnification: workbench.magnification
             )
 
-            if let hitTarget = hitTarget {
+            if let hitTarget = hitTarget, let hitID = hitTarget.selectableID {
                 print("Hit test result: \(hitTarget.debugDescription)")
-                // An element was hit. Select it if not already selected.
-                let hitID = hitTarget.selectableID
-                if !workbench.selectedIDs.contains(hitID) {
-                    workbench.selectedIDs = [hitID]
-                    workbench.onSelectionChange?(workbench.selectedIDs)
+
+                if e.modifierFlags.contains(.shift) {
+                    // Shift-click: Toggle selection for the hit element.
+                    if workbench.selectedIDs.contains(hitID) {
+                        workbench.selectedIDs.remove(hitID)
+                    } else {
+                        workbench.selectedIDs.insert(hitID)
+                    }
+                } else {
+                    // Normal click: If the item isn't already selected, make it the sole selection.
+                    // If it IS already selected, we do nothing, allowing a drag to begin.
+                    if !workbench.selectedIDs.contains(hitID) {
+                        workbench.selectedIDs = [hitID]
+                    }
                 }
+                workbench.onSelectionChange?(workbench.selectedIDs)
+
             } else {
-                // Empty space: clear selection and start marquee.
+                // Empty space or a non-selectable element was hit.
+                // Clear selection and start marquee.
                 if !workbench.selectedIDs.isEmpty {
                     workbench.selectedIDs.removeAll()
                     workbench.onSelectionChange?(workbench.selectedIDs)
@@ -147,10 +159,18 @@ final class WorkbenchInputCoordinator {
 
     func deleteSelectedElements() {
         guard !workbench.selectedIDs.isEmpty else { return }
+
+        // Delete from both the schematic graph and the canvas elements.
+        workbench.schematicGraph.delete(items: workbench.selectedIDs)
         workbench.elements.removeAll { workbench.selectedIDs.contains($0.id) }
+
+        // Clear the selection and notify listeners.
         workbench.selectedIDs.removeAll()
-        workbench.onSelectionChange?(workbench.selectedIDs)
+        workbench.onSelectionChange?([])
         workbench.onUpdate?(workbench.elements)
+        
+        // Force a redraw of the connections.
+        workbench.connectionsView?.needsDisplay = true
     }
 
     // MARK: – Public reset

@@ -27,10 +27,30 @@ final class ConnectionsView: NSView {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
 
         let allSelected = selectedIDs.union(marqueeSelectedIDs)
-        let lineWidth = 1.5 / magnification
-        let vertexRadius = 3.0 / magnification
+        // Sizes are now constant and do not scale with magnification.
+        let lineWidth: CGFloat = 1.5
+        let vertexRadius: CGFloat = 2.0
+        let junctionRadius: CGFloat = 4.0
+        let highlightLineWidth: CGFloat = 5.0
 
-        // Draw Edges
+        // 1. Draw Selected Edge Highlights
+        ctx.setStrokeColor(NSColor.systemYellow.cgColor)
+        ctx.setLineWidth(highlightLineWidth)
+        ctx.setLineCap(.round)
+        
+        for selectedID in allSelected {
+            if let edge = schematicGraph.edges[selectedID] {
+                guard let startVertex = schematicGraph.vertices[edge.start],
+                      let endVertex = schematicGraph.vertices[edge.end] else { continue }
+                
+                ctx.move(to: startVertex.point)
+                ctx.addLine(to: endVertex.point)
+                ctx.strokePath()
+            }
+        }
+        ctx.setLineCap(.butt) // Reset
+
+        // 2. Draw All Edges (on top of highlights)
         ctx.setStrokeColor(NSColor.systemGreen.cgColor)
         ctx.setLineWidth(lineWidth)
         
@@ -43,8 +63,21 @@ final class ConnectionsView: NSView {
             ctx.strokePath()
         }
         
-        // Draw Vertices
-        ctx.setFillColor(NSColor.systemBlue.cgColor)
+        // 3. Draw Junctions
+        ctx.setFillColor(NSColor.systemGreen.cgColor)
+        
+        for vertex in schematicGraph.vertices.values {
+            if schematicGraph.adjacency[vertex.id]?.count ?? 0 > 2 {
+                let rect = CGRect(x: vertex.point.x - junctionRadius,
+                                  y: vertex.point.y - junctionRadius,
+                                  width: junctionRadius * 2,
+                                  height: junctionRadius * 2)
+                ctx.fillEllipse(in: rect)
+            }
+        }
+        
+        // 4. Draw Vertices (with no selection highlight)
+        ctx.setFillColor(NSColor.systemBlue.cgColor) // Always use default color
         
         for vertex in schematicGraph.vertices.values {
             let rect = CGRect(x: vertex.point.x - vertexRadius,

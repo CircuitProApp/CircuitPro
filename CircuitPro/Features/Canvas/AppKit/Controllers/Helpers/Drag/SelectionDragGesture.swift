@@ -29,7 +29,9 @@ final class SelectionDragGesture: DragGesture {
         )
 
         // Drag starts only if the hit element is already selected.
-        guard let hitTarget = hitTarget, workbench.selectedIDs.contains(hitTarget.selectableID) else {
+        guard let hitTarget = hitTarget,
+              let selectableID = hitTarget.selectableID,
+              workbench.selectedIDs.contains(selectableID) else {
             return false
         }
 

@@ -89,6 +89,9 @@ class SchematicGraph {
         // If the line is already straight, just add a single edge.
         if from.x == to.x || from.y == to.y {
             addEdge(from: startID, to: endID)
+            // After connecting, check both ends for potential merges.
+            cleanupCollinearSegments(at: startID)
+            cleanupCollinearSegments(at: endID)
             return
         }
         
@@ -104,6 +107,55 @@ class SchematicGraph {
         let cornerVertex = addVertex(at: cornerPoint)
         addEdge(from: startID, to: cornerVertex.id)
         addEdge(from: cornerVertex.id, to: endID)
+        
+        // After connecting, the start point and the new corner are candidates for merging.
+        cleanupCollinearSegments(at: startID)
+        cleanupCollinearSegments(at: cornerVertex.id)
+    }
+    
+    // MARK: - Graph Cleanup
+    
+    private func cleanupCollinearSegments(at vertexID: ConnectionVertex.ID) {
+        // A vertex must have exactly two connections to be a candidate for removal.
+        guard let connectedEdgeIDs = adjacency[vertexID], connectedEdgeIDs.count == 2 else {
+            return
+        }
+        
+        // Get the two edges connected to the vertex.
+        let edgesArray = Array(connectedEdgeIDs).compactMap { edges[$0] }
+        guard edgesArray.count == 2 else { return }
+        
+        let edge1 = edgesArray[0]
+        let edge2 = edgesArray[1]
+        
+        // Get the three vertices that form the potential line.
+        guard let middleVertex = vertices[vertexID] else { return }
+        
+        let outerVertex1ID = (edge1.start == vertexID) ? edge1.end : edge1.start
+        let outerVertex2ID = (edge2.start == vertexID) ? edge2.end : edge2.start
+        
+        guard let outerVertex1 = vertices[outerVertex1ID],
+              let outerVertex2 = vertices[outerVertex2ID] else {
+            return
+        }
+        
+        // Check if the three vertices are collinear (on a straight horizontal or vertical line).
+        let p1 = outerVertex1.point
+        let p2 = middleVertex.point
+        let p3 = outerVertex2.point
+        
+        let areCollinear = (p1.x == p2.x && p2.x == p3.x) || (p1.y == p2.y && p2.y == p3.y)
+        
+        guard areCollinear else {
+            return
+        }
+        
+        // The vertices are collinear, so we can merge the two edges.
+        // Remove the middle vertex. This will also remove the two connected edges.
+        removeVertex(id: vertexID)
+        
+        // Create a new single edge between the two outer vertices.
+        addEdge(from: outerVertex1ID, to: outerVertex2ID)
     }
     
     /// Splits an existing edge by inserting a new vertex at a specific point.
@@ -166,6 +218,37 @@ class SchematicGraph {
         vertices.removeAll()
         edges.removeAll()
         adjacency.removeAll()
+    }
+    
+    /// Deletes a set of items (vertices or edges) from the graph.
+    /// After deletion, it cleans up any vertices that may have become orphaned.
+    func delete(items: Set<UUID>) {
+        var verticesToCheck: Set<ConnectionVertex.ID> = []
+
+        // Process edges first, collecting the vertices they were connected to.
+        for itemID in items {
+            if let edge = edges[itemID] {
+                verticesToCheck.insert(edge.start)
+                verticesToCheck.insert(edge.end)
+                removeEdge(id: itemID)
+            }
+        }
+
+        // Process vertices next.
+        for itemID in items {
+            if vertices.keys.contains(itemID) {
+                removeVertex(id: itemID)
+            }
+        }
+
+        // Clean up potentially orphaned vertices from the deleted edges.
+        for vertexID in verticesToCheck {
+            // If the vertex still exists and now has no connections, remove it.
+            if let adj = adjacency[vertexID], adj.isEmpty {
+                vertices.removeValue(forKey: vertexID)
+                adjacency.removeValue(forKey: vertexID)
+            }
+        }
     }
     
     // MARK: - Graph Analysis

@@ -42,8 +42,8 @@ enum CanvasHitTarget: Equatable, Hashable {
 extension CanvasHitTarget {
     
     /// The ID of the specific primitive that should be added to the selection set.
-    /// In the new model, we select vertices and edges directly.
-    var selectableID: UUID {
+    /// Returns `nil` for primitives that are hittable but not selectable, like vertices.
+    var selectableID: UUID? {
         switch self {
         case .canvasElement(let part):
             switch part {
@@ -57,12 +57,12 @@ extension CanvasHitTarget {
                 return id
             }
         case .connection(let part):
-            // The selectable item is now the primitive itself (the vertex or the edge).
-            // Your selection manager will now hold a set of vertex and edge IDs.
             switch part {
-            case .vertex(let id, _, _):
-                return id
+            case .vertex:
+                // Vertices are not directly selectable.
+                return nil
             case .edge(let id, _, _):
+                // Edges are selectable.
                 return id
             }
         }
