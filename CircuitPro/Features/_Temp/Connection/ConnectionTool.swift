@@ -9,7 +9,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     // MARK: - State
     private enum State: Equatable, Hashable {
         case idle
-        case drawing(from: CGPoint)
+        case drawing(points: [CGPoint])
     }
     
     private var state: State = .idle
@@ -20,60 +20,58 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             assertionFailure("ConnectionTool requires a schematic graph in the context.")
             return .noResult
         }
+        
+        print(context.hitTarget)
+
+        // Finish drawing on double-click
+        if context.clickCount > 1 {
+            if case .drawing = state {
+                state = .idle
+                return .schematicModified
+            }
+            return .noResult
+        }
 
         switch state {
         case .idle:
-            // TODO: Check for hit on a pin and snap `loc` to it.
-            state = .drawing(from: loc)
-            return .noResult // No change yet, just started drawing.
+            // Start a new connection path
+            state = .drawing(points: [loc])
             
-        case .drawing(let from):
-            // If the start and end points are the same, do nothing and reset.
-            if from == loc {
-                state = .idle
+        case .drawing(var points):
+            guard let lastPoint = points.last else {
+                state = .idle // Should not happen, but reset if it does.
                 return .noResult
             }
-
-            let startVertex = graph.addVertex(at: from)
-            let endVertex = graph.addVertex(at: loc)
-
-            // If the line is already perfectly horizontal or vertical, just add one edge.
-            if from.x == loc.x || from.y == loc.y {
-                graph.addEdge(from: startVertex.id, to: endVertex.id)
-            } else {
-                // Otherwise, add a corner vertex to make an orthogonal (H-then-V) connection.
-                let cornerPoint = CGPoint(x: loc.x, y: from.y)
-                let cornerVertex = graph.addVertex(at: cornerPoint)
-                graph.addEdge(from: startVertex.id, to: cornerVertex.id)
-                graph.addEdge(from: cornerVertex.id, to: endVertex.id)
-            }
             
-            // For now, we reset to idle. A more complex tool could continue drawing.
-            state = .idle
-            return .schematicModified
+            // Don't add a segment if the click is at the same location.
+            if lastPoint == loc { return .noResult }
+
+            // Add the new point to our path
+            points.append(loc)
+            state = .drawing(points: points)
+
+            // Create the vertices and edges in the graph
+            addOrthogonalSegment(graph: graph, from: lastPoint, to: loc)
         }
+        return .schematicModified
     }
     
     func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
-        switch state {
-        case .idle:
-            // Do nothing, the main crosshair is sufficient.
-            break
-            
-        case .drawing(let from):
-            // Draw an orthogonal preview line from the start point to the mouse.
-            ctx.setStrokeColor(NSColor.systemGreen.cgColor)
-            ctx.setLineWidth(1.0 / context.magnification)
-            ctx.setLineDash(phase: 0, lengths: [4 / context.magnification, 2 / context.magnification])
-
-            // Orthogonal line: horizontal segment then vertical segment
-            let corner = CGPoint(x: mouse.x, y: from.y)
-            
-            ctx.move(to: from)
-            ctx.addLine(to: corner)
-            ctx.addLine(to: mouse)
-            ctx.strokePath()
+        guard case .drawing(let points) = state, let lastPoint = points.last else {
+            return
         }
+
+        // Draw an orthogonal preview line from the last point to the mouse.
+        ctx.setStrokeColor(NSColor.systemGreen.cgColor)
+        ctx.setLineWidth(1.0 / context.magnification)
+        ctx.setLineDash(phase: 0, lengths: [4 / context.magnification, 2 / context.magnification])
+
+        let corner = CGPoint(x: mouse.x, y: lastPoint.y)
+        
+        ctx.move(to: lastPoint)
+        ctx.addLine(to: corner)
+        ctx.addLine(to: mouse)
+        ctx.strokePath()
     }
 
     // MARK: - Tool State Management
@@ -84,11 +82,31 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
     
     mutating func handleReturn() -> CanvasToolResult {
-        // For now, Return does nothing special. Could be used to complete a segment.
+        if case .drawing = state {
+            state = .idle
+            return .schematicModified
+        }
         return .noResult
     }
     
     mutating func handleBackspace() {
         // For now, Backspace does nothing. Could be used to remove the last segment.
+    }
+    
+    // MARK: - Private Helpers
+    
+    /// Creates the necessary vertices and edges to form an orthogonal connection between two points.
+    private func addOrthogonalSegment(graph: SchematicGraph, from: CGPoint, to: CGPoint) {
+        let startVertex = graph.addVertex(at: from)
+        let endVertex = graph.addVertex(at: to)
+
+        if from.x == to.x || from.y == to.y {
+            graph.addEdge(from: startVertex.id, to: endVertex.id)
+        } else {
+            let cornerPoint = CGPoint(x: to.x, y: from.y)
+            let cornerVertex = graph.addVertex(at: cornerPoint)
+            graph.addEdge(from: startVertex.id, to: cornerVertex.id)
+            graph.addEdge(from: cornerVertex.id, to: endVertex.id)
+        }
     }
 }
