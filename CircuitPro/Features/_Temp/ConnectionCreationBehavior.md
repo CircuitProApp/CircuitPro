@@ -145,7 +145,6 @@ The Connection behavior code is delegated through two stages, one within Connect
 
 ## Collinear Half-Interior-Overlap Edge Merge
 
-- Scope: Tool & Post  
 - Logic: Edge Merge (half interior)  
 - Precondition: An existing Edge consisting of  
   - E1 from (0,0) to (100,0)  
@@ -162,7 +161,6 @@ The Connection behavior code is delegated through two stages, one within Connect
 
 ## Edge & Vertex Full-Interior Merge
 
-- Scope: Tool & Post  
 - Logic: Edge Merge + Vertex Merge (full interior)  
 - Precondition: An existing Edge consisting of  
   - E1 from (0,0) to (100,0)  
@@ -180,7 +178,6 @@ The Connection behavior code is delegated through two stages, one within Connect
 
 ## Collinear Merge on T‑Junction
 
-- Scope: Tool & Post  
 - Logic: Edge Merge + Vertex Merge (collinear on Junction)  
 - Precondition: An existing T‑Junction consisting of  
   - E1 from (0,0) to (100,0)  
@@ -191,7 +188,6 @@ The Connection behavior code is delegated through two stages, one within Connect
 
 ## Collinear Merge on T‑Junction (Reverse Endpoint)
 
-- Scope: Tool & Post  
 - Logic: Edge Merge + Vertex Merge (collinear on Junction)  
 - Precondition: An existing T‑Junction consisting of  
   - E1 from (0,0) to (100,0)  
@@ -234,7 +230,6 @@ The Connection behavior code is delegated through two stages, one within Connect
 
 ## Full-Span Edge Extension
 
-- Scope: Post  
 - Logic: Edge Merge (full-span)  
 - Precondition: Single Edge  
   - E1 from (0,0) to (100,0)  
@@ -251,3 +246,21 @@ The Connection behavior code is delegated through two stages, one within Connect
   - E3 from (100,0) to (100,100)  
 - Action: T1(300,0) T2(-100,0)  
 - Result: A single continuous horizontal Edge from (-100,0) to (300,0), merging the two original horizontal segments through the junction point at (100,0), while preserving the vertical branch at (100,0)  
+
+## Plus Sign Creation
+
+- Logic: Vertex Merge
+- Precondition: Existing L-Shape
+    - E1 from (0,0) to (100,0)
+    - E2 from (100,0) to (100,100)
+- Action: T1(200,0) T2(100, -100) [Using the L-shape creation]
+- Result: A unified plus shape with singular intersection vertex at 100,0
+
+## T-Junction Creation (L-Shape variant)
+
+- Logic: Vertex Merge
+- Precondition: Existing L-Shape
+    - E1 from (0,0) to (100,0)
+    - E2 from (100,0) to (100,100)
+- Action: T1(200,0) T2(0,0)
+- Result: A new T-Junction including the original edges from the L-shape with a new branch of E3 from (200,0) to (100,0) creating a junction at 100,0

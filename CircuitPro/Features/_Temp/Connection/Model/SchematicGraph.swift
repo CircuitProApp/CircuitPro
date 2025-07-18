@@ -86,16 +86,50 @@ class SchematicGraph {
         let from = startVertex.point
         let to = endVertex.point
 
-        // If the line is already straight, just add a single edge.
+        // If the line is already straight, handle merging with existing segments.
         if from.x == to.x || from.y == to.y {
-            addEdge(from: startID, to: endID)
-            // After connecting, check both ends for potential merges.
-            cleanupCollinearSegments(at: startID)
-            cleanupCollinearSegments(at: endID)
+            // 1. Find all vertices on the path, including the start and end.
+            var verticesOnPath = [startVertex, endVertex]
+            
+            // Find vertices that lie on the segment but are not the start or end.
+            let otherVertices = vertices.values.filter {
+                $0.id != startID && $0.id != endID &&
+                isPoint($0.point, onSegmentBetween: from, p2: to)
+            }
+            verticesOnPath.append(contentsOf: otherVertices)
+
+            // 2. Sort them by position.
+            if from.x == to.x { // Vertical line
+                verticesOnPath.sort { $0.point.y < $1.point.y }
+            } else { // Horizontal line
+                verticesOnPath.sort { $0.point.x < $1.point.x }
+            }
+            
+            // 3. Connect adjacent vertices in the sorted list if not already connected.
+            for i in 0..<(verticesOnPath.count - 1) {
+                let v1ID = verticesOnPath[i].id
+                let v2ID = verticesOnPath[i+1].id
+                
+                // Check if an edge already exists to avoid duplicates.
+                let isAlreadyConnected = adjacency[v1ID]?.contains(where: { edgeID in
+                    guard let edge = edges[edgeID] else { return false }
+                    return edge.start == v2ID || edge.end == v2ID
+                }) ?? false
+                
+                if !isAlreadyConnected {
+                    addEdge(from: v1ID, to: v2ID)
+                }
+            }
+
+            // 4. After connecting, run cleanup on all involved vertices
+            //    to handle merging with the rest of the graph.
+            for vertex in verticesOnPath {
+                cleanupCollinearSegments(at: vertex.id)
+            }
             return
         }
         
-        // Otherwise, create a corner vertex and two edges.
+        // Otherwise, create a corner vertex and two edges for an L-shaped connection.
         let cornerPoint: CGPoint
         switch strategy {
         case .horizontalThenVertical:
@@ -104,58 +138,152 @@ class SchematicGraph {
             cornerPoint = CGPoint(x: from.x, y: to.y)
         }
         
-        let cornerVertex = addVertex(at: cornerPoint)
+        // Find or create the vertex at the corner.
+        let cornerVertex: ConnectionVertex
+        if let existingVertex = findVertex(at: cornerPoint) {
+            cornerVertex = existingVertex
+        } else {
+            cornerVertex = addVertex(at: cornerPoint)
+        }
+        
         addEdge(from: startID, to: cornerVertex.id)
         addEdge(from: cornerVertex.id, to: endID)
         
-        // After connecting, the start point and the new corner are candidates for merging.
+        // After connecting, the affected points are candidates for merging.
         cleanupCollinearSegments(at: startID)
         cleanupCollinearSegments(at: cornerVertex.id)
+        cleanupCollinearSegments(at: endID)
     }
-    
+
     // MARK: - Graph Cleanup
     
+    private func getCollinearNeighbors(for centerVertex: ConnectionVertex) -> (horizontal: [ConnectionVertex], vertical: [ConnectionVertex]) {
+        guard let connectedEdgeIDs = adjacency[centerVertex.id] else { return ([], []) }
+
+        let neighborVertices = connectedEdgeIDs.compactMap { edgeID -> ConnectionVertex? in
+            guard let edge = edges[edgeID] else { return nil }
+            let neighborID = edge.start == centerVertex.id ? edge.end : edge.start
+            return vertices[neighborID]
+        }
+
+        var horizontalNeighbors: [ConnectionVertex] = []
+        var verticalNeighbors: [ConnectionVertex] = []
+        
+        let tolerance: CGFloat = 1e-6
+        for neighbor in neighborVertices {
+            if abs(neighbor.point.y - centerVertex.point.y) < tolerance {
+                horizontalNeighbors.append(neighbor)
+            } else if abs(neighbor.point.x - centerVertex.point.x) < tolerance {
+                verticalNeighbors.append(neighbor)
+            }
+        }
+        return (horizontalNeighbors, verticalNeighbors)
+    }
+
+    /// Analyzes and merges collinear segments meeting at a given vertex.
+    /// This method is the core of the edge merging logic.
     private func cleanupCollinearSegments(at vertexID: ConnectionVertex.ID) {
-        // A vertex must have exactly two connections to be a candidate for removal.
-        guard let connectedEdgeIDs = adjacency[vertexID], connectedEdgeIDs.count == 2 else {
-            return
+        // A vertex might be cleaned up by a previous pass, so ensure it still exists.
+        guard let centerVertex = vertices[vertexID] else { return }
+
+        // Process both horizontal and vertical axes for potential merges.
+        processCollinearRun(for: centerVertex, isHorizontal: true)
+        
+        // The center vertex might have been removed by the horizontal pass.
+        guard vertices[vertexID] != nil else { return }
+        processCollinearRun(for: centerVertex, isHorizontal: false)
+    }
+    
+    /// Traverses the entire straight-line run of vertices from a starting point,
+    /// determines which can be simplified, and rewires the graph.
+    private func processCollinearRun(for startVertex: ConnectionVertex, isHorizontal: Bool) {
+        // 1. Discover the entire run of collinear vertices using graph traversal.
+        var runVertices: [ConnectionVertex] = []
+        var queue: [ConnectionVertex] = [startVertex]
+        var visitedIDs: Set<ConnectionVertex.ID> = [startVertex.id]
+
+        while let currentVertex = queue.popLast() {
+            runVertices.append(currentVertex)
+            
+            let (h, v) = getCollinearNeighbors(for: currentVertex)
+            let neighborsOnAxis = isHorizontal ? h : v
+            
+            for neighbor in neighborsOnAxis {
+                if !visitedIDs.contains(neighbor.id) {
+                    visitedIDs.insert(neighbor.id)
+                    queue.append(neighbor)
+                }
+            }
+        }
+
+        // A "run" must have more than 2 vertices to be simplified (e.g., A-B-C -> A-C).
+        guard runVertices.count > 2 else { return }
+
+        // 2. Sort the run by position
+        if isHorizontal {
+            runVertices.sort { $0.point.x < $1.point.x }
+        } else {
+            runVertices.sort { $0.point.y < $1.point.y }
+        }
+
+        // 3. Identify which vertices to keep: endpoints and junctions.
+        var keptVertices: [ConnectionVertex] = []
+        keptVertices.append(runVertices.first!) // Always keep the start of the run
+        
+        let internalVertices = runVertices.dropFirst().dropLast()
+        for vertex in internalVertices {
+            let (h, v) = getCollinearNeighbors(for: vertex)
+            let collinearDegree = isHorizontal ? h.count : v.count
+            let totalDegree = adjacency[vertex.id]?.count ?? 0
+
+            // A vertex is a junction if it has more connections than those that
+            // simply place it along the collinear run. This preserves T-junctions, etc.
+            if totalDegree > collinearDegree {
+                keptVertices.append(vertex)
+            }
+        }
+        keptVertices.append(runVertices.last!) // Always keep the end of the run
+        
+        // Ensure keptVertices is unique and sorted
+        let uniqueKeptVertices = Array(Set(keptVertices))
+        let sortedKeptVertices: [ConnectionVertex]
+        if isHorizontal {
+            sortedKeptVertices = uniqueKeptVertices.sorted { $0.point.x < $1.point.x }
+        } else {
+            sortedKeptVertices = uniqueKeptVertices.sorted { $0.point.y < $1.point.y }
         }
         
-        // Get the two edges connected to the vertex.
-        let edgesArray = Array(connectedEdgeIDs).compactMap { edges[$0] }
-        guard edgesArray.count == 2 else { return }
+        // If no vertices were simplified away, there's nothing more to do.
+        if sortedKeptVertices.count == runVertices.count { return }
         
-        let edge1 = edgesArray[0]
-        let edge2 = edgesArray[1]
+        // 4. Rewire the graph.
+        let runIDs = Set(runVertices.map { $0.id })
         
-        // Get the three vertices that form the potential line.
-        guard let middleVertex = vertices[vertexID] else { return }
-        
-        let outerVertex1ID = (edge1.start == vertexID) ? edge1.end : edge1.start
-        let outerVertex2ID = (edge2.start == vertexID) ? edge2.end : edge2.start
-        
-        guard let outerVertex1 = vertices[outerVertex1ID],
-              let outerVertex2 = vertices[outerVertex2ID] else {
-            return
+        // 4a. Remove all old edges that connect vertices within the original run.
+        for vertex in runVertices {
+            if let edgeIDs = adjacency[vertex.id] {
+                for edgeID in Array(edgeIDs) {
+                    if let edge = edges[edgeID] {
+                        let neighborID = edge.start == vertex.id ? edge.end : edge.start
+                        if runIDs.contains(neighborID) {
+                            removeEdge(id: edgeID)
+                        }
+                    }
+                }
+            }
         }
         
-        // Check if the three vertices are collinear (on a straight horizontal or vertical line).
-        let p1 = outerVertex1.point
-        let p2 = middleVertex.point
-        let p3 = outerVertex2.point
-        
-        let areCollinear = (p1.x == p2.x && p2.x == p3.x) || (p1.y == p2.y && p2.y == p3.y)
-        
-        guard areCollinear else {
-            return
+        // 4b. Remove the intermediate vertices that were deemed unnecessary.
+        let keptIDs = Set(sortedKeptVertices.map { $0.id })
+        let verticesToRemove = runVertices.filter { !keptIDs.contains($0.id) }
+        for vertex in verticesToRemove {
+            removeVertex(id: vertex.id)
         }
-        
-        // The vertices are collinear, so we can merge the two edges.
-        // Remove the middle vertex. This will also remove the two connected edges.
-        removeVertex(id: vertexID)
-        
-        // Create a new single edge between the two outer vertices.
-        addEdge(from: outerVertex1ID, to: outerVertex2ID)
+
+        // 4c. Create new edges to connect the remaining "kept" vertices in sequence.
+        for i in 0..<(sortedKeptVertices.count - 1) {
+            addEdge(from: sortedKeptVertices[i].id, to: sortedKeptVertices[i+1].id)
+        }
     }
     
     /// Splits an existing edge by inserting a new vertex at a specific point.
@@ -221,11 +349,11 @@ class SchematicGraph {
     }
     
     /// Deletes a set of items (vertices or edges) from the graph.
-    /// After deletion, it cleans up any vertices that may have become orphaned.
+    /// After deletion, it cleans up any vertices that may have become orphaned or redundant.
     func delete(items: Set<UUID>) {
         var verticesToCheck: Set<ConnectionVertex.ID> = []
 
-        // Process edges first, collecting the vertices they were connected to.
+        // 1. Process Edges for Deletion
         for itemID in items {
             if let edge = edges[itemID] {
                 verticesToCheck.insert(edge.start)
@@ -233,25 +361,84 @@ class SchematicGraph {
                 removeEdge(id: itemID)
             }
         }
-
-        // Process vertices next.
+        
+        // 2. Process Vertices for Deletion
         for itemID in items {
-            if vertices.keys.contains(itemID) {
+            if let vertexToRemove = vertices[itemID] {
+                // Add neighbors to the check list before removing the vertex
+                let (horizontalNeighbors, verticalNeighbors) = getCollinearNeighbors(for: vertexToRemove)
+                for neighbor in horizontalNeighbors { verticesToCheck.insert(neighbor.id) }
+                for neighbor in verticalNeighbors { verticesToCheck.insert(neighbor.id) }
+                
                 removeVertex(id: itemID)
             }
         }
 
-        // Clean up potentially orphaned vertices from the deleted edges.
+        // 3. Post-Deletion Cleanup
         for vertexID in verticesToCheck {
-            // If the vertex still exists and now has no connections, remove it.
+            // Ensure vertex still exists, as a prior cleanup might have removed it
+            if vertices[vertexID] == nil { continue }
+
             if let adj = adjacency[vertexID], adj.isEmpty {
-                vertices.removeValue(forKey: vertexID)
-                adjacency.removeValue(forKey: vertexID)
+                // Remove orphaned vertices
+                removeVertex(id: vertexID)
+            } else {
+                // Attempt to merge collinear segments on any non-orphaned vertex
+                cleanupCollinearSegments(at: vertexID)
             }
         }
     }
     
     // MARK: - Graph Analysis
+    
+    /// Finds a vertex at the given point, within a small tolerance.
+    private func findVertex(at point: CGPoint) -> ConnectionVertex? {
+        let tolerance: CGFloat = 1e-6
+        return vertices.values.first { v in
+            abs(v.point.x - point.x) < tolerance && abs(v.point.y - point.y) < tolerance
+        }
+    }
+    
+    /// Finds the first edge that contains the given point.
+    /// - Parameter point: The point to test for.
+    /// - Returns: A `ConnectionEdge` if one is found at the point, otherwise `nil`.
+    func findEdge(at point: CGPoint) -> ConnectionEdge? {
+        for edge in edges.values {
+            guard let startVertex = vertices[edge.start], let endVertex = vertices[edge.end] else {
+                continue
+            }
+            if isPoint(point, onSegmentBetween: startVertex.point, p2: endVertex.point) {
+                return edge
+            }
+        }
+        return nil
+    }
+    
+    /// Checks if a point lies on the line segment between two other points, for orthogonal lines.
+    private func isPoint(_ p: CGPoint, onSegmentBetween p1: CGPoint, p2: CGPoint) -> Bool {
+        let tolerance: CGFloat = 1e-6
+
+        let minX = min(p1.x, p2.x) - tolerance
+        let maxX = max(p1.x, p2.x) + tolerance
+        let minY = min(p1.y, p2.y) - tolerance
+        let maxY = max(p1.y, p2.y) + tolerance
+
+        // Check if point is within the bounding box of the segment.
+        guard p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY else {
+            return false
+        }
+
+        // Check for collinearity for horizontal or vertical lines.
+        let isHorizontal = abs(p1.y - p2.y) < tolerance
+        let isVertical = abs(p1.x - p2.x) < tolerance
+
+        if isHorizontal {
+            return abs(p.y - p1.y) < tolerance
+        } else if isVertical {
+            return abs(p.x - p1.x) < tolerance
+        }
+        return false
+    }
     
     /// Finds all vertices and edges belonging to the same connected net as the starting vertex.
     /// - Parameter startVertexID: The ID of the vertex where the search begins.

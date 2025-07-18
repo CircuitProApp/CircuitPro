@@ -119,8 +119,23 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             return id
             
         case .connection(.edge(let id, _, _)):
-            // The click was on an edge. Split the edge and return the new vertex.
-            return graph.splitEdgeAndInsertVertex(edgeID: id, at: point)!
+            // The click was on an edge.
+            // The edge ID from the hit target might be stale if the graph was mutated
+            // during this same user action (e.g., the start of the connection split this edge).
+            if graph.edges[id] != nil {
+                // The edge exists, split it as intended.
+                return graph.splitEdgeAndInsertVertex(edgeID: id, at: point)!
+            } else if let newEdge = graph.findEdge(at: point) {
+                // The edge ID was stale. We found the replacement edge at this point. Split it.
+                return graph.splitEdgeAndInsertVertex(edgeID: newEdge.id, at: point)!
+            } else {
+                // Fallback: The edge is stale and we can't find a new one.
+                // This might happen with floating point inaccuracies or if the click
+                // is no longer on any edge after the mutation.
+                // Create a new vertex at the click location to be safe.
+                assertionFailure("Could not find replacement edge for stale ID. Creating vertex in empty space.")
+                return graph.addVertex(at: point).id
+            }
             
         case .canvasElement(.pin(_, _, let pinPosition)):
             // The click was on a component pin. Create a new vertex at the pin's exact location.
