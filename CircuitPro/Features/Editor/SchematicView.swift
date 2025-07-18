@@ -14,6 +14,7 @@ struct SchematicView: View {
     @State private var netlist: SchematicGraph = .init()
     @State private var canvasElements: [CanvasElement] = []
     @State private var selectedTool: AnyCanvasTool = .init(CursorTool())
+    @State private var nets: [SchematicGraph.Net] = []
 
     var body: some View {
         @Bindable var bindableProjectManager = projectManager
@@ -33,6 +34,11 @@ struct SchematicView: View {
             SchematicToolbarView(selectedSchematicTool: $selectedTool)
                 .padding(16)
         }
+        .overlay(alignment: .bottom) {
+            if !nets.isEmpty {
+                NetsOverlay(nets: nets)
+            }
+        }
         .onAppear {
             rebuildCanvasElements()
         }
@@ -41,9 +47,17 @@ struct SchematicView: View {
         .onChange(of: projectManager.componentInstances) { _ in
             rebuildCanvasElements()
         }
+        
+        // Analyze the graph when it changes
+        .onChange(of: netlist.vertices) { _, _ in updateNets() }
+        .onChange(of: netlist.edges) { _, _ in updateNets() }
 
         // Persist symbol moves back to the model
         .onChange(of: canvasElements) { syncCanvasToModel($0) }
+    }
+    
+    private func updateNets() {
+        nets = netlist.findNets()
     }
 
     // ───────────────────────────────
