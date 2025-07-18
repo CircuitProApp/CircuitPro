@@ -3,13 +3,23 @@ import AppKit
 
 struct ConnectionTool: CanvasTool, Equatable, Hashable {
     let id = "connection"
-    let symbolName = CircuitProSymbols.Schematic.connectionWire
+    let symbolName = CircuitProSymbols.Schematic.connectionWire // Assuming this exists
     let label = "Connection"
+
+    // MARK: - Types
+    private enum DrawingDirection: Equatable, Hashable {
+        case horizontal
+        case vertical
+
+        func toggled() -> DrawingDirection {
+            self == .horizontal ? .vertical : .horizontal
+        }
+    }
 
     // MARK: - State
     private enum State: Equatable, Hashable {
         case idle
-        case drawing(from: CanvasHitTarget?, at: CGPoint)
+        case drawing(from: CanvasHitTarget?, at: CGPoint, direction: DrawingDirection)
     }
 
     private var state: State = .idle
@@ -28,30 +38,38 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
         switch state {
         case .idle:
-            state = .drawing(from: context.hitTarget, at: loc)
+            // 1. Determine initial drawing direction from the hit target
+            let initialDirection = determineInitialDirection(from: context.hitTarget)
+            state = .drawing(from: context.hitTarget, at: loc, direction: initialDirection)
             return .noResult
 
-        case .drawing(let startTarget, let startPoint):
+        case .drawing(let startTarget, let startPoint, let direction):
             let endTarget = context.hitTarget
 
             if startTarget == nil && endTarget == nil && startPoint == loc { return .noResult }
-            
-            // The tool's responsibility is now simple: get the start and end vertex IDs
-            // using the model's authoritative function.
+
             let startVertexID = graph.getOrCreateVertex(at: startPoint)
             let endVertexID = graph.getOrCreateVertex(at: loc)
-            
+
             if startVertexID == endVertexID {
                 state = .idle
                 return .schematicModified
             }
-            
-            // Then tell the model to connect them. The model handles all complex merge logic.
-            graph.connect(from: startVertexID, to: endVertexID)
-            
+
+            // 2. Determine if the requested connection is a straight line
+            let isStraightLine = (startPoint.x == loc.x || startPoint.y == loc.y)
+
+            // 3. Connect vertices using the current direction strategy
+            let strategy: SchematicGraph.ConnectionStrategy = (direction == .horizontal) ? .horizontalThenVertical : .verticalThenHorizontal
+            graph.connect(from: startVertexID, to: endVertexID, preferring: strategy)
+
+            // 4. Update state for the next segment
             if endTarget == nil {
+                // 4.1. Only toggle the direction if a straight line was just drawn
+                let newDirection = isStraightLine ? direction.toggled() : direction
+                
                 let newStartTarget = CanvasHitTarget.connection(part: .vertex(id: endVertexID, position: loc, type: .corner))
-                state = .drawing(from: newStartTarget, at: loc)
+                state = .drawing(from: newStartTarget, at: loc, direction: newDirection)
             } else {
                 state = .idle
             }
@@ -61,12 +79,23 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
-        guard case .drawing(_, let startPoint) = state else { return }
+        // 1. Get drawing state, including the direction
+        guard case .drawing(_, let startPoint, let direction) = state else { return }
 
         ctx.setStrokeColor(NSColor.systemGreen.cgColor)
         ctx.setLineWidth(1.0 / context.magnification)
         ctx.setLineDash(phase: 0, lengths: [4 / context.magnification, 2 / context.magnification])
-        let corner = CGPoint(x: mouse.x, y: startPoint.y)
+
+        // 2. Determine corner based on current drawing direction
+        let corner: CGPoint
+        switch direction {
+        case .horizontal:
+            corner = CGPoint(x: mouse.x, y: startPoint.y)
+        case .vertical:
+            corner = CGPoint(x: startPoint.x, y: mouse.y)
+        }
+        
+        // 3. Draw the preview lines
         ctx.move(to: startPoint)
         ctx.addLine(to: corner)
         ctx.addLine(to: mouse)
@@ -88,5 +117,32 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     mutating func handleBackspace() {
         // TODO: Implement backspace
+    }
+    
+    // MARK: - Private Helpers
+    
+    /// Determines the initial drawing direction based on the object under the cursor.
+    private func determineInitialDirection(from hitTarget: CanvasHitTarget?) -> DrawingDirection {
+        guard let hitTarget = hitTarget else {
+            // Default to horizontal when starting in an empty space.
+            return .horizontal
+        }
+
+        // 1. Check if the hit target is a connection, specifically an edge.
+        guard case .connection(let part) = hitTarget,
+              case .edge(_, _, let orientation) = part else {
+            // Default to horizontal for vertices, canvas elements, etc.
+            return .horizontal
+        }
+
+        // 2. Use the edge's orientation to set the next drawing direction.
+        switch orientation {
+        case .horizontal:
+            // Start drawing vertically from a horizontal edge.
+            return .vertical
+        case .vertical:
+            // Start drawing horizontally from a vertical edge.
+            return .horizontal
+        }
     }
 }
