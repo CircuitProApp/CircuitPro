@@ -29,6 +29,11 @@ class SchematicGraph {
         let edgeCount: Int
     }
     
+    enum ConnectionStrategy {
+        case horizontalThenVertical
+        case verticalThenHorizontal
+    }
+    
     private(set) var vertices: [ConnectionVertex.ID: ConnectionVertex] = [:]
     private(set) var edges: [ConnectionEdge.ID: ConnectionEdge] = [:]
     
@@ -63,6 +68,42 @@ class SchematicGraph {
         adjacency[endVertexID]?.insert(edge.id)
         
         return edge
+    }
+    
+    /// Creates a new orthogonal connection between two vertices.
+    /// This is the authoritative method for creating connections.
+    /// - Parameters:
+    ///   - startID: The starting vertex of the connection.
+    ///   - endID: The ending vertex of the connection.
+    ///   - strategy: The preferred routing for the orthogonal connection.
+    func connect(from startID: ConnectionVertex.ID, to endID: ConnectionVertex.ID, preferring strategy: ConnectionStrategy = .horizontalThenVertical) {
+        guard let startVertex = vertices[startID],
+              let endVertex = vertices[endID] else {
+            assertionFailure("Cannot connect non-existent vertices.")
+            return
+        }
+
+        let from = startVertex.point
+        let to = endVertex.point
+
+        // If the line is already straight, just add a single edge.
+        if from.x == to.x || from.y == to.y {
+            addEdge(from: startID, to: endID)
+            return
+        }
+        
+        // Otherwise, create a corner vertex and two edges.
+        let cornerPoint: CGPoint
+        switch strategy {
+        case .horizontalThenVertical:
+            cornerPoint = CGPoint(x: to.x, y: from.y)
+        case .verticalThenHorizontal:
+            cornerPoint = CGPoint(x: from.x, y: to.y)
+        }
+        
+        let cornerVertex = addVertex(at: cornerPoint)
+        addEdge(from: startID, to: cornerVertex.id)
+        addEdge(from: cornerVertex.id, to: endID)
     }
     
     // MARK: - Graph Analysis

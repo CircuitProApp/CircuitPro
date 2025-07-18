@@ -39,17 +39,15 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
         case .drawing(let lastVertexID):
             guard let lastVertex = graph.vertices[lastVertexID] else {
-                // Should not happen, but as a safeguard, reset the tool.
                 state = .idle
                 return .noResult
             }
 
-            // Don't add a segment if the click is at the same location.
             if lastVertex.point == loc { return .noResult }
 
-            // Create the next vertex and connect it to the previous one.
+            // Create the next vertex and use the graph's authoritative method to connect it.
             let newVertex = graph.addVertex(at: loc)
-            addOrthogonalConnection(graph: graph, from: lastVertexID, to: newVertex.id)
+            graph.connect(from: lastVertexID, to: newVertex.id)
 
             // Update the state to continue drawing from the new vertex.
             state = .drawing(lastVertexID: newVertex.id)
@@ -81,7 +79,6 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     // MARK: - Tool State Management
     mutating func handleEscape() {
         // TODO: This should delete the in-progress net from the graph.
-        // For now, just resets the tool state.
         if case .drawing = state {
             state = .idle
         }
@@ -97,28 +94,5 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     mutating func handleBackspace() {
         // TODO: Implement backspace to remove the last segment.
-    }
-
-    // MARK: - Private Helpers
-
-    /// Creates the necessary edges (and a corner vertex if needed) to form an orthogonal connection between two existing vertices.
-    private func addOrthogonalConnection(graph: SchematicGraph, from startID: ConnectionVertex.ID, to endID: ConnectionVertex.ID) {
-        guard let startVertex = graph.vertices[startID],
-              let endVertex = graph.vertices[endID] else {
-            assertionFailure("Cannot connect non-existent vertices.")
-            return
-        }
-
-        let from = startVertex.point
-        let to = endVertex.point
-
-        if from.x == to.x || from.y == to.y {
-            graph.addEdge(from: startID, to: endID)
-        } else {
-            let cornerPoint = CGPoint(x: to.x, y: from.y)
-            let cornerVertex = graph.addVertex(at: cornerPoint)
-            graph.addEdge(from: startID, to: cornerVertex.id)
-            graph.addEdge(from: cornerVertex.id, to: endID)
-        }
     }
 }

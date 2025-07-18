@@ -77,6 +77,7 @@ final class WorkbenchInputCoordinator {
             )
 
             if let hitTarget = hitTarget {
+                print("Hit test result: \(hitTarget.debugDescription)")
                 // An element was hit. Select it if not already selected.
                 let hitID = hitTarget.selectableID
                 if !workbench.selectedIDs.contains(hitID) {

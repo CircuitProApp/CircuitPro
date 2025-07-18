@@ -34,8 +34,18 @@ struct WorkbenchHitTestService {
         for vertex in schematicGraph.vertices.values {
             let distance = hypot(point.x - vertex.point.x, point.y - vertex.point.y)
             if distance < tolerance {
-                // TODO: Determine the actual VertexType (endpoint, corner, junction)
-                let type = VertexType.corner
+                // Determine the vertex type based on the number of connected edges.
+                let connectionCount = schematicGraph.adjacency[vertex.id]?.count ?? 0
+                let type: VertexType
+                switch connectionCount {
+                case 0, 1:
+                    type = .endpoint
+                case 2:
+                    // TODO: Differentiate between a corner and a straight-line junction (T-junction)
+                    type = .corner
+                default:
+                    type = .junction
+                }
                 return .connection(part: .vertex(id: vertex.id, position: vertex.point, type: type))
             }
         }
