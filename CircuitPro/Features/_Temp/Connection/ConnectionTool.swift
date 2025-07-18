@@ -9,7 +9,6 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     // MARK: - State
     private enum State: Equatable, Hashable {
         case idle
-        // The hit target where the connection started, and the starting point.
         case drawing(from: CanvasHitTarget?, at: CGPoint)
     }
 
@@ -22,7 +21,6 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             return .noResult
         }
 
-        // On a double-click, finalize the current drawing operation.
         if context.clickCount > 1 {
             state = .idle
             return .schematicModified
@@ -30,39 +28,29 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
         switch state {
         case .idle:
-            // Start a new drawing from the current hit target and location.
             state = .drawing(from: context.hitTarget, at: loc)
-            // We return noResult because the graph hasn't been modified yet.
             return .noResult
 
         case .drawing(let startTarget, let startPoint):
             let endTarget = context.hitTarget
 
-            // If the user clicks the same spot they started from, and it's not on a specific target,
-            // it's likely an accidental click. We do nothing and wait for the next valid point.
-            if startTarget == nil && endTarget == nil && startPoint == loc {
-                return .noResult
-            }
+            if startTarget == nil && endTarget == nil && startPoint == loc { return .noResult }
             
-            let startVertexID = getOrCreateVertex(for: startTarget, at: startPoint, in: graph)
-            let endVertexID = getOrCreateVertex(for: endTarget, at: loc, in: graph)
+            // The tool's responsibility is now simple: get the start and end vertex IDs
+            // using the model's authoritative function.
+            let startVertexID = graph.getOrCreateVertex(at: startPoint)
+            let endVertexID = graph.getOrCreateVertex(at: loc)
             
-            // Do not create a connection if the start and end points are the same vertex.
             if startVertexID == endVertexID {
                 state = .idle
                 return .schematicModified
             }
             
-            // Connect the two vertices.
+            // Then tell the model to connect them. The model handles all complex merge logic.
             graph.connect(from: startVertexID, to: endVertexID)
             
-            // If the connection ended on a specific target (not empty space),
-            // finalize the drawing operation. Otherwise, continue from the new point.
             if endTarget == nil {
-                // Continue drawing. The new start target is the vertex we just created.
-                let newStartTarget = CanvasHitTarget.connection(
-                    part: .vertex(id: endVertexID, position: loc, type: .corner) // Using .corner as a placeholder
-                )
+                let newStartTarget = CanvasHitTarget.connection(part: .vertex(id: endVertexID, position: loc, type: .corner))
                 state = .drawing(from: newStartTarget, at: loc)
             } else {
                 state = .idle
@@ -75,13 +63,10 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
         guard case .drawing(_, let startPoint) = state else { return }
 
-        // Draw an orthogonal preview line from the last point to the mouse.
         ctx.setStrokeColor(NSColor.systemGreen.cgColor)
         ctx.setLineWidth(1.0 / context.magnification)
         ctx.setLineDash(phase: 0, lengths: [4 / context.magnification, 2 / context.magnification])
-
         let corner = CGPoint(x: mouse.x, y: startPoint.y)
-
         ctx.move(to: startPoint)
         ctx.addLine(to: corner)
         ctx.addLine(to: mouse)
@@ -90,9 +75,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
     // MARK: - Tool State Management
     mutating func handleEscape() {
-        if case .drawing = state {
-            state = .idle
-        }
+        if case .drawing = state { state = .idle }
     }
 
     mutating func handleReturn() -> CanvasToolResult {
@@ -104,50 +87,6 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     mutating func handleBackspace() {
-        // TODO: Implement backspace to remove the last segment.
-    }
-    
-    // MARK: - Private Helpers
-    
-    /// Resolves a hit target and a location into a vertex ID.
-    /// This is the authoritative method for determining which vertex a click corresponds to.
-    /// It will create a new vertex if the click is on an edge, a pin, or in empty space.
-    private func getOrCreateVertex(for hitTarget: CanvasHitTarget?, at point: CGPoint, in graph: SchematicGraph) -> ConnectionVertex.ID {
-        switch hitTarget {
-        case .connection(.vertex(let id, _, _)):
-            // The click was directly on an existing vertex. Use it.
-            return id
-            
-        case .connection(.edge(let id, _, _)):
-            // The click was on an edge.
-            // The edge ID from the hit target might be stale if the graph was mutated
-            // during this same user action (e.g., the start of the connection split this edge).
-            if graph.edges[id] != nil {
-                // The edge exists, split it as intended.
-                return graph.splitEdgeAndInsertVertex(edgeID: id, at: point)!
-            } else if let newEdge = graph.findEdge(at: point) {
-                // The edge ID was stale. We found the replacement edge at this point. Split it.
-                return graph.splitEdgeAndInsertVertex(edgeID: newEdge.id, at: point)!
-            } else {
-                // Fallback: The edge is stale and we can't find a new one.
-                // This might happen with floating point inaccuracies or if the click
-                // is no longer on any edge after the mutation.
-                // Create a new vertex at the click location to be safe.
-                assertionFailure("Could not find replacement edge for stale ID. Creating vertex in empty space.")
-                return graph.addVertex(at: point).id
-            }
-            
-        case .canvasElement(.pin(_, _, let pinPosition)):
-            // The click was on a component pin. Create a new vertex at the pin's exact location.
-            // Note: This correctly uses the pin's position, not the raw click location.
-            // Future improvement: Check if a vertex already exists at this position.
-            return graph.addVertex(at: pinPosition).id
-            
-        case .canvasElement, .none:
-            // The click was in empty space or on another part of a canvas element.
-            // Create a new vertex at the click location.
-            // Future improvement: Check if a vertex already exists at this position.
-            return graph.addVertex(at: point).id
-        }
+        // TODO: Implement backspace
     }
 }

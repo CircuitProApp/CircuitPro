@@ -6,14 +6,10 @@ struct NetsOverlay: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            HStack {
-                Text("Disconnected Nets (\(nets.count))")
-                    .font(.headline)
-                Spacer()
-                Button("Clear All", role: .destructive) {
-                    graph.clear()
-                }
-            }
+   
+            Text("Disconnected Nets (\(nets.count))")
+                .font(.headline)
+            
             
             ScrollView {
                 VStack(alignment: .leading) {

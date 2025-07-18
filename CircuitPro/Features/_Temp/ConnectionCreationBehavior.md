@@ -253,7 +253,7 @@ The Connection behavior code is delegated through two stages, one within Connect
 - Precondition: Existing L-Shape
     - E1 from (0,0) to (100,0)
     - E2 from (100,0) to (100,100)
-- Action: T1(200,0) T2(100, -100) [Using the L-shape creation]
+- Action: T1(200,0) T2(100,-100) [Using the L-shape creation]
 - Result: A unified plus shape with singular intersection vertex at 100,0
 
 ## T-Junction Creation (L-Shape variant)
@@ -264,3 +264,28 @@ The Connection behavior code is delegated through two stages, one within Connect
     - E2 from (100,0) to (100,100)
 - Action: T1(200,0) T2(0,0)
 - Result: A new T-Junction including the original edges from the L-shape with a new branch of E3 from (200,0) to (100,0) creating a junction at 100,0
+
+## L-Shape Edge extension
+
+- Logic: Vertex/Edge Merge
+- Precondition: Existing L-Shape
+    - E1 from (0,0) to (100,0)
+    - E2 from (100,0) to (100,100)
+- Action: T1(-100,0) T2(100,-100) [Using the L-shape creation]
+- Result: A unified shape with:
+    - E1 from (-100,0) to (100,0)
+    - E2 from (100,0) to (100,100)
+    - E3 from (100,0) to (100,-100)
+
+## L-Shape Edge Extension (L-Shape Variant)
+
+- Logic: Junction creation, Vertex/Edge Merge
+- Precondition: Existing U-Shape
+    - E1 from (0,0) to (100,0)
+    - E2 from (100,0) to (100,0)
+- Action: T1(-100,0) T2(50,-100) [using the L-shape creation]
+- Result: A unified shape where we have two new junctions at 0,0 and 50,0
+    - E1 from (-100,0) to (0,0)
+    - E2 from (0,100) to (0,0)
+    - E3 from (0,0) to (50,0)
+    - E4 from (50,0) to (100,0)
