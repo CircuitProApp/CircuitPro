@@ -154,7 +154,6 @@ The Connection behavior code is delegated through two stages, one within Connect
 
 ## Collinear Full-Interior-Overlap Edge Merge
 
-- Scope: Tool & Post  
 - Logic: Edge Merge (full interior)  
 - Precondition: An existing Edge consisting of  
   - E1 from (0,0) to (200,0)  
