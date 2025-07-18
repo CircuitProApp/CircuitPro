@@ -42,6 +42,7 @@ final class ToolActionController {
             selectedLayer:    workbench.selectedLayer,
             magnification:    workbench.magnification,
             hitTarget:        hitTarget,
+            schematicGraph:   workbench.schematicGraph,
             clickCount:       event.clickCount
         )
 
@@ -55,6 +56,12 @@ final class ToolActionController {
             }
             workbench.onUpdate?(workbench.elements)
         case .noResult:
+            // The tool might have modified the schematic graph, which doesn't
+            // have a dedicated result type yet. For now, we'll just assume
+            // that if the connection tool was used, we need to redraw.
+            if tool.id == "connection" {
+                workbench.connectionsView?.needsDisplay = true
+            }
             break
         }
 

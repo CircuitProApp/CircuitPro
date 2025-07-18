@@ -27,7 +27,31 @@ final class ConnectionsView: NSView {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
 
         let allSelected = selectedIDs.union(marqueeSelectedIDs)
+        let lineWidth = 1.5 / magnification
+        let vertexRadius = 3.0 / magnification
 
-
+        // Draw Edges
+        ctx.setStrokeColor(NSColor.systemGreen.cgColor)
+        ctx.setLineWidth(lineWidth)
+        
+        for edge in schematicGraph.edges.values {
+            guard let startVertex = schematicGraph.vertices[edge.start],
+                  let endVertex = schematicGraph.vertices[edge.end] else { continue }
+            
+            ctx.move(to: startVertex.point)
+            ctx.addLine(to: endVertex.point)
+            ctx.strokePath()
+        }
+        
+        // Draw Vertices
+        ctx.setFillColor(NSColor.systemBlue.cgColor)
+        
+        for vertex in schematicGraph.vertices.values {
+            let rect = CGRect(x: vertex.point.x - vertexRadius,
+                              y: vertex.point.y - vertexRadius,
+                              width: vertexRadius * 2,
+                              height: vertexRadius * 2)
+            ctx.fillEllipse(in: rect)
+        }
     }
 }

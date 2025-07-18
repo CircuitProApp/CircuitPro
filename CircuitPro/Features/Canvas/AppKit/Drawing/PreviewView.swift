@@ -40,7 +40,8 @@ final class PreviewView: NSView {
             existingPinCount: pinCount,
             existingPadCount: padCount,
             selectedLayer: workbench.selectedLayer,
-            magnification: magnification
+            magnification: magnification,
+            schematicGraph: workbench.schematicGraph
         )
 
         let snappedMouse = workbench.snap(mouse)
