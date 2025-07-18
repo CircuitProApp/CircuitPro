@@ -55,13 +55,11 @@ final class ToolActionController {
                 workbench.onPrimitiveAdded?(prim.id, ctx.selectedLayer)
             }
             workbench.onUpdate?(workbench.elements)
+        
+        case .schematicModified:
+            workbench.connectionsView?.needsDisplay = true
+            
         case .noResult:
-            // The tool might have modified the schematic graph, which doesn't
-            // have a dedicated result type yet. For now, we'll just assume
-            // that if the connection tool was used, we need to redraw.
-            if tool.id == "connection" {
-                workbench.connectionsView?.needsDisplay = true
-            }
             break
         }
 

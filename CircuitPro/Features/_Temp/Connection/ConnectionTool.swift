@@ -25,25 +25,40 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         case .idle:
             // TODO: Check for hit on a pin and snap `loc` to it.
             state = .drawing(from: loc)
+            return .noResult // No change yet, just started drawing.
+            
         case .drawing(let from):
+            // If the start and end points are the same, do nothing and reset.
+            if from == loc {
+                state = .idle
+                return .noResult
+            }
+
             let startVertex = graph.addVertex(at: from)
             let endVertex = graph.addVertex(at: loc)
-            graph.addEdge(from: startVertex.id, to: endVertex.id)
+
+            // If the line is already perfectly horizontal or vertical, just add one edge.
+            if from.x == loc.x || from.y == loc.y {
+                graph.addEdge(from: startVertex.id, to: endVertex.id)
+            } else {
+                // Otherwise, add a corner vertex to make an orthogonal (H-then-V) connection.
+                let cornerPoint = CGPoint(x: loc.x, y: from.y)
+                let cornerVertex = graph.addVertex(at: cornerPoint)
+                graph.addEdge(from: startVertex.id, to: cornerVertex.id)
+                graph.addEdge(from: cornerVertex.id, to: endVertex.id)
+            }
             
             // For now, we reset to idle. A more complex tool could continue drawing.
             state = .idle
+            return .schematicModified
         }
-        return .noResult
     }
     
     func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
         switch state {
         case .idle:
-            // Draw a small crosshair at the mouse position to indicate where a click will register.
-            ctx.setStrokeColor(NSColor.systemBlue.withAlphaComponent(0.8).cgColor)
-            ctx.setLineWidth(1.0 / context.magnification)
-            ctx.addArc(center: mouse, radius: 4.0 / context.magnification, startAngle: 0, endAngle: .pi * 2, clockwise: true)
-            ctx.strokePath()
+            // Do nothing, the main crosshair is sufficient.
+            break
             
         case .drawing(let from):
             // Draw an orthogonal preview line from the start point to the mouse.

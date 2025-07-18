@@ -135,6 +135,8 @@ final class WorkbenchInputCoordinator {
         case .element(let newElement):
             workbench.elements.append(newElement)
             workbench.onUpdate?(workbench.elements)
+        case .schematicModified:
+            workbench.connectionsView?.needsDisplay = true
         case .noResult:
             break
         }
