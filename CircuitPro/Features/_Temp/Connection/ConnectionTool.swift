@@ -82,7 +82,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
         // 1. Get drawing state, including the direction
         guard case .drawing(_, let startPoint, let direction) = state else { return }
 
-        ctx.setStrokeColor(NSColor.systemGreen.cgColor)
+        ctx.setStrokeColor(NSColor.systemBlue.cgColor)
         ctx.setLineWidth(1.0 / context.magnification)
         ctx.setLineDash(phase: 0, lengths: [4 / context.magnification, 2 / context.magnification])
 

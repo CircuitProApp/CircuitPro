@@ -34,7 +34,7 @@ final class ConnectionsView: NSView {
         let highlightLineWidth: CGFloat = 5.0
 
         // 1. Draw Selected Edge Highlights
-        ctx.setStrokeColor(NSColor.systemYellow.cgColor)
+        ctx.setStrokeColor(NSColor.systemBlue.withAlphaComponent(0.3).cgColor)
         ctx.setLineWidth(highlightLineWidth)
         ctx.setLineCap(.round)
         
@@ -51,7 +51,7 @@ final class ConnectionsView: NSView {
         ctx.setLineCap(.butt) // Reset
 
         // 2. Draw All Edges (on top of highlights)
-        ctx.setStrokeColor(NSColor.systemGreen.cgColor)
+        ctx.setStrokeColor(NSColor.systemBlue.cgColor)
         ctx.setLineWidth(lineWidth)
         
         for edge in schematicGraph.edges.values {
@@ -77,7 +77,7 @@ final class ConnectionsView: NSView {
         }
         
         // 4. Draw Vertices (with no selection highlight)
-        ctx.setFillColor(NSColor.systemBlue.cgColor) // Always use default color
+        ctx.setFillColor(NSColor.systemPurple.cgColor) // Always use default color
         
         for vertex in schematicGraph.vertices.values {
             let rect = CGRect(x: vertex.point.x - vertexRadius,
