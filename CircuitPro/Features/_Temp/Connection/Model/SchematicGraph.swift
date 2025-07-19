@@ -96,16 +96,29 @@ class SchematicGraph {
         normalize(around: verticesToCheck)
     }
     
+    /// Moves a vertex to a new point. This is a low-level operation
+    /// that does not perform normalization.
+    func moveVertex(id: ConnectionVertex.ID, to newPoint: CGPoint) {
+        vertices[id]?.point = newPoint
+    }
+    
     // MARK: - Graph Normalization
     
-    private func normalize(around verticesToCheck: Set<ConnectionVertex.ID>) {
-        for vertexID in verticesToCheck {
+    /// Normalizes the graph structure around a set of vertices.
+    /// This involves merging coincident vertices and cleaning up collinear segments.
+    func normalize(around verticesToCheck: Set<ConnectionVertex.ID>) {
+        let mergedVertices = mergeCoincidentVertices(in: verticesToCheck)
+        
+        var allAffectedVertices = verticesToCheck
+        allAffectedVertices.formUnion(mergedVertices)
+        
+        for vertexID in allAffectedVertices {
             if vertices[vertexID] != nil {
                 cleanupCollinearSegments(at: vertexID)
             }
         }
         // A second pass to clean up orphans created by the first pass
-        for vertexID in verticesToCheck where vertices[vertexID] != nil && (adjacency[vertexID]?.isEmpty ?? false) {
+        for vertexID in allAffectedVertices where vertices[vertexID] != nil && (adjacency[vertexID]?.isEmpty ?? false) {
             removeVertex(id: vertexID)
         }
     }
@@ -115,6 +128,44 @@ class SchematicGraph {
         processCollinearRun(for: centerVertex, isHorizontal: true)
         guard vertices[vertexID] != nil else { return }
         processCollinearRun(for: centerVertex, isHorizontal: false)
+    }
+    
+    private func mergeCoincidentVertices(in scope: Set<ConnectionVertex.ID>) -> Set<ConnectionVertex.ID> {
+        var verticesToProcess = scope.compactMap { vertices[$0] }
+        var processedIDs: Set<ConnectionVertex.ID> = []
+        var modifiedVertices: Set<ConnectionVertex.ID> = []
+        let tolerance: CGFloat = 1e-6
+
+        while let vertex = verticesToProcess.popLast() {
+            if processedIDs.contains(vertex.id) { continue }
+            
+            let coincidentGroup = vertices.values.filter {
+                hypot(vertex.point.x - $0.point.x, vertex.point.y - $0.point.y) < tolerance
+            }
+            
+            if coincidentGroup.count > 1 {
+                let survivor = coincidentGroup.first!
+                processedIDs.insert(survivor.id)
+                modifiedVertices.insert(survivor.id)
+                
+                for victim in coincidentGroup where victim.id != survivor.id {
+                    if let victimEdges = adjacency[victim.id] {
+                        for edgeID in victimEdges {
+                            guard let edge = edges[edgeID] else { continue }
+                            let otherEndID = edge.start == victim.id ? edge.end : edge.start
+                            if otherEndID != survivor.id {
+                                addEdge(from: survivor.id, to: otherEndID)
+                            }
+                        }
+                    }
+                    removeVertex(id: victim.id)
+                    processedIDs.insert(victim.id)
+                }
+            } else {
+                processedIDs.insert(vertex.id)
+            }
+        }
+        return modifiedVertices
     }
     
     private func processCollinearRun(for startVertex: ConnectionVertex, isHorizontal: Bool) {
