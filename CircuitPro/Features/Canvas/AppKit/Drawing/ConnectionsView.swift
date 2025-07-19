@@ -64,7 +64,7 @@ final class ConnectionsView: NSView {
         }
         
         // 3. Draw Junctions
-        ctx.setFillColor(NSColor.systemGreen.cgColor)
+        ctx.setFillColor(NSColor.systemBlue.cgColor)
         
         for vertex in schematicGraph.vertices.values {
             if schematicGraph.adjacency[vertex.id]?.count ?? 0 > 2 {

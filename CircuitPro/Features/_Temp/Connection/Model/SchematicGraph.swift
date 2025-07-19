@@ -203,6 +203,11 @@ class SchematicGraph {
         var allAffectedVertices = verticesToCheck
         allAffectedVertices.formUnion(mergedVertices)
         
+        // First, resolve any overlapping segments that may have been created by the merge.
+        // This is crucial for correctly forming T-junctions.
+        splitEdgesWithIntermediateVertices()
+        
+        // Now, clean up any redundant vertices on straight lines.
         for vertexID in allAffectedVertices {
             if vertices[vertexID] != nil {
                 cleanupCollinearSegments(at: vertexID)
@@ -214,10 +219,43 @@ class SchematicGraph {
         }
     }
     
+    private func splitEdgesWithIntermediateVertices() {
+        var splits: [(edgeID: UUID, vertexID: UUID)] = []
+        
+        let allEdges = Array(edges.values)
+        let allVertices = Array(vertices.values)
+
+        for edge in allEdges {
+            guard let p1 = vertices[edge.start]?.point, let p2 = vertices[edge.end]?.point else { continue }
+            
+            for vertex in allVertices {
+                if vertex.id == edge.start || vertex.id == edge.end { continue }
+                
+                if isPoint(vertex.point, onSegmentBetween: p1, p2: p2) {
+                    splits.append((edge.id, vertex.id))
+                }
+            }
+        }
+        
+        guard !splits.isEmpty else { return }
+
+        for split in splits {
+            // The edge might have been removed by a previous split operation in this same loop
+            guard let edgeToSplit = edges[split.edgeID] else { continue }
+            
+            let startID = edgeToSplit.start
+            let endID = edgeToSplit.end
+            
+            removeEdge(id: edgeToSplit.id)
+            addEdge(from: startID, to: split.vertexID)
+            addEdge(from: split.vertexID, to: endID)
+        }
+    }
+    
     private func cleanupCollinearSegments(at vertexID: ConnectionVertex.ID) {
         guard let centerVertex = vertices[vertexID] else { return }
         processCollinearRun(for: centerVertex, isHorizontal: true)
-        guard vertices[vertexID] != nil else { return }
+        guard vertices[vertexID] != nil else { return } // The vertex might have been removed
         processCollinearRun(for: centerVertex, isHorizontal: false)
     }
     
@@ -264,6 +302,7 @@ class SchematicGraph {
         var queue: [ConnectionVertex] = [startVertex]
         var visitedIDs: Set<ConnectionVertex.ID> = [startVertex.id]
 
+        // 1. Find the entire continuous run of collinear vertices
         while let current = queue.popLast() {
             run.append(current)
             let (h, v) = getCollinearNeighbors(for: current)
@@ -274,20 +313,33 @@ class SchematicGraph {
                 }
             }
         }
+        
+        // A run of 2 is just a single segment, which cannot be simplified
         if run.count < 3 { return }
 
-        if isHorizontal { run.sort { $0.point.x < $1.point.x } }
-        else { run.sort { $0.point.y < $1.point.y } }
-
-        var keptIDs: Set<ConnectionVertex.ID> = [run.first!.id, run.last!.id]
-        for vertex in run.dropFirst().dropLast() {
+        // 2. Decide which vertices are topologically significant and must be kept
+        var keptIDs: Set<ConnectionVertex.ID> = []
+        for vertex in run {
             let (h, v) = getCollinearNeighbors(for: vertex)
-            if (adjacency[vertex.id]?.count ?? 0) > (isHorizontal ? h.count : v.count) {
-                keptIDs.insert(vertex.id)
+            let collinearNeighborCount = isHorizontal ? h.count : v.count
+            
+            // Keep a vertex if it's a branch point (T-junction) or a true net endpoint.
+            if (adjacency[vertex.id]?.count ?? 0) > collinearNeighborCount {
+                 keptIDs.insert(vertex.id)
             }
         }
-        if keptIDs.count == run.count { return }
+        
+        // Always preserve the absolute endpoints of the run
+        if isHorizontal { run.sort { $0.point.x < $1.point.x } }
+        else { run.sort { $0.point.y < $1.point.y } }
+        
+        if let first = run.first { keptIDs.insert(first.id) }
+        if let last = run.last { keptIDs.insert(last.id) }
 
+        // If no simplification is possible, exit
+        if keptIDs.count >= run.count { return }
+
+        // 3. Remove all the old edges that were part of the run
         let runIDs = Set(run.map { $0.id })
         for vertex in run where adjacency[vertex.id] != nil {
             for edgeID in Array(adjacency[vertex.id]!) {
@@ -297,9 +349,13 @@ class SchematicGraph {
             }
         }
         
+        // 4. Remove the redundant (not kept) vertices
         run.filter { !keptIDs.contains($0.id) }.forEach { removeVertex(id: $0.id) }
         
+        // 5. Create new, simplified edges between the kept vertices
         let sortedKeptVertices = run.filter { keptIDs.contains($0.id) }
+        if sortedKeptVertices.count < 2 { return }
+
         for i in 0..<(sortedKeptVertices.count - 1) {
             addEdge(from: sortedKeptVertices[i].id, to: sortedKeptVertices[i+1].id)
         }
