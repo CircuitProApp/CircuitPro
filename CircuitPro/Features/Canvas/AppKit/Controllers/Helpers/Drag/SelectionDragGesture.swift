@@ -10,15 +10,10 @@ import AppKit
 
 final class SelectionDragGesture: DragGesture {
 
-    private struct DragModel {
-        var originalVertexPositions: [UUID: CGPoint] = [:]
-    }
-
     unowned let workbench: WorkbenchView
 
     private var origin: CGPoint?
     private var originalPositions: [UUID: CGPoint] = [:] // For non-schematic elements
-    private var dragModel = DragModel()
     private var didMove = false
     private let threshold: CGFloat = 4.0
 
@@ -41,7 +36,6 @@ final class SelectionDragGesture: DragGesture {
 
         origin = p
         originalPositions.removeAll()
-        dragModel = DragModel()
         didMove = false
 
         // 1. Cache for standard elements
@@ -49,8 +43,8 @@ final class SelectionDragGesture: DragGesture {
             originalPositions[elt.id] = elt.transformable.position
         }
 
-        // 2. Cache all vertex positions for the schematic drag model
-        dragModel.originalVertexPositions = workbench.schematicGraph.vertices.mapValues { $0.point }
+        // 2. Tell the schematic graph to prepare for a drag
+        workbench.schematicGraph.beginDrag(selectedIDs: workbench.selectedIDs)
         
         return true
     }
@@ -80,76 +74,20 @@ final class SelectionDragGesture: DragGesture {
             workbench.onUpdate?(updatedElements)
         }
 
-        // --- Part 2: Move schematic components using BFS propagation ---
-        let selectedEdges = workbench.schematicGraph.edges.values.filter {
-            workbench.selectedIDs.contains($0.id)
-        }
-        guard !selectedEdges.isEmpty else {
-            workbench.connectionsView?.needsDisplay = true
-            return
-        }
-
-        var newPositions: [UUID: CGPoint] = [:]
-        var queue: [UUID] = []
-        
-        // 1. Initial state: selected vertices move freely
-        let primaryMovableVertices = Set(selectedEdges.flatMap { [$0.start, $0.end] })
-        for id in primaryMovableVertices {
-            if let origin = dragModel.originalVertexPositions[id] {
-                newPositions[id] = CGPoint(x: origin.x + moveDelta.x, y: origin.y + moveDelta.y)
-                queue.append(id)
-            }
-        }
-        
-        // 2. BFS to propagate constraints
-        var head = 0
-        while head < queue.count {
-            let junctionID = queue[head]
-            head += 1
-            
-            guard let junctionNewPos = newPositions[junctionID],
-                  let adjacentEdgeIDs = workbench.schematicGraph.adjacency[junctionID] else { continue }
-
-            for edgeID in adjacentEdgeIDs {
-                guard let edge = workbench.schematicGraph.edges[edgeID], !workbench.selectedIDs.contains(edgeID) else { continue }
-                
-                let anchorID = edge.start == junctionID ? edge.end : edge.start
-                if newPositions[anchorID] != nil { continue } // Already processed
-
-                guard let anchorOrigPos = dragModel.originalVertexPositions[anchorID],
-                      let junctionOrigPos = dragModel.originalVertexPositions[junctionID] else { continue }
-                
-                let wasHorizontal = abs(anchorOrigPos.y - junctionOrigPos.y) < 1e-6
-                
-                let newAnchorPos: CGPoint
-                if wasHorizontal {
-                    newAnchorPos = CGPoint(x: anchorOrigPos.x, y: junctionNewPos.y)
-                } else { // Was vertical
-                    newAnchorPos = CGPoint(x: junctionNewPos.x, y: anchorOrigPos.y)
-                }
-                
-                newPositions[anchorID] = newAnchorPos
-                queue.append(anchorID)
-            }
-        }
-
-        // 3. Atomic update: Apply all calculated positions
-        for (id, pos) in newPositions {
-            workbench.schematicGraph.moveVertex(id: id, to: pos)
-        }
+        // --- Part 2: Update the schematic drag ---
+        workbench.schematicGraph.updateDrag(by: moveDelta)
         
         workbench.connectionsView?.needsDisplay = true
     }
 
     // MARK: – End
     func end() {
-        if didMove && !dragModel.originalVertexPositions.isEmpty {
-            workbench.schematicGraph.normalize(around: Set(dragModel.originalVertexPositions.keys))
+        if didMove {
+            workbench.schematicGraph.endDrag()
         }
         
         origin = nil
         originalPositions.removeAll()
-        dragModel = DragModel()
         didMove = false
         
         workbench.connectionsView?.needsDisplay = true

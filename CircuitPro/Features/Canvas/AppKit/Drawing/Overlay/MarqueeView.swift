@@ -29,8 +29,8 @@ final class MarqueeView: NSView {
         let scale     = 1 / magnification
         let ctx       = NSGraphicsContext.current!.cgContext
 
-        ctx.setStrokeColor(NSColor(.blue).cgColor)
-        ctx.setFillColor(NSColor(.blue.opacity(0.10)).cgColor)
+        ctx.setStrokeColor(NSColor.systemBlue.cgColor)
+        ctx.setFillColor(NSColor.systemBlue.withAlphaComponent(0.1).cgColor)
         ctx.setLineWidth(1 * scale)
         ctx.setLineDash(phase: 0, lengths: [4 * scale, 2 * scale])
 

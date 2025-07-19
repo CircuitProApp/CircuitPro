@@ -26,8 +26,8 @@ final class HandlesView: NSView {
         guard let ctx = NSGraphicsContext.current?.cgContext, selectedIDs.count == 1 else { return }
         
         let scale = 1 / magnification
-        ctx.setFillColor(NSColor(.white).cgColor)
-        ctx.setStrokeColor(NSColor(.blue).cgColor)
+        ctx.setFillColor(NSColor.white.cgColor)
+        ctx.setStrokeColor(NSColor.systemBlue.cgColor)
         ctx.setLineWidth(1 * scale)
 
         let base: CGFloat = 10

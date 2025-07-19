@@ -28,9 +28,9 @@ extension Drawable {
         switch self {
         case let prim as any GraphicPrimitive:
             return prim.color.cgColor.copy(alpha: haloAlpha) ??
-            NSColor(.blue.opacity(haloAlpha)).cgColor
+            NSColor.systemBlue.withAlphaComponent(haloAlpha).cgColor
         default:
-            return NSColor(.blue.opacity(haloAlpha)).cgColor
+            return NSColor.systemBlue.withAlphaComponent(haloAlpha).cgColor
         }
     }
 

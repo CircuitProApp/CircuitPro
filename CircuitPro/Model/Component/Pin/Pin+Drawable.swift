@@ -27,7 +27,7 @@ extension Pin: Drawable {
         let text  = label as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 10),
-            .foregroundColor: NSColor(.accentColor)
+            .foregroundColor: NSColor.systemBlue
         ]
         let size = text.size(withAttributes: attrs)
         let pad: CGFloat = 4
@@ -53,7 +53,7 @@ extension Pin: Drawable {
         let text  = "\(number)" as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 9, weight: .medium),
-            .foregroundColor: NSColor(.accentColor)
+            .foregroundColor: NSColor.systemBlue
         ]
         let size = text.size(withAttributes: attrs)
         let pad: CGFloat = 3

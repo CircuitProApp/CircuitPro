@@ -29,7 +29,7 @@ final class CrosshairsView: NSView {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
 
         ctx.saveGState()
-        ctx.setStrokeColor(NSColor(.blue.opacity(0.6)).cgColor)
+        ctx.setStrokeColor(NSColor.systemBlue.cgColor)
         ctx.setLineWidth(1.0 / magnification)
 
         switch crosshairsStyle {

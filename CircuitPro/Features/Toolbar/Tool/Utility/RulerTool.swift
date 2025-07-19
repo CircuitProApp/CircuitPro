@@ -41,10 +41,11 @@ struct RulerTool: CanvasTool {
         guard let start = start else { return }
         let magnificationScale = 1.0 / context.magnification
         let isDarkMode = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let color: NSColor = isDarkMode ? .white : .black
 
         let currentEnd = (clicks >= 2 ? end ?? mouse : mouse)
 
-        ctx.setStrokeColor(NSColor(isDarkMode ? .white : .black).cgColor)
+        ctx.setStrokeColor(color.cgColor)
         ctx.setLineWidth(1 * magnificationScale) // 🔧 scale line width
         ctx.setLineCap(.round)
         ctx.move(to: start)
@@ -84,7 +85,7 @@ struct RulerTool: CanvasTool {
         let fontSize: CGFloat = 12 * magnificationScale // 🔧 scale font
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .medium),
-            .foregroundColor: NSColor(isDarkMode ? .white : .black)
+            .foregroundColor: color
         ]
         let text = NSAttributedString(string: labelText, attributes: attributes)
         let textSize = text.size()

@@ -39,6 +39,13 @@ class SchematicGraph {
     private(set) var edges: [ConnectionEdge.ID: ConnectionEdge] = [:]
     private(set) var adjacency: [ConnectionVertex.ID: Set<ConnectionEdge.ID>] = [:]
 
+    // MARK: - Drag State
+    private struct DragState {
+        let originalVertexPositions: [UUID: CGPoint]
+        let selectedEdges: [ConnectionEdge]
+    }
+    private var dragState: DragState?
+
     // MARK: - Public API
     
     /// The authoritative method for getting a vertex for a given point.
@@ -100,6 +107,90 @@ class SchematicGraph {
     /// that does not perform normalization.
     func moveVertex(id: ConnectionVertex.ID, to newPoint: CGPoint) {
         vertices[id]?.point = newPoint
+    }
+
+    // MARK: - Drag Lifecycle
+    
+    /// Call this when a drag gesture begins.
+    /// It caches the initial state of the graph needed for calculations.
+    public func beginDrag(selectedIDs: Set<UUID>) {
+        let edges = self.edges.values.filter { selectedIDs.contains($0.id) }
+        guard !edges.isEmpty else { return }
+        
+        self.dragState = DragState(
+            originalVertexPositions: self.vertices.mapValues { $0.point },
+            selectedEdges: edges
+        )
+    }
+
+    /// Call this repeatedly as the user drags.
+    /// It contains the complex BFS logic to update vertex positions.
+    public func updateDrag(by delta: CGPoint) {
+        guard let state = dragState else { return }
+
+        var newPositions: [UUID: CGPoint] = [:]
+        var queue: [UUID] = []
+        
+        // 1. Initial state: selected vertices move freely
+        let primaryMovableVertices = Set(state.selectedEdges.flatMap { [$0.start, $0.end] })
+        for id in primaryMovableVertices {
+            if let origin = state.originalVertexPositions[id] {
+                newPositions[id] = CGPoint(x: origin.x + delta.x, y: origin.y + delta.y)
+                queue.append(id)
+            }
+        }
+        
+        // 2. BFS to propagate constraints
+        var head = 0
+        while head < queue.count {
+            let junctionID = queue[head]
+            head += 1
+            
+            guard let junctionNewPos = newPositions[junctionID],
+                  let adjacentEdgeIDs = self.adjacency[junctionID] else { continue }
+
+            for edgeID in adjacentEdgeIDs {
+                // Check if the edge is one of the *initially* selected edges
+                let isSelectedEdge = state.selectedEdges.contains(where: { $0.id == edgeID })
+                guard let edge = self.edges[edgeID], !isSelectedEdge else { continue }
+                
+                let anchorID = edge.start == junctionID ? edge.end : edge.start
+                if newPositions[anchorID] != nil { continue } // Already processed
+
+                guard let anchorOrigPos = state.originalVertexPositions[anchorID],
+                      let junctionOrigPos = state.originalVertexPositions[junctionID] else { continue }
+                
+                let wasHorizontal = abs(anchorOrigPos.y - junctionOrigPos.y) < 1e-6
+                
+                let newAnchorPos: CGPoint
+                if wasHorizontal {
+                    newAnchorPos = CGPoint(x: anchorOrigPos.x, y: junctionNewPos.y)
+                } else { // Was vertical
+                    newAnchorPos = CGPoint(x: junctionNewPos.x, y: anchorOrigPos.y)
+                }
+                
+                newPositions[anchorID] = newAnchorPos
+                queue.append(anchorID)
+            }
+        }
+
+        // 3. Atomic update: Apply all calculated positions
+        for (id, pos) in newPositions {
+            self.moveVertex(id: id, to: pos)
+        }
+    }
+
+    /// Call this when the drag gesture ends.
+    /// It normalizes the graph and cleans up the temporary state.
+    public func endDrag() {
+        guard let state = dragState else { return }
+        
+        // Use the original vertex keys to know which part of the graph was affected.
+        let affectedVertices = Set(state.originalVertexPositions.keys)
+        normalize(around: affectedVertices)
+        
+        // Clean up
+        self.dragState = nil
     }
     
     // MARK: - Graph Normalization
