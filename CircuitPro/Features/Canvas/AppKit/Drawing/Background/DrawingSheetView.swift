@@ -10,7 +10,7 @@ import AppKit
 // MARK: - DrawingSheetView ---------------------------------------------------
 final class DrawingSheetView: NSView {
 
-    var sheetSize: PaperSize = .a4 { didSet { invalidate() } }
+    var sheetSize: PaperSize = .iso(.a4) { didSet { invalidate() } }
     var orientation: PaperOrientation = .portrait { didSet { invalidate() } }
 
     private let graphicColor: NSColor = NSColor(name: nil) { appearance in
@@ -24,7 +24,7 @@ final class DrawingSheetView: NSView {
     var cellValues: [String: String] = [
         "Title": "Untitled",
         "Units": "mm",
-        "Size": PaperSize.a4.name.uppercased()
+        "Size": PaperSize.iso(.a4).name.uppercased()
     ] { didSet { invalidate() } }
 
     // Constants --------------------------------------------------------------

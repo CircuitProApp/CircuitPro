@@ -83,7 +83,7 @@ final class WorkbenchView: NSView {
         didSet { crosshairsView?.crosshairsStyle = crosshairsStyle }
     }
 
-    var paperSize: PaperSize = .a4 {
+    var paperSize: PaperSize = .iso(.a4) {
         didSet {
             sheetView?.sheetSize = paperSize
             layout.refreshSheetSize()
