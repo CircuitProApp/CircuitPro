@@ -9,7 +9,7 @@ import AppKit
 
 final class DocumentContainerView: NSView {
 
-    let workspaceBackgroundView = WorkspaceBackgroundView()
+    let documentBackgroundView = DocumentBackgroundView()
     let workbenchView: WorkbenchView
 
     override var isFlipped: Bool { true }
@@ -18,7 +18,7 @@ final class DocumentContainerView: NSView {
         self.workbenchView = workbench
         super.init(frame: .zero)
         
-        addSubview(workspaceBackgroundView)
+        addSubview(documentBackgroundView)
         addSubview(workbenchView)
     }
 
@@ -28,7 +28,7 @@ final class DocumentContainerView: NSView {
 
     override func layout() {
         super.layout()
-        workspaceBackgroundView.frame = bounds
+        documentBackgroundView.frame = bounds
         
         let wbSize = workbenchView.frame.size
         let mySize = bounds.size
