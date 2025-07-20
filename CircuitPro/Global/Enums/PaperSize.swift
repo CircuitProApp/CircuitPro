@@ -63,6 +63,11 @@ enum PaperSize {
         }
     }
 
+    var aspectRatio: CGFloat {
+        let (w, h) = dimensions
+        return w / h
+    }
+
     var name: String {
         switch self {
         case .iso(let s):  return s.name

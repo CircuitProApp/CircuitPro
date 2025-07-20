@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import UniformTypeIdentifiers
 
 final class WorkbenchView: NSView {
 
@@ -116,6 +117,9 @@ final class WorkbenchView: NSView {
         super.init(frame: frame)
         wantsLayer = true
         layer?.backgroundColor = NSColor.white.cgColor
+        
+        self.registerForDraggedTypes([.transferableComponent])
+        
         _ = layout
     }
 
@@ -192,4 +196,46 @@ final class WorkbenchView: NSView {
     // old public helpers (still used by all gesture classes)
     func snap(_ p: CGPoint) -> CGPoint    { snapService.snap(p) }
     func snapDelta(_ v: CGFloat) -> CGFloat { snapService.snapDelta(v) }
+    
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let pasteboard = sender.draggingPasteboard
+        guard pasteboard.canReadItem(withDataConformingToTypes: [UTType.transferableComponent.identifier]) else {
+            return false
+        }
+
+        if let data = pasteboard.data(forType: .transferableComponent) {
+            do {
+                let component = try JSONDecoder().decode(TransferableComponent.self, from: data)
+
+                let windowPoint = sender.draggingLocation
+                guard let scrollView = self.enclosingScrollView,
+                      let contentView = scrollView.contentView as? NSClipView else {
+                    return false
+                }
+
+                let pointInClip = contentView.convert(windowPoint, from: nil)
+                let pointInWorkbench = self.convert(pointInClip, from: contentView)
+
+                let unscaledPoint = CGPoint(
+                    x: pointInWorkbench.x / scrollView.magnification,
+                    y: pointInWorkbench.y / scrollView.magnification
+                )
+
+                print("Dropped component: \(component.componentUUID) at \(unscaledPoint)")
+
+ 
+                return true
+
+            } catch {
+                print("Failed to decode TransferableComponent:", error)
+            }
+        }
+
+        return false
+    }
+
+}
+
+extension NSPasteboard.PasteboardType {
+    static let transferableComponent = NSPasteboard.PasteboardType(UTType.transferableComponent.identifier)
 }

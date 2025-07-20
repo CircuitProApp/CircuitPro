@@ -71,16 +71,16 @@ struct CanvasView: NSViewRepresentable {
         let workbench = context.coordinator.workbench
         let documentContainer = context.coordinator.documentContainer
 
-        let paperCanvasSize = manager.paperSize.canvasSize(orientation: workbench.sheetOrientation)
-        let padding: CGFloat = 1000 // 500 on each side
-        let containerSize = CGSize(width: paperCanvasSize.width + padding, height: paperCanvasSize.height + padding)
+        let workbenchSize = manager.paperSize.canvasSize(orientation: workbench.sheetOrientation)
+        let scaleFactor: CGFloat = 1.4
+        let containerSize = CGSize(width: workbenchSize.width * scaleFactor, height: workbenchSize.height * scaleFactor)
 
         if documentContainer.frame.size != containerSize {
             documentContainer.frame.size = containerSize
         }
         
-        if workbench.frame.size != paperCanvasSize {
-            workbench.frame.size = paperCanvasSize
+        if workbench.frame.size != workbenchSize {
+            workbench.frame.size = workbenchSize
         }
         
         // Pass state to Workbench

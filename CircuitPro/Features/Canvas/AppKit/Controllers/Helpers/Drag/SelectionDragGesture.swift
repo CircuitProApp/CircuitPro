@@ -60,33 +60,8 @@ final class SelectionDragGesture: DragGesture {
         }
         didMove = true
         
-        var moveDelta = CGPoint(x: workbench.snapDelta(rawDelta.x),
+        let moveDelta = CGPoint(x: workbench.snapDelta(rawDelta.x),
                                 y: workbench.snapDelta(rawDelta.y))
-
-        if let sheetFrame = workbench.sheetView?.frame {
-            for id in workbench.selectedIDs {
-                if let originalPos = originalPositions[id],
-                   let element = workbench.elements.first(where: { $0.id == id }) {
-                    
-                    let newPos = CGPoint(x: originalPos.x + moveDelta.x, y: originalPos.y + moveDelta.y)
-                    let elementBounds = element.boundingBox
-                    let newBounds = elementBounds.offsetBy(dx: newPos.x - element.transformable.position.x, dy: newPos.y - element.transformable.position.y)
-
-                    if newBounds.minX < sheetFrame.minX {
-                        moveDelta.x -= newBounds.minX - sheetFrame.minX
-                    }
-                    if newBounds.maxX > sheetFrame.maxX {
-                        moveDelta.x -= newBounds.maxX - sheetFrame.maxX
-                    }
-                    if newBounds.minY < sheetFrame.minY {
-                        moveDelta.y -= newBounds.minY - sheetFrame.minY
-                    }
-                    if newBounds.maxY > sheetFrame.maxY {
-                        moveDelta.y -= newBounds.maxY - sheetFrame.maxY
-                    }
-                }
-            }
-        }
 
         // --- Part 1: Move standard canvas elements ---
         if !originalPositions.isEmpty {

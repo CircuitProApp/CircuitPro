@@ -9,31 +9,35 @@ import AppKit
 
 final class DocumentContainerView: NSView {
 
-    let pasteboardView = PasteboardView()
+    let workspaceBackgroundView = WorkspaceBackgroundView()
     let workbenchView: WorkbenchView
+
+    override var isFlipped: Bool { true }
 
     init(workbench: WorkbenchView) {
         self.workbenchView = workbench
         super.init(frame: .zero)
         
-        pasteboardView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(pasteboardView)
-        
-        workbenchView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(workspaceBackgroundView)
         addSubview(workbenchView)
-
-        NSLayoutConstraint.activate([
-            pasteboardView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            pasteboardView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            pasteboardView.topAnchor.constraint(equalTo: topAnchor),
-            pasteboardView.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            workbenchView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            workbenchView.centerYAnchor.constraint(equalTo: centerYAnchor)
-        ])
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        workspaceBackgroundView.frame = bounds
+        
+        let wbSize = workbenchView.frame.size
+        let mySize = bounds.size
+        
+        let origin = CGPoint(
+            x: (mySize.width - wbSize.width) / 2,
+            y: (mySize.height - wbSize.height) / 2
+        )
+        
+        workbenchView.frame = CGRect(origin: origin, size: wbSize)
     }
 }
