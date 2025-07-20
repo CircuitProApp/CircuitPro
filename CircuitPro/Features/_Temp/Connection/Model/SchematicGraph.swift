@@ -8,9 +8,15 @@
 import Foundation
 import SwiftUI
 
+enum VertexOwnership: Hashable {
+    case free
+    case pin(symbolID: UUID, pinID: UUID)
+}
+
 struct ConnectionVertex: Identifiable, Hashable {
     let id: UUID
     var point: CGPoint
+    var ownership: VertexOwnership
 }
 
 struct ConnectionEdge: Identifiable, Hashable {
@@ -43,6 +49,7 @@ class SchematicGraph {
     private struct DragState {
         let originalVertexPositions: [UUID: CGPoint]
         let selectedEdges: [ConnectionEdge]
+        let verticesToMove: Set<UUID>
     }
     private var dragState: DragState?
 
@@ -59,7 +66,23 @@ class SchematicGraph {
             return splitEdgeAndInsertVertex(edgeID: edgeToSplit.id, at: point)!
         }
         // The point is in empty space.
-        return addVertex(at: point).id
+        return addVertex(at: point, ownership: .free).id
+    }
+    
+    /// Finds a vertex for a pin, or creates one, promoting a junction if necessary.
+    func getOrCreatePinVertex(at point: CGPoint, symbolID: UUID, pinID: UUID) -> ConnectionVertex.ID {
+        let ownership: VertexOwnership = .pin(symbolID: symbolID, pinID: pinID)
+        if let existingVertex = findVertex(at: point) {
+            // A vertex already exists here. We must claim it.
+            vertices[existingVertex.id]?.ownership = ownership
+            return existingVertex.id
+        }
+        if let edgeToSplit = findEdge(at: point) {
+            // A pin is being placed on an existing wire. Split it and claim the new vertex.
+            return splitEdgeAndInsertVertex(edgeID: edgeToSplit.id, at: point, ownership: ownership)!
+        }
+        // The pin is in empty space.
+        return addVertex(at: point, ownership: ownership).id
     }
     
     /// Creates a new orthogonal connection and normalizes the graph.
@@ -106,7 +129,9 @@ class SchematicGraph {
     /// Moves a vertex to a new point. This is a low-level operation
     /// that does not perform normalization.
     func moveVertex(id: ConnectionVertex.ID, to newPoint: CGPoint) {
-        vertices[id]?.point = newPoint
+        if vertices[id]?.point != newPoint {
+            vertices[id]?.point = newPoint
+        }
     }
 
     // MARK: - Drag Lifecycle
@@ -114,12 +139,28 @@ class SchematicGraph {
     /// Call this when a drag gesture begins.
     /// It caches the initial state of the graph needed for calculations.
     public func beginDrag(selectedIDs: Set<UUID>) {
-        let edges = self.edges.values.filter { selectedIDs.contains($0.id) }
-        guard !edges.isEmpty else { return }
+        // A drag can affect selected edges OR vertices attached to selected symbols.
+        
+        // 1. Find vertices that are part of selected symbols
+        let pinVertices = vertices.values.filter { vertex in
+            if case .pin(let symbolID, _) = vertex.ownership {
+                return selectedIDs.contains(symbolID)
+            }
+            return false
+        }
+        let pinVertexIDs = Set(pinVertices.map(\.id))
+
+        // 2. Find vertices connected to selected edges
+        let selectedEdges = self.edges.values.filter { selectedIDs.contains($0.id) }
+        let edgeVertexIDs = Set(selectedEdges.flatMap { [$0.start, $0.end] })
+        
+        let allMovableVertexIDs = pinVertexIDs.union(edgeVertexIDs)
+        guard !allMovableVertexIDs.isEmpty else { return }
         
         self.dragState = DragState(
             originalVertexPositions: self.vertices.mapValues { $0.point },
-            selectedEdges: edges
+            selectedEdges: selectedEdges,
+            verticesToMove: allMovableVertexIDs
         )
     }
 
@@ -129,14 +170,12 @@ class SchematicGraph {
         guard let state = dragState else { return }
 
         var newPositions: [UUID: CGPoint] = [:]
-        var queue: [UUID] = []
+        var queue: [UUID] = Array(state.verticesToMove)
         
         // 1. Initial state: selected vertices move freely
-        let primaryMovableVertices = Set(state.selectedEdges.flatMap { [$0.start, $0.end] })
-        for id in primaryMovableVertices {
+        for id in state.verticesToMove {
             if let origin = state.originalVertexPositions[id] {
                 newPositions[id] = CGPoint(x: origin.x + delta.x, y: origin.y + delta.y)
-                queue.append(id)
             }
         }
         
@@ -150,12 +189,20 @@ class SchematicGraph {
                   let adjacentEdgeIDs = self.adjacency[junctionID] else { continue }
 
             for edgeID in adjacentEdgeIDs {
-                // Check if the edge is one of the *initially* selected edges
+                guard let edge = self.edges[edgeID] else { continue }
+                
+                // If the edge was part of the initial edge selection, its vertices are already moving.
+                // If not, it's a constraining edge.
                 let isSelectedEdge = state.selectedEdges.contains(where: { $0.id == edgeID })
-                guard let edge = self.edges[edgeID], !isSelectedEdge else { continue }
+                if isSelectedEdge { continue }
                 
                 let anchorID = edge.start == junctionID ? edge.end : edge.start
                 if newPositions[anchorID] != nil { continue } // Already processed
+
+                // Pin-owned vertices that aren't part of the selection are immovable anchors.
+                if let anchorVertex = vertices[anchorID], case .pin = anchorVertex.ownership {
+                    continue
+                }
 
                 guard let anchorOrigPos = state.originalVertexPositions[anchorID],
                       let junctionOrigPos = state.originalVertexPositions[junctionID] else { continue }
@@ -215,7 +262,9 @@ class SchematicGraph {
         }
         // A second pass to clean up orphans created by the first pass
         for vertexID in allAffectedVertices where vertices[vertexID] != nil && (adjacency[vertexID]?.isEmpty ?? false) {
-            removeVertex(id: vertexID)
+            if case .free = vertices[vertexID]?.ownership {
+                removeVertex(id: vertexID)
+            }
         }
     }
     
@@ -254,6 +303,8 @@ class SchematicGraph {
     
     private func cleanupCollinearSegments(at vertexID: ConnectionVertex.ID) {
         guard let centerVertex = vertices[vertexID] else { return }
+        // We only clean up free junctions. Pin-owned vertices are sacred.
+        guard case .free = centerVertex.ownership else { return }
         processCollinearRun(for: centerVertex, isHorizontal: true)
         guard vertices[vertexID] != nil else { return } // The vertex might have been removed
         processCollinearRun(for: centerVertex, isHorizontal: false)
@@ -273,7 +324,10 @@ class SchematicGraph {
             }
             
             if coincidentGroup.count > 1 {
-                let survivor = coincidentGroup.first!
+                // Important: A pin-owned vertex always wins and becomes the survivor.
+                let survivor = coincidentGroup.first(where: { if case .pin = $0.ownership { return true } else { return false } })
+                               ?? coincidentGroup.first!
+                
                 processedIDs.insert(survivor.id)
                 modifiedVertices.insert(survivor.id)
                 
@@ -320,6 +374,12 @@ class SchematicGraph {
         // 2. Decide which vertices are topologically significant and must be kept
         var keptIDs: Set<ConnectionVertex.ID> = []
         for vertex in run {
+            // Always keep pin-owned vertices
+            if case .pin = vertex.ownership {
+                keptIDs.insert(vertex.id)
+                continue
+            }
+            
             let (h, v) = getCollinearNeighbors(for: vertex)
             let collinearNeighborCount = isHorizontal ? h.count : v.count
             
@@ -395,8 +455,8 @@ class SchematicGraph {
     }
     
     @discardableResult
-    private func addVertex(at point: CGPoint) -> ConnectionVertex {
-        let vertex = ConnectionVertex(id: UUID(), point: point)
+    private func addVertex(at point: CGPoint, ownership: VertexOwnership) -> ConnectionVertex {
+        let vertex = ConnectionVertex(id: UUID(), point: point, ownership: ownership)
         vertices[vertex.id] = vertex
         adjacency[vertex.id] = []
         return vertex
@@ -419,12 +479,12 @@ class SchematicGraph {
     }
     
     @discardableResult
-    private func splitEdgeAndInsertVertex(edgeID: UUID, at point: CGPoint) -> ConnectionVertex.ID? {
+    private func splitEdgeAndInsertVertex(edgeID: UUID, at point: CGPoint, ownership: VertexOwnership = .free) -> ConnectionVertex.ID? {
         guard let edgeToSplit = edges[edgeID] else { return nil }
         let startID = edgeToSplit.start
         let endID = edgeToSplit.end
         removeEdge(id: edgeID)
-        let newVertex = addVertex(at: point)
+        let newVertex = addVertex(at: point, ownership: ownership)
         addEdge(from: startID, to: newVertex.id)
         addEdge(from: newVertex.id, to: endID)
         return newVertex.id
@@ -454,6 +514,15 @@ class SchematicGraph {
         for edge in edges.values {
             guard let startVertex = vertices[edge.start], let endVertex = vertices[edge.end] else { continue }
             if isPoint(point, onSegmentBetween: startVertex.point, p2: endVertex.point) { return edge }
+        }
+        return nil
+    }
+
+    func findVertex(ownedBy symbolID: UUID, pinID: UUID) -> ConnectionVertex.ID? {
+        for vertex in vertices.values {
+            if case .pin(let sID, let pID) = vertex.ownership, sID == symbolID, pID == pinID {
+                return vertex.id
+            }
         }
         return nil
     }

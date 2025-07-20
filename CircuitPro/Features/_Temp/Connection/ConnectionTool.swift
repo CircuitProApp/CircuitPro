@@ -48,8 +48,8 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
             if startTarget == nil && endTarget == nil && startPoint == loc { return .noResult }
 
-            let startVertexID = graph.getOrCreateVertex(at: startPoint)
-            let endVertexID = graph.getOrCreateVertex(at: loc)
+            let startVertexID = getOrCreateVertex(at: startPoint, from: startTarget, in: graph)
+            let endVertexID = getOrCreateVertex(at: loc, from: endTarget, in: graph)
 
             if startVertexID == endVertexID {
                 state = .idle
@@ -68,6 +68,7 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
                 // 4.1. Only toggle the direction if a straight line was just drawn
                 let newDirection = isStraightLine ? direction.toggled() : direction
                 
+                // FIXME: The VertexType here is a guess. We don't have enough info.
                 let newStartTarget = CanvasHitTarget.connection(part: .vertex(id: endVertexID, position: loc, type: .corner))
                 state = .drawing(from: newStartTarget, at: loc, direction: newDirection)
             } else {
@@ -120,6 +121,17 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
     
     // MARK: - Private Helpers
+    
+    /// Gets or creates a vertex in the graph, using pin information if available.
+    private func getOrCreateVertex(at point: CGPoint, from target: CanvasHitTarget?, in graph: SchematicGraph) -> UUID {
+        if let target = target, case .canvasElement(let part) = target, case .pin(let pinID, let symbolID, _) = part {
+            // This is a pin, so create a special vertex for it.
+            return graph.getOrCreatePinVertex(at: point, symbolID: symbolID!, pinID: pinID)
+        } else {
+            // This is a free point or a junction on an existing wire.
+            return graph.getOrCreateVertex(at: point)
+        }
+    }
     
     /// Determines the initial drawing direction based on the object under the cursor.
     private func determineInitialDirection(from hitTarget: CanvasHitTarget?) -> DrawingDirection {

@@ -25,6 +25,9 @@ final class WorkbenchView: NSView {
             elementsView?.elements  = elements
             handlesView?.elements   = elements
             previewView?.needsDisplay = true
+            
+            // Update the schematic graph with new pin positions
+            syncPinPositionsToGraph()
         }
     }
     
@@ -164,16 +167,34 @@ final class WorkbenchView: NSView {
                     isEnabled: isSnappingEnabled)
     }
     
-    private func pinPositions(from elems: [CanvasElement]) -> [CGPoint] {
-        elems.compactMap { elem -> SymbolElement? in
-            if case .symbol(let s) = elem { return s }
-            return nil
-        }
-        .flatMap { sym -> [CGPoint] in
-            sym.symbol.pins.map { pin in
-                sym.instance.position + pin.position.rotated(by: sym.instance.rotation)
+    /// Ensures the schematic graph has vertices for every symbol pin and that their
+    /// positions are up-to-date.
+    private func syncPinPositionsToGraph() {
+        for element in elements {
+            guard case .symbol(let symbolElement) = element else { continue }
+            
+            let transform = CGAffineTransform(translationX: symbolElement.position.x, y: symbolElement.position.y)
+                .rotated(by: symbolElement.rotation)
+
+            for pin in symbolElement.symbol.pins {
+                let worldPinPosition = pin.position.applying(transform)
+
+                // First, check if the vertex already exists for this pin.
+                if let vertexID = schematicGraph.findVertex(ownedBy: symbolElement.id, pinID: pin.id) {
+                    // It exists, just move it to the correct position.
+                    schematicGraph.moveVertex(id: vertexID, to: worldPinPosition)
+                } else {
+                    // It doesn't exist, so we must create it.
+                    // This is the operation that should only happen once per pin.
+                    schematicGraph.getOrCreatePinVertex(
+                        at: worldPinPosition,
+                        symbolID: symbolElement.id,
+                        pinID: pin.id
+                    )
+                }
             }
         }
+        connectionsView?.needsDisplay = true
     }
 
     // old public helpers (still used by all gesture classes)

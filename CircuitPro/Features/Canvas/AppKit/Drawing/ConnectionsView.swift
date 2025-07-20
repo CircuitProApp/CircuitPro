@@ -66,7 +66,22 @@ final class ConnectionsView: NSView {
         ctx.setFillColor(NSColor.systemBlue.cgColor)
         
         for vertex in schematicGraph.vertices.values {
-            if schematicGraph.adjacency[vertex.id]?.count ?? 0 > 2 {
+            let connectionCount = schematicGraph.adjacency[vertex.id]?.count ?? 0
+            var isJunction = false
+
+            if case .pin = vertex.ownership {
+                // A pin is a junction if it's on a wire or at a corner (2+ connections).
+                if connectionCount >= 2 {
+                    isJunction = true
+                }
+            } else {
+                // A free vertex is a junction if it's a T-junction or more (3+ connections).
+                if connectionCount > 2 {
+                    isJunction = true
+                }
+            }
+            
+            if isJunction {
                 let rect = CGRect(x: vertex.point.x - junctionRadius,
                                   y: vertex.point.y - junctionRadius,
                                   width: junctionRadius * 2,
