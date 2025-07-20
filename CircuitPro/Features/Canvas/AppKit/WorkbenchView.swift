@@ -24,7 +24,6 @@ final class WorkbenchView: NSView {
         didSet {
             elementsView?.elements  = elements
             handlesView?.elements   = elements
-            connectionsView?.allPinPositions = pinPositions(from: elements) 
             previewView?.needsDisplay = true
         }
     }

@@ -15,7 +15,6 @@ final class ConnectionsView: NSView {
     var schematicGraph: SchematicGraph = .init()             { didSet { needsDisplay = true } }
     var selectedIDs: Set<UUID> = []            { didSet { needsDisplay = true } }
     var marqueeSelectedIDs: Set<UUID> = []     { didSet { needsDisplay = true } }
-    var allPinPositions: [CGPoint] = []        { didSet { needsDisplay = true } }
     var magnification: CGFloat = 1.0           { didSet { needsDisplay = true } }
 
     // MARK: – View flags
