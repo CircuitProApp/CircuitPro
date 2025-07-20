@@ -20,14 +20,6 @@ final class DrawingSheetView: NSView {
             return .black
         }
     }
-    
-    private let backgroundColor: NSColor = NSColor(name: nil) { appearance in
-        if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
-            return .black
-        } else {
-            return .white
-        }
-    }
 
     var cellValues: [String: String] = [
         "Title": "Untitled",
@@ -116,7 +108,7 @@ final class DrawingSheetView: NSView {
             : CGRect(x: outer.minX, y: inner.maxY, width: outer.width, height: outer.maxY - inner.maxY)
 
         // Fill the background first
-        ctx.setFillColor(backgroundColor.cgColor)
+        ctx.setFillColor(NSColor.white.cgColor)
         ctx.fill(bgRect)
 
         // Then draw ticks and labels on top
@@ -160,7 +152,7 @@ final class DrawingSheetView: NSView {
             : CGRect(x: inner.maxX, y: outer.minY, width: outer.maxX - inner.maxX, height: outer.height)
 
         // Fill the background first
-        ctx.setFillColor(backgroundColor.cgColor)
+        ctx.setFillColor(NSColor.white.cgColor)
         ctx.fill(bgRect)
 
         // Then draw ticks and labels on top
@@ -200,7 +192,7 @@ final class DrawingSheetView: NSView {
             height: blockHeight
         )
         
-        context.setFillColor(backgroundColor.cgColor)
+        context.setFillColor(NSColor.white.cgColor)
         context.fill(rect)
 
         context.setStrokeColor(graphicColor.cgColor)
