@@ -12,12 +12,14 @@ struct DrawingMetrics {
     let outerBounds: CGRect
     let innerBounds: CGRect
     let titleBlockFrame: CGRect
-    let tickSpacing: CGFloat
+    let horizontalTickSpacing: CGFloat
+    let verticalTickSpacing: CGFloat
 
-    init(viewBounds: CGRect, inset: CGFloat, tickSpacing: CGFloat, cellHeight: CGFloat, cellValues: [String: String]) {
+    init(viewBounds: CGRect, inset: CGFloat, horizontalTickSpacing: CGFloat, verticalTickSpacing: CGFloat, cellHeight: CGFloat, cellValues: [String: String]) {
         self.outerBounds = viewBounds.insetBy(dx: 0.5, dy: 0.5)
         self.innerBounds = outerBounds.insetBy(dx: inset, dy: inset)
-        self.tickSpacing = tickSpacing
+        self.horizontalTickSpacing = horizontalTickSpacing
+        self.verticalTickSpacing = verticalTickSpacing
 
         let rowCount = cellValues.count
         let blockWidth = cellHeight * 8
@@ -48,6 +50,7 @@ struct RulerDrawer {
     let position: Position
     let graphicColor: NSColor
     let safeFont: (CGFloat, NSFont.Weight) -> NSFont
+    let showLabels: Bool
 
     private func attrs(font: NSFont) -> [NSAttributedString.Key: Any] {
         [.font: font, .foregroundColor: graphicColor]
@@ -68,57 +71,57 @@ struct RulerDrawer {
     func draw(in context: CGContext, metrics: DrawingMetrics) {
         switch position {
         case .top:
-            drawHorizontalRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, isTop: true, tickSpacing: metrics.tickSpacing)
+            drawRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, tickSpacing: metrics.horizontalTickSpacing, isVertical: false, isPrimaryEdge: true)
         case .bottom:
-            drawHorizontalRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, isTop: false, tickSpacing: metrics.tickSpacing)
+            drawRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, tickSpacing: metrics.horizontalTickSpacing, isVertical: false, isPrimaryEdge: false)
         case .left:
-            drawVerticalRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, isLeft: true, tickSpacing: metrics.tickSpacing)
+            drawRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, tickSpacing: metrics.verticalTickSpacing, isVertical: true, isPrimaryEdge: true)
         case .right:
-            drawVerticalRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, isLeft: false, tickSpacing: metrics.tickSpacing)
+            drawRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, tickSpacing: metrics.verticalTickSpacing, isVertical: true, isPrimaryEdge: false)
         }
     }
 
-    private func drawHorizontalRuler(_ ctx: CGContext, inner: CGRect, outer: CGRect, isTop: Bool, tickSpacing: CGFloat) {
+    private func drawRuler(_ ctx: CGContext, inner: CGRect, outer: CGRect, tickSpacing: CGFloat, isVertical: Bool, isPrimaryEdge: Bool) {
+        guard tickSpacing > 0 else { return }
         let font = safeFont(9, .regular)
         let attr = attrs(font: font)
 
-        let yTick = isTop ? inner.minY : inner.maxY
-        let yLabel = isTop ? (inner.minY + outer.minY) * 0.5 : (inner.maxY + outer.maxY) * 0.5
+        if isVertical {
+            let xTick = isPrimaryEdge ? inner.minX : inner.maxX
+            let xLabel = isPrimaryEdge ? (inner.minX + outer.minX) * 0.5 : (inner.maxX + outer.maxX) * 0.5
+            let yRange = stride(from: inner.minY + tickSpacing, to: inner.maxY, by: tickSpacing)
 
-        let xRange = stride(from: inner.minX + tickSpacing, to: inner.maxX, by: tickSpacing)
+            for (i, y) in yRange.enumerated() {
+                ctx.move(to: .init(x: xTick, y: y))
+                ctx.addLine(to: .init(x: isPrimaryEdge ? outer.minX : outer.maxX, y: y))
+                ctx.strokePath()
 
-        for (i, x) in xRange.enumerated() {
-            ctx.move(to: .init(x: x, y: yTick))
-            ctx.addLine(to: .init(x: x, y: isTop ? outer.minY : outer.maxY))
-            ctx.strokePath()
+                if showLabels {
+                    let prevY = y - tickSpacing
+                    let mid = (y + prevY) * 0.5
+                    let text = labelForIndex(i, isNumber: false) as NSString
+                    let size = text.size(withAttributes: attr)
+                    text.draw(at: .init(x: xLabel - size.width * 0.5, y: mid - size.height * 0.5), withAttributes: attr)
+                }
+            }
+        } else { // Horizontal
+            let yTick = isPrimaryEdge ? inner.minY : inner.maxY
+            let yLabel = isPrimaryEdge ? (inner.minY + outer.minY) * 0.5 : (inner.maxY + outer.maxY) * 0.5
+            let xRange = stride(from: inner.minX + tickSpacing, to: inner.maxX, by: tickSpacing)
 
-            let prevX = x - tickSpacing
-            let mid = (x + prevX) * 0.5
-            let text = labelForIndex(i, isNumber: true) as NSString
-            let size = text.size(withAttributes: attr)
-            text.draw(at: .init(x: mid - size.width * 0.5, y: yLabel - size.height * 0.5), withAttributes: attr)
-        }
-    }
+            for (i, x) in xRange.enumerated() {
+                ctx.move(to: .init(x: x, y: yTick))
+                ctx.addLine(to: .init(x: x, y: isPrimaryEdge ? outer.minY : outer.maxY))
+                ctx.strokePath()
 
-    private func drawVerticalRuler(_ ctx: CGContext, inner: CGRect, outer: CGRect, isLeft: Bool, tickSpacing: CGFloat) {
-        let font = safeFont(9, .regular)
-        let attr = attrs(font: font)
-
-        let xTick = isLeft ? inner.minX : inner.maxX
-        let xLabel = isLeft ? (inner.minX + outer.minX) * 0.5 : (inner.maxX + outer.maxX) * 0.5
-
-        let yRange = stride(from: inner.minY + tickSpacing, to: inner.maxY, by: tickSpacing)
-
-        for (i, y) in yRange.enumerated() {
-            ctx.move(to: .init(x: xTick, y: y))
-            ctx.addLine(to: .init(x: isLeft ? outer.minX : outer.maxX, y: y))
-            ctx.strokePath()
-
-            let prevY = y - tickSpacing
-            let mid = (y + prevY) * 0.5
-            let text = labelForIndex(i, isNumber: false) as NSString
-            let size = text.size(withAttributes: attr)
-            text.draw(at: .init(x: xLabel - size.width * 0.5, y: mid - size.height * 0.5), withAttributes: attr)
+                if showLabels {
+                    let prevX = x - tickSpacing
+                    let mid = (x + prevX) * 0.5
+                    let text = labelForIndex(i, isNumber: true) as NSString
+                    let size = text.size(withAttributes: attr)
+                    text.draw(at: .init(x: mid - size.width * 0.5, y: yLabel - size.height * 0.5), withAttributes: attr)
+                }
+            }
         }
     }
 }

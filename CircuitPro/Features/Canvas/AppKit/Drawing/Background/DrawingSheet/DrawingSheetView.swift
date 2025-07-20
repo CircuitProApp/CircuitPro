@@ -10,8 +10,15 @@ import AppKit
 // MARK: - DrawingSheetView ---------------------------------------------------
 final class DrawingSheetView: NSView {
 
+    enum RulerDivision {
+        case byCount(Int)
+        case bySpacing(CGFloat)
+    }
+
     var sheetSize: PaperSize = .iso(.a4) { didSet { invalidate() } }
     var orientation: PaperOrientation = .landscape { didSet { invalidate() } }
+    var rulerDivision: RulerDivision = .bySpacing(10) { didSet { invalidate() } }
+    var showRulerLabels: Bool = true { didSet { invalidate() } }
 
     private let graphicColor: NSColor = NSColor(name: nil) { appearance in
         if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
@@ -25,7 +32,6 @@ final class DrawingSheetView: NSView {
 
     // Constants --------------------------------------------------------------
     private let inset: CGFloat = 20
-    private let tickSpacing: CGFloat = 100
     private let cellHeight: CGFloat = 25
     private let cellPad: CGFloat = 10
     private let unitsPerMM: CGFloat = 10    // 10 canvas units == 1 mm
@@ -44,10 +50,26 @@ final class DrawingSheetView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         
+        let initialMetrics = DrawingMetrics(viewBounds: bounds, inset: inset, horizontalTickSpacing: 0, verticalTickSpacing: 0, cellHeight: cellHeight, cellValues: cellValues)
+        
+        let hSpacing: CGFloat
+        let vSpacing: CGFloat
+        
+        switch rulerDivision {
+        case .byCount(let count):
+            guard count > 0 else { return }
+            hSpacing = initialMetrics.innerBounds.width / CGFloat(count)
+            vSpacing = initialMetrics.innerBounds.height / CGFloat(count)
+        case .bySpacing(let spacing):
+            hSpacing = spacing * unitsPerMM
+            vSpacing = spacing * unitsPerMM
+        }
+        
         let metrics = DrawingMetrics(
             viewBounds: bounds,
             inset: inset,
-            tickSpacing: tickSpacing,
+            horizontalTickSpacing: hSpacing,
+            verticalTickSpacing: vSpacing,
             cellHeight: cellHeight,
             cellValues: cellValues
         )
@@ -68,25 +90,27 @@ final class DrawingSheetView: NSView {
 
         BorderDrawer().draw(in: ctx, metrics: metrics)
         
-        let titleDrawer = TitleBlockDrawer(
-            cellValues: cellValues,
-            graphicColor: graphicColor,
-            cellPad: cellPad,
-            cellHeight: cellHeight,
-            safeFont: safeFont
-        )
-        titleDrawer.draw(in: ctx, metrics: metrics)
+        if !cellValues.isEmpty {
+            let titleDrawer = TitleBlockDrawer(
+                cellValues: cellValues,
+                graphicColor: graphicColor,
+                cellPad: cellPad,
+                cellHeight: cellHeight,
+                safeFont: safeFont
+            )
+            titleDrawer.draw(in: ctx, metrics: metrics)
+        }
         
-        let rulerDrawerTop = RulerDrawer(position: .top, graphicColor: graphicColor, safeFont: safeFont)
+        let rulerDrawerTop = RulerDrawer(position: .top, graphicColor: graphicColor, safeFont: safeFont, showLabels: showRulerLabels)
         rulerDrawerTop.draw(in: ctx, metrics: metrics)
         
-        let rulerDrawerBottom = RulerDrawer(position: .bottom, graphicColor: graphicColor, safeFont: safeFont)
+        let rulerDrawerBottom = RulerDrawer(position: .bottom, graphicColor: graphicColor, safeFont: safeFont, showLabels: showRulerLabels)
         rulerDrawerBottom.draw(in: ctx, metrics: metrics)
         
-        let rulerDrawerLeft = RulerDrawer(position: .left, graphicColor: graphicColor, safeFont: safeFont)
+        let rulerDrawerLeft = RulerDrawer(position: .left, graphicColor: graphicColor, safeFont: safeFont, showLabels: showRulerLabels)
         rulerDrawerLeft.draw(in: ctx, metrics: metrics)
         
-        let rulerDrawerRight = RulerDrawer(position: .right, graphicColor: graphicColor, safeFont: safeFont)
+        let rulerDrawerRight = RulerDrawer(position: .right, graphicColor: graphicColor, safeFont: safeFont, showLabels: showRulerLabels)
         rulerDrawerRight.draw(in: ctx, metrics: metrics)
     }
 
