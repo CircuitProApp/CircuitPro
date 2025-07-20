@@ -88,3 +88,13 @@ ConnectionElement is the highest level Connection representation that holds Conn
 ### Test 4
 - Action: Drag E1 along Y by 50
 - Result E1 elongates, E1 becomes (0,250) to (0,100)
+
+
+## T-Shape Edge Drag
+
+- Precondition: An existing T-Shape Connection:
+    - E1 from (0,100) to (0,0)
+    - E2 from (0,0) to (100,0)
+    - E3 from (0,0) to (0,-100)
+- Action: Drag E1 by -100 across X 
+- Result: E1 moves freely while there's a new edge created E4 from (-100,0) to (0,0)
