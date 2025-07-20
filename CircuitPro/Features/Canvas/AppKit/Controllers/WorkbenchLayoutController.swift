@@ -17,16 +17,12 @@ final class WorkbenchLayoutController {
         buildHierarchy()
     }
 
-    // 2. Stored references
-    private var sheetWidthC:   NSLayoutConstraint?
-    private var sheetHeightC:  NSLayoutConstraint?
-
-    // 3. Hierarchy builder
+    // 2. Hierarchy builder
     private func buildHierarchy() {
 
         // 1 Background
-        let background = DottedBackgroundView(frame: workbench.bounds)
-        background.autoresizingMask = [.width, .height]
+        let background = DottedBackgroundView(frame: .zero)
+        background.translatesAutoresizingMaskIntoConstraints = false
         workbench.addSubview(background)
         workbench.backgroundView = background
 
@@ -36,12 +32,18 @@ final class WorkbenchLayoutController {
         workbench.addSubview(sheet)
         workbench.sheetView = sheet
 
-        let size = sheet.intrinsicContentSize
-        sheetWidthC  = sheet.widthAnchor .constraint(equalToConstant: size.width)
-        sheetHeightC = sheet.heightAnchor.constraint(equalToConstant: size.height)
-        let leading  = sheet.leadingAnchor.constraint(equalTo: workbench.leadingAnchor, constant: 2500)
-        let top      = sheet.topAnchor    .constraint(equalTo: workbench.topAnchor,    constant: 2500)
-        NSLayoutConstraint.activate([sheetWidthC!, sheetHeightC!, leading, top])
+        // Pin background and sheet to workbench edges
+        NSLayoutConstraint.activate([
+            background.leadingAnchor.constraint(equalTo: workbench.leadingAnchor),
+            background.trailingAnchor.constraint(equalTo: workbench.trailingAnchor),
+            background.topAnchor.constraint(equalTo: workbench.topAnchor),
+            background.bottomAnchor.constraint(equalTo: workbench.bottomAnchor),
+            
+            sheet.leadingAnchor.constraint(equalTo: workbench.leadingAnchor),
+            sheet.trailingAnchor.constraint(equalTo: workbench.trailingAnchor),
+            sheet.topAnchor.constraint(equalTo: workbench.topAnchor),
+            sheet.bottomAnchor.constraint(equalTo: workbench.bottomAnchor)
+        ])
 
         let connections = ConnectionsView(frame: workbench.bounds)
         connections.autoresizingMask = [.width, .height]
@@ -79,12 +81,5 @@ final class WorkbenchLayoutController {
         workbench.addSubview(crosshairs)
         workbench.crosshairsView = crosshairs
     }
-
-    // 4. Constraint maintenance
-    func refreshSheetSize() {
-        guard let sheet = workbench.sheetView else { return }
-        let size = sheet.intrinsicContentSize
-        sheetWidthC?.constant  = size.width
-        sheetHeightC?.constant = size.height
-    }
 }
+

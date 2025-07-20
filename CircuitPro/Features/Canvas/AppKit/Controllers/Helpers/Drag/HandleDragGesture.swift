@@ -37,7 +37,13 @@ final class HandleDragGesture: DragGesture {
     func drag(to p: CGPoint) {
         guard let (id, kind) = active else { return }
         var updated = workbench.elements
-        let snapped = workbench.snap(p)
+        var snapped = workbench.snap(p)
+        
+        if let sheetFrame = workbench.sheetView?.frame {
+            snapped.x = max(sheetFrame.minX, min(sheetFrame.maxX, snapped.x))
+            snapped.y = max(sheetFrame.minY, min(sheetFrame.maxY, snapped.y))
+        }
+        
         for i in updated.indices where updated[i].id == id {
             updated[i].updateHandle(kind, to: snapped, opposite: frozenOppositeWorld)
             workbench.elements = updated

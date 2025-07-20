@@ -28,6 +28,10 @@ final class ToolActionController {
 
         let snapped = workbench.snap(p)
         
+        if let sheetFrame = workbench.sheetView?.frame, !sheetFrame.contains(snapped) {
+            return false
+        }
+        
         // Perform a hit-test to create a rich context for the tool.
         let hitTarget = workbench.hitTestService.hitTest(
             at: snapped,

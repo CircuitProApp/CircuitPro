@@ -83,27 +83,15 @@ final class WorkbenchView: NSView {
         didSet { crosshairsView?.crosshairsStyle = crosshairsStyle }
     }
 
-    var paperSize: PaperSize = .iso(.a4) {
-        didSet {
-            sheetView?.sheetSize = paperSize
-            layout.refreshSheetSize()
-        }
-    }
+    var paperSize: PaperSize = .iso(.a4)
 
-    var sheetOrientation: PaperOrientation = .landscape {
-        didSet {
-            sheetView?.orientation = sheetOrientation
-            layout.refreshSheetSize()
-        }
-    }
+    var sheetOrientation: PaperOrientation = .landscape
 
     var sheetCellValues: [String:String] = [:] {
         didSet { sheetView?.cellValues = sheetCellValues }
     }
 
-    var showDrawingSheet: Bool = false {
-        didSet { sheetView?.isHidden = !showDrawingSheet }
-    }
+    
 
     // MARK: Callbacks
     var onUpdate:          (([CanvasElement]) -> Void)?
@@ -126,11 +114,15 @@ final class WorkbenchView: NSView {
     // MARK: Init
     override init(frame: NSRect) {
         super.init(frame: frame)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.white.cgColor
         _ = layout
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.white.cgColor
         _ = layout
     }
 

@@ -11,13 +11,21 @@ import AppKit
 final class DrawingSheetView: NSView {
 
     var sheetSize: PaperSize = .iso(.a4) { didSet { invalidate() } }
-    var orientation: PaperOrientation = .portrait { didSet { invalidate() } }
+    var orientation: PaperOrientation = .landscape { didSet { invalidate() } }
 
     private let graphicColor: NSColor = NSColor(name: nil) { appearance in
         if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
             return .white
         } else {
             return .black
+        }
+    }
+    
+    private let backgroundColor: NSColor = NSColor(name: nil) { appearance in
+        if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+            return .black
+        } else {
+            return .white
         }
     }
 
@@ -62,24 +70,18 @@ final class DrawingSheetView: NSView {
         ctx.stroke(outer)
 
         // ------------------------------------------------------------------
-        // 2. Margin outline 85 units inside the sheet
+        // 2. Title-block (or content) outline
         // ------------------------------------------------------------------
-        let marginRect = outer.insetBy(dx: 100 - inset, dy: 100 - inset)
-        ctx.stroke(marginRect)
-
-        // ------------------------------------------------------------------
-        // 3. Title-block (or content) outline inside the margin
-        // ------------------------------------------------------------------
-        let inner = marginRect.insetBy(dx: inset, dy: inset)
+        let inner = outer.insetBy(dx: inset, dy: inset)
         ctx.stroke(inner)
 
         // ------------------------------------------------------------------
-        // 4. Rulers and title block use the updated rectangles
+        // 3. Rulers and title block use the updated rectangles
         // ------------------------------------------------------------------
-        drawHorizontalRuler(ctx, inner: inner, outer: marginRect, isTop: true)
-        drawHorizontalRuler(ctx, inner: inner, outer: marginRect, isTop: false)
-        drawVerticalRuler(ctx, inner: inner, outer: marginRect, isLeft: true)
-        drawVerticalRuler(ctx, inner: inner, outer: marginRect, isLeft: false)
+        drawHorizontalRuler(ctx, inner: inner, outer: outer, isTop: true)
+        drawHorizontalRuler(ctx, inner: inner, outer: outer, isTop: false)
+        drawVerticalRuler(ctx, inner: inner, outer: outer, isLeft: true)
+        drawVerticalRuler(ctx, inner: inner, outer: outer, isLeft: false)
 
         drawTitleBlock(ctx, inner: inner)
     }
@@ -105,24 +107,31 @@ final class DrawingSheetView: NSView {
         outer: CGRect,
         isTop: Bool
     ) {
-
         let font = safeFont(size: 9, weight: .regular)
         let attr = attrs(font: font)
 
+        // Define the entire ruler background area
+        let bgRect = isTop
+            ? CGRect(x: outer.minX, y: outer.minY, width: outer.width, height: inner.minY - outer.minY)
+            : CGRect(x: outer.minX, y: inner.maxY, width: outer.width, height: outer.maxY - inner.maxY)
+
+        // Fill the background first
+        ctx.setFillColor(backgroundColor.cgColor)
+        ctx.fill(bgRect)
+
+        // Then draw ticks and labels on top
         let yTick = isTop ? inner.minY : inner.maxY
         let yLabel = isTop
             ? (inner.minY + outer.minY) * 0.5
             : (inner.maxY + outer.maxY) * 0.5
 
         for (i, x) in stride(from: inner.minX, through: inner.maxX, by: tickSpacing).enumerated() {
-
             ctx.move(to: .init(x: x, y: yTick))
             ctx.addLine(to: .init(x: x, y: isTop ? outer.minY : outer.maxY))
             ctx.strokePath()
 
             let nextX = min(x + tickSpacing, inner.maxX)
             let mid   = (x + nextX) * 0.5
-
             let text  = labelForIndex(i, isNumber: true) as NSString
             let size  = text.size(withAttributes: attr)
             text.draw(
@@ -142,24 +151,31 @@ final class DrawingSheetView: NSView {
         outer: CGRect,
         isLeft: Bool
     ) {
-
         let font = safeFont(size: 9, weight: .regular)
         let attr = attrs(font: font)
 
+        // Define the entire ruler background area
+        let bgRect = isLeft
+            ? CGRect(x: outer.minX, y: outer.minY, width: inner.minX - outer.minX, height: outer.height)
+            : CGRect(x: inner.maxX, y: outer.minY, width: outer.maxX - inner.maxX, height: outer.height)
+
+        // Fill the background first
+        ctx.setFillColor(backgroundColor.cgColor)
+        ctx.fill(bgRect)
+
+        // Then draw ticks and labels on top
         let xTick = isLeft ? inner.minX : inner.maxX
         let xLabel = isLeft
             ? (inner.minX + outer.minX) * 0.5
             : (inner.maxX + outer.maxX) * 0.5
 
         for (i, y) in stride(from: inner.minY, through: inner.maxY, by: tickSpacing).enumerated() {
-
             ctx.move(to: .init(x: xTick, y: y))
             ctx.addLine(to: .init(x: isLeft ? outer.minX : outer.maxX, y: y))
             ctx.strokePath()
 
             let nextY = min(y + tickSpacing, inner.maxY)
             let mid   = (y + nextY) * 0.5
-
             let text  = labelForIndex(i, isNumber: false) as NSString
             let size  = text.size(withAttributes: attr)
             text.draw(
@@ -183,7 +199,11 @@ final class DrawingSheetView: NSView {
             width: blockWidth,
             height: blockHeight
         )
+        
+        context.setFillColor(backgroundColor.cgColor)
+        context.fill(rect)
 
+        context.setStrokeColor(graphicColor.cgColor)
         context.stroke(rect)
 
         for rowIndex in 1..<rowCount {

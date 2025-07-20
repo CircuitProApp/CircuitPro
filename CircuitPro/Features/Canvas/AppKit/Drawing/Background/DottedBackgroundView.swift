@@ -146,16 +146,15 @@ final class DottedBackgroundView: NSView {
 
         tileLayer.levelsOfDetail      = 4  // down-scale quality levels
         tileLayer.levelsOfDetailBias  = 4  // up-scale quality levels
-        tileLayer.frame          = CGRect(x: 0, y: 0,
-                                          width: 5_000, height: 5_000)
         return tileLayer
     }
 
-    /// Keep the 5 000 × 5 000 layer centred as the view resizes
+    /// Sets the layer frame to match the view's bounds.
     override func layout() {
         super.layout()
         guard let tileLayer = layer else { return }
-        tileLayer.position    = CGPoint(x: bounds.midX, y: bounds.midY)
-        tileLayer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        if tileLayer.frame != bounds {
+            tileLayer.frame = bounds
+        }
     }
 }

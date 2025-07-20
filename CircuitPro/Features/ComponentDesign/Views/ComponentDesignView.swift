@@ -105,10 +105,6 @@ struct ComponentDesignView: View {
                         .clipAndStroke(with: RoundedRectangle(cornerRadius: 5))
                     }
                 }
-                .onAppear {
-                    symbolCanvasManager.showDrawingSheet = false
-                    footprintCanvasManager.showDrawingSheet = false
-                }
                 .onChange(of: componentDesignManager.componentProperties) {
                     componentDesignManager.refreshValidation()
                 }
