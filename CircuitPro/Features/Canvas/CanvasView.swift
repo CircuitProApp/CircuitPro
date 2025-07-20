@@ -97,6 +97,7 @@ struct CanvasView: NSViewRepresentable {
         workbench.paperSize = manager.paperSize
         var cellValues = workbench.sheetCellValues
         cellValues["Size"] = manager.paperSize.name.uppercased()
+        cellValues["Units"] = "mm"
         workbench.sheetCellValues = cellValues
         
         // Callbacks
