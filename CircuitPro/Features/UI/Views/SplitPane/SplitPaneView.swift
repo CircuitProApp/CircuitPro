@@ -18,7 +18,7 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: NSVie
     public init(
         isCollapsed: Binding<Bool>,
         minPrimary: CGFloat = 100,
-        minSecondary: CGFloat = 200,
+        minSecondary: CGFloat = 100,
         handleHeight: CGFloat = 29,
         secondaryCollapsible: Bool = true,
         @ViewBuilder primary: () -> Primary,

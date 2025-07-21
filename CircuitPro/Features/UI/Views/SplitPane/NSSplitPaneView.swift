@@ -1,9 +1,8 @@
-
-
 import SwiftUI
 import AppKit
- 
-// MARK: NSView
+
+// MARK: - 1.  NSView  ─────────────────────────────────────────────────────────
+
 public final class NSSplitPaneView: NSView {
 
     // MARK: configuration
@@ -35,8 +34,6 @@ public final class NSSplitPaneView: NSView {
 
     // MARK: constants
     private static let animDuration: TimeInterval = 0.20
-    
-    public override var isFlipped: Bool { true }
 
     // MARK: init
     init(primary:            AnyView,
@@ -60,9 +57,6 @@ public final class NSSplitPaneView: NSView {
         super.init(frame: .zero)
 
         wantsLayer = true
-
-        secondaryHosting.wantsLayer = true
-        secondaryHosting.layer?.masksToBounds = true
 
         handleBackground.wantsLayer = true
         handleBackground.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
@@ -191,11 +185,10 @@ extension NSSplitPaneView {
         var holes: [ClosedRange<CGFloat>] = []
 
         func collectXRanges(from view: NSView) {
-            let isInteractive = (view is NSControl) || !view.gestureRecognizers.isEmpty
-
+            // Any focusable / pressable sub-view inside `handleHosting`
             if view !== handleHosting,
-               isInteractive,
-               view.window === self.window
+               view.acceptsFirstResponder,
+               view.window === self.window          // visible & in same window
             {
                 let r = view.convert(view.bounds, to: self)
                 let clipped = r.intersection(bar)
@@ -203,7 +196,6 @@ extension NSSplitPaneView {
                     holes.append(clipped.minX ... clipped.maxX)
                 }
             }
-            
             view.subviews.forEach(collectXRanges(from:))
         }
         collectXRanges(from: handleHosting)

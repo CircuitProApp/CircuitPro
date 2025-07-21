@@ -45,9 +45,9 @@ struct StatusBarView: View {
                 
             }
             Button {
-                withAnimation {
-                    self.showUtilityArea.toggle()
-                }
+          
+                self.showUtilityArea.toggle()
+                
             } label: {
                 Image(systemName: CircuitProSymbols.Workspace.toggleUtilityArea)
                     .resizable()
