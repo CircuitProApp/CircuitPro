@@ -48,7 +48,7 @@ public final class NSSplitPaneView: NSView {
         self.minSecondary        = minSecondary
         self.handleHeight        = handleHeight
         self.secondaryCollapsible = secondaryCollapsible
-        self.secondaryHeight     = minSecondary                  // start minimised
+        self.secondaryHeight     = minSecondary
 
         self.primaryHosting   = NSHostingView(rootView: primary)
         self.handleHosting    = NSHostingView(rootView: handle)
@@ -57,6 +57,10 @@ public final class NSSplitPaneView: NSView {
         super.init(frame: .zero)
 
         wantsLayer = true
+
+        // 1. Clip the secondary pane so its contents never draw outside its frame
+        secondaryHosting.wantsLayer = true
+        secondaryHosting.layer?.masksToBounds = true   // key line
 
         handleBackground.wantsLayer = true
         handleBackground.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
@@ -159,8 +163,8 @@ public final class NSSplitPaneView: NSView {
 
         if animated {
             NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration              = Self.animDuration
-                ctx.timingFunction        = CAMediaTimingFunction(name: .linear)
+                ctx.duration = Self.animDuration
+                ctx.timingFunction = CAMediaTimingFunction(name: .linear)
                 ctx.allowsImplicitAnimation = true
                 apply()
             }
