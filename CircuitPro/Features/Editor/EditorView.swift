@@ -30,7 +30,7 @@ struct EditorView: View {
                 editorSelection
             }
 
-            SplitView(showBottomView: $showUtilityArea) {
+            SplitPaneView(isCollapsed: $showUtilityArea) {
                 if projectManager.selectedDesign == nil {
                     Text("Select a design")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -43,13 +43,14 @@ struct EditorView: View {
                     }
                 }
 
-            } dividerView: {
+            } handle: {
                 StatusBarView(
                     canvasManager: selectedCanvasManager,
                     editorType: selectedEditor,
                     showUtilityArea: $showUtilityArea
                 )
-            } bottomView: {
+                .padding(.horizontal, 12.5)
+            } secondary: {
                 UtilityAreaView()
             }
         }
