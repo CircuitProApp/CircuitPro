@@ -7,7 +7,7 @@
 
 import AppKit
 
-final class HandleDragGesture: DragGesture {
+final class HandleDragGesture: CanvasDragGesture {
 
     unowned let workbench: WorkbenchView
     private var active: (UUID, Handle.Kind)?

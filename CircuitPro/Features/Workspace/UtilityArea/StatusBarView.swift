@@ -41,13 +41,8 @@ struct StatusBarView: View {
                 .foregroundStyle(.quinary)
                 .frame(height: 12)
                 .padding(.trailing, 4)
-            Button("Hello") {
-                
-            }
             Button {
-          
                 self.showUtilityArea.toggle()
-                
             } label: {
                 Image(systemName: CircuitProSymbols.Workspace.toggleUtilityArea)
                     .resizable()

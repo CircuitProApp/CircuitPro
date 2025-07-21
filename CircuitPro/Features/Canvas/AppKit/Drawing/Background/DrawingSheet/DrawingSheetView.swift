@@ -22,7 +22,7 @@ final class DrawingSheetView: NSView {
 
     private let graphicColor: NSColor = NSColor(name: nil) { appearance in
         if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
-            return .white
+            return .black
         } else {
             return .black
         }

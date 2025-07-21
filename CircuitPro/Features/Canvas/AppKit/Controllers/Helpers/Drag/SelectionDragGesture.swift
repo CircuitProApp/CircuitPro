@@ -8,7 +8,7 @@
 
 import AppKit
 
-final class SelectionDragGesture: DragGesture {
+final class SelectionDragGesture: CanvasDragGesture {
 
     unowned let workbench: WorkbenchView
 
