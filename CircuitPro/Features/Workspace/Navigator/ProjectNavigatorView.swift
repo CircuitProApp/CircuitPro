@@ -69,8 +69,7 @@ struct ProjectNavigatorView: View {
                 case .symbols:
                     SymbolNavigatorView(document: document)
                 case .connections:
-                    Text("Connections")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    ConnectionNavigatorView(document: document)
                 }
             }
         }

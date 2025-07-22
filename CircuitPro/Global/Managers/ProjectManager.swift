@@ -13,8 +13,10 @@ final class ProjectManager {
 
     private let modelContext: ModelContext
     var project: CircuitProject
-    var selectedDesign: CircuitDesign?
+    var selectedDesign: CircuitDesign? 
     var selectedComponentIDs: Set<UUID> = []
+    var selectedNetIDs: Set<UUID> = []
+    var schematicGraph = SchematicGraph()
 
     init(
         project: CircuitProject,

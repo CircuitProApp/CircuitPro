@@ -17,6 +17,15 @@ struct ConnectionVertex: Identifiable, Hashable {
     let id: UUID
     var point: CGPoint
     var ownership: VertexOwnership
+    var netID: UUID?
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: ConnectionVertex, rhs: ConnectionVertex) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 struct ConnectionEdge: Identifiable, Hashable {
@@ -29,8 +38,9 @@ struct ConnectionEdge: Identifiable, Hashable {
 class SchematicGraph {
     
     // MARK: - Net Definition
-    struct Net: Identifiable {
-        let id = UUID()
+    struct Net: Identifiable, Hashable, Equatable {
+        let id: UUID // This is the persistent net ID
+        var name: String
         let vertexCount: Int
         let edgeCount: Int
     }
@@ -44,6 +54,8 @@ class SchematicGraph {
     private(set) var vertices: [ConnectionVertex.ID: ConnectionVertex] = [:]
     private(set) var edges: [ConnectionEdge.ID: ConnectionEdge] = [:]
     private(set) var adjacency: [ConnectionVertex.ID: Set<ConnectionEdge.ID>] = [:]
+    private var netNames: [UUID: String] = [:]
+    private var nextNetNumber = 1
 
     // MARK: - Drag State
     private struct DragState {
@@ -54,6 +66,11 @@ class SchematicGraph {
     private var dragState: DragState?
 
     // MARK: - Public API
+    
+    /// Renames a net.
+    public func setName(_ name: String, for netID: UUID) {
+        netNames[netID] = name
+    }
     
     /// The authoritative method for getting a vertex for a given point.
     /// It finds an existing vertex, splits an edge if the point is on one, or creates a new vertex.
@@ -102,6 +119,7 @@ class SchematicGraph {
             handleLShapeConnection(from: startVertex, to: endVertex, strategy: strategy, affectedVertices: &affectedVertices)
         }
         
+        unifyNetIDs(between: startID, and: endID)
         normalize(around: affectedVertices)
     }
     
@@ -332,6 +350,8 @@ class SchematicGraph {
                 modifiedVertices.insert(survivor.id)
                 
                 for victim in coincidentGroup where victim.id != survivor.id {
+                    unifyNetIDs(between: survivor.id, and: victim.id)
+                    
                     if let victimEdges = adjacency[victim.id] {
                         for edgeID in victimEdges {
                             guard let edge = edges[edgeID] else { continue }
@@ -456,7 +476,7 @@ class SchematicGraph {
     
     @discardableResult
     private func addVertex(at point: CGPoint, ownership: VertexOwnership) -> ConnectionVertex {
-        let vertex = ConnectionVertex(id: UUID(), point: point, ownership: ownership)
+        let vertex = ConnectionVertex(id: UUID(), point: point, ownership: ownership, netID: nil)
         vertices[vertex.id] = vertex
         adjacency[vertex.id] = []
         return vertex
@@ -483,8 +503,13 @@ class SchematicGraph {
         guard let edgeToSplit = edges[edgeID] else { return nil }
         let startID = edgeToSplit.start
         let endID = edgeToSplit.end
+        
+        let originalNetID = vertices[startID]?.netID
+        
         removeEdge(id: edgeID)
         let newVertex = addVertex(at: point, ownership: ownership)
+        vertices[newVertex.id]?.netID = originalNetID
+        
         addEdge(from: startID, to: newVertex.id)
         addEdge(from: newVertex.id, to: endID)
         return newVertex.id
@@ -502,6 +527,54 @@ class SchematicGraph {
         guard let edge = edges.removeValue(forKey: id) else { return }
         adjacency[edge.start]?.remove(id)
         adjacency[edge.end]?.remove(id)
+    }
+    
+    // MARK: - Net Management
+
+    private func unifyNetIDs(between vertex1ID: ConnectionVertex.ID, and vertex2ID: ConnectionVertex.ID) {
+        let netID1 = vertices[vertex1ID]?.netID
+        let netID2 = vertices[vertex2ID]?.netID
+
+        if let id1 = netID1, let id2 = netID2 {
+            if id1 != id2 {
+                // Merge is required. Find the entire component, which is now connected,
+                // and unify its ID. The component of vertex2 will be updated to id1.
+                let (wholeComponent, _) = net(startingFrom: vertex2ID)
+                for vID in wholeComponent {
+                    vertices[vID]?.netID = id1
+                }
+                // Handle name merging
+                if let oldName = netNames[id2], let newName = netNames[id1] {
+                    if newName.hasPrefix("N$") && !oldName.hasPrefix("N$") {
+                        netNames[id1] = oldName
+                    }
+                }
+                netNames.removeValue(forKey: id2)
+            }
+        } else {
+            // At least one of the vertices doesn't have a net ID.
+            // Find the whole component and give it a single, consistent ID.
+            let (wholeComponent, _) = net(startingFrom: vertex1ID) // Start traversal from either
+            
+            // Find an existing ID within the component, if any.
+            let existingID = wholeComponent.compactMap { vertices[$0]?.netID }.first
+            
+            let finalNetID: UUID
+            if let id = existingID {
+                finalNetID = id
+            } else {
+                // No vertex in the new component had an ID. Create one.
+                finalNetID = UUID()
+                let netName = "N$\(nextNetNumber)"
+                nextNetNumber += 1
+                netNames[finalNetID] = netName
+            }
+            
+            // Ensure all vertices in the component have this ID.
+            for vID in wholeComponent {
+                vertices[vID]?.netID = finalNetID
+            }
+        }
     }
     
     // MARK: - Graph Analysis
@@ -551,7 +624,6 @@ class SchematicGraph {
         return false
     }
     
-    // ... findNets and net(startingFrom:) remain unchanged ...
     func net(startingFrom startVertexID: ConnectionVertex.ID) -> (vertices: Set<ConnectionVertex.ID>, edges: Set<ConnectionEdge.ID>) {
         var visitedVertices: Set<ConnectionVertex.ID> = []
         var visitedEdges: Set<ConnectionEdge.ID> = []
@@ -572,16 +644,88 @@ class SchematicGraph {
         }
         return (visitedVertices, visitedEdges)
     }
+
     func findNets() -> [Net] {
-        var foundNets: [Net] = []
+        var discoveredNets: [Net] = []
         var unvisitedVertices = Set(vertices.keys)
+        
+        // A dictionary to hold the disconnected components (islands) found for each original net ID.
+        var componentsByNetID: [UUID: [[ConnectionVertex.ID]]] = [:]
+
+        // First pass: Discover all connected components (islands) and group them by their existing net ID.
         while let startVertexID = unvisitedVertices.first {
-            let (netVertices, netEdges) = net(startingFrom: startVertexID)
-            if !netEdges.isEmpty {
-                foundNets.append(Net(vertexCount: netVertices.count, edgeCount: netEdges.count))
+            let (componentVertices, componentEdges) = net(startingFrom: startVertexID)
+            unvisitedVertices.subtract(componentVertices)
+            
+            // A component is only a valid net if it has edges. Otherwise, it's just floating pins.
+            guard !componentEdges.isEmpty else {
+                // As a cleanup, nullify the netID of these orphaned vertices.
+                for vID in componentVertices {
+                    vertices[vID]?.netID = nil
+                }
+                continue
             }
-            unvisitedVertices.subtract(netVertices)
+            
+            // We use the first valid netID we find as the key.
+            if let representativeNetID = componentVertices.compactMap({ vertices[$0]?.netID }).first {
+                componentsByNetID[representativeNetID, default: []].append(Array(componentVertices))
+            } else {
+                // This component has no ID yet, so it's a new net.
+                let newNetID = UUID()
+                componentsByNetID[newNetID, default: []].append(Array(componentVertices))
+            }
         }
-        return foundNets
+        
+        // Second pass: Reconcile splits and create the definitive list of nets.
+        for (originalNetID, components) in componentsByNetID {
+            if components.count == 1 {
+                // No split detected for this net. Just ensure it has a name and update its vertices.
+                let component = components[0]
+                let (netVertices, netEdges) = net(startingFrom: component[0])
+                
+                let finalID = originalNetID
+                if netNames[finalID] == nil {
+                    netNames[finalID] = "N$\(nextNetNumber)"
+                    nextNetNumber += 1
+                }
+                
+                // Ensure all vertices are consistent, just in case.
+                for vID in netVertices { vertices[vID]?.netID = finalID }
+                
+                discoveredNets.append(Net(id: finalID, name: netNames[finalID]!, vertexCount: netVertices.count, edgeCount: netEdges.count))
+                
+            } else {
+                // A split was detected. The net with this ID has broken into multiple pieces.
+                // Find the largest component to keep the original ID.
+                var sortedComponents = components.sorted { $0.count > $1.count }
+                
+                // The largest component keeps the original ID and name.
+                let mainComponent = sortedComponents.removeFirst()
+                let (mainVertices, mainEdges) = net(startingFrom: mainComponent[0])
+                for vID in mainVertices { vertices[vID]?.netID = originalNetID }
+                
+                if netNames[originalNetID] == nil {
+                    netNames[originalNetID] = "N$\(nextNetNumber)"
+                    nextNetNumber += 1
+                }
+                
+                discoveredNets.append(Net(id: originalNetID, name: netNames[originalNetID]!, vertexCount: mainVertices.count, edgeCount: mainEdges.count))
+                
+                // All other, smaller components become new nets.
+                for smallerComponent in sortedComponents {
+                    let (newNetVertices, newNetEdges) = net(startingFrom: smallerComponent[0])
+                    let newNetID = UUID()
+                    let newNetName = "N$\(nextNetNumber)"
+                    nextNetNumber += 1
+                    netNames[newNetID] = newNetName
+                    
+                    for vID in newNetVertices { vertices[vID]?.netID = newNetID }
+                    
+                    discoveredNets.append(Net(id: newNetID, name: newNetName, vertexCount: newNetVertices.count, edgeCount: newNetEdges.count))
+                }
+            }
+        }
+        
+        return discoveredNets
     }
 }

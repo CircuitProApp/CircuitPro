@@ -11,7 +11,6 @@ struct SchematicView: View {
     private var projectManager
 
     // Canvas state
-    @State private var netlist: SchematicGraph = .init()
     @State private var canvasElements: [CanvasElement] = []
     @State private var selectedTool: AnyCanvasTool = .init(CursorTool())
     @State private var nets: [SchematicGraph.Net] = []
@@ -21,7 +20,7 @@ struct SchematicView: View {
 
         CanvasView(
             manager:      canvasManager,
-            schematicGraph: netlist,
+            schematicGraph: projectManager.schematicGraph,
             elements:     $canvasElements,
             selectedIDs:  $bindableProjectManager.selectedComponentIDs,
             selectedTool: $selectedTool,
@@ -35,7 +34,7 @@ struct SchematicView: View {
         }
         .overlay(alignment: .bottom) {
             if !nets.isEmpty {
-                NetsOverlay(graph: $netlist, nets: nets)
+                NetsOverlay(graph: $bindableProjectManager.schematicGraph, nets: nets)
             }
         }
         .onAppear {
@@ -48,15 +47,23 @@ struct SchematicView: View {
         }
         
         // Analyze the graph when it changes
-        .onChange(of: netlist.vertices) { _, _ in updateNets() }
-        .onChange(of: netlist.edges) { _, _ in updateNets() }
+        .onChange(of: projectManager.schematicGraph.vertices) { _, _ in updateNets() }
+        .onChange(of: projectManager.schematicGraph.edges) { _, _ in updateNets() }
 
         // Persist symbol moves back to the model
         .onChange(of: canvasElements) { syncCanvasToModel($0) }
+        
+        // When canvas selection changes, check if we need to deselect in the navigator
+        .onChange(of: projectManager.selectedComponentIDs) { _, newSelection in
+            let selectedEdges = newSelection.filter { projectManager.schematicGraph.edges[$0] != nil }
+            if selectedEdges.isEmpty {
+                projectManager.selectedNetIDs.removeAll()
+            }
+        }
     }
     
     private func updateNets() {
-        nets = netlist.findNets()
+        nets = projectManager.schematicGraph.findNets()
     }
 
     // ───────────────────────────────
