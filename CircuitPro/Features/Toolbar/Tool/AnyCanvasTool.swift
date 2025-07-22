@@ -14,7 +14,7 @@ struct AnyCanvasTool: CanvasTool {
     let label: String
 
     private let _handleTap: (CGPoint, CanvasToolContext) -> CanvasToolResult
-    private let _drawPreview: (CGContext, CGPoint, CanvasToolContext) -> Void
+    private let _preview: (CGPoint, CanvasToolContext) -> ToolPreview?
     private let _handleEscape: () -> Void
     private let _handleBackspace: () -> Void
     private let _handleRotate: () -> Void
@@ -37,11 +37,12 @@ struct AnyCanvasTool: CanvasTool {
             return result                       // 4
         }
 
-        // ----- drawPreview --------------------------------------------------
-        _drawPreview = { cgCTX, mouse, ctx in
+        // ----- preview ------------------------------------------------------
+        _preview = { mouse, ctx in
             var inner = storage.tool             // 1
-            inner.drawPreview(in: cgCTX, mouse: mouse, context: ctx) // 2
+            let result = inner.preview(mouse: mouse, context: ctx) // 2
             storage.tool = inner                 // 3
+            return result
         }
 
         // ----- handleEscape -------------------------------------------------
@@ -78,8 +79,9 @@ struct AnyCanvasTool: CanvasTool {
      mutating func handleTap(at point: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
          _handleTap(point, context)
      }
-    mutating func drawPreview(in cgCTX: CGContext, mouse: CGPoint, context: CanvasToolContext) {
-        _drawPreview(cgCTX, mouse, context)
+
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> ToolPreview? {
+        _preview(mouse, context)
     }
 
     mutating func handleEscape() {

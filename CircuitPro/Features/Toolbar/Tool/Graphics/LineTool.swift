@@ -32,16 +32,19 @@ struct LineTool: CanvasTool {
         }
     }
 
-    mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
-        guard let start else { return }
-        ctx.saveGState()
-        ctx.setStrokeColor(NSColor(context.selectedLayer.color).cgColor)
-        ctx.setLineWidth(1)
-        ctx.setLineDash(phase: 0, lengths: [4])
-        ctx.move(to: start)
-        ctx.addLine(to: mouse)
-        ctx.strokePath()
-        ctx.restoreGState()
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> ToolPreview? {
+        guard let start else { return nil }
+
+        let path = CGMutablePath()
+        path.move(to: start)
+        path.addLine(to: mouse)
+
+        return ToolPreview(
+            path: path,
+            strokeColor: NSColor(context.selectedLayer.color).cgColor,
+            lineWidth: 1.0,
+            lineDashPattern: [4, 4]
+        )
     }
 
     mutating func handleEscape() {

@@ -37,52 +37,50 @@ struct RulerTool: CanvasTool {
     }
 
     // swiftlint:disable:next function_body_length
-    mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
-        guard let start = start else { return }
-        let magnificationScale = 1.0 / context.magnification
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> ToolPreview? {
+        guard let start = start else { return nil }
         let isDarkMode = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        let color: NSColor = isDarkMode ? .white : .black
+        let color: NSColor = .black
 
         let currentEnd = (clicks >= 2 ? end ?? mouse : mouse)
 
-        ctx.setStrokeColor(color.cgColor)
-        ctx.setLineWidth(1 * magnificationScale) // 🔧 scale line width
-        ctx.setLineCap(.round)
-        ctx.move(to: start)
-        ctx.addLine(to: currentEnd)
-        ctx.strokePath()
+        let path = CGMutablePath()
+        path.move(to: start)
+        path.addLine(to: currentEnd)
 
         let deltaX = currentEnd.x - start.x
         let deltaY = currentEnd.y - start.y
-        let distance = hypot(deltaX, deltaY)
-        let distanceMM = distance / 10.0
+        // let distance = hypot(deltaX, deltaY)
 
         let mid = CGPoint(x: (start.x + currentEnd.x) / 2, y: (start.y + currentEnd.y) / 2)
 
         let rawPerp = CGPoint(x: -deltaY, y: deltaX)
         let length = hypot(rawPerp.x, rawPerp.y)
-        guard length > 0 else { return }
+        guard length > 0 else {
+            return ToolPreview(path: path, strokeColor: color.cgColor, lineWidth: 1.0)
+        }
         let unitPerp = CGPoint(x: rawPerp.x / length, y: rawPerp.y / length)
 
-        let tickLength: CGFloat = 4 * magnificationScale // 🔧 scale tick length
+        let tickLength: CGFloat = 4
         let drawTick: (CGPoint) -> Void = { center in
             let tickStart = CGPoint(x: center.x - unitPerp.x * tickLength, y: center.y - unitPerp.y * tickLength)
             let tickEnd = CGPoint(x: center.x + unitPerp.x * tickLength, y: center.y + unitPerp.y * tickLength)
-            ctx.move(to: tickStart)
-            ctx.addLine(to: tickEnd)
-            ctx.strokePath()
+            path.move(to: tickStart)
+            path.addLine(to: tickEnd)
         }
 
         drawTick(mid)
         drawTick(start)
         drawTick(currentEnd)
 
+        /*
         // Draw measurement label
+        let distanceMM = distance / 10.0
         let labelText: String = distanceMM < 1
             ? String(format: "%.2f mm", distanceMM)
             : String(format: "%.1f mm", distanceMM)
 
-        let fontSize: CGFloat = 12 * magnificationScale // 🔧 scale font
+        let fontSize: CGFloat = 12
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .medium),
             .foregroundColor: color
@@ -91,12 +89,11 @@ struct RulerTool: CanvasTool {
         let textSize = text.size()
 
         var labelOffsetDir = unitPerp
-
         if labelOffsetDir.y > 0 {
             labelOffsetDir = CGPoint(x: -labelOffsetDir.x, y: -labelOffsetDir.y)
         }
 
-        let offsetDistance: CGFloat = 16 * magnificationScale // 🔧 scale offset
+        let offsetDistance: CGFloat = 16
         let labelCenter = CGPoint(
             x: mid.x + labelOffsetDir.x * offsetDistance,
             y: mid.y + labelOffsetDir.y * offsetDistance
@@ -107,7 +104,9 @@ struct RulerTool: CanvasTool {
             y: labelCenter.y - textSize.height / 2
         )
 
-        text.draw(at: drawPoint)
+        let textLabel = ToolPreview.TextLabel(text: text, position: drawPoint, size: textSize)
+        */
+        return ToolPreview(path: path, strokeColor: color.cgColor, lineWidth: 1.0)
     }
     mutating func handleEscape() {
         start = nil
