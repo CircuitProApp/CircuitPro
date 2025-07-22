@@ -23,8 +23,8 @@ struct StatusBarView: View {
                 .padding(.leading, 4)
             Spacer()
             HStack {
-                Text(String(format: "x: %.1f", canvasManager.relativeMousePosition.x))
-                Text(String(format: "y: %.1f", canvasManager.relativeMousePosition.y))
+                Text(String(format: "x: %.0f", canvasManager.mouseLocationInMM.x))
+                Text(String(format: "y: %.0f", canvasManager.mouseLocationInMM.y))
             }
             .font(.system(size: 12))
             .foregroundStyle(.secondary)

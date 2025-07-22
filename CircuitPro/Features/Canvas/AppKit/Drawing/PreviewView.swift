@@ -20,7 +20,6 @@ final class PreviewView: NSView {
     // without creating a retain cycle. The workbench owns the PreviewView.
     weak var workbench: WorkbenchView?
 
-    override var isFlipped: Bool { true }
     override var isOpaque: Bool { false }
 
     override func draw(_ dirtyRect: NSRect) {

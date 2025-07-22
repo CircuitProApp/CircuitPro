@@ -16,7 +16,6 @@ final class ElementsView: NSView {
     var marqueeSelectedIDs: Set<UUID> = [] { didSet { needsDisplay = true } }
 
     // MARK: – View flags
-    override var isFlipped: Bool  { true  }
     override var isOpaque: Bool   { false }
 
     // MARK: – Drawing

@@ -109,7 +109,6 @@ final class WorkbenchView: NSView {
     var isRotating: Bool { input.isRotating }
 
     // MARK: NSView overrides
-    override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { true }
 
     // MARK: Init

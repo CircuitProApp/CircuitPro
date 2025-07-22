@@ -14,8 +14,6 @@ final class CrosshairsView: NSView {
         didSet { needsDisplay = true }
     }
 
-    override var isFlipped: Bool { true }
-
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override init(frame frameRect: NSRect) {

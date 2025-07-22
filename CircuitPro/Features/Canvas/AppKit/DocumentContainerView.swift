@@ -12,8 +12,6 @@ final class DocumentContainerView: NSView {
     let documentBackgroundView = DocumentBackgroundView()
     let workbenchView: WorkbenchView
 
-    override var isFlipped: Bool { true }
-
     init(workbench: WorkbenchView) {
         self.workbenchView = workbench
         super.init(frame: .zero)

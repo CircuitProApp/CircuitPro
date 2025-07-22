@@ -42,6 +42,7 @@ struct BorderDrawer {
 }
 
 // MARK: - RulerDrawer
+// MARK: - RulerDrawer
 struct RulerDrawer {
     enum Position {
         case top, bottom, left, right
@@ -91,6 +92,9 @@ struct RulerDrawer {
             let xLabel = isPrimaryEdge ? (inner.minX + outer.minX) * 0.5 : (inner.maxX + outer.maxX) * 0.5
             let yRange = stride(from: inner.minY + tickSpacing, to: inner.maxY, by: tickSpacing)
 
+            // 1. Get the total number of vertical intervals to correctly calculate the label index.
+            let totalVerticalIntervals = Int(floor(inner.height / tickSpacing))
+
             for (i, y) in yRange.enumerated() {
                 ctx.move(to: .init(x: xTick, y: y))
                 ctx.addLine(to: .init(x: isPrimaryEdge ? outer.minX : outer.maxX, y: y))
@@ -99,7 +103,13 @@ struct RulerDrawer {
                 if showLabels {
                     let prevY = y - tickSpacing
                     let mid = (y + prevY) * 0.5
-                    let text = labelForIndex(i, isNumber: false) as NSString
+
+                    // 2. Calculate the index from the top.
+                    // Since the view is not flipped, the drawing loop for the y-axis goes from bottom to top.
+                    // We subtract the current index from the total count to ensure 'A' starts at the top.
+                    let labelIndexFromTop = totalVerticalIntervals - 1 - i
+                    let text = labelForIndex(labelIndexFromTop, isNumber: false) as NSString
+                    
                     let size = text.size(withAttributes: attr)
                     text.draw(at: .init(x: xLabel - size.width * 0.5, y: mid - size.height * 0.5), withAttributes: attr)
                 }

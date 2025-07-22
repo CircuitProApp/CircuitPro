@@ -18,7 +18,6 @@ final class ConnectionsView: NSView {
     var magnification: CGFloat = 1.0           { didSet { needsDisplay = true } }
 
     // MARK: – View flags
-    override var isFlipped: Bool  { true }
     override var isOpaque: Bool   { false }
 
     // MARK: – Drawing

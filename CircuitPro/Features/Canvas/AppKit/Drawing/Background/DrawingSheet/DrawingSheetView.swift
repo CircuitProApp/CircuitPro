@@ -37,7 +37,6 @@ final class DrawingSheetView: NSView {
     private let unitsPerMM: CGFloat = 10    // 10 canvas units == 1 mm
 
     // House-keeping ----------------------------------------------------------
-    override var isFlipped: Bool { true }
     private func invalidate() { needsDisplay = true }
 
     // Convenience ------------------------------------------------------------

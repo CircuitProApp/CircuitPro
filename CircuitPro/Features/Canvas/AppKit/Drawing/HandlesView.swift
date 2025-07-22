@@ -19,7 +19,6 @@ final class HandlesView: NSView {
         didSet { needsDisplay = true }
     }
 
-    override var isFlipped: Bool { true }
     override var isOpaque: Bool { false }
 
     override func draw(_ dirtyRect: NSRect) {
