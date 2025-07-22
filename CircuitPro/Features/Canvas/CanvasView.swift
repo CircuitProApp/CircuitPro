@@ -10,6 +10,7 @@ struct CanvasView: NSViewRepresentable {
     @Binding var selectedIDs: Set<UUID>
     @Binding var selectedTool: AnyCanvasTool
     var layerBindings: CanvasLayerBindings? = nil
+    var onComponentDropped: ((TransferableComponent, CGPoint) -> Void)?
 
     // MARK: – Coordinator holding the App-Kit subviews
     final class Coordinator {
@@ -104,6 +105,7 @@ struct CanvasView: NSViewRepresentable {
         workbench.onUpdate = { self.elements = $0 }
         workbench.onSelectionChange = { self.selectedIDs = $0 }
         workbench.onMouseMoved = { position in self.manager.mouseLocation = position }
+        workbench.onComponentDropped = onComponentDropped
         workbench.onPinHoverChange = { id in
             if let id = id { print("Hovering pin \(id)") }
         }

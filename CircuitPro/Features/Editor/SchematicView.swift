@@ -24,12 +24,11 @@ struct SchematicView: View {
             schematicGraph: netlist,
             elements:     $canvasElements,
             selectedIDs:  $bindableProjectManager.selectedComponentIDs,
-            selectedTool: $selectedTool
+            selectedTool: $selectedTool,
+            onComponentDropped: { component, point in
+                addComponents([component], at: point)
+            }
         )
-        .dropDestination(for: TransferableComponent.self) { dropped, loc in
-            addComponents(dropped, atClipPoint: loc)
-            return !dropped.isEmpty
-        }
         .overlay(alignment: .leading) {
             SchematicToolbarView(selectedSchematicTool: $selectedTool)
                 .padding(16)
@@ -65,14 +64,9 @@ struct SchematicView: View {
     // ───────────────────────────────
     private func addComponents(
         _ comps: [TransferableComponent],
-        atClipPoint clipPoint: CGPoint
+        at point: CGPoint
     ) {
-        // 1. Clip-space → doc coordinates
-        let origin = canvasManager.scrollOrigin
-        let zoom   = canvasManager.magnification
-        let docPt  = CGPoint(x: origin.x + clipPoint.x / zoom,
-                             y: origin.y + clipPoint.y / zoom)
-        let pos    = canvasManager.snap(docPt)
+        let pos = canvasManager.snap(point)
 
         // 2. Current max reference per component UUID
         let instances = projectManager.selectedDesign?.componentInstances ?? []

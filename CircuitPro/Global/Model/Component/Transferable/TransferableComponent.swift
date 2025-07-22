@@ -1,10 +1,3 @@
-//
-//  TransferrableComponent.swift
-//  Circuit Pro
-//
-//  Created by Giorgi Tchelidze on 4/15/25.
-//
-
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -26,18 +19,6 @@ struct TransferableComponent: Transferable, Codable {
 
 extension UTType {
     static let transferableComponent = UTType(exportedAs: "app.circuitpro.transferable-component-data")
-}
-
-struct DraggableModifier: ViewModifier {
-    let component: Component
-    func body(content: Content) -> some View {
-        if let transferable = TransferableComponent(component: component) {
-            content
-                .draggable(transferable)
-        } else {
-            content
-        }
-    }
 }
 
 extension View {

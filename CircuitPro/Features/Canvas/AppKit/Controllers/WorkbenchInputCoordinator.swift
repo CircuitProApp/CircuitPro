@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import UniformTypeIdentifiers
 
 final class WorkbenchInputCoordinator {
 
@@ -213,4 +214,49 @@ final class WorkbenchInputCoordinator {
             NSCursor.arrow.set()
         }
     }
+}
+
+// MARK: - NSDraggingDestination
+extension WorkbenchInputCoordinator {
+    func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        if sender.draggingPasteboard.canReadItem(withDataConformingToTypes: [UTType.transferableComponent.identifier]) {
+            return .copy
+        }
+        return []
+    }
+
+    func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        if sender.draggingPasteboard.canReadItem(withDataConformingToTypes: [UTType.transferableComponent.identifier]) {
+            return .copy
+        }
+        return []
+    }
+    
+    func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let pasteboard = sender.draggingPasteboard
+        guard pasteboard.canReadItem(withDataConformingToTypes: [UTType.transferableComponent.identifier]) else {
+            return false
+        }
+
+        guard let data = pasteboard.data(forType: .transferableComponent) else {
+            return false
+        }
+        
+        do {
+            let component = try JSONDecoder().decode(TransferableComponent.self, from: data)
+            let pointInView = workbench.convert(sender.draggingLocation, from: nil)
+            
+            workbench.onComponentDropped?(component, pointInView)
+            
+            return true
+
+        } catch {
+            print("Failed to decode TransferableComponent:", error)
+            return false
+        }
+    }
+}
+
+extension NSPasteboard.PasteboardType {
+    static let transferableComponent = NSPasteboard.PasteboardType(UTType.transferableComponent.identifier)
 }
