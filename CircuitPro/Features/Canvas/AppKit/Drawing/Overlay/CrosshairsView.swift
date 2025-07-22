@@ -1,61 +1,93 @@
 import AppKit
 
+/// Vector-based cross-hairs overlay.
+/// Uses a CAShapeLayer so memory stays flat even at high magnification.
 final class CrosshairsView: NSView {
 
+    // MARK: – Public API -----------------------------------------------------
+
     var crosshairsStyle: CrosshairsStyle = .centeredCross {
-        didSet { needsDisplay = true }
+        didSet { updatePath() }
     }
 
+    /// Point in **view coordinates** (y-down).
+    /// Pass `nil` to hide when style is not `.hidden`.
     var location: CGPoint? {
-        didSet { needsDisplay = true }
+        didSet { updatePath() }
     }
 
+    /// Current scroll-view magnification (used only for stroke width).
     var magnification: CGFloat = 1.0 {
-        didSet { needsDisplay = true }
+        didSet { updatePath() }
     }
 
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    // MARK: – Init -----------------------------------------------------------
+
+    private let shapeLayer = CAShapeLayer()
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        wantsLayer = true
+
+        wantsLayer = true                              // we need a backing layer
+        layer = CALayer()                              // plain container
+        layer?.isGeometryFlipped = true                // match NSView coords
+
+        // Shape layer setup
+        shapeLayer.fillColor   = nil
+        shapeLayer.strokeColor = NSColor.systemBlue.cgColor
+        shapeLayer.lineCap     = .round
+        layer?.addSublayer(shapeLayer)
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
-    override func draw(_ dirtyRect: NSRect) {
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+    // MARK: – Layout & drawing ----------------------------------------------
 
-        ctx.saveGState()
-        ctx.setStrokeColor(NSColor.systemBlue.cgColor)
-        ctx.setLineWidth(1.0 / magnification)
+    override func layout() {
+        super.layout()
+        shapeLayer.frame = bounds
+        updatePath()
+    }
 
-        switch crosshairsStyle {
-        case .hidden:
-            return  // draw nothing
+    /// Rebuilds the vector path when state changes.
+    private func updatePath() {
 
-        case .fullScreenLines:
-            guard let point = location else { return }
-            ctx.beginPath()
-            ctx.move(to: CGPoint(x: point.x, y: 0))
-            ctx.addLine(to: CGPoint(x: point.x, y: bounds.height))
-            ctx.move(to: CGPoint(x: 0, y: point.y))
-            ctx.addLine(to: CGPoint(x: bounds.width, y: point.y))
-            ctx.strokePath()
-
-        case .centeredCross:
-            guard let point = location else { return }
-            let size: CGFloat = 20.0
-            let half = size / 2
-            ctx.setLineCap(.round)
-            ctx.beginPath()
-            ctx.move(to: CGPoint(x: point.x - half, y: point.y))
-            ctx.addLine(to: CGPoint(x: point.x + half, y: point.y))
-            ctx.move(to: CGPoint(x: point.x, y: point.y - half))
-            ctx.addLine(to: CGPoint(x: point.x, y: point.y + half))
-            ctx.strokePath()
+        // Nothing to draw?
+        guard crosshairsStyle != .hidden,
+              let p = location else {
+            shapeLayer.path = nil
+            return
         }
 
-        ctx.restoreGState()
+        let path = CGMutablePath()
+        switch crosshairsStyle {
+        case .fullScreenLines:
+            path.move(to: CGPoint(x: p.x, y: 0))
+            path.addLine(to: CGPoint(x: p.x, y: bounds.height))
+            path.move(to: CGPoint(x: 0,  y: p.y))
+            path.addLine(to: CGPoint(x: bounds.width, y: p.y))
+
+        case .centeredCross:
+            let size: CGFloat = 20.0
+            let half = size / 2
+            path.move(to: CGPoint(x: p.x - half, y: p.y))
+            path.addLine(to: CGPoint(x: p.x + half, y: p.y))
+            path.move(to: CGPoint(x: p.x, y: p.y - half))
+            path.addLine(to: CGPoint(x: p.x, y: p.y + half))
+
+        case .hidden:      // already handled above
+            break
+        }
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)          // avoid implicit fades
+        shapeLayer.lineWidth = 1.0 / max(magnification, 0.01)
+        shapeLayer.path      = path
+        CATransaction.commit()
     }
+
+    // MARK: – Hit-testing ----------------------------------------------------
+
+    /// This view is only an overlay – it should never intercept events.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }

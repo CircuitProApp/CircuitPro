@@ -8,8 +8,10 @@
 import AppKit
 
 final class DocumentBackgroundView: NSView {
-    override func draw(_ dirtyRect: NSRect) {
-        NSColor.windowBackgroundColor.setFill()
-        dirtyRect.fill()
+    override func viewDidMoveToSuperview() {
+        super.viewDidMoveToSuperview()
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
     }
 }
+
