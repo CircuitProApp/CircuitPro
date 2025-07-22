@@ -10,7 +10,7 @@ struct CanvasView: NSViewRepresentable {
     @Binding var selectedIDs: Set<UUID>
     @Binding var selectedTool: AnyCanvasTool
     var layerBindings: CanvasLayerBindings? = nil
-    
+
     // MARK: – Coordinator holding the App-Kit subviews
     final class Coordinator {
         let workbench: WorkbenchView
@@ -35,7 +35,7 @@ struct CanvasView: NSViewRepresentable {
         scrollView.allowsMagnification = true
         scrollView.minMagnification = ZoomStep.minZoom
         scrollView.maxMagnification = ZoomStep.maxZoom
-        scrollView.magnification = manager.magnification
+        scrollView.magnification = manager.magnification        
         
         // Set a background color to create the "out of bounds" area
         scrollView.drawsBackground = false

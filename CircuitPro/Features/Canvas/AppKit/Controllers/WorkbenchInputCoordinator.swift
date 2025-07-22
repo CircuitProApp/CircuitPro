@@ -49,7 +49,7 @@ final class WorkbenchInputCoordinator {
         workbench.onMouseMoved?(snapped)
 
         // Live hit-testing for cursor feedback
-//        updateCursor(at: p)
+        updateCursor(at: p)
 
         // Preview & live rotation
         rotation.update(to: p)
@@ -182,35 +182,35 @@ final class WorkbenchInputCoordinator {
     }
 
     // MARK: - Private Helpers
-//    private func updateCursor(at point: CGPoint) {
-//        // Only change cursor when the select tool is active.
-//        guard workbench.selectedTool?.id == "cursor" else {
-//            NSCursor.arrow.set()
-//            return
-//        }
-//
-//        let hitTarget = hitTest.hitTest(
-//            at: point,
-//            elements: workbench.elements,
-//            schematicGraph: workbench.schematicGraph,
-//            magnification: workbench.magnification
-//        )
-//
-//        switch hitTarget {
-//        case .canvasElement(let part):
-//            switch part {
-//            case .pin, .pad:
-//                NSCursor.crosshair.set()
-//            case .body:
-//                NSCursor.pointingHand.set()
-//            }
-//        case .connection(let part):
-//            switch part {
-//            case .vertex, .edge:
-//                NSCursor.crosshair.set()
-//            }
-//        case nil:
-//            NSCursor.arrow.set()
-//        }
-//    }
+    private func updateCursor(at point: CGPoint) {
+        // Only change cursor when the select tool is active.
+        guard workbench.selectedTool?.id == "cursor" else {
+            NSCursor.arrow.set()
+            return
+        }
+
+        let hitTarget = hitTest.hitTest(
+            at: point,
+            elements: workbench.elements,
+            schematicGraph: workbench.schematicGraph,
+            magnification: workbench.magnification
+        )
+
+        switch hitTarget {
+        case .canvasElement(let part):
+            switch part {
+            case .pin, .pad:
+                NSCursor.crosshair.set()
+            case .body:
+                NSCursor.pointingHand.set()
+            }
+        case .connection(let part):
+            switch part {
+            case .vertex, .edge:
+                NSCursor.crosshair.set()
+            }
+        case nil:
+            NSCursor.arrow.set()
+        }
+    }
 }

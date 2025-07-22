@@ -1,16 +1,13 @@
-//
 //  SplitPaneView.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 7/21/25.
-//
 
 import SwiftUI
 
 public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View {
 
     // MARK: - State Machine Definition
-    
     private enum SplitterState: Equatable {
         case collapsed
         case expanded(height: CGFloat)
@@ -51,19 +48,18 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
     @State private var splitterState: SplitterState
     @State private var lastNonCollapsedHeight: CGFloat
     @State private var collapseSource: StateChangeSource? = nil
-    @State private var isHovering: Bool = false
-    
+
     // MARK: - Transient Drag State
     @State private var isDragging: Bool = false
     @State private var dragInitialHeight: CGFloat = 0
     @State private var currentDragHeight: CGFloat = 0
+    @State private var isHovering: Bool = false
 
     // MARK: - Coordinate Space Name
     private let dragSpace = "SplitPaneDragSpace"
-    
-    // MARK: - Computed Properties
+
     private var showResizeCursor: Bool {
-        isHovering || isDragging
+        isDragging || isHovering
     }
 
     // MARK: - Init
@@ -85,7 +81,7 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
         self.primary = primary()
         self.handle = handle()
         self.secondary = secondary()
-        
+
         let initialRestoreHeight = minSecondary
         let initialState: SplitterState = isCollapsed.wrappedValue ? .collapsed : .expanded(height: initialRestoreHeight)
         _splitterState = State(initialValue: initialState)
@@ -96,24 +92,24 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
     public var body: some View {
         GeometryReader { geo in
             let usableHeight = geo.size.height - handleHeight
-            
+
             if usableHeight >= 0 {
                 let displayHeight = isDragging ? currentDragHeight : splitterState.height
 
                 let dragGesture = DragGesture(minimumDistance: 0, coordinateSpace: .named(dragSpace))
                     .onChanged { value in handleDragChanged(value: value, usableHeight: usableHeight) }
                     .onEnded { _ in handleDragEnded() }
-                
-                 VStack(spacing: 0) {
-                    ZStack(alignment: .bottom) {
+
+                VStack(spacing: 0) {
+
                         primary
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                         handleAssembly
                             .gesture(dragGesture)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
+
+                   
                     secondary
                         .frame(maxWidth: .infinity)
                         .frame(height: max(0, displayHeight), alignment: .top)
@@ -125,14 +121,14 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
                 .onChange(of: isCollapsed) { oldValue, newValue in
                     handleExternalCollapseChange(newValue: newValue)
                 }
-                .onChange(of: showResizeCursor) { oldValue, newValue in
-                    if newValue {
+                .onChange(of: showResizeCursor) { _, show in
+                    if show {
                         NSCursor.resizeUpDown.push()
                     } else {
                         NSCursor.pop()
                     }
                 }
-                
+
             } else {
                 primary
             }
@@ -142,24 +138,25 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
     // MARK: - Handle View
     private var handleAssembly: some View {
         ZStack {
-            Color.clear
-                .contentShape(Rectangle())
-                .onHover { self.isHovering = $0 }
-
             VStack(spacing: 0) {
                 Divider()
-                handle
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Color.clear
                 Divider()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onHover { isHovering in
+                self.isHovering = isHovering
+            }
+            handle
+              
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
         }
         .frame(height: handleHeight)
         .background(.ultraThinMaterial)
-        .contentShape(Rectangle())
     }
-    
-    // MARK: - State Machine Transition Logic
 
+    // MARK: - State Machine Transition Logic (unchanged)
     private func handleDragChanged(value: DragGesture.Value, usableHeight: CGFloat) {
         if !isDragging {
             isDragging = true
@@ -178,7 +175,7 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
         } else {
             let newHeight = max(minSecondary, potentialHeight)
             let clampedNewHeight = min(newHeight, usableHeight - minPrimary)
-            
+
             if splitterState.isCollapsed {
                 updateState(to: .expanded(height: clampedNewHeight), source: .internalDrag)
             }
@@ -193,13 +190,13 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
         if !splitterState.isCollapsed {
             let finalHeight = currentDragHeight
             lastNonCollapsedHeight = finalHeight
-            
+
             if splitterState != .expanded(height: finalHeight) {
                 updateState(to: .expanded(height: finalHeight), source: .internalDrag)
             }
         }
     }
-    
+
     private func handleExternalCollapseChange(newValue: Bool) {
         guard newValue != splitterState.isCollapsed else { return }
 
@@ -221,14 +218,11 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
 
     private func updateState(to newState: SplitterState, source: StateChangeSource) {
         guard newState != splitterState else { return }
-        
+
         if newState.isCollapsed {
             self.collapseSource = source
         }
-        
-        let stateDescription = newState.isCollapsed ? "collapsed" : "expanded(height: \(Int(newState.height)))"
-        print("SplitPaneView: State changed to \(stateDescription) via \(source.rawValue)")
-        
+
         let animation: Animation? = (source == .external) ? .linear : nil
 
         if let animation = animation {
@@ -238,7 +232,7 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
         } else {
             splitterState = newState
         }
-        
+
         if isCollapsed != newState.isCollapsed {
             isCollapsed = newState.isCollapsed
         }
