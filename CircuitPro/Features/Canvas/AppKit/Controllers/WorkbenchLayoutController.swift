@@ -57,17 +57,17 @@ final class WorkbenchLayoutController {
 //        workbench.elementsView = elements
 //
 //        // 4 Preview
-//        let preview = PreviewView(frame: workbench.bounds)
-//        preview.autoresizingMask = [.width, .height]
-//        preview.workbench = workbench
-//        workbench.addSubview(preview)
-//        workbench.previewView = preview
-//
+        let preview = PreviewView(frame: workbench.bounds)
+        preview.autoresizingMask = [.width, .height]
+        preview.workbench = workbench
+        workbench.addSubview(preview)
+        workbench.previewView = preview
+
 //        // 5 Handles
-//        let handles = HandlesView(frame: workbench.bounds)
-//        handles.autoresizingMask = [.width, .height]
-//        workbench.addSubview(handles)
-//        workbench.handlesView = handles
+        let handles = HandlesView(frame: workbench.bounds)
+        handles.autoresizingMask = [.width, .height]
+        workbench.addSubview(handles)
+        workbench.handlesView = handles
 
         // 6 Marquee
         let marquee = MarqueeView(frame: workbench.bounds)
