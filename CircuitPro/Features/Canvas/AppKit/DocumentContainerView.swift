@@ -16,12 +16,27 @@ final class DocumentContainerView: NSView {
         self.workbenchView = workbench
         super.init(frame: .zero)
         
+        // 1. Configure WorkbenchView
+        setupWorkbenchViewShadow()
+        
+        // 2. Add subviews
         addSubview(documentBackgroundView)
         addSubview(workbenchView)
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    // MARK: - Setup
+    private func setupWorkbenchViewShadow() {
+        workbenchView.wantsLayer = true
+        
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.3)
+        shadow.shadowBlurRadius = 7.0
+        
+        workbenchView.shadow = shadow
     }
 
     override func layout() {
