@@ -93,9 +93,10 @@ struct RulerDrawer {
         if isVertical {
             let xTick = isPrimaryEdge ? inner.minX : inner.maxX
             let xLabel = isPrimaryEdge ? (inner.minX + outer.minX) * 0.5 : (inner.maxX + outer.maxX) * 0.5
-            let yRange = stride(from: inner.minY + tickSpacing, to: inner.maxY, by: tickSpacing)
             
-            let totalVerticalIntervals = Int(floor(inner.height / tickSpacing))
+            // 1. Anchor lettered rulers to the top edge (maxY) by striding downwards.
+            // This ensures that any partial cell is at the bottom.
+            let yRange = stride(from: inner.maxY - tickSpacing, to: inner.minY, by: -tickSpacing)
 
             for (i, y) in yRange.enumerated() {
                 ctx.move(to: .init(x: xTick, y: y))
@@ -103,11 +104,12 @@ struct RulerDrawer {
                 ctx.strokePath()
 
                 if showLabels {
-                    let prevY = y - tickSpacing
-                    let mid = (y + prevY) * 0.5
+                    // 1.1. Calculate label position for the cell above the tick
+                    let nextY = y + tickSpacing
+                    let mid = (y + nextY) * 0.5
                     
-                    let labelIndexFromTop = totalVerticalIntervals - 1 - i
-                    let text = labelForIndex(labelIndexFromTop, isNumber: false) as NSString
+                    // 1.2. Get lettered label, starting with 'A' for index 0
+                    let text = labelForIndex(i, isNumber: false) as NSString
                     
                     let size = text.size(withAttributes: attr)
                     text.draw(at: .init(x: xLabel - size.width * 0.5, y: mid - size.height * 0.5), withAttributes: attr)
