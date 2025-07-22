@@ -163,9 +163,28 @@ final class WorkbenchView: NSView {
                     isEnabled: isSnappingEnabled)
     }
     
-    /// Ensures the schematic graph has vertices for every symbol pin and that their
-    /// positions are up-to-date.
+    /// Ensures the schematic graph has vertices for every symbol pin, that their
+    /// positions are up-to-date, and that vertices for deleted symbols are removed.
     private func syncPinPositionsToGraph() {
+        // 1. Get all symbol IDs currently on the workbench
+        let currentSymbolIDs = Set<UUID>(elements.compactMap {
+            guard case .symbol(let symbol) = $0 else { return nil }
+            return symbol.id
+        })
+
+        // 2. Find and remove vertices from the graph that belong to deleted symbols
+        let verticesToRemove = schematicGraph.vertices.values.filter { vertex in
+            if case .pin(let symbolID, _) = vertex.ownership {
+                return !currentSymbolIDs.contains(symbolID)
+            }
+            return false
+        }
+        
+        if !verticesToRemove.isEmpty {
+            schematicGraph.delete(items: Set(verticesToRemove.map { $0.id }))
+        }
+
+        // 3. Update existing pins and add new ones
         for element in elements {
             guard case .symbol(let symbolElement) = element else { continue }
             
