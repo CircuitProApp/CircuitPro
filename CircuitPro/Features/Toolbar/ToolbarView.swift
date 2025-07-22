@@ -44,7 +44,6 @@ struct ToolbarView<Tool: CanvasTool>: View {
         .background(.thinMaterial)
         .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3), lineWidth: 1)
         .buttonStyle(.borderless)
-        .padding(.bottom, 30)
     }
 
     private var toolbarContent: some View {

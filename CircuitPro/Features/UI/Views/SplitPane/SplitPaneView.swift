@@ -7,16 +7,14 @@ import SwiftUI
 
 public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View {
 
-    // MARK: - State Machine Definition
+    // 1. State Machine
     private enum SplitterState: Equatable {
         case collapsed
         case expanded(height: CGFloat)
 
         var isCollapsed: Bool {
-            switch self {
-            case .collapsed: return true
-            case .expanded: return false
-            }
+            if case .collapsed = self { return true }
+            return false
         }
 
         var height: CGFloat {
@@ -32,10 +30,8 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
         case internalDrag
     }
 
-    // MARK: - Public binding
+    // 2. Bindings & Configuration
     @Binding private var isCollapsed: Bool
-
-    // MARK: - Configuration
     private let primary: Primary
     private let handle: Handle
     private let secondary: Secondary
@@ -44,25 +40,22 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
     private let handleHeight: CGFloat
     private let secondaryCollapsible: Bool
 
-    // MARK: - Internal State
+    // 3. Internal State
     @State private var splitterState: SplitterState
     @State private var lastNonCollapsedHeight: CGFloat
     @State private var collapseSource: StateChangeSource? = nil
 
-    // MARK: - Transient Drag State
+    // 4. Transient Drag State
     @State private var isDragging: Bool = false
     @State private var dragInitialHeight: CGFloat = 0
     @State private var currentDragHeight: CGFloat = 0
     @State private var isHovering: Bool = false
 
-    // MARK: - Coordinate Space Name
+    // 5. Utilities
     private let dragSpace = "SplitPaneDragSpace"
+    private var showResizeCursor: Bool { isDragging || isHovering }
 
-    private var showResizeCursor: Bool {
-        isDragging || isHovering
-    }
-
-    // MARK: - Init
+    // 6. Init
     public init(
         isCollapsed: Binding<Bool>,
         minPrimary: CGFloat = 100,
@@ -73,6 +66,7 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
         @ViewBuilder handle: () -> Handle,
         @ViewBuilder secondary: () -> Secondary
     ) {
+        // 6.1. Initialize Bindings and Configuration
         _isCollapsed = isCollapsed
         self.minPrimary = minPrimary
         self.minSecondary = minSecondary
@@ -82,150 +76,174 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
         self.handle = handle()
         self.secondary = secondary()
 
+        // 6.2. Initialize State
         let initialRestoreHeight = minSecondary
         let initialState: SplitterState = isCollapsed.wrappedValue ? .collapsed : .expanded(height: initialRestoreHeight)
         _splitterState = State(initialValue: initialState)
         _lastNonCollapsedHeight = State(initialValue: initialRestoreHeight)
     }
 
-    // MARK: - Body
+    // 7. Body
     public var body: some View {
         GeometryReader { geo in
-            let usableHeight = geo.size.height - handleHeight
-
-            if usableHeight >= 0 {
-                let displayHeight = isDragging ? currentDragHeight : splitterState.height
-
-                let dragGesture = DragGesture(minimumDistance: 0, coordinateSpace: .named(dragSpace))
-                    .onChanged { value in handleDragChanged(value: value, usableHeight: usableHeight) }
-                    .onEnded { _ in handleDragEnded() }
-
-                VStack(spacing: 0) {
-
-                        primary
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                        handleAssembly
-                            .gesture(dragGesture)
-
-
-                   
-                    secondary
-                        .frame(maxWidth: .infinity)
-                        .frame(height: max(0, displayHeight), alignment: .top)
-                        .clipped()
-                        .allowsHitTesting(displayHeight > 0)
-                }
-                .frame(height: geo.size.height)
-                .coordinateSpace(name: dragSpace)
-                .onChange(of: isCollapsed) { oldValue, newValue in
-                    handleExternalCollapseChange(newValue: newValue)
-                }
-                .onChange(of: showResizeCursor) { _, show in
-                    if show {
-                        NSCursor.resizeUpDown.push()
-                    } else {
-                        NSCursor.pop()
-                    }
-                }
-
-            } else {
+            // 7.1. Ensure there is enough space for the view
+            if geo.size.height - handleHeight < 0 {
                 primary
+            } else {
+                splitViewContent(for: geo)
             }
         }
     }
 
-    // MARK: - Handle View
+    // 8. View Builders
+    private func splitViewContent(for geo: GeometryProxy) -> some View {
+        let usableHeight = geo.size.height - handleHeight
+        let displayHeight = isDragging ? currentDragHeight : splitterState.height
+        let dragGesture = DragGesture(minimumDistance: 0, coordinateSpace: .named(dragSpace))
+            .onChanged { value in handleDragChanged(value: value, usableHeight: usableHeight) }
+            .onEnded { _ in handleDragEnded() }
+
+        return VStack(spacing: 0) {
+            primary
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            handleAssembly
+                .gesture(dragGesture)
+
+            secondary
+                .frame(maxWidth: .infinity)
+                .frame(height: max(0, displayHeight), alignment: .top)
+                .clipped()
+                .allowsHitTesting(displayHeight > 0)
+        }
+        .frame(height: geo.size.height)
+        .coordinateSpace(name: dragSpace)
+        .onChange(of: isCollapsed) { _, newValue in
+            handleExternalCollapseChange(isCollapsing: newValue)
+        }
+        .onChange(of: showResizeCursor) { _, show in
+            show ? NSCursor.resizeUpDown.push() : NSCursor.pop()
+        }
+    }
+    
     private var handleAssembly: some View {
         ZStack {
+            // 8.1. Handle Background and hover area
             VStack(spacing: 0) {
                 Divider()
                 Color.clear
                 Divider()
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .onHover { isHovering in
-                self.isHovering = isHovering
-            }
+            .contentShape(Rectangle()) // Ensure entire area is hoverable
+            .onHover { self.isHovering = $0 }
+            
+            // 8.2. User-provided handle view
             handle
-              
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
         }
         .frame(height: handleHeight)
         .background(.ultraThinMaterial)
     }
 
-    // MARK: - State Machine Transition Logic (unchanged)
+    // 9. Drag Handling Logic
     private func handleDragChanged(value: DragGesture.Value, usableHeight: CGFloat) {
+        // 9.1. Initialize Drag
         if !isDragging {
-            isDragging = true
-            dragInitialHeight = splitterState.height
+            beginDrag()
         }
 
+        // 9.2. Calculate Drag Height
         let potentialHeight = dragInitialHeight - value.translation.height
         let collapseThreshold = minSecondary / 2
 
-        if secondaryCollapsible && potentialHeight < collapseThreshold {
-            if !splitterState.isCollapsed {
-                lastNonCollapsedHeight = splitterState.height
-                updateState(to: .collapsed, source: .internalDrag)
-            }
-            currentDragHeight = 0
+        // 9.3. Process Drag
+        if shouldCollapse(potentialHeight: potentialHeight, collapseThreshold: collapseThreshold) {
+            processDragCollapse()
         } else {
-            let newHeight = max(minSecondary, potentialHeight)
-            let clampedNewHeight = min(newHeight, usableHeight - minPrimary)
-
-            if splitterState.isCollapsed {
-                updateState(to: .expanded(height: clampedNewHeight), source: .internalDrag)
-            }
-            currentDragHeight = clampedNewHeight
+            processDragExpand(potentialHeight: potentialHeight, usableHeight: usableHeight)
         }
     }
-
+    
     private func handleDragEnded() {
         guard isDragging else { return }
         isDragging = false
 
-        if !splitterState.isCollapsed {
-            let finalHeight = currentDragHeight
-            lastNonCollapsedHeight = finalHeight
+        // 9.4. Finalize Drag State
+        guard !splitterState.isCollapsed else { return }
+        
+        let finalHeight = currentDragHeight
+        lastNonCollapsedHeight = finalHeight
 
-            if splitterState != .expanded(height: finalHeight) {
-                updateState(to: .expanded(height: finalHeight), source: .internalDrag)
-            }
+        if splitterState != .expanded(height: finalHeight) {
+            updateState(to: .expanded(height: finalHeight), source: .internalDrag)
         }
     }
 
-    private func handleExternalCollapseChange(newValue: Bool) {
-        guard newValue != splitterState.isCollapsed else { return }
+    // 10. Drag Handling Helpers
+    private func beginDrag() {
+        isDragging = true
+        dragInitialHeight = splitterState.height
+    }
 
-        if newValue {
-            if !splitterState.isCollapsed {
-                lastNonCollapsedHeight = splitterState.height
-            }
+    private func shouldCollapse(potentialHeight: CGFloat, collapseThreshold: CGFloat) -> Bool {
+        return secondaryCollapsible && potentialHeight < collapseThreshold
+    }
+
+    private func processDragCollapse() {
+        if !splitterState.isCollapsed {
+            lastNonCollapsedHeight = splitterState.height
+            updateState(to: .collapsed, source: .internalDrag)
+        }
+        currentDragHeight = 0
+    }
+
+    private func processDragExpand(potentialHeight: CGFloat, usableHeight: CGFloat) {
+        let newHeight = max(minSecondary, potentialHeight)
+        let clampedHeight = min(newHeight, usableHeight - minPrimary)
+
+        if splitterState.isCollapsed {
+            updateState(to: .expanded(height: clampedHeight), source: .internalDrag)
+        }
+        currentDragHeight = clampedHeight
+    }
+    
+    // 11. External State Change Handling
+    private func handleExternalCollapseChange(isCollapsing: Bool) {
+        guard isCollapsing != splitterState.isCollapsed else { return }
+
+        if isCollapsing {
+            // 11.1. Collapse from external trigger
+            lastNonCollapsedHeight = splitterState.height
             updateState(to: .collapsed, source: .external)
         } else {
-            let restoreHeight: CGFloat
-            if collapseSource == .internalDrag {
-                restoreHeight = minSecondary
-            } else {
-                restoreHeight = max(lastNonCollapsedHeight, minSecondary)
-            }
+            // 11.2. Expand from external trigger
+            let restoreHeight = calculateRestoreHeight()
             updateState(to: .expanded(height: restoreHeight), source: .external)
         }
     }
+    
+    private func calculateRestoreHeight() -> CGFloat {
+        // 11.3. Determine height to restore to
+        if collapseSource == .internalDrag {
+            return minSecondary
+        } else {
+            return max(lastNonCollapsedHeight, minSecondary)
+        }
+    }
 
+    // 12. Core State Update
     private func updateState(to newState: SplitterState, source: StateChangeSource) {
         guard newState != splitterState else { return }
 
+        // 12.1. Update collapse source if view is collapsing
         if newState.isCollapsed {
             self.collapseSource = source
         }
 
+        // 12.2. Determine animation
         let animation: Animation? = (source == .external) ? .linear : nil
 
-        if let animation = animation {
+        // 12.3. Apply state change with animation
+        if let animation {
             withAnimation(animation) {
                 splitterState = newState
             }
@@ -233,6 +251,7 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
             splitterState = newState
         }
 
+        // 12.4. Sync external binding if needed
         if isCollapsed != newState.isCollapsed {
             isCollapsed = newState.isCollapsed
         }
