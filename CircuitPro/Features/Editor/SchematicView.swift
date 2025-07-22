@@ -32,11 +32,6 @@ struct SchematicView: View {
             SchematicToolbarView(selectedSchematicTool: $selectedTool)
                 .padding(16)
         }
-        .overlay(alignment: .bottom) {
-            if !nets.isEmpty {
-                NetsOverlay(graph: $bindableProjectManager.schematicGraph, nets: nets)
-            }
-        }
         .onAppear {
             rebuildCanvasElements()
         }
