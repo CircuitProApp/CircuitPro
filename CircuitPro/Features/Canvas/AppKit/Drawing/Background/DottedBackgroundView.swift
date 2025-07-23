@@ -34,7 +34,6 @@ final class DottedBackgroundView: NSView, CALayerDelegate {
     }
 
     override var wantsUpdateLayer: Bool { true }
-    override var isFlipped: Bool { true }
 
     // MARK: - Drawing Logic
     

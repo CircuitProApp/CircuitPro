@@ -28,16 +28,16 @@ struct CircleTool: CanvasTool {
         }
     }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> ToolPreview? {
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters? {
         guard let center else { return nil }
         let radius = hypot(mouse.x - center.x, mouse.y - center.y)
         let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
         let path = CGPath(ellipseIn: rect, transform: nil)
 
-        return ToolPreview(
+        return DrawingParameters(
             path: path,
-            strokeColor: NSColor(context.selectedLayer.color).cgColor,
             lineWidth: 1.0,
+            strokeColor: NSColor(context.selectedLayer.color).cgColor,
             lineDashPattern: [4, 4]
         )
     }

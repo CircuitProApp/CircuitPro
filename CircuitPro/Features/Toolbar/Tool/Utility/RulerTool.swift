@@ -37,7 +37,7 @@ struct RulerTool: CanvasTool {
     }
 
     // swiftlint:disable:next function_body_length
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> ToolPreview? {
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters? {
         guard let start = start else { return nil }
         let isDarkMode = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         let color: NSColor = .black
@@ -57,7 +57,7 @@ struct RulerTool: CanvasTool {
         let rawPerp = CGPoint(x: -deltaY, y: deltaX)
         let length = hypot(rawPerp.x, rawPerp.y)
         guard length > 0 else {
-            return ToolPreview(path: path, strokeColor: color.cgColor, lineWidth: 1.0)
+            return DrawingParameters(path: path, lineWidth: 1.0, strokeColor: color.cgColor)
         }
         let unitPerp = CGPoint(x: rawPerp.x / length, y: rawPerp.y / length)
 
@@ -106,7 +106,7 @@ struct RulerTool: CanvasTool {
 
         let textLabel = ToolPreview.TextLabel(text: text, position: drawPoint, size: textSize)
         */
-        return ToolPreview(path: path, strokeColor: color.cgColor, lineWidth: 1.0)
+        return DrawingParameters(path: path, lineWidth: 1.0, strokeColor: color.cgColor)
     }
     mutating func handleEscape() {
         start = nil

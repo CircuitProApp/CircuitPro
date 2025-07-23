@@ -70,7 +70,7 @@ final class WorkbenchLayoutController {
         workbench.handlesView = handles
 
         // 6 Marquee
-        let marquee = MarqueeView(frame: workbench.bounds)
+        let marquee = MarqueeView()
         marquee.autoresizingMask = [.width, .height]
         workbench.addSubview(marquee)
         workbench.marqueeView = marquee
