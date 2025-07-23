@@ -104,7 +104,7 @@ extension Pin: Drawable {
     }
 
     // ─────────────────────────── same positioning logic as drawBody(in:)
-    private func labelLayout() -> (String, CGPoint, NSFont) {
+    func labelLayout() -> (String, CGPoint, NSFont) {
         let font = NSFont.systemFont(ofSize: 10)
         let pad: CGFloat = 4
         let size = (label as NSString).size(withAttributes: [.font: font])
@@ -132,7 +132,7 @@ extension Pin: Drawable {
         }
     }
 
-    private func numberLayout() -> (String, CGPoint, NSFont) {
+    func numberLayout() -> (String, CGPoint, NSFont) {
         let font = NSFont.systemFont(ofSize: 9, weight: .medium)
         let pad: CGFloat = 3
         let text = "\(number)"
@@ -156,28 +156,6 @@ extension Pin: Drawable {
                     CGPoint(x: mid.x + pad, y: mid.y - size.height / 2),
                     font)
         }
-    }
-}
-
-// MARK: Hittable
-extension Pin: Hittable {
-
-    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
-        // 1. get the outline that selection/halo already uses
-        guard let shape = selectionPath() else { return nil }
-
-        // 2. inflate it by the tolerance and ask Core Graphics
-        let fat = shape.copy(
-            strokingWithWidth: tolerance * 2,
-            lineCap: .round,
-            lineJoin: .round,
-            miterLimit: 10
-        )
-
-        if fat.contains(point) {
-            return .canvasElement(part: .pin(id: id, parentSymbolID: nil, position: position))
-        }
-        return nil
     }
 }
 
@@ -234,33 +212,4 @@ private func pathForText(
     }
 
     return composite
-}
-
-// Pin+Bounded.swift
-extension Pin: Bounded {
-    var boundingBox: CGRect {
-        var box = primitives
-            .map(\.boundingBox)
-            .reduce(CGRect.null) { $0.union($1) }
-
-        if showLabel && name.isNotEmpty {
-            let (text, pos, font) = labelLayout()
-            box = box.union(textRect(text, font: font, at: pos))
-        }
-        if showNumber {
-            let (text, pos, font) = numberLayout()
-            box = box.union(textRect(text, font: font, at: pos))
-        }
-        return box
-    }
-
-    private func textRect(
-        _ string: String,
-        font: NSFont,
-        at origin: CGPoint
-    ) -> CGRect {
-        let size = (string as NSString).size(withAttributes: [.font: font])
-
-        return CGRect(origin: origin, size: size)
-    }
 }

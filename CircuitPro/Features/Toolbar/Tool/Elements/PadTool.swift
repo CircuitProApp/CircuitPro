@@ -27,7 +27,7 @@ struct PadTool: CanvasTool {
         return .element(.pad(pad))
     }
 
-    mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters? {
         let number = context.existingPadCount + 1
         let previewPad = Pad(
             number: number,
@@ -38,7 +38,7 @@ struct PadTool: CanvasTool {
             drillDiameter: nil
         )
 
-//        previewPad.draw(in: ctx, selected: false)
+        return previewPad.makeBodyParameters().first
     }
 
     mutating func handleRotate() {
