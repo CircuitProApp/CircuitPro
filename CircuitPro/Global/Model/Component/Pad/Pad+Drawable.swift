@@ -1,65 +1,79 @@
-//
-//  Pad+Drawable.swift
-//  Circuit Pro
-//
-//  Created by Giorgi Tchelidze on 5/16/25.
-//
-
 import AppKit
 
 extension Pad: Drawable {
 
-    // ─────────────────────────────────────────────────────────────
-    // 1.  Normal appearance
-    // ─────────────────────────────────────────────────────────────
-    func drawBody(in ctx: CGContext) {
-
-        ctx.saveGState()
-
-        // copper shape – no halo here
-        for prim in shapePrimitives {
-            prim.drawBody(in: ctx)
-        }
-
-        // optional drill hole punched *after* the copper was drawn
-        if type == .throughHole, let drill = drillDiameter {
-            let holeRect = CGRect(
-                x: position.x - drill / 2,
-                y: position.y - drill / 2,
-                width: drill,
-                height: drill
-            )
-            ctx.addEllipse(in: holeRect)
-            ctx.setBlendMode(.clear)          // subtract from what is there
-            ctx.fillPath()
-            ctx.setBlendMode(.normal)
-        }
-
-        ctx.restoreGState()
+    // MARK: - Private Path Generation Helper
+    
+    /// A helper that generates the final, geometrically correct path for the pad's body.
+    private func getFinalPath() -> CGPath {
+        let shapePath = CGMutablePath()
+        shapePrimitives.forEach { shapePath.addPath($0.makePath()) }
+        
+        guard type == .throughHole else { return shapePath }
+        
+        let drillPath = CGMutablePath()
+        maskPrimitives.forEach { drillPath.addPath($0.makePath()) }
+        
+        return shapePath.subtracting(drillPath)
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // 2.  Outline that should glow when the pad is selected
-    // ─────────────────────────────────────────────────────────────
-    func selectionPath() -> CGPath? {
+    // MARK: - Drawable Protocol Conformance
 
-        let combined = CGMutablePath()
-        for prim in shapePrimitives {
-            combined.addPath(prim.makePath())
+    func makeBodyParameters() -> [DrawingParameters] {
+        let path = getFinalPath()
+        guard !path.isEmpty else { return [] }
+        
+        let copperColor = shapePrimitives.first?.color.cgColor ?? NSColor.systemBlue.cgColor
+        
+        return [DrawingParameters(
+            path: path,
+            lineWidth: 0,
+            fillColor: copperColor,
+            strokeColor: nil
+        )]
+    }
+
+    func makeHaloParameters() -> DrawingParameters? {
+        let haloWidth: CGFloat = 4.0
+        let haloColor = shapePrimitives.first?.color.cgColor.copy(alpha: 0.3) ?? NSColor.systemBlue.withAlphaComponent(0.3).cgColor
+        
+        let shapePath = CGMutablePath()
+        shapePrimitives.forEach { shapePath.addPath($0.makePath()) }
+        guard !shapePath.isEmpty else { return nil }
+        
+        // --- FIX IS HERE ---
+        // Removed the "guard let" as copy(strokingWithWidth:) is not optional.
+        let thickOutline = shapePath.copy(strokingWithWidth: haloWidth * 2, lineCap: .round, lineJoin: .round, miterLimit: 1)
+        // --- END FIX ---
+
+        let enlargedShape: CGPath = thickOutline.union(shapePath)
+
+        let finalHaloPath: CGPath
+        if type == .throughHole {
+            let drillPath = CGMutablePath()
+            maskPrimitives.forEach { drillPath.addPath($0.makePath()) }
+            finalHaloPath = enlargedShape.subtracting(drillPath)
+        } else {
+            finalHaloPath = enlargedShape
         }
-
-        // The drill hole is *not* part of the halo; leaving it filled
-        // results in a nice doughnut-shaped glow for TH pads.
-        return combined
+        
+        guard !finalHaloPath.isEmpty else { return nil }
+        
+        return DrawingParameters(
+            path: finalHaloPath,
+            lineWidth: 0,
+            fillColor: haloColor,
+            strokeColor: nil
+        )
     }
 }
 
 extension Pad: Bounded {
 
-    // 1 Bounding rectangle that encloses everything the pad draws
+    /// The bounding box should still encompass the original primitives.
     var boundingBox: CGRect {
-        allPrimitives
-            .map(\.boundingBox)          // each primitive already knows its box
+        return allPrimitives
+            .map(\.boundingBox)
             .reduce(CGRect.null) { $0.union($1) }
     }
 }

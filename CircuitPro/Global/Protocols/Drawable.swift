@@ -5,20 +5,11 @@ import AppKit
 protocol Drawable {
     
     // MARK: - Legacy Drawing (Core Graphics)
-    /// Paints the normal appearance of the object into a graphics context.
-    /// Note: This is bridged to the new layer-based system by default.
     func drawBody(in ctx: CGContext)
 
     // MARK: - Modern Drawing (Core Animation)
-    /// Generates the declarative parameters for the main body of the object.
-    /// - Returns: An array of `DrawingParameters` structs, one for each `CAShapeLayer` required.
     func makeBodyParameters() -> [DrawingParameters]
-
-    // MARK: - Selection Highlighting
-    /// An optional outline path that should glow when the object is selected.
-    /// For composite objects, this should return a single unified path.
-    /// - Returns: A `CGPath` representing the highlightable outline, or `nil`.
-    func selectionPath() -> CGPath?
+    func makeHaloParameters() -> DrawingParameters?
 }
 
 extension Drawable {
@@ -57,8 +48,7 @@ extension Drawable {
     }
 
     /// Default implementation that will intentionally crash for types that have not
-    /// yet been migrated to the new `makeBodyParameters` system. This ensures
-    /// all `Drawable`s explicitly support layer-based rendering.
+    /// been updated to the new `makeBodyParameters` system.
     func makeBodyParameters() -> [DrawingParameters] {
         fatalError("\(type(of: self)) has not been updated to support layer-based rendering. Please implement makeBodyParameters().")
     }

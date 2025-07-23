@@ -93,6 +93,10 @@ extension SymbolElement: Drawable {
 
         return combined.copy(using: &transform)
     }
+    
+    func makeHaloParameters() -> DrawingParameters? {
+        nil
+    }
 }
 
 extension SymbolElement: Hittable {

@@ -21,6 +21,10 @@ extension Pin: Drawable {
             drawLabel(in: ctx)
         }
     }
+    
+    func makeHaloParameters() -> DrawingParameters? {
+        nil
+    }
 
     private func drawLabel(in ctx: CGContext) {
 
