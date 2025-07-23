@@ -1,47 +1,39 @@
 import SwiftUI
 
 enum CardinalRotation: CGFloat, CaseIterable, Codable, Hashable {
-    case deg0 = 0
-    case deg90 = 90
-    case deg180 = 180
-    case deg270 = 270
+    // Cases are now named by their direction for clarity.
+    // Raw values now match standard mathematical angles (0° is East).
+    case east   = 0
+    case north  = 90
+    case west   = 180
+    case south  = 270
 
+    /// Radians, for use in CGAffineTransform and other Core Graphics functions.
     var radians: CGFloat {
-        CGFloat(rawValue) * .pi / 180
+        self.rawValue * .pi / 180
     }
-}
-
-extension CardinalRotation {
-    /// Unit vector in the direction of this rotation.
+    
+    /// Unit vector pointing in the direction of the rotation.
     var direction: CGPoint {
         switch self {
-        case .deg0:   return CGPoint(x: -1, y: 0) // West
-        case .deg90:  return CGPoint(x: 0, y: 1) // North
-        case .deg180: return CGPoint(x: 1, y: 0) // East
-        case .deg270: return CGPoint(x: 0, y: -1) // South
+        case .east:   return CGPoint(x: 1, y: 0)
+        case .west:   return CGPoint(x: -1, y: 0)
+        case .north:  return CGPoint(x: 0, y: 1)
+        case .south:  return CGPoint(x: 0, y: -1)
         }
     }
-}
-
-extension CardinalRotation {
-    /// Snaps an arbitrary angle (radians, math coords) to the
-    /// nearest of the four cardinals, compensating for the fact
-    /// that we treat 0° as **West** and 180° as **East**.
+    
+    /// Snaps an arbitrary angle (in radians) to the nearest cardinal direction.
     static func closest(to angle: CGFloat) -> CardinalRotation {
-        // radians → [0 , 360) in mathematical convention (0° = +X)
+        // 1. Convert radians to degrees in [0, 360) range.
         let degrees = angle * 180 / .pi
-        let norm    = ((degrees.truncatingRemainder(dividingBy: 360)) + 360)
+        let norm = ((degrees.truncatingRemainder(dividingBy: 360)) + 360)
                       .truncatingRemainder(dividingBy: 360)
 
-        // snap to the nearest 90-degree stop
-        let snap = (round(norm / 90) * 90).truncatingRemainder(dividingBy: 360)
-
-        switch Int(snap) {
-        case 0:   return .deg180   // mouse → E  → our “East” enum
-        case 90:  return .deg90    // mouse → N
-        case 180: return .deg0     // mouse → W
-        case 270: return .deg270   // mouse → S
-        default:  return .deg0     // fallback (shouldn’t happen)
-        }
+        // 2. Snap to the nearest 90-degree increment.
+        let snappedDegrees = round(norm / 90) * 90
+        
+        // 3. Directly initialize from the standard raw value. This is now simple and clear.
+        return CardinalRotation(rawValue: snappedDegrees) ?? .east // Default to East
     }
 }

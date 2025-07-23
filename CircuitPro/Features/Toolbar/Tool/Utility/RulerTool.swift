@@ -39,7 +39,7 @@ struct RulerTool: CanvasTool {
     // swiftlint:disable:next function_body_length
     mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters? {
         guard let start = start else { return nil }
-        let isDarkMode = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        // let isDarkMode = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         let color: NSColor = .black
 
         let currentEnd = (clicks >= 2 ? end ?? mouse : mouse)

@@ -12,7 +12,7 @@ struct Pin: Identifiable, Codable, Hashable {
     var name: String
     var number: Int
     var position: CGPoint
-    var cardinalRotation: CardinalRotation = .deg0
+    var cardinalRotation: CardinalRotation = .west
     var type: PinType
     var lengthType: PinLengthType = .long
     var showLabel: Bool = true

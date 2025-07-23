@@ -12,7 +12,7 @@ struct PadTool: CanvasTool {
     let symbolName = CircuitProSymbols.Footprint.pad
     let label = "Pad"
 
-    private var rotation: CardinalRotation = .deg0
+    private var rotation: CardinalRotation = .west
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
         let number = context.existingPadCount + 1

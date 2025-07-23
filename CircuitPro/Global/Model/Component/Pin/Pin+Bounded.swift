@@ -9,28 +9,27 @@ import AppKit
 
 extension Pin: Bounded {
     var boundingBox: CGRect {
+        // 1. Start with the bounding box of the geometric primitives.
         var box = primitives
             .map(\.boundingBox)
             .reduce(CGRect.null) { $0.union($1) }
 
+        // 2. Union the bounding box for the pin label.
         if showLabel && name.isNotEmpty {
-            let (text, pos, font) = labelLayout()
-            box = box.union(textRect(text, font: font, at: pos))
+            var (path, transform) = labelLayout()
+            if let finalPath = path.copy(using: &transform) {
+                box = box.union(finalPath.boundingBoxOfPath)
+            }
         }
+        
+        // 3. Union the bounding box for the pin number.
         if showNumber {
-            let (text, pos, font) = numberLayout()
-            box = box.union(textRect(text, font: font, at: pos))
+            var (path, transform) = numberLayout()
+            if let finalPath = path.copy(using: &transform) {
+                box = box.union(finalPath.boundingBoxOfPath)
+            }
         }
+        
         return box
-    }
-
-    private func textRect(
-        _ string: String,
-        font: NSFont,
-        at origin: CGPoint
-    ) -> CGRect {
-        let size = (string as NSString).size(withAttributes: [.font: font])
-
-        return CGRect(origin: origin, size: size)
     }
 }

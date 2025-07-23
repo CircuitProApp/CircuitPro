@@ -37,7 +37,7 @@ struct SchematicView: View {
         }
 
         // Rebuild when the data model changes
-        .onChange(of: projectManager.componentInstances) { _ in
+        .onChange(of: projectManager.componentInstances) {
             rebuildCanvasElements()
         }
         
@@ -46,7 +46,9 @@ struct SchematicView: View {
         .onChange(of: projectManager.schematicGraph.edges) { _, _ in updateNets() }
 
         // Persist symbol moves back to the model
-        .onChange(of: canvasElements) { syncCanvasToModel($0) }
+        .onChange(of: canvasElements) { _, newValue in
+            syncCanvasToModel(newValue)
+        }
         
         // When canvas selection changes, check if we need to deselect in the navigator
         .onChange(of: projectManager.selectedComponentIDs) { _, newSelection in
@@ -84,7 +86,7 @@ struct SchematicView: View {
             let symbolInst = SymbolInstance(
                 symbolUUID: comp.symbolUUID,
                 position:   pos,
-                cardinalRotation: .deg0
+                cardinalRotation: .west
             )
 
             let instance = ComponentInstance(

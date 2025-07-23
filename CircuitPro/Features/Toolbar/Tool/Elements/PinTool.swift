@@ -13,7 +13,7 @@ struct PinTool: CanvasTool {
     let symbolName = CircuitProSymbols.Symbol.pin
     let label = "Pin"
 
-    private var rotation: CardinalRotation = .deg0
+    private var rotation: CardinalRotation = .west
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
         let number = context.existingPinCount + 1
@@ -28,7 +28,7 @@ struct PinTool: CanvasTool {
         return .element(.pin(pin))
     }
 
-    mutating func drawPreview(in ctx: CGContext, mouse: CGPoint, context: CanvasToolContext) {
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters? {
         let previewPin = Pin(
             name: "",
             number: context.existingPinCount + 1,
@@ -38,10 +38,7 @@ struct PinTool: CanvasTool {
             lengthType: .long
         )
 
-//        previewPin.draw(
-//            in: ctx,
-//            selected: false     // no selection halo for preview
-//        )
+        return previewPin.makePreviewDrawingParameters()
     }
 
     mutating func handleRotate() {

@@ -36,7 +36,7 @@ final class ToolActionController {
             magnification: workbench.magnification
         )
 
-        var ctx = CanvasToolContext(
+        let ctx = CanvasToolContext(
             existingPinCount: workbench.elements.reduce(0) { $1.isPin ? $0 + 1 : $0 },
             existingPadCount: workbench.elements.reduce(0) { $1.isPad ? $0 + 1 : $0 },
             selectedLayer:    workbench.selectedLayer,
