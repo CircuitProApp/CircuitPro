@@ -18,6 +18,27 @@ protocol GraphicPrimitive:
     func makePath() -> CGPath
 }
 
+extension Drawable where Self: GraphicPrimitive {
+    
+    /// Provides the `Drawable` conformance for all graphic primitives.
+    func makeBodyParameters() -> [DrawingParameters] {
+        let params = DrawingParameters(
+            path: makePath(),
+            lineWidth: filled ? 0.0 : strokeWidth, // No stroke if filled
+            fillColor: filled ? color.cgColor : nil,
+            strokeColor: filled ? nil : color.cgColor,
+            lineCap: .round,
+            lineJoin: .round
+        )
+        return [params]
+    }
+
+    /// For a single primitive, the selection path is simply its own path.
+    func selectionPath() -> CGPath? {
+        return makePath()
+    }
+}
+
 extension GraphicPrimitive {
     // body drawing stays exactly like today
     func drawBody(in ctx: CGContext) {
@@ -65,8 +86,4 @@ extension GraphicPrimitive {
         }
         return box
     }
-}
-
-extension Drawable where Self: GraphicPrimitive {
-    func selectionPath() -> CGPath? { makePath() }
 }

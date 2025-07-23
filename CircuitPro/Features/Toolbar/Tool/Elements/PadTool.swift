@@ -38,7 +38,7 @@ struct PadTool: CanvasTool {
             drillDiameter: nil
         )
 
-        previewPad.draw(in: ctx, selected: false)
+//        previewPad.draw(in: ctx, selected: false)
     }
 
     mutating func handleRotate() {

@@ -59,14 +59,14 @@ struct SymbolThumbnail: View {
                 cgContext.concatenate(transform)
 
                 // Primitives
-                for primitive in symbol.primitives {
-                    primitive.draw(in: cgContext, selected: false)
-                }
+//                for primitive in symbol.primitives {
+//                    primitive.draw(in: cgContext, selected: false)
+//                }
 
                 // Pins (no text → unreadable in 100 pt)
-                for pin in symbol.pins {
-                    pin.draw(in: cgContext, selected: false)
-                }
+//                for pin in symbol.pins {
+//                    pin.draw(in: cgContext, selected: false)
+//                }
 
                 cgContext.restoreGState()
             }

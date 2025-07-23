@@ -51,11 +51,11 @@ final class WorkbenchLayoutController {
 //        workbench.connectionsView = connections
 //        
 //        // 3 Elements
-//        let elements = ElementsView(frame: workbench.bounds)
-//        elements.autoresizingMask = [.width, .height]
-//        workbench.addSubview(elements)
-//        workbench.elementsView = elements
-//
+        let elements = ElementsView(frame: workbench.bounds)
+        elements.autoresizingMask = [.width, .height]
+        workbench.addSubview(elements)
+        workbench.elementsView = elements
+
 //        // 4 Preview
         let preview = PreviewView(frame: workbench.bounds)
         preview.autoresizingMask = [.width, .height]

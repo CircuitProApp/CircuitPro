@@ -38,10 +38,10 @@ struct PinTool: CanvasTool {
             lengthType: .long
         )
 
-        previewPin.draw(
-            in: ctx,
-            selected: false     // no selection halo for preview
-        )
+//        previewPin.draw(
+//            in: ctx,
+//            selected: false     // no selection halo for preview
+//        )
     }
 
     mutating func handleRotate() {
