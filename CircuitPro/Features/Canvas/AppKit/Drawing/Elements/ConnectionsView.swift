@@ -5,99 +5,122 @@
 //  Created by Giorgi Tchelidze on 7/17/25.
 //
 
-
 import AppKit
 
-/// Draws all nets stored in `NetList`.
+/// Draws all nets stored in `SchematicGraph` using dedicated shape layers.
 final class ConnectionsView: NSView {
 
-    // MARK: – Data pushed in by WorkbenchView
-    var schematicGraph: SchematicGraph = .init()             { didSet { needsDisplay = true } }
-    var selectedIDs: Set<UUID> = []            { didSet { needsDisplay = true } }
-    var marqueeSelectedIDs: Set<UUID> = []     { didSet { needsDisplay = true } }
-    var magnification: CGFloat = 1.0           { didSet { needsDisplay = true } }
+    // MARK: – Data Properties
+    var schematicGraph: SchematicGraph = .init() { didSet { updateLayers() } }
+    var selectedIDs: Set<UUID> = []      { didSet { updateLayers() } }
+    var marqueeSelectedIDs: Set<UUID> = [] { didSet { updateLayers() } }
+    var magnification: CGFloat = 1.0     { didSet { updateLayers() } }
 
-    // MARK: – View flags
-    override var isOpaque: Bool   { false }
+    // MARK: – Layers
+    private let highlightLayer = CAShapeLayer()
+    private let edgesLayer = CAShapeLayer()
+    private let junctionsLayer = CAShapeLayer()
+    private let verticesLayer = CAShapeLayer()
 
-    // MARK: – Drawing
-    override func draw(_ dirtyRect: NSRect) {
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+    // MARK: – Initializers
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        setupViewAndLayers()
+    }
 
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupViewAndLayers()
+    }
+
+    // MARK: – Setup
+    private func setupViewAndLayers() {
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.clear.cgColor
+        
+        // 1. Configure Layer Styles (these are constant)
+        highlightLayer.lineWidth = 5.0
+        highlightLayer.strokeColor = NSColor.systemBlue.withAlphaComponent(0.3).cgColor
+        highlightLayer.fillColor = nil
+        highlightLayer.lineCap = .round
+        
+        edgesLayer.lineWidth = 1.5
+        edgesLayer.strokeColor = NSColor.systemBlue.cgColor
+        edgesLayer.fillColor = nil
+        
+        junctionsLayer.fillColor = NSColor.systemBlue.cgColor
+        
+        verticesLayer.fillColor = NSColor.systemPurple.cgColor
+        
+        // 2. Add layers to the view's main layer in drawing order (bottom to top)
+        layer?.addSublayer(highlightLayer)
+        layer?.addSublayer(edgesLayer)
+        layer?.addSublayer(junctionsLayer)
+        layer?.addSublayer(verticesLayer)
+    }
+
+    // MARK: – Layer Updates
+    /// Re-calculates and assigns the paths for all shape layers.
+    private func updateLayers() {
+        // Use a transaction to update all layer paths simultaneously without implicit animations.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        
         let allSelected = selectedIDs.union(marqueeSelectedIDs)
-        // Sizes are now constant and do not scale with magnification.
-        let lineWidth: CGFloat = 1.5
+        
+        // Define constant radii
         let vertexRadius: CGFloat = 2.0
         let junctionRadius: CGFloat = 4.0
-        let highlightLineWidth: CGFloat = 5.0
 
-        // 1. Draw Selected Edge Highlights
-        ctx.setStrokeColor(NSColor.systemBlue.withAlphaComponent(0.3).cgColor)
-        ctx.setLineWidth(highlightLineWidth)
-        ctx.setLineCap(.round)
-        
+        // 1. Update Highlight Layer Path
+        let highlightPath = CGMutablePath()
         for selectedID in allSelected {
-            if let edge = schematicGraph.edges[selectedID] {
-                guard let startVertex = schematicGraph.vertices[edge.start],
-                      let endVertex = schematicGraph.vertices[edge.end] else { continue }
-                
-                ctx.move(to: startVertex.point)
-                ctx.addLine(to: endVertex.point)
-                ctx.strokePath()
+            if let edge = schematicGraph.edges[selectedID],
+               let startVertex = schematicGraph.vertices[edge.start],
+               let endVertex = schematicGraph.vertices[edge.end] {
+                highlightPath.move(to: startVertex.point)
+                highlightPath.addLine(to: endVertex.point)
             }
         }
-        ctx.setLineCap(.butt) // Reset
-
-        // 2. Draw All Edges (on top of highlights)
-        ctx.setStrokeColor(NSColor.systemBlue.cgColor)
-        ctx.setLineWidth(lineWidth)
+        highlightLayer.path = highlightPath
         
+        // 2. Update All Edges Layer Path
+        let edgesPath = CGMutablePath()
         for edge in schematicGraph.edges.values {
-            guard let startVertex = schematicGraph.vertices[edge.start],
-                  let endVertex = schematicGraph.vertices[edge.end] else { continue }
-            
-            ctx.move(to: startVertex.point)
-            ctx.addLine(to: endVertex.point)
-            ctx.strokePath()
+            if let startVertex = schematicGraph.vertices[edge.start],
+               let endVertex = schematicGraph.vertices[edge.end] {
+                edgesPath.move(to: startVertex.point)
+                edgesPath.addLine(to: endVertex.point)
+            }
         }
+        edgesLayer.path = edgesPath
         
-        // 3. Draw Junctions
-        ctx.setFillColor(NSColor.systemBlue.cgColor)
+        // 3. Update Junctions and Vertices Layer Paths
+        let junctionsPath = CGMutablePath()
+        let verticesPath = CGMutablePath()
         
         for vertex in schematicGraph.vertices.values {
+            // Path for all vertices
+            let vertexRect = CGRect(x: vertex.point.x - vertexRadius, y: vertex.point.y - vertexRadius, width: vertexRadius * 2, height: vertexRadius * 2)
+            verticesPath.addEllipse(in: vertexRect)
+            
+            // Path for junctions (determined by connection count)
             let connectionCount = schematicGraph.adjacency[vertex.id]?.count ?? 0
             var isJunction = false
-
             if case .pin = vertex.ownership {
-                // A pin is a junction if it's on a wire or at a corner (2+ connections).
-                if connectionCount >= 2 {
-                    isJunction = true
-                }
+                if connectionCount >= 2 { isJunction = true }
             } else {
-                // A free vertex is a junction if it's a T-junction or more (3+ connections).
-                if connectionCount > 2 {
-                    isJunction = true
-                }
+                if connectionCount > 2 { isJunction = true }
             }
             
             if isJunction {
-                let rect = CGRect(x: vertex.point.x - junctionRadius,
-                                  y: vertex.point.y - junctionRadius,
-                                  width: junctionRadius * 2,
-                                  height: junctionRadius * 2)
-                ctx.fillEllipse(in: rect)
+                let junctionRect = CGRect(x: vertex.point.x - junctionRadius, y: vertex.point.y - junctionRadius, width: junctionRadius * 2, height: junctionRadius * 2)
+                junctionsPath.addEllipse(in: junctionRect)
             }
         }
+        junctionsLayer.path = junctionsPath
+        verticesLayer.path = verticesPath
         
-        // 4. Draw Vertices (with no selection highlight)
-        ctx.setFillColor(NSColor.systemPurple.cgColor) // Always use default color
-        
-        for vertex in schematicGraph.vertices.values {
-            let rect = CGRect(x: vertex.point.x - vertexRadius,
-                              y: vertex.point.y - vertexRadius,
-                              width: vertexRadius * 2,
-                              height: vertexRadius * 2)
-            ctx.fillEllipse(in: rect)
-        }
+        CATransaction.commit()
     }
 }

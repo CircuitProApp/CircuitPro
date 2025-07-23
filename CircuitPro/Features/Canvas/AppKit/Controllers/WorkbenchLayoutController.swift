@@ -32,7 +32,7 @@ final class WorkbenchLayoutController {
         workbench.addSubview(sheet)
         workbench.sheetView = sheet
 
-//        // Pin background and sheet to workbench edges
+        // Pin background and sheet to workbench edges
         NSLayoutConstraint.activate([
             background.leadingAnchor.constraint(equalTo: workbench.leadingAnchor),
             background.trailingAnchor.constraint(equalTo: workbench.trailingAnchor),
@@ -45,12 +45,12 @@ final class WorkbenchLayoutController {
             sheet.bottomAnchor.constraint(equalTo: workbench.bottomAnchor)
         ])
 
-//        let connections = ConnectionsView(frame: workbench.bounds)
-//        connections.autoresizingMask = [.width, .height]
-//        workbench.addSubview(connections)
-//        workbench.connectionsView = connections
-//        
-//        // 3 Elements
+        let connections = ConnectionsView(frame: workbench.bounds)
+        connections.autoresizingMask = [.width, .height]
+        workbench.addSubview(connections)
+        workbench.connectionsView = connections
+        
+        // 3 Elements
         let elements = ElementsView(frame: workbench.bounds)
         elements.autoresizingMask = [.width, .height]
         workbench.addSubview(elements)

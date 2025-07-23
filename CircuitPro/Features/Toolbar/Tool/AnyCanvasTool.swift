@@ -14,7 +14,7 @@ struct AnyCanvasTool: CanvasTool {
     let label: String
 
     private let _handleTap: (CGPoint, CanvasToolContext) -> CanvasToolResult
-    private let _preview: (CGPoint, CanvasToolContext) -> DrawingParameters?
+    private let _preview: (CGPoint, CanvasToolContext) -> [DrawingParameters]
     private let _handleEscape: () -> Void
     private let _handleBackspace: () -> Void
     private let _handleRotate: () -> Void
@@ -80,7 +80,7 @@ struct AnyCanvasTool: CanvasTool {
          _handleTap(point, context)
      }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters? {
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
         _preview(mouse, context)
     }
 

@@ -32,20 +32,20 @@ struct LineTool: CanvasTool {
         }
     }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters? {
-        guard let start else { return nil }
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
+        guard let start else { return [] }
 
         let path = CGMutablePath()
         path.move(to: start)
         path.addLine(to: mouse)
 
-        return DrawingParameters(
+        return [DrawingParameters(
             path: path,
             lineWidth: 1.0,
             fillColor: nil,
             strokeColor: NSColor(context.selectedLayer.color).cgColor,
             lineDashPattern: [4, 4]
-        )
+        )]
     }
 
     mutating func handleEscape() {

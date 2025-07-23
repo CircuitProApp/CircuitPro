@@ -151,27 +151,4 @@ extension Pin: Drawable {
         let transform = CGAffineTransform(translationX: targetPos.x - trueBounds.minX, y: targetPos.y - trueBounds.minY)
         return (textPath, transform)
     }
-
-    func makePreviewDrawingParameters() -> DrawingParameters? {
-        let combinedPath = CGMutablePath()
-        
-        self.primitives.forEach { combinedPath.addPath($0.makePath()) }
-
-        if showNumber {
-            let (path, transform) = numberLayout()
-            combinedPath.addPath(path, transform: transform)
-        }
-
-        guard !combinedPath.isEmpty else { return nil }
-        guard let styleSource = self.primitives.first else { return nil }
-        
-        return DrawingParameters(
-            path: combinedPath,
-            lineWidth: 1,
-            fillColor: nil,
-            strokeColor: styleSource.color.cgColor,
-            lineCap: .round,
-            lineJoin: .round
-        )
-    }
 }

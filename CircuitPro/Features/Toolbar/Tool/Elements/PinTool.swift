@@ -28,7 +28,7 @@ struct PinTool: CanvasTool {
         return .element(.pin(pin))
     }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters? {
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
         let previewPin = Pin(
             name: "",
             number: context.existingPinCount + 1,
@@ -38,7 +38,7 @@ struct PinTool: CanvasTool {
             lengthType: .long
         )
 
-        return previewPin.makePreviewDrawingParameters()
+        return previewPin.makeBodyParameters()
     }
 
     mutating func handleRotate() {

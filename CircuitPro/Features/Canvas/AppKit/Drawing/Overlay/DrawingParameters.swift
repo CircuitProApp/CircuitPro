@@ -9,6 +9,6 @@ struct DrawingParameters {
     var lineDashPattern: [NSNumber]?
     var lineCap: CAShapeLayerLineCap = .round
     var lineJoin: CAShapeLayerLineJoin = .round
-    var fillRule: CAShapeLayerFillRule = .nonZero // New property
+    var fillRule: CAShapeLayerFillRule = .nonZero
 }
 

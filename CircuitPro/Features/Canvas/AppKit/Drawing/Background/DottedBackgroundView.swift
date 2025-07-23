@@ -68,6 +68,13 @@ final class DottedBackgroundView: NSView {
 
     // MARK: - Drawing Logic
     private func updateGrid() {
+        
+        if magnification < 0.35 {
+            majorGridLayer.path = nil
+            minorGridLayer.path = nil
+            return
+        }
+        
         // 1. Calculate the true drawing area.
         // The drawing should only happen within the intersection of the view's bounds
         // and the portion visible within the scroll view. This prevents calculating

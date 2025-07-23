@@ -32,17 +32,17 @@ struct RectangleTool: CanvasTool {
         }
     }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters? {
-        guard let start else { return nil }
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
+        guard let start else { return [] }
         let rect = CGRect(origin: start, size: .zero).union(CGRect(origin: mouse, size: .zero))
         let path = CGPath(rect: rect, transform: nil)
 
-        return DrawingParameters(
+        return [DrawingParameters(
             path: path,
             lineWidth: 1.0,
             strokeColor: NSColor(context.selectedLayer.color).cgColor,
             lineDashPattern: [4, 4]
-        )
+        )]
     }
 
     mutating func handleEscape() {

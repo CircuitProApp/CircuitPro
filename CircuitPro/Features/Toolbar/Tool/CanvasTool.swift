@@ -16,7 +16,7 @@ protocol CanvasTool: Hashable {
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters?
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters]
 
     // NEW: keyboard actions -------------------------------------------------
     /// Called when the user presses the Escape key while this tool is active.
@@ -42,7 +42,7 @@ extension CanvasTool {
         return .noResult
     }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> DrawingParameters? { nil }
+    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] { [] }
 
     mutating func handleEscape() {}
 
