@@ -1,3 +1,10 @@
+//
+//  Pin+Drawable.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 19.06.25.
+//
+
 import AppKit
 import CoreText
 
@@ -61,7 +68,6 @@ extension Pin: Drawable {
            // 3. Add pin label to the outline.
            if showLabel && name.isNotEmpty {
                var (path, transform) = labelLayout()
-               // Apply the same fix for the label.
                if let transformedPath = path.copy(using: &transform) {
                    let fattedText = transformedPath.copy(strokingWithWidth: textFattenAmount, lineCap: .round, lineJoin: .round, miterLimit: 1)
                    outline.addPath(fattedText)
@@ -71,7 +77,6 @@ extension Pin: Drawable {
            guard !outline.isEmpty else { return nil }
            
            // 4. Return parameters to STROKE the final unified outline path.
-           // Because the text paths are now solid blobs, the entire halo will be continuous.
            return DrawingParameters(
                path: outline,
                lineWidth: haloWidth,
@@ -81,52 +86,43 @@ extension Pin: Drawable {
        }
 
     // MARK: - Layout Calculations
+    
     func labelLayout() -> (path: CGPath, transform: CGAffineTransform) {
         let font = NSFont.systemFont(ofSize: 10)
         let pad: CGFloat = 4
 
-        // The canonical text path at (0,0) and get its true bounds.
-        let textPath = self.pathForText(name, font: font)
+        // Use the centralized TextUtilities to create the path.
+        let textPath = TextUtilities.path(for: name, font: font)
         let trueBounds = textPath.boundingBoxOfPath
         
         var transform: CGAffineTransform
 
         switch cardinalRotation {
-        case .west: // Pin points left. Anchor is middle-right of text box.
+        case .west: // Pin points left
             let anchor = CGPoint(x: trueBounds.maxX, y: trueBounds.midY)
             let target = CGPoint(x: legStart.x - pad, y: legStart.y)
             transform = CGAffineTransform(translationX: target.x - anchor.x, y: target.y - anchor.y)
 
-        case .east: // Pin points right. Anchor is middle-left of text box.
+        case .east: // Pin points right
             let anchor = CGPoint(x: trueBounds.minX, y: trueBounds.midY)
             let target = CGPoint(x: legStart.x + pad, y: legStart.y)
             transform = CGAffineTransform(translationX: target.x - anchor.x, y: target.y - anchor.y)
         
-        case .north: // Pin points top. Anchor is middle-left of text box.
-            let angle = CGFloat.pi / 2 // 90 degrees CCW
+        case .north: // Pin points up
+            let angle = CGFloat.pi / 2
             let rotation = CGAffineTransform(rotationAngle: angle)
-            
             let anchor = CGPoint(x: trueBounds.minX, y: trueBounds.midY)
             let target = CGPoint(x: legStart.x, y: legStart.y + pad)
-            
             let rotatedAnchor = anchor.applying(rotation)
-            
-            let translation = CGAffineTransform(translationX: target.x - rotatedAnchor.x, y: target.y - rotatedAnchor.y)
-            
-            transform = rotation.concatenating(translation)
+            transform = rotation.concatenating(CGAffineTransform(translationX: target.x - rotatedAnchor.x, y: target.y - rotatedAnchor.y))
         
-        case .south: // Pin points down. Anchor is middle-right of text box.
-            let angle = CGFloat.pi / 2 // 90 degrees CCW
+        case .south: // Pin points down
+            let angle = CGFloat.pi / 2
             let rotation = CGAffineTransform(rotationAngle: angle)
-            
             let anchor = CGPoint(x: trueBounds.maxX, y: trueBounds.midY)
             let target = CGPoint(x: legStart.x, y: legStart.y - pad)
-            
             let rotatedAnchor = anchor.applying(rotation)
-            
-            let translation = CGAffineTransform(translationX: target.x - rotatedAnchor.x, y: target.y - rotatedAnchor.y)
-            
-            transform = rotation.concatenating(translation)
+            transform = rotation.concatenating(CGAffineTransform(translationX: target.x - rotatedAnchor.x, y: target.y - rotatedAnchor.y))
         }
         
         return (textPath, transform)
@@ -137,19 +133,18 @@ extension Pin: Drawable {
         let pad: CGFloat = 3
         let text = "\(number)"
         
-        let textPath = self.pathForText(text, font: font)
+        // Use the centralized TextUtilities to create the path.
+        let textPath = TextUtilities.path(for: text, font: font)
         let trueBounds = textPath.boundingBoxOfPath
-        
         let mid = CGPoint(x: (position.x + legStart.x) / 2, y: (position.y + legStart.y) / 2)
         
         let targetPos: CGPoint
-        // UPDATED: Switch now uses semantic case names for clarity.
         switch cardinalRotation {
         case .east, .west: // Horizontal pins
             targetPos = CGPoint(x: mid.x - trueBounds.width / 2, y: mid.y + pad)
-        case .north: // Pin points up, text is to the left
+        case .north: // Pin points up
             targetPos = CGPoint(x: mid.x + pad + trueBounds.width, y: mid.y - trueBounds.height / 2)
-        case .south: // Pin points down, text is to the right
+        case .south: // Pin points down
             targetPos = CGPoint(x: mid.x + pad, y: mid.y - trueBounds.height / 2)
         }
         
@@ -157,62 +152,26 @@ extension Pin: Drawable {
         return (textPath, transform)
     }
 
-    /// Generates a single, simplified `DrawingParameters` object suitable for a tool preview.
-    /// This combines the essential geometric primitives into one path.
     func makePreviewDrawingParameters() -> DrawingParameters? {
-        // 1. Create a single path to hold all visible parts of the preview.
         let combinedPath = CGMutablePath()
         
-        // 2. Add the geometric primitives (circle and line).
         self.primitives.forEach { combinedPath.addPath($0.makePath()) }
 
-        // 3. Add the transformed pin number path.
         if showNumber {
-            // `addPath` takes `transform` as a non-mutating parameter.
             let (path, transform) = numberLayout()
             combinedPath.addPath(path, transform: transform)
         }
 
-        // 5. If the path is empty, there's nothing to preview.
         guard !combinedPath.isEmpty else { return nil }
-        
-        // 6. We must return a single drawing style. Stroking the unified path is the best
-        //    compromise. The text will appear as a hollow outline, but all parts will be visible.
         guard let styleSource = self.primitives.first else { return nil }
         
         return DrawingParameters(
             path: combinedPath,
-            lineWidth: 1, // Use the pin's standard line width
-            fillColor: nil,                     // Nothing is filled
-            strokeColor: styleSource.color.cgColor,  // Everything is stroked with the pin color
+            lineWidth: 1,
+            fillColor: nil,
+            strokeColor: styleSource.color.cgColor,
             lineCap: .round,
             lineJoin: .round
         )
-    }
-    /// Helper for converting a string to its raw vector CGPath at the origin (0,0).
-    private func pathForText(_ string: String, font: NSFont) -> CGPath {
-        let attrString = NSAttributedString(string: string, attributes: [.font: font])
-        let line = CTLineCreateWithAttributedString(attrString)
-        let composite = CGMutablePath()
-        
-        guard let runs = CTLineGetGlyphRuns(line) as? [CTRun] else { return composite }
-        
-        for run in runs {
-            let runFont = unsafeBitCast(CFDictionaryGetValue(CTRunGetAttributes(run), Unmanaged.passUnretained(kCTFontAttributeName).toOpaque()), to: CTFont.self)
-            let count = CTRunGetGlyphCount(run)
-            var glyphs = [CGGlyph](repeating: 0, count: count)
-            var positions = [CGPoint](repeating: .zero, count: count)
-            
-            CTRunGetGlyphs(run, CFRangeMake(0, count), &glyphs)
-            CTRunGetPositions(run, CFRangeMake(0, count), &positions)
-            
-            for i in 0..<count {
-                if let gPath = CTFontCreatePathForGlyph(runFont, glyphs[i], nil) {
-                    let transform = CGAffineTransform(translationX: positions[i].x, y: positions[i].y)
-                    composite.addPath(gPath, transform: transform)
-                }
-            }
-        }
-        return composite
     }
 }

@@ -7,114 +7,134 @@
 
 import AppKit
 
-// MARK: - DrawingSheetView ---------------------------------------------------
+// MARK: - DrawingSheetView
 final class DrawingSheetView: NSView {
 
-    enum RulerDivision {
-        case byCount(Int)
-        case bySpacing(CGFloat)
-    }
+    // MARK: Public Properties
+    var sheetSize: PaperSize = .iso(.a4) { didSet { needsLayout = true } }
+    var orientation: PaperOrientation = .landscape { didSet { needsLayout = true } }
+    var rulerDivision: RulerDivision = .bySpacing(10) { didSet { needsLayout = true } }
+    var showRulerLabels: Bool = true { didSet { needsLayout = true } }
+    var cellValues: [String: String] = [:] { didSet { needsLayout = true } }
 
-    var sheetSize: PaperSize = .iso(.a4) { didSet { invalidate() } }
-    var orientation: PaperOrientation = .landscape { didSet { invalidate() } }
-    var rulerDivision: RulerDivision = .bySpacing(10) { didSet { invalidate() } }
-    var showRulerLabels: Bool = true { didSet { invalidate() } }
+    // MARK: Private Properties
+    private var managedLayers: [CALayer] = []
+    private let graphicColor: NSColor = .black
 
-    private let graphicColor: NSColor = NSColor(name: nil) { appearance in
-        if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
-            return .black
-        } else {
-            return .black
-        }
-    }
-
-    var cellValues: [String: String] = [:] { didSet { invalidate() } }
-
-    // Constants --------------------------------------------------------------
+    // MARK: Constants
     private let inset: CGFloat = 20
     private let cellHeight: CGFloat = 25
     private let cellPad: CGFloat = 10
-    private let unitsPerMM: CGFloat = 10    // 10 canvas units == 1 mm
+    private let unitsPerMM: CGFloat = 10 // 10 canvas units == 1 mm
 
-    // House-keeping ----------------------------------------------------------
-    private func invalidate() { needsDisplay = true }
-
-    // Convenience ------------------------------------------------------------
-    fileprivate func safeFont(size: CGFloat, weight: NSFont.Weight) -> NSFont {
-        NSFont.monospacedSystemFont(ofSize: size, weight: weight)
-        ?? NSFont.systemFont(ofSize: size, weight: weight)
+    // MARK: Initializers
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        setupView()
     }
 
-    // MARK: Drawing ----------------------------------------------------------
-    override func draw(_ dirtyRect: NSRect) {
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        
-        let initialMetrics = DrawingMetrics(viewBounds: bounds, inset: inset, horizontalTickSpacing: 0, verticalTickSpacing: 0, cellHeight: cellHeight, cellValues: cellValues)
-        
-        let hSpacing: CGFloat
-        let vSpacing: CGFloat
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupView()
+    }
+    
+    private func setupView() {
+        wantsLayer = true
+        // Set view layer to be transparent; backgrounds will be handled by dedicated layers.
+        layer?.backgroundColor = NSColor.clear.cgColor
+        layerContentsRedrawPolicy = .onSetNeedsDisplay
+    }
+
+    // MARK: Layout and Drawing
+    override func layout() {
+        super.layout()
+        updateLayers()
+    }
+
+    private func updateLayers() {
+        // 1. Clear previous layers.
+        managedLayers.forEach { $0.removeFromSuperlayer() }
+        managedLayers.removeAll()
+
+        // 2. Calculate metrics.
+        let hSpacing: CGFloat, vSpacing: CGFloat
+        let initialInnerBounds = bounds.insetBy(dx: inset, dy: inset)
         
         switch rulerDivision {
         case .byCount(let count):
             guard count > 0 else { return }
-            hSpacing = initialMetrics.innerBounds.width / CGFloat(count)
-            vSpacing = initialMetrics.innerBounds.height / CGFloat(count)
+            hSpacing = initialInnerBounds.width / CGFloat(count)
+            vSpacing = initialInnerBounds.height / CGFloat(count)
         case .bySpacing(let spacing):
             hSpacing = spacing * unitsPerMM
             vSpacing = spacing * unitsPerMM
         }
         
         let metrics = DrawingMetrics(
-            viewBounds: bounds,
-            inset: inset,
-            horizontalTickSpacing: hSpacing,
-            verticalTickSpacing: vSpacing,
-            cellHeight: cellHeight,
-            cellValues: cellValues
+            viewBounds: bounds, inset: inset,
+            horizontalTickSpacing: hSpacing, verticalTickSpacing: vSpacing,
+            cellHeight: cellHeight, cellValues: cellValues
         )
         
-        ctx.setLineWidth(1.0)
-        ctx.setStrokeColor(graphicColor.cgColor)
+        // 3. Create background layers.
+        // These are added first to be at the bottom of the layer stack.
+        createBackgroundLayers(metrics: metrics)
         
-        // Fill background for rulers and title block to avoid visual glitches
-        ctx.saveGState()
-        ctx.setFillColor(NSColor.white.cgColor)
-        let topRulerBG = CGRect(x: metrics.outerBounds.minX, y: metrics.outerBounds.minY, width: metrics.outerBounds.width, height: metrics.innerBounds.minY - metrics.outerBounds.minY)
-        let bottomRulerBG = CGRect(x: metrics.outerBounds.minX, y: metrics.innerBounds.maxY, width: metrics.outerBounds.width, height: metrics.outerBounds.maxY - metrics.innerBounds.maxY)
-        let leftRulerBG = CGRect(x: metrics.outerBounds.minX, y: metrics.outerBounds.minY, width: metrics.innerBounds.minX - metrics.outerBounds.minX, height: metrics.outerBounds.height)
-        let rightRulerBG = CGRect(x: metrics.innerBounds.maxX, y: metrics.outerBounds.minY, width: metrics.outerBounds.maxX - metrics.innerBounds.maxX, height: metrics.outerBounds.height)
-        
-        ctx.fill([topRulerBG, bottomRulerBG, leftRulerBG, rightRulerBG, metrics.titleBlockFrame])
-        ctx.restoreGState()
+        // 4. Create and collect all foreground content layers.
+        managedLayers.append(contentsOf: BorderDrawer().makeLayers(metrics: metrics, color: graphicColor.cgColor))
 
-        BorderDrawer().draw(in: ctx, metrics: metrics)
-        
         if !cellValues.isEmpty {
-            let titleDrawer = TitleBlockDrawer(
-                cellValues: cellValues,
-                graphicColor: graphicColor,
-                cellPad: cellPad,
-                cellHeight: cellHeight,
-                safeFont: safeFont
+            let drawer = TitleBlockDrawer(
+                cellValues: cellValues, graphicColor: graphicColor, cellPad: cellPad,
+                cellHeight: cellHeight, safeFont: safeFont
             )
-            titleDrawer.draw(in: ctx, metrics: metrics)
+            managedLayers.append(contentsOf: drawer.makeLayers(metrics: metrics))
         }
         
-        let rulerDrawerTop = RulerDrawer(position: .top, graphicColor: graphicColor, safeFont: safeFont, showLabels: showRulerLabels)
-        rulerDrawerTop.draw(in: ctx, metrics: metrics)
+        let rulerPositions: [RulerDrawer.Position] = [.top, .bottom, .left, .right]
+        rulerPositions.forEach { position in
+            let drawer = RulerDrawer(position: position, graphicColor: graphicColor, safeFont: safeFont, showLabels: showRulerLabels)
+            managedLayers.append(contentsOf: drawer.makeLayers(metrics: metrics))
+        }
         
-        let rulerDrawerBottom = RulerDrawer(position: .bottom, graphicColor: graphicColor, safeFont: safeFont, showLabels: showRulerLabels)
-        rulerDrawerBottom.draw(in: ctx, metrics: metrics)
+        // 5. Add all generated layers to the view's main layer.
+        managedLayers.forEach { layer?.addSublayer($0) }
+    }
+    
+    /// Creates and adds the background layers for the rulers and title block.
+    private func createBackgroundLayers(metrics: DrawingMetrics) {
+        // 1. Ruler Background
+        // Create a path that fills the area between the outer and inner bounds
+        // using the even-odd fill rule.
+        let rulerBGPath = CGMutablePath()
+        rulerBGPath.addRect(metrics.outerBounds)
+        rulerBGPath.addRect(metrics.innerBounds)
         
-        let rulerDrawerLeft = RulerDrawer(position: .left, graphicColor: graphicColor, safeFont: safeFont, showLabels: showRulerLabels)
-        rulerDrawerLeft.draw(in: ctx, metrics: metrics)
+        let rulerBGLayer = CAShapeLayer()
+        rulerBGLayer.path = rulerBGPath
+        rulerBGLayer.fillRule = .evenOdd
+        rulerBGLayer.fillColor = NSColor.white.cgColor
+
+        managedLayers.append(rulerBGLayer)
         
-        let rulerDrawerRight = RulerDrawer(position: .right, graphicColor: graphicColor, safeFont: safeFont, showLabels: showRulerLabels)
-        rulerDrawerRight.draw(in: ctx, metrics: metrics)
+        // 2. Title Block Background
+        // If there's a title block, create a separate background layer for it.
+        if !cellValues.isEmpty {
+            let titleBGPath = CGPath(rect: metrics.titleBlockFrame, transform: nil)
+            let titleBGLayer = CAShapeLayer()
+            titleBGLayer.path = titleBGPath
+            titleBGLayer.fillColor = NSColor.white.cgColor
+            managedLayers.append(titleBGLayer)
+        }
     }
 
-    // MARK: Intrinsic size (10 units == 1 mm)
+    // MARK: Sizing
     override var intrinsicContentSize: NSSize {
         sheetSize.canvasSize(scale: unitsPerMM, orientation: orientation)
+    }
+    
+    // MARK: Helpers
+    fileprivate func safeFont(size: CGFloat, weight: NSFont.Weight) -> NSFont {
+        NSFont.monospacedSystemFont(ofSize: size, weight: weight) ?? NSFont.systemFont(ofSize: size, weight: weight)
     }
 }

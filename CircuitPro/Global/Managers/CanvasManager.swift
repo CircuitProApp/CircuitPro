@@ -15,7 +15,7 @@ final class CanvasManager {
     var gridSpacing: GridSpacing = .mm1
     var scrollOrigin: CGPoint = .zero
 
-    var paperSize: PaperSize = .iso(.a0)
+    var paperSize: PaperSize = .iso(.a4)
 
     var mouseLocation: CGPoint = .zero
     

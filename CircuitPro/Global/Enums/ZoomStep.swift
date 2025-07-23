@@ -2,7 +2,7 @@ import SwiftUI
 
 enum ZoomStep: CGFloat, Displayable, Comparable {
     // swiftlint:disable identifier_name
-    case x0_1 = 0.1
+//    case x0_1 = 0.1
     case x0_25 = 0.25
     case x0_5 = 0.5
     case x0_75 = 0.75

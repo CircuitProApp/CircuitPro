@@ -89,24 +89,7 @@ extension Pad {
     var allPrimitives: [AnyPrimitive] { shapePrimitives + maskPrimitives }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// MARK: - Drawable & Hittable
-// ═══════════════════════════════════════════════════════════════════════
-extension Pad: Hittable {
-
-    func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        for primitive in allPrimitives {
-            if primitive.hitTest(point, tolerance: tolerance) != nil {
-                return .canvasElement(part: .pad(id: id, position: position))
-            }
-        }
-        return nil
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
 // MARK: - Convenience computed properties (width / height / radius)
-// ═══════════════════════════════════════════════════════════════════════
 extension Pad {
 
     var isCircle: Bool {

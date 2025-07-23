@@ -16,7 +16,8 @@ struct DrawingMetrics {
     let verticalTickSpacing: CGFloat
 
     init(viewBounds: CGRect, inset: CGFloat, horizontalTickSpacing: CGFloat, verticalTickSpacing: CGFloat, cellHeight: CGFloat, cellValues: [String: String]) {
-        self.outerBounds = viewBounds.insetBy(dx: 0.5, dy: 0.5)
+        // Correct: outerBounds must match the view's true bounds for background fills.
+        self.outerBounds = viewBounds
         self.innerBounds = outerBounds.insetBy(dx: inset, dy: inset)
         self.horizontalTickSpacing = horizontalTickSpacing
         self.verticalTickSpacing = verticalTickSpacing
@@ -25,9 +26,6 @@ struct DrawingMetrics {
         let blockWidth = cellHeight * 8
         let blockHeight = CGFloat(rowCount) * cellHeight
         
-        // 1. Calculate the title block frame from the bottom-right corner.
-        // In a non-flipped coordinate system, the origin is at the bottom-left.
-        // We use innerBounds.minY as the base for the y-coordinate.
         self.titleBlockFrame = CGRect(
             x: innerBounds.maxX - blockWidth,
             y: innerBounds.minY,
@@ -39,101 +37,133 @@ struct DrawingMetrics {
 
 // MARK: - BorderDrawer
 struct BorderDrawer {
-    func draw(in context: CGContext, metrics: DrawingMetrics) {
-        context.stroke(metrics.outerBounds)
-        context.stroke(metrics.innerBounds)
+    func makeLayers(metrics: DrawingMetrics, color: CGColor) -> [CAShapeLayer] {
+        let outerBorder = CAShapeLayer()
+        // THE FIX: Inset the path itself by 0.5 points. This ensures that the 1-point
+        // stroke is drawn entirely within the layer's bounds, preventing clipping and gaps.
+        outerBorder.path = CGPath(rect: metrics.outerBounds.insetBy(dx: 0.5, dy: 0.5), transform: nil)
+
+        let innerBorder = CAShapeLayer()
+        innerBorder.path = CGPath(rect: metrics.innerBounds, transform: nil)
+
+        return [outerBorder, innerBorder].map {
+            $0.strokeColor = color
+            $0.fillColor = nil
+            $0.lineWidth = 1.0
+            return $0
+        }
     }
 }
 
 // MARK: - RulerDrawer
 struct RulerDrawer {
-    enum Position {
-        case top, bottom, left, right
-    }
+    enum Position { case top, bottom, left, right }
 
     let position: Position
     let graphicColor: NSColor
     let safeFont: (CGFloat, NSFont.Weight) -> NSFont
     let showLabels: Bool
 
-    private func attrs(font: NSFont) -> [NSAttributedString.Key: Any] {
-        [.font: font, .foregroundColor: graphicColor]
-    }
+    func makeLayers(metrics: DrawingMetrics) -> [CALayer] {
+        let spacing = isVertical() ? metrics.verticalTickSpacing : metrics.horizontalTickSpacing
+        guard spacing > 0 else { return [] }
 
-    private func labelForIndex(_ index: Int, isNumber: Bool) -> String {
-        if isNumber { return "\(index + 1)" }
-        var number = index
-        var label = ""
-        repeat {
-            let remainder = number % 26
-            label = String(UnicodeScalar(65 + remainder)!) + label
-            number = number / 26 - 1
-        } while number >= 0
-        return label
-    }
+        let tickLayer = makeTicksLayer(metrics: metrics, tickSpacing: spacing)
+        var layers: [CALayer] = [tickLayer]
 
-    func draw(in context: CGContext, metrics: DrawingMetrics) {
-        switch position {
-        case .top:
-            drawRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, tickSpacing: metrics.horizontalTickSpacing, isVertical: false, isPrimaryEdge: true)
-        case .bottom:
-            drawRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, tickSpacing: metrics.horizontalTickSpacing, isVertical: false, isPrimaryEdge: false)
-        case .left:
-            drawRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, tickSpacing: metrics.verticalTickSpacing, isVertical: true, isPrimaryEdge: true)
-        case .right:
-            drawRuler(context, inner: metrics.innerBounds, outer: metrics.outerBounds, tickSpacing: metrics.verticalTickSpacing, isVertical: true, isPrimaryEdge: false)
+        if showLabels {
+            let labelsLayer = makeLabelsLayer(metrics: metrics, tickSpacing: spacing)
+            layers.append(labelsLayer)
         }
+        
+        return layers
     }
-
-    private func drawRuler(_ ctx: CGContext, inner: CGRect, outer: CGRect, tickSpacing: CGFloat, isVertical: Bool, isPrimaryEdge: Bool) {
-        guard tickSpacing > 0 else { return }
-        let font = safeFont(9, .regular)
-        let attr = attrs(font: font)
-
-        if isVertical {
-            let xTick = isPrimaryEdge ? inner.minX : inner.maxX
-            let xLabel = isPrimaryEdge ? (inner.minX + outer.minX) * 0.5 : (inner.maxX + outer.maxX) * 0.5
-            
-            // 1. Anchor lettered rulers to the top edge (maxY) by striding downwards.
-            // This ensures that any partial cell is at the bottom.
+    
+    private func makeTicksLayer(metrics: DrawingMetrics, tickSpacing: CGFloat) -> CAShapeLayer {
+        let tickPath = CGMutablePath()
+        let inner = metrics.innerBounds
+        let outer = metrics.outerBounds
+        
+        if isVertical() {
+            let xStart = isPrimaryEdge() ? inner.minX : inner.maxX
+            let xEnd = isPrimaryEdge() ? outer.minX : outer.maxX
             let yRange = stride(from: inner.maxY - tickSpacing, to: inner.minY, by: -tickSpacing)
-
-            for (i, y) in yRange.enumerated() {
-                ctx.move(to: .init(x: xTick, y: y))
-                ctx.addLine(to: .init(x: isPrimaryEdge ? outer.minX : outer.maxX, y: y))
-                ctx.strokePath()
-
-                if showLabels {
-                    // 1.1. Calculate label position for the cell above the tick
-                    let nextY = y + tickSpacing
-                    let mid = (y + nextY) * 0.5
-                    
-                    // 1.2. Get lettered label, starting with 'A' for index 0
-                    let text = labelForIndex(i, isNumber: false) as NSString
-                    
-                    let size = text.size(withAttributes: attr)
-                    text.draw(at: .init(x: xLabel - size.width * 0.5, y: mid - size.height * 0.5), withAttributes: attr)
-                }
+            yRange.forEach { y in
+                tickPath.move(to: CGPoint(x: xStart, y: y))
+                tickPath.addLine(to: CGPoint(x: xEnd, y: y))
             }
         } else { // Horizontal
-            let yTick = isPrimaryEdge ? inner.minY : inner.maxY
-            let yLabel = isPrimaryEdge ? (inner.minY + outer.minY) * 0.5 : (inner.maxY + outer.maxY) * 0.5
+            let yStart = isPrimaryEdge() ? inner.minY : inner.maxY
+            let yEnd = isPrimaryEdge() ? outer.minY : outer.maxY
+            let xRange = stride(from: inner.minX + tickSpacing, to: inner.maxX, by: tickSpacing)
+            xRange.forEach { x in
+                tickPath.move(to: CGPoint(x: x, y: yStart))
+                tickPath.addLine(to: CGPoint(x: x, y: yEnd))
+            }
+        }
+        
+        let layer = CAShapeLayer()
+        layer.path = tickPath
+        layer.strokeColor = graphicColor.cgColor
+        layer.lineWidth = 1.0
+        return layer
+    }
+    
+    private func makeLabelsLayer(metrics: DrawingMetrics, tickSpacing: CGFloat) -> CAShapeLayer {
+        let font = safeFont(9, .regular)
+        let inner = metrics.innerBounds
+        let outer = metrics.outerBounds
+        let path = CGMutablePath()
+
+        if isVertical() {
+            let xLabel = isPrimaryEdge() ? (inner.minX + outer.minX) / 2 : (inner.maxX + outer.maxX) / 2
+            let yRange = stride(from: inner.maxY - tickSpacing, to: inner.minY, by: -tickSpacing)
+            
+            for (i, y) in yRange.enumerated() {
+                let cellMidY = y + tickSpacing / 2
+                let text = labelForIndex(i, isNumber: false)
+                let textPath = TextUtilities.path(for: text, font: font)
+                let textBounds = textPath.boundingBoxOfPath
+                
+                let position = CGPoint(x: xLabel - textBounds.width / 2, y: cellMidY - textBounds.height / 2)
+                var transform = CGAffineTransform(translationX: position.x - textBounds.minX, y: position.y - textBounds.minY)
+                
+                path.addPath(textPath, transform: transform)
+            }
+        } else { // Horizontal
+            let yLabel = isPrimaryEdge() ? (inner.minY + outer.minY) / 2 : (inner.maxY + outer.maxY) / 2
             let xRange = stride(from: inner.minX + tickSpacing, to: inner.maxX, by: tickSpacing)
 
             for (i, x) in xRange.enumerated() {
-                ctx.move(to: .init(x: x, y: yTick))
-                ctx.addLine(to: .init(x: x, y: isPrimaryEdge ? outer.minY : outer.maxY))
-                ctx.strokePath()
+                let cellMidX = x - tickSpacing / 2
+                let text = labelForIndex(i, isNumber: true)
+                let textPath = TextUtilities.path(for: text, font: font)
+                let textBounds = textPath.boundingBoxOfPath
+                
+                let position = CGPoint(x: cellMidX - textBounds.width / 2, y: yLabel - textBounds.height / 2)
+                var transform = CGAffineTransform(translationX: position.x - textBounds.minX, y: position.y - textBounds.minY)
 
-                if showLabels {
-                    let prevX = x - tickSpacing
-                    let mid = (x + prevX) * 0.5
-                    let text = labelForIndex(i, isNumber: true) as NSString
-                    let size = text.size(withAttributes: attr)
-                    text.draw(at: .init(x: mid - size.width * 0.5, y: yLabel - size.height * 0.5), withAttributes: attr)
-                }
+                path.addPath(textPath, transform: transform)
             }
         }
+        
+        let layer = CAShapeLayer()
+        layer.path = path
+        layer.fillColor = graphicColor.cgColor
+        return layer
+    }
+
+    private func isVertical() -> Bool { position == .left || position == .right }
+    private func isPrimaryEdge() -> Bool { position == .top || position == .left }
+
+    private func labelForIndex(_ index: Int, isNumber: Bool) -> String {
+        if isNumber { return "\(index + 1)" }
+        var number = index, label = ""
+        repeat {
+            label = String(UnicodeScalar(65 + (number % 26))!) + label
+            number = number / 26 - 1
+        } while number >= 0
+        return label
     }
 }
 
@@ -145,43 +175,56 @@ struct TitleBlockDrawer {
     let cellHeight: CGFloat
     let safeFont: (CGFloat, NSFont.Weight) -> NSFont
 
-    private func attrs(font: NSFont) -> [NSAttributedString.Key: Any] {
-        [.font: font, .foregroundColor: graphicColor]
-    }
-
-    func draw(in context: CGContext, metrics: DrawingMetrics) {
+    func makeLayers(metrics: DrawingMetrics) -> [CALayer] {
         let rect = metrics.titleBlockFrame
-        context.stroke(rect)
-
-        for rowIndex in 1..<cellValues.count {
-            let y = rect.minY + CGFloat(rowIndex) * cellHeight
-            context.move(to: CGPoint(x: rect.minX, y: y))
-            context.addLine(to: CGPoint(x: rect.maxX, y: y))
-            context.strokePath()
+        
+        // 1. Create lines layer
+        let linePath = CGMutablePath()
+        linePath.addRect(rect)
+        for i in 1..<cellValues.count {
+            let y = rect.minY + CGFloat(i) * cellHeight
+            linePath.move(to: CGPoint(x: rect.minX, y: y))
+            linePath.addLine(to: CGPoint(x: rect.maxX, y: y))
         }
-
+        
+        let lineLayer = CAShapeLayer()
+        lineLayer.path = linePath
+        lineLayer.strokeColor = graphicColor.cgColor
+        lineLayer.fillColor = nil
+        lineLayer.lineWidth = 1.0
+        
+        var layers: [CALayer] = [lineLayer]
+        
+        // 2. Create text layers
         let keyFont = safeFont(8, .semibold)
         let valueFont = safeFont(11, .regular)
-        let keyAttributes = attrs(font: keyFont)
-        let valueAttributes = attrs(font: valueFont)
 
-        for (row, keyValue) in cellValues.enumerated() {
+        for (row, (key, value)) in cellValues.enumerated() {
             let y = rect.minY + CGFloat(row) * cellHeight
-            let cell = CGRect(x: rect.minX, y: y, width: rect.width, height: cellHeight)
-                .insetBy(dx: cellPad, dy: 0)
+            let cellRect = CGRect(x: rect.minX, y: y, width: rect.width, height: cellHeight).insetBy(dx: cellPad, dy: 0)
 
-            (keyValue.key.uppercased() as NSString)
-                .draw(at: CGPoint(x: cell.minX, y: cell.minY + 2), withAttributes: keyAttributes)
-
-            let value = keyValue.value as NSString
-            let valueSize = value.size(withAttributes: valueAttributes)
-            value.draw(
-                at: CGPoint(
-                    x: cell.maxX - valueSize.width,
-                    y: cell.minY + (cell.height - valueSize.height) * 0.5
-                ),
-                withAttributes: valueAttributes
-            )
+            // Key
+            let keyPath = TextUtilities.path(for: key.uppercased(), font: keyFont)
+            let keyPosition = CGPoint(x: cellRect.minX, y: cellRect.minY + 2)
+            var keyTransform = CGAffineTransform(translationX: keyPosition.x - keyPath.boundingBoxOfPath.minX, y: keyPosition.y - keyPath.boundingBoxOfPath.minY)
+            
+            let keyLayer = CAShapeLayer()
+            keyLayer.path = keyPath.copy(using: &keyTransform)
+            keyLayer.fillColor = graphicColor.cgColor
+            layers.append(keyLayer)
+            
+            // Value
+            let valuePath = TextUtilities.path(for: value, font: valueFont)
+            let valueBounds = valuePath.boundingBoxOfPath
+            let valuePosition = CGPoint(x: cellRect.maxX - valueBounds.width, y: cellRect.minY + (cellRect.height - valueBounds.height) / 2)
+            var valueTransform = CGAffineTransform(translationX: valuePosition.x - valueBounds.minX, y: valuePosition.y - valueBounds.minY)
+            
+            let valueLayer = CAShapeLayer()
+            valueLayer.path = valuePath.copy(using: &valueTransform)
+            valueLayer.fillColor = graphicColor.cgColor
+            layers.append(valueLayer)
         }
+        
+        return layers
     }
 }
