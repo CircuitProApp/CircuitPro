@@ -42,7 +42,7 @@ struct RulerTool: CanvasTool {
     // This now correctly returns an array of DrawingParameters.
     mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
         guard let start = start else { return [] }
-        let color: NSColor = .labelColor
+        let color: NSColor = .black
 
         let currentEnd = (clicks == 2 ? end ?? mouse : mouse)
         var allParameters: [DrawingParameters] = []

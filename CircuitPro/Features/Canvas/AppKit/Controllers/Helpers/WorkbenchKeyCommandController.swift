@@ -32,7 +32,6 @@ final class WorkbenchKeyCommandController {
             if var tool = workbench.selectedTool, tool.id != "cursor" {
                 tool.handleRotate()
                 workbench.selectedTool = tool
-                workbench.previewView?.needsDisplay = true
             } else if let id = workbench.selectedIDs.first,
                       let center = workbench.elements
                                          .first(where: { $0.id == id })?
@@ -44,7 +43,6 @@ final class WorkbenchKeyCommandController {
         // — Tool-specific Return ————————————————————————
         case "\r", "\u{3}":
             coordinator.handleReturnKeyPress()
-            workbench.previewView?.needsDisplay = true
             return true
 
         // — Escape ————————————————————————————————
@@ -52,7 +50,6 @@ final class WorkbenchKeyCommandController {
             if var tool = workbench.selectedTool, tool.id != "cursor" {
                 tool.handleEscape()
                 workbench.selectedTool = tool
-                workbench.previewView?.needsDisplay = true
                 return true
             }
 
@@ -62,8 +59,8 @@ final class WorkbenchKeyCommandController {
             if var tool = workbench.selectedTool, tool.id != "cursor" {
                 tool.handleBackspace()
                 workbench.selectedTool = tool
-                workbench.previewView?.needsDisplay = true
-            } else {
+            }
+            else {
                 coordinator.deleteSelectedElements()
             }
             return true

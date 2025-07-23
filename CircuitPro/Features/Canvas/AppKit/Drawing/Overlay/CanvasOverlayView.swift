@@ -20,7 +20,6 @@ class CanvasOverlayView: NSView {
         wantsLayer = true
         guard let hostLayer = layer else { fatalError("Expected a backing layer") }
 
-        hostLayer.isGeometryFlipped = true     // align coordinates
         hostLayer.addSublayer(shapeLayer)
     }
     required init?(coder: NSCoder) { fatalError() }

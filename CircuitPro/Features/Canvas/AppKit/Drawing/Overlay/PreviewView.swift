@@ -13,7 +13,9 @@ final class PreviewView: NSView {
     // MARK: - API
     var selectedTool: AnyCanvasTool? {
         didSet {
-            guard oldValue?.id != selectedTool?.id else { return }
+            // The guard `oldValue?.id != selectedTool?.id` was removed because
+            // a tool's internal state (e.g., rotation) can change without its
+            // ID changing. We need to redraw the preview in those cases.
             updateDrawing()
         }
     }
@@ -31,42 +33,24 @@ final class PreviewView: NSView {
     
     // MARK: - State
     private var shapeLayers: [CAShapeLayer] = []
-    private var mouseLocation: CGPoint? {
-        didSet {
-            guard oldValue != mouseLocation else { return }
-            updateDrawing()
-        }
-    }
+    private var mouseLocation: CGPoint?
 
     // MARK: - Initializers
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.isGeometryFlipped = true // Align with model coordinates
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     
     // MARK: - Overrides
     override func hitTest(_: NSPoint) -> NSView? { nil } // Stay transparent
 
-    // MARK: - Mouse Tracking
-    private var trackingArea: NSTrackingArea?
-
-    override func updateTrackingAreas() {
-        if let currentTrackingArea = trackingArea { removeTrackingArea(currentTrackingArea) }
-        let options: NSTrackingArea.Options = [.mouseMoved, .activeInKeyWindow, .inVisibleRect]
-        let newTrackingArea = NSTrackingArea(rect: bounds, options: options, owner: self, userInfo: nil)
-        addTrackingArea(newTrackingArea)
-        trackingArea = newTrackingArea
-        super.updateTrackingAreas()
-    }
-
-    override func mouseMoved(with event: NSEvent) {
-        self.mouseLocation = convert(event.locationInWindow, from: nil)
-    }
-    
-    override func mouseExited(with event: NSEvent) {
-        self.mouseLocation = nil
+    // MARK: - Public API
+    /// Called by the input coordinator to update the mouse position.
+    func updateMouseLocation(to point: CGPoint?) {
+        guard point != mouseLocation else { return }
+        mouseLocation = point
+        updateDrawing()
     }
 
     // MARK: - Drawing
@@ -123,8 +107,6 @@ final class PreviewView: NSView {
 
         let snappedMouse = workbench.snap(mouse)
         let drawingParams = tool.preview(mouse: snappedMouse, context: context)
-        
-        workbench.selectedTool = tool
         
         return drawingParams
     }

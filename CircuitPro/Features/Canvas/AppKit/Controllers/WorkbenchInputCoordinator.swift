@@ -54,7 +54,11 @@ final class WorkbenchInputCoordinator {
 
         // Preview & live rotation
         rotation.update(to: p)
-        workbench.previewView?.needsDisplay = true
+        workbench.previewView?.updateMouseLocation(to: p)
+    }
+
+    func mouseExited() {
+        workbench.crosshairsView?.location = nil
     }
 
     // MARK: – Mouse-down

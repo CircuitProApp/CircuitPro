@@ -34,7 +34,6 @@ final class ElementsView: NSView {
     
     private func setupView() {
         wantsLayer = true
-        layer?.isGeometryFlipped = true
     }
 
     // MARK: - View Configuration

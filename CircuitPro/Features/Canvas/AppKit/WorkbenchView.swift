@@ -140,13 +140,15 @@ final class WorkbenchView: NSView {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
         let area = NSTrackingArea(rect: bounds,
-                                  options: [.mouseMoved, .activeInKeyWindow, .inVisibleRect],
+                                  options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
                                   owner: self,
                                   userInfo: nil)
         addTrackingArea(area)
     }
 
     override func mouseMoved(with e: NSEvent)   { input.mouseMoved(e) }
+    override func mouseEntered(with e: NSEvent) { input.mouseMoved(e) }
+    override func mouseExited(with e: NSEvent)  { input.mouseExited() }
     override func mouseDown(with e: NSEvent)    { input.mouseDown(e) }
     override func mouseDragged(with e: NSEvent) { input.mouseDragged(e) }
     override func mouseUp(with e: NSEvent)      { input.mouseUp(e) }

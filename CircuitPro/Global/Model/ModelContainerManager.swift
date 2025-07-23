@@ -6,6 +6,7 @@
 //
 
 import SwiftData
+import SwiftUI
 
 final class ModelContainerManager {
 
@@ -33,6 +34,12 @@ final class ModelContainerManager {
                     Model.self,
                 configurations: appLibraryConfig
             )
+
+            // Log the container's store file location
+            if let storeURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+                print("📁 SwiftData Store Path: \(storeURL.appendingPathComponent("appLibrary.store").path)")
+            }
+
         } catch {
             fatalError("Failed to initialize ModelContainer: \(error)")
         }
