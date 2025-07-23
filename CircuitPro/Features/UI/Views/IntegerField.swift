@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct IntegerField: View {
+
     let title: String
     @Binding var value: Int
     var placeholder: String = ""
     var range: ClosedRange<Int>?
     var allowNegative: Bool = false
+
 
     @State private var text: String = ""
     @FocusState private var isFocused: Bool
