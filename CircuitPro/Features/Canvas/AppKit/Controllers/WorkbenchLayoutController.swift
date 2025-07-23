@@ -21,11 +21,11 @@ final class WorkbenchLayoutController {
     private func buildHierarchy() {
 
         // 1 Background
-//        let background = DottedBackgroundView()
-//        background.translatesAutoresizingMaskIntoConstraints = false
-//        workbench.addSubview(background)
-//        workbench.backgroundView = background
-//
+        let background = DottedBackgroundView()
+        background.translatesAutoresizingMaskIntoConstraints = false
+        workbench.addSubview(background)
+        workbench.backgroundView = background
+
 //        // 2 Drawing sheet
 ////        let sheet = DrawingSheetView(frame: .zero)
 ////        sheet.translatesAutoresizingMaskIntoConstraints = false
@@ -33,17 +33,17 @@ final class WorkbenchLayoutController {
 ////        workbench.sheetView = sheet
 //
 //        // Pin background and sheet to workbench edges
-//        NSLayoutConstraint.activate([
-//            background.leadingAnchor.constraint(equalTo: workbench.leadingAnchor),
-//            background.trailingAnchor.constraint(equalTo: workbench.trailingAnchor),
-//            background.topAnchor.constraint(equalTo: workbench.topAnchor),
-//            background.bottomAnchor.constraint(equalTo: workbench.bottomAnchor),
-//            
+        NSLayoutConstraint.activate([
+            background.leadingAnchor.constraint(equalTo: workbench.leadingAnchor),
+            background.trailingAnchor.constraint(equalTo: workbench.trailingAnchor),
+            background.topAnchor.constraint(equalTo: workbench.topAnchor),
+            background.bottomAnchor.constraint(equalTo: workbench.bottomAnchor),
+            
 ////            sheet.leadingAnchor.constraint(equalTo: workbench.leadingAnchor),
 ////            sheet.trailingAnchor.constraint(equalTo: workbench.trailingAnchor),
 ////            sheet.topAnchor.constraint(equalTo: workbench.topAnchor),
 ////            sheet.bottomAnchor.constraint(equalTo: workbench.bottomAnchor)
-//        ])
+        ])
 
 //        let connections = ConnectionsView(frame: workbench.bounds)
 //        connections.autoresizingMask = [.width, .height]
@@ -56,14 +56,14 @@ final class WorkbenchLayoutController {
         workbench.addSubview(elements)
         workbench.elementsView = elements
 
-//        // 4 Preview
+        // 4 Preview
         let preview = PreviewView(frame: workbench.bounds)
         preview.autoresizingMask = [.width, .height]
         preview.workbench = workbench
         workbench.addSubview(preview)
         workbench.previewView = preview
 
-//        // 5 Handles
+        // 5 Handles
         let handles = HandlesView(frame: workbench.bounds)
         handles.autoresizingMask = [.width, .height]
         workbench.addSubview(handles)
@@ -76,7 +76,7 @@ final class WorkbenchLayoutController {
         workbench.marqueeView = marquee
 
         // 7 Crosshairs
-        let crosshairs = CrosshairsView(frame: workbench.bounds)
+        let crosshairs = CrosshairsView()
         crosshairs.autoresizingMask = [.width, .height]
         workbench.addSubview(crosshairs)
         workbench.crosshairsView = crosshairs

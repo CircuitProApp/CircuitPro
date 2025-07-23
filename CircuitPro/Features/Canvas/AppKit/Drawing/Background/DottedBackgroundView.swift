@@ -1,96 +1,143 @@
 // CircuitPro/Features/Canvas/AppKit/Drawing/Background/DottedBackgroundView.swift
 import AppKit
 
-final class DottedBackgroundView: NSView, CALayerDelegate {
+final class DottedBackgroundView: NSView {
+
+    // MARK: - Layers
+    private let majorGridLayer = CAShapeLayer()
+    private let minorGridLayer = CAShapeLayer()
 
     // MARK: - Public Properties
     var unitSpacing: CGFloat = 10.0 {
-        didSet { layer?.setNeedsDisplay() }
+        didSet {
+            // A layout pass is needed to recalculate grid paths.
+            needsLayout = true
+        }
     }
 
     var magnification: CGFloat = 1.0 {
-        didSet { layer?.setNeedsDisplay() }
+        didSet {
+            // A layout pass is needed to recalculate grid paths.
+            needsLayout = true
+        }
     }
-
+    
     // MARK: - View Lifecycle & Configuration
     
-    // Programmatic initializer
     override init(frame frameRect: CGRect) {
         super.init(frame: frameRect)
         commonInit()
     }
     
-    // Storyboard/XIB initializer
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         commonInit()
     }
 
-    // A single setup method called by both initializers.
     private func commonInit() {
-        self.wantsLayer = true
-        // Set the layer's delegate immediately during initialization.
-        self.layer?.delegate = self
+        wantsLayer = true
+        guard let layer = self.layer else { return }
+        
+        // 1. Setup Layer Hierarchy
+        layer.addSublayer(majorGridLayer)
+        layer.addSublayer(minorGridLayer)
+        
+        // 2. Configure Layer Colors
+        majorGridLayer.fillColor = NSColor.gray.withAlphaComponent(1.0).cgColor
+        minorGridLayer.fillColor = NSColor.gray.withAlphaComponent(0.5).cgColor
     }
 
-    override var wantsUpdateLayer: Bool { true }
+    override func layout() {
+        super.layout()
+        // The frame of sublayers should match the bounds of this view's layer.
+        majorGridLayer.frame = layer?.bounds ?? .zero
+        minorGridLayer.frame = layer?.bounds ?? .zero
+        updateGrid()
+    }
+    
+    override var wantsUpdateLayer: Bool {
+        return true
+    }
+
+    override func updateLayer() {
+        // Set the contents scale for our layers to ensure high-resolution rendering.
+        let scale = window?.backingScaleFactor ?? 1.0
+        majorGridLayer.contentsScale = scale
+        minorGridLayer.contentsScale = scale
+    }
 
     // MARK: - Drawing Logic
-    
-    // This is called when the layer needs to update, but before drawing.
-    // We use it to set high-level properties.
-    override func updateLayer() {
-        guard let layer = self.layer else { return }
-        layer.backgroundColor = NSColor.clear.cgColor
-        layer.contentsScale = self.window?.backingScaleFactor ?? 1.0
-    }
-    
-    // This delegate method performs the actual drawing.
-    func draw(_ layer: CALayer, in ctx: CGContext) {
-        // We always draw within the view's visible rectangle.
-        let visibleRect = self.visibleRect
+    private func updateGrid() {
+        // 1. Calculate the true drawing area.
+        // The drawing should only happen within the intersection of the view's bounds
+        // and the portion visible within the scroll view. This prevents calculating
+        // dots that are either scrolled out of view or outside the workbench's frame.
+        let drawingRect = self.bounds.intersection(self.visibleRect)
 
+        // If the drawingRect is empty (e.g., the view is completely off-screen),
+        // clear the paths and do nothing.
+        guard !drawingRect.isEmpty else {
+            majorGridLayer.path = nil
+            minorGridLayer.path = nil
+            return
+        }
+        
+        // 2. Calculate Drawing Parameters
         let spacing = adjustedSpacing()
         let dotRadius = (1.0 / max(magnification, 1.0))
         
-        let minorColor = NSColor.gray.withAlphaComponent(0.5).cgColor
-        let majorColor = NSColor.gray.withAlphaComponent(1.0).cgColor
+        let majorPath = CGMutablePath()
+        let minorPath = CGMutablePath()
 
-        let startX = previousMultiple(of: spacing, beforeOrEqualTo: visibleRect.minX)
-        let startY = previousMultiple(of: spacing, beforeOrEqualTo: visibleRect.minY)
+        // 3. Set loop boundaries based on the precise `drawingRect`.
+        let startX = previousMultiple(of: spacing, beforeOrEqualTo: drawingRect.minX)
+        let startY = previousMultiple(of: spacing, beforeOrEqualTo: drawingRect.minY)
+        
+        // The end coordinates are implicitly handled by the loop's condition.
+        let endX = drawingRect.maxX
+        let endY = drawingRect.maxY
 
+        // 4. Generate Dot Paths only within the calculated rectangle.
         var currentY = startY
-        while currentY <= visibleRect.maxY {
+        while currentY <= endY {
             let yGridIndex = Int(round(currentY / spacing))
             let yIsMajor = (yGridIndex % 10 == 0)
 
             var currentX = startX
-            while currentX <= visibleRect.maxX {
+            while currentX <= endX {
                 let xGridIndex = Int(round(currentX / spacing))
                 let isMajor = yIsMajor || (xGridIndex % 10 == 0)
-
-                // Set color and draw the dot immediately.
-                // This is the absolute cheapest way in terms of memory.
-                ctx.setFillColor(isMajor ? majorColor : minorColor)
+                
                 let dotRect = CGRect(x: currentX - dotRadius, y: currentY - dotRadius, width: dotRadius * 2, height: dotRadius * 2)
-                ctx.fill(dotRect)
 
+                if isMajor {
+                    majorPath.addEllipse(in: dotRect)
+                } else {
+                    minorPath.addEllipse(in: dotRect)
+                }
                 currentX += spacing
             }
             currentY += spacing
         }
+        
+        // 5. Assign Paths to Layers
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        majorGridLayer.path = majorPath
+        minorGridLayer.path = minorPath
+        CATransaction.commit()
     }
-
 
     // MARK: - Helpers
     private func previousMultiple(of step: CGFloat, beforeOrEqualTo value: CGFloat) -> CGFloat {
-        let quotient = Int(value / step)
-        return CGFloat(quotient) * step
+        guard step > 0 else { return value }
+        return floor(value / step) * step
     }
 
     private func adjustedSpacing() -> CGFloat {
         switch unitSpacing {
-        case 5:   return magnification < 2.0  ? 10 : 5
+        case 5:
+            return magnification < 2.0 ? 10 : 5
         case 2.5:
             if magnification < 2.0 { return 10 }
             else if magnification < 3.0 { return 5 }
@@ -100,7 +147,8 @@ final class DottedBackgroundView: NSView, CALayerDelegate {
             else if magnification < 5.0 { return 4 }
             else if magnification < 10 { return 2 }
             else { return 1 }
-        default: return unitSpacing
+        default:
+            return unitSpacing
         }
     }
 }
