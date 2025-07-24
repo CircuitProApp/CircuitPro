@@ -13,7 +13,7 @@ struct TextElement: Identifiable {
     var position: CGPoint
     var rotation: CGFloat = 0.0
     var font: NSFont = .systemFont(ofSize: 12)
-    var color: CGColor = NSColor.labelColor.cgColor
+    var color: CGColor = NSColor.black.cgColor
     var isEditable: Bool = false
 }
 
@@ -63,9 +63,9 @@ extension TextElement: Drawable {
         return [
             DrawingParameters(
                 path: transformedPath,
-                lineWidth: 1.0,
+                lineWidth: 0,
                 fillColor: color,
-                strokeColor: color
+                strokeColor: nil
             )
         ]
     }
@@ -92,7 +92,7 @@ extension TextElement: Drawable {
 extension TextElement: Hittable {
     func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
         if boundingBox.insetBy(dx: -tolerance, dy: -tolerance).contains(point) {
-            return .canvasElement(part: .body(id: id))
+            return .canvasElement(part: .text(id: id))
         }
         return nil
     }
