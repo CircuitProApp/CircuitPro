@@ -55,7 +55,12 @@ final class WorkbenchView: NSView {
     }
 
     var selectedTool: AnyCanvasTool? {
-        didSet { previewView?.selectedTool = selectedTool }
+        didSet {
+            previewView?.selectedTool = selectedTool
+            if window?.firstResponder != self {
+                window?.makeFirstResponder(self)
+            }
+        }
     }
 
     var selectedLayer: CanvasLayer = .layer0 {

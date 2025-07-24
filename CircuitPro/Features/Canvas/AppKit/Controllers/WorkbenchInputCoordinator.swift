@@ -251,6 +251,7 @@ extension WorkbenchInputCoordinator {
             let pointInView = workbench.convert(sender.draggingLocation, from: nil)
             
             workbench.onComponentDropped?(component, pointInView)
+            workbench.window?.makeFirstResponder(workbench)
             
             return true
 
