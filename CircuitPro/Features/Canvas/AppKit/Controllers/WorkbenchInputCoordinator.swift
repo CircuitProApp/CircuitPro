@@ -137,8 +137,6 @@ final class WorkbenchInputCoordinator {
         activeDrag?.end()
         activeDrag = nil
 
-        workbench.elementsView?.needsDisplay = true
-        workbench.handlesView?.needsDisplay  = true
     }
 
     // MARK: – Called by the key-command helper
@@ -156,12 +154,12 @@ final class WorkbenchInputCoordinator {
             workbench.elements.append(newElement)
             workbench.onUpdate?(workbench.elements)
         case .schematicModified:
-            workbench.connectionsView?.needsDisplay = true
+            break
         case .noResult:
             break
         }
         workbench.selectedTool = tool
-        workbench.previewView?.needsDisplay = true
+        
     }
 
     func deleteSelectedElements() {
@@ -177,7 +175,7 @@ final class WorkbenchInputCoordinator {
         workbench.onUpdate?(workbench.elements)
         
         // Force a redraw of the connections.
-        workbench.connectionsView?.needsDisplay = true
+        
     }
 
     // MARK: – Public reset

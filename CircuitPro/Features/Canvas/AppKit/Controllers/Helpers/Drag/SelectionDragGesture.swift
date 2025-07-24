@@ -77,7 +77,7 @@ final class SelectionDragGesture: CanvasDragGesture {
         // --- Part 2: Update the schematic drag ---
         workbench.schematicGraph.updateDrag(by: moveDelta)
         
-        workbench.connectionsView?.needsDisplay = true
+        
     }
 
     // MARK: – End
@@ -90,6 +90,6 @@ final class SelectionDragGesture: CanvasDragGesture {
         originalPositions.removeAll()
         didMove = false
         
-        workbench.connectionsView?.needsDisplay = true
+        
     }
 }

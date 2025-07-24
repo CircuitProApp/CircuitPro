@@ -126,7 +126,7 @@ struct RulerDrawer {
                 let textBounds = textPath.boundingBoxOfPath
                 
                 let position = CGPoint(x: xLabel - textBounds.width / 2, y: cellMidY - textBounds.height / 2)
-                var transform = CGAffineTransform(translationX: position.x - textBounds.minX, y: position.y - textBounds.minY)
+                let transform = CGAffineTransform(translationX: position.x - textBounds.minX, y: position.y - textBounds.minY)
                 
                 path.addPath(textPath, transform: transform)
             }
@@ -141,7 +141,7 @@ struct RulerDrawer {
                 let textBounds = textPath.boundingBoxOfPath
                 
                 let position = CGPoint(x: cellMidX - textBounds.width / 2, y: yLabel - textBounds.height / 2)
-                var transform = CGAffineTransform(translationX: position.x - textBounds.minX, y: position.y - textBounds.minY)
+                let transform = CGAffineTransform(translationX: position.x - textBounds.minX, y: position.y - textBounds.minY)
 
                 path.addPath(textPath, transform: transform)
             }

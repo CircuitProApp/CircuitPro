@@ -26,7 +26,7 @@ final class WorkbenchView: NSView {
         didSet {
             elementsView?.elements  = elements
             handlesView?.elements   = elements
-            previewView?.needsDisplay = true
+    
             
             // Update the schematic graph with new pin positions
             syncPinPositionsToGraph()
@@ -63,9 +63,7 @@ final class WorkbenchView: NSView {
         }
     }
 
-    var selectedLayer: CanvasLayer = .layer0 {
-        didSet { previewView?.needsDisplay = true }
-    }
+    var selectedLayer: CanvasLayer = .layer0
 
     var magnification: CGFloat = 1.0 {
         didSet {
@@ -237,7 +235,6 @@ final class WorkbenchView: NSView {
                 }
             }
         }
-        connectionsView?.needsDisplay = true
     }
 
     // old public helpers (still used by all gesture classes)

@@ -57,7 +57,7 @@ final class ToolActionController {
             workbench.onUpdate?(workbench.elements)
         
         case .schematicModified:
-            workbench.connectionsView?.needsDisplay = true
+            break
             
         case .noResult:
             break

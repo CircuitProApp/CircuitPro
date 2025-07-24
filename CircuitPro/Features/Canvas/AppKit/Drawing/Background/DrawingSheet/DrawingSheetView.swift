@@ -42,7 +42,6 @@ final class DrawingSheetView: NSView {
         wantsLayer = true
         // Set view layer to be transparent; backgrounds will be handled by dedicated layers.
         layer?.backgroundColor = NSColor.clear.cgColor
-        layerContentsRedrawPolicy = .onSetNeedsDisplay
     }
 
     // MARK: Layout and Drawing
