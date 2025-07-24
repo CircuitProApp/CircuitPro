@@ -102,12 +102,14 @@ final class WorkbenchInputCoordinator {
 
             } else {
                 // Empty space or a non-selectable element was hit.
-                // Clear selection and start marquee.
-                if !workbench.selectedIDs.isEmpty {
-                    workbench.selectedIDs.removeAll()
-                    workbench.onSelectionChange?(workbench.selectedIDs)
+                // Clear selection (if shift isn't held) and start marquee.
+                if !e.modifierFlags.contains(.shift) {
+                    if !workbench.selectedIDs.isEmpty {
+                        workbench.selectedIDs.removeAll()
+                        workbench.onSelectionChange?(workbench.selectedIDs)
+                    }
                 }
-                marquee.begin(at: p)
+                marquee.begin(at: p, event: e)
                 return
             }
         }

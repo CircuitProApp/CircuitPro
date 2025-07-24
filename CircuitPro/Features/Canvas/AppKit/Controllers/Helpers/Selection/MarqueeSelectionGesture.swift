@@ -16,13 +16,15 @@ final class MarqueeSelectionGesture {
     private var rect:   CGRect? {
         didSet { workbench.marqueeView?.rect = rect }
     }
+    private var isAdditive: Bool = false
 
     init(workbench: WorkbenchView) { self.workbench = workbench }
 
     // start when the cursor tool is active and the hit-test finds nothing
-    func begin(at p: CGPoint) {
+    func begin(at p: CGPoint, event: NSEvent) {
         origin = p
         rect   = nil
+        isAdditive = event.modifierFlags.contains(.shift)
     }
 
     func drag(to p: CGPoint) {
@@ -57,12 +59,17 @@ final class MarqueeSelectionGesture {
 
     func end() {
         if origin != nil {
-            workbench.selectedIDs = workbench.marqueeSelectedIDs
+            if isAdditive {
+                workbench.selectedIDs.formUnion(workbench.marqueeSelectedIDs)
+            } else {
+                workbench.selectedIDs = workbench.marqueeSelectedIDs
+            }
             workbench.onSelectionChange?(workbench.selectedIDs)
         }
         workbench.marqueeSelectedIDs.removeAll()
         origin = nil
         rect   = nil
+        isAdditive = false
     }
 
     var active: Bool { origin != nil }
