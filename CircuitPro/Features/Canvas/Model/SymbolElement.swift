@@ -50,55 +50,86 @@ extension SymbolElement: Transformable {
 }
 
 extension SymbolElement: Drawable {
-
-    // ─────────────────────────────────────────────────────────────
-    // 1.  Normal appearance
-    // ─────────────────────────────────────────────────────────────
-    func drawBody(in ctx: CGContext) {
-        ctx.saveGState()
-
-        // Place the symbol instance in world space
-        ctx.concatenate(
-            CGAffineTransform(translationX: position.x, y: position.y)
-            .rotated(by: rotation)
-        )
-
-        // Master primitives
-        symbol.primitives.forEach { $0.drawBody(in: ctx) }
-
-        // Pins are drawables themselves, so call their *body* only
-        symbol.pins.forEach { $0.drawBody(in: ctx) }
-
-        ctx.restoreGState()
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // 2.  Outline that should glow when selected
-    // ─────────────────────────────────────────────────────────────
-    func selectionPath() -> CGPath? {
-
-        // accumulate every path that makes up the symbol
-        let combined = CGMutablePath()
-
-        for prim in symbol.primitives {
-            combined.addPath(prim.makePath())
-        }
-        for pin in symbol.pins {
-            pin.primitives.forEach { combined.addPath($0.makePath()) }
-        }
-
-        // copy it into world space with the same transform we used to draw
+    
+    /// Generates the drawing parameters for the symbol's entire body, including all child primitives and pins,
+    /// transformed into world space.
+    func makeBodyParameters() -> [DrawingParameters] {
+        // 1. Define the instance's world transform
         var transform = CGAffineTransform(translationX: position.x, y: position.y)
             .rotated(by: rotation)
+        
+        var allParameters: [DrawingParameters] = []
 
-        return combined.copy(using: &transform)
+        // 2. Process master primitives
+        // Ask each primitive for its parameters and apply the symbol's transform to the path.
+        let masterPrimitiveParams = symbol.primitives.flatMap { $0.makeBodyParameters() }
+        for params in masterPrimitiveParams {
+            if let transformedPath = params.path.copy(using: &transform) {
+                // Create a new DrawingParameters with the transformed path
+                allParameters.append(DrawingParameters(
+                    path: transformedPath,
+                    lineWidth: params.lineWidth,
+                    fillColor: params.fillColor,
+                    strokeColor: params.strokeColor,
+                    lineDashPattern: params.lineDashPattern,
+                    lineCap: params.lineCap,
+                    lineJoin: params.lineJoin
+                ))
+            }
+        }
+        
+        // 3. Process pins
+        // Pins are also composite, so we do the same for all parameters they return.
+        let pinParams = symbol.pins.flatMap { $0.makeBodyParameters() }
+        for params in pinParams {
+            if let transformedPath = params.path.copy(using: &transform) {
+                // Create a new DrawingParameters with the transformed path
+                allParameters.append(DrawingParameters(
+                    path: transformedPath,
+                    lineWidth: params.lineWidth,
+                    fillColor: params.fillColor,
+                    strokeColor: params.strokeColor,
+                    lineDashPattern: params.lineDashPattern,
+                    lineCap: params.lineCap,
+                    lineJoin: params.lineJoin
+                ))
+            }
+        }
+        
+        return allParameters
     }
     
+    /// Generates a single, unified outline for the selection halo, transformed into world space.
     func makeHaloParameters() -> DrawingParameters? {
-        nil
+        let combinedPath = CGMutablePath()
+        
+        // 1. Collect all halo paths from children (primitives and pins)
+        let childHaloables = symbol.primitives as [any Drawable] + symbol.pins as [any Drawable]
+        for child in childHaloables {
+            if let haloParams = child.makeHaloParameters() {
+                combinedPath.addPath(haloParams.path)
+            }
+        }
+        
+        guard !combinedPath.isEmpty else { return nil }
+        
+        // 2. Apply the symbol's instance transform to the unified path
+        var transform = CGAffineTransform(translationX: position.x, y: position.y)
+            .rotated(by: rotation)
+        
+        guard let finalPath = combinedPath.copy(using: &transform) else {
+            return nil
+        }
+        
+        // 3. Return the final drawing parameters for the halo
+        return DrawingParameters(
+            path: finalPath,
+            lineWidth: 4.0, // Standard halo width
+            fillColor: nil,
+            strokeColor: NSColor.systemBlue.withAlphaComponent(0.3).cgColor
+        )
     }
 }
-
 extension SymbolElement: Hittable {
 
     func hitTest(_ worldPoint: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
