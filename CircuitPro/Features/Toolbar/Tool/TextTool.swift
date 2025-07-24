@@ -16,7 +16,8 @@ struct TextTool: CanvasTool {
         let newTextElement = TextElement(
             id: UUID(),
             text: "text",
-            position: location
+            position: location,
+            isEditable: true
         )
         return .element(.text(newTextElement))
     }

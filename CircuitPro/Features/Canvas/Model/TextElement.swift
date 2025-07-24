@@ -13,7 +13,8 @@ struct TextElement: Identifiable {
     var position: CGPoint
     var rotation: CGFloat = 0.0
     var font: NSFont = .systemFont(ofSize: 12)
-    var color: CGColor = NSColor.black.cgColor
+    var color: CGColor = NSColor.labelColor.cgColor
+    var isEditable: Bool = false
 }
 
 // MARK: - Equatable, Hashable
@@ -24,7 +25,8 @@ extension TextElement: Equatable, Hashable {
         lhs.position == rhs.position &&
         lhs.rotation == rhs.rotation &&
         lhs.font == rhs.font &&
-        lhs.color == rhs.color
+        lhs.color == rhs.color &&
+        lhs.isEditable == rhs.isEditable
     }
 
     func hash(into hasher: inout Hasher) {
