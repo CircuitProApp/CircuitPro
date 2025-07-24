@@ -75,6 +75,10 @@ extension CircuitProSymbols {
         static let connectionWire = "connection.wire"
     }
     
+    enum Tool {
+        static let text = "character.textbox"
+    }
+    
     enum Graphic {
         static let line = "line.diagonal"
         static let rectangle = "rectangle"

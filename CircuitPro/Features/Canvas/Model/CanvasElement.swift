@@ -14,6 +14,7 @@ enum CanvasElement: Identifiable, Hashable {
     case pin(Pin)
     case pad(Pad)
     case symbol(SymbolElement)
+    case text(TextElement)
 
     // MARK: – ID
     var id: UUID {
@@ -22,6 +23,7 @@ enum CanvasElement: Identifiable, Hashable {
         case .pin(let pin):             return pin.id
         case .pad(let pad):             return pad.id
         case .symbol(let symbol):       return symbol.id
+        case .text(let text):           return text.id
         }
     }
 
@@ -38,6 +40,7 @@ enum CanvasElement: Identifiable, Hashable {
         case .pin(let pin):     return pin.primitives
         case .pad(let pad):     return pad.shapePrimitives + pad.maskPrimitives
         case .symbol(let sym):  return sym.primitives
+        case .text:             return []
         }
     }
 
@@ -49,8 +52,8 @@ enum CanvasElement: Identifiable, Hashable {
 
     func handles() -> [Handle] {
         switch self {
-        case .symbol:
-            return []                 // symbol is rigid
+        case .symbol, .text:
+            return [] // rigid elements
         default:
             return primitives.flatMap { $0.handles() }
         }
@@ -82,6 +85,7 @@ extension CanvasElement {
         case .pin(let pin):     return pin
         case .pad(let pad):     return pad
         case .symbol(let sym):  return sym
+        case .text(let text):   return text
         }
     }
 }
@@ -90,6 +94,7 @@ extension CanvasElement {
 extension CanvasElement {
     var isPin: Bool { if case .pin = self { true } else { false } }
     var isPad: Bool { if case .pad = self { true } else { false } }
+    var isText: Bool { if case .text = self { true } else { false } }
 }
 
 // MARK: – Bounding Box
@@ -99,6 +104,7 @@ extension CanvasElement {
         case .pin(let pin):    return pin.boundingBox
         case .pad(let pad):    return pad.boundingBox
         case .symbol(let sym): return sym.boundingBox
+        case .text(let text):  return text.boundingBox
         default:
             return primitives
                 .map(\.boundingBox)
@@ -115,6 +121,7 @@ extension CanvasElement {
         case .pin(let pin):     return pin
         case .pad(let pad):     return pad
         case .symbol(let sym):  return sym
+        case .text(let text):   return text
         }
     }
 }
@@ -128,6 +135,7 @@ extension CanvasElement: Hittable {
         case .pin(let pin):     return pin.hitTest(point, tolerance: tolerance)
         case .pad(let pad):     return pad.hitTest(point, tolerance: tolerance)
         case .symbol(let sym):  return sym.hitTest(point, tolerance: tolerance)
+        case .text(let text):   return text.hitTest(point, tolerance: tolerance)
         }
     }
 }
@@ -145,6 +153,8 @@ extension CanvasElement {
             pad.position = orig + delta; self = .pad(pad)
         case .symbol(var sym):
             sym.position = orig + delta; self = .symbol(sym)
+        case .text(var text):
+            text.position = orig + delta; self = .text(text)
         }
     }
 
@@ -154,6 +164,7 @@ extension CanvasElement {
         case .pin(var pin):     pin.rotation = angle; self = .pin(pin)
         case .pad(var pad):     pad.rotation = angle; self = .pad(pad)
         case .symbol(var sym):  sym.rotation = angle; self = .symbol(sym)
+        case .text(var text):   text.rotation = angle; self = .text(text)
         }
     }
 }

@@ -15,6 +15,10 @@ enum CanvasToolRegistry {
         AnyCanvasTool(RulerTool())
     ]
 
+    static let text: [AnyCanvasTool] = [
+        AnyCanvasTool(TextTool())
+    ]
+    
     static let graphicsTools: [AnyCanvasTool] = [
         AnyCanvasTool(LineTool()),
         AnyCanvasTool(RectangleTool()),
@@ -22,7 +26,7 @@ enum CanvasToolRegistry {
     ]
 
     static let symbolDesignTools: [AnyCanvasTool] =
-    cursor + graphicsTools + [AnyCanvasTool(PinTool())] + ruler
+    cursor + graphicsTools + [AnyCanvasTool(PinTool())] + text + ruler
 
     static let footprintDesignTools: [AnyCanvasTool] =
     cursor + graphicsTools + [AnyCanvasTool(PadTool())] + ruler
