@@ -28,7 +28,9 @@ struct SymbolElement: Identifiable {
 // ═══════════════════════════════════════════════════════════════════════
 extension SymbolElement: Equatable, Hashable {
     static func == (lhs: SymbolElement, rhs: SymbolElement) -> Bool {
-        lhs.id == rhs.id
+        // An element is only truly equal if its instance data (like position) is also the same.
+        // This is critical for the rendering system to detect changes and redraw elements that have moved.
+        lhs.id == rhs.id && lhs.instance == rhs.instance
     }
 
     func hash(into hasher: inout Hasher) {
@@ -40,12 +42,23 @@ extension SymbolElement: Transformable {
 
     var position: CGPoint {
         get { instance.position }
-        set { instance.position = newValue }
+        set {
+            // To maintain value semantics for the struct, we must replace the
+            // reference type property with a new copy containing the change.
+            // This ensures that struct mutation is correctly detected by views.
+            let newInstance = instance.copy()
+            newInstance.position = newValue
+            self.instance = newInstance
+        }
     }
 
     var rotation: CGFloat {
         get { instance.rotation }
-        set { instance.rotation = newValue }
+        set {
+            let newInstance = instance.copy()
+            newInstance.rotation = newValue
+            self.instance = newInstance
+        }
     }
 }
 

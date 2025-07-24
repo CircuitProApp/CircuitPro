@@ -35,4 +35,22 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
         case _position = "position"
         case _cardinalRotation = "rotation"
     }
+    
+    /// Creates a new instance with the same property values.
+    func copy() -> SymbolInstance {
+        SymbolInstance(id: id,
+                       symbolUUID: symbolUUID,
+                       position: position,
+                       cardinalRotation: cardinalRotation)
+    }
+}
+
+// Add Equatable conformance to allow value-based comparisons.
+extension SymbolInstance: Equatable {
+    static func == (lhs: SymbolInstance, rhs: SymbolInstance) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.symbolUUID == rhs.symbolUUID &&
+        lhs.position == rhs.position &&
+        lhs.cardinalRotation == rhs.cardinalRotation
+    }
 }
