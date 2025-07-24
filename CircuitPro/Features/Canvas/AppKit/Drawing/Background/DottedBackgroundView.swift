@@ -44,6 +44,7 @@ final class DottedBackgroundView: NSView {
     private func commonInit() {
         wantsLayer = true
         guard let layer = self.layer else { return }
+        layer.masksToBounds = true
         
         // 1. Setup Layer Hierarchy
         layer.addSublayer(majorGridLayer)
