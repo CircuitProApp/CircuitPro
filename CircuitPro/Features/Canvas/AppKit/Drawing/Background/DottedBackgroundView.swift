@@ -22,6 +22,13 @@ final class DottedBackgroundView: NSView {
         }
     }
     
+    var gridOrigin: CGPoint = .zero {
+        didSet {
+            guard gridOrigin != oldValue else { return }
+            needsLayout = true
+        }
+    }
+    
     // MARK: - View Lifecycle & Configuration
     
     override init(frame frameRect: CGRect) {
@@ -76,13 +83,8 @@ final class DottedBackgroundView: NSView {
         }
         
         // 1. Calculate the true drawing area.
-        // The drawing should only happen within the intersection of the view's bounds
-        // and the portion visible within the scroll view. This prevents calculating
-        // dots that are either scrolled out of view or outside the workbench's frame.
         let drawingRect = self.bounds.intersection(self.visibleRect)
 
-        // If the drawingRect is empty (e.g., the view is completely off-screen),
-        // clear the paths and do nothing.
         guard !drawingRect.isEmpty else {
             majorGridLayer.path = nil
             minorGridLayer.path = nil
@@ -97,22 +99,21 @@ final class DottedBackgroundView: NSView {
         let minorPath = CGMutablePath()
 
         // 3. Set loop boundaries based on the precise `drawingRect`.
-        let startX = previousMultiple(of: spacing, beforeOrEqualTo: drawingRect.minX)
-        let startY = previousMultiple(of: spacing, beforeOrEqualTo: drawingRect.minY)
+        let startX = previousMultiple(of: spacing, beforeOrEqualTo: drawingRect.minX, offset: gridOrigin.x)
+        let startY = previousMultiple(of: spacing, beforeOrEqualTo: drawingRect.minY, offset: gridOrigin.y)
         
-        // The end coordinates are implicitly handled by the loop's condition.
         let endX = drawingRect.maxX
         let endY = drawingRect.maxY
 
         // 4. Generate Dot Paths only within the calculated rectangle.
         var currentY = startY
         while currentY <= endY {
-            let yGridIndex = Int(round(currentY / spacing))
+            let yGridIndex = Int(round((currentY - gridOrigin.y) / spacing))
             let yIsMajor = (yGridIndex % 10 == 0)
 
             var currentX = startX
             while currentX <= endX {
-                let xGridIndex = Int(round(currentX / spacing))
+                let xGridIndex = Int(round((currentX - gridOrigin.x) / spacing))
                 let isMajor = yIsMajor || (xGridIndex % 10 == 0)
                 
                 let dotRect = CGRect(x: currentX - dotRadius, y: currentY - dotRadius, width: dotRadius * 2, height: dotRadius * 2)
@@ -136,9 +137,9 @@ final class DottedBackgroundView: NSView {
     }
 
     // MARK: - Helpers
-    private func previousMultiple(of step: CGFloat, beforeOrEqualTo value: CGFloat) -> CGFloat {
+    private func previousMultiple(of step: CGFloat, beforeOrEqualTo value: CGFloat, offset: CGFloat = 0) -> CGFloat {
         guard step > 0 else { return value }
-        return floor(value / step) * step
+        return floor((value - offset) / step) * step + offset
     }
 
     private func adjustedSpacing() -> CGFloat {

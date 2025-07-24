@@ -125,6 +125,10 @@ struct ComponentDesignView: View {
                 .help("Send Feedback")
             }
         }
+        .onAppear {
+            symbolCanvasManager.showGuides = true
+            footprintCanvasManager.showGuides = true
+        }
         .alert("Error", isPresented: $showError, actions: {
           Button("OK", role: .cancel) { }
         }, message: {

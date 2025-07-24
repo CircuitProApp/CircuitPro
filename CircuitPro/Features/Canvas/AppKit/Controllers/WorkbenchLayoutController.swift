@@ -26,6 +26,11 @@ final class WorkbenchLayoutController {
         workbench.addSubview(background)
         workbench.backgroundView = background
 
+        let guides = GuideView(frame: workbench.bounds)
+        guides.autoresizingMask = [.width, .height]
+        workbench.addSubview(guides)
+        workbench.guideView = guides
+        
         // 2 Drawing sheet
         let sheet = DrawingSheetView(frame: .zero)
         sheet.translatesAutoresizingMaskIntoConstraints = false
@@ -44,7 +49,7 @@ final class WorkbenchLayoutController {
             sheet.topAnchor.constraint(equalTo: workbench.topAnchor),
             sheet.bottomAnchor.constraint(equalTo: workbench.bottomAnchor)
         ])
-
+        
         let connections = ConnectionsView(frame: workbench.bounds)
         connections.autoresizingMask = [.width, .height]
         workbench.addSubview(connections)

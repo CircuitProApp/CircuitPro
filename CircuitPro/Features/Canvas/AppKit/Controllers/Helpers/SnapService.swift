@@ -13,14 +13,15 @@ struct SnapService {
 
     var gridSize:  CGFloat
     var isEnabled: Bool
+    var origin: CGPoint = .zero
 
     // snap an absolute point
     func snap(_ p: CGPoint) -> CGPoint {
         guard isEnabled else { return p }
-        func roundToGrid(_ v: CGFloat) -> CGFloat {
-            (v / gridSize).rounded() * gridSize
+        func roundToGrid(_ v: CGFloat, offset: CGFloat) -> CGFloat {
+            ((v - offset) / gridSize).rounded() * gridSize + offset
         }
-        return CGPoint(x: roundToGrid(p.x), y: roundToGrid(p.y))
+        return CGPoint(x: roundToGrid(p.x, offset: origin.x), y: roundToGrid(p.y, offset: origin.y))
     }
 
     // snap a delta value (dx or dy)

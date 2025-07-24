@@ -92,6 +92,7 @@ struct CanvasView: NSViewRepresentable {
         workbench.magnification = manager.magnification
         workbench.isSnappingEnabled = manager.enableSnapping
         workbench.snapGridSize = manager.gridSpacing.rawValue * 10.0
+        workbench.showGuides = manager.showGuides
         
         // Pass configuration to Workbench
         workbench.crosshairsStyle = manager.crosshairsStyle

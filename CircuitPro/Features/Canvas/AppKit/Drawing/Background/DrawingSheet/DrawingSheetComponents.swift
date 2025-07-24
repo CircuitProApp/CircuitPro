@@ -205,7 +205,7 @@ struct TitleBlockDrawer {
 
             // Key
             let keyPath = TextUtilities.path(for: key.uppercased(), font: keyFont)
-            let keyPosition = CGPoint(x: cellRect.minX, y: cellRect.minY + 2)
+            let keyPosition = CGPoint(x: cellRect.minX, y: cellRect.midY + 2)
             var keyTransform = CGAffineTransform(translationX: keyPosition.x - keyPath.boundingBoxOfPath.minX, y: keyPosition.y - keyPath.boundingBoxOfPath.minY)
             
             let keyLayer = CAShapeLayer()
