@@ -92,7 +92,7 @@ extension TextElement: Drawable {
 extension TextElement: Hittable {
     func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
         if boundingBox.insetBy(dx: -tolerance, dy: -tolerance).contains(point) {
-            return .canvasElement(part: .text(id: id))
+            return .canvasElement(part: .body(id: id))
         }
         return nil
     }
