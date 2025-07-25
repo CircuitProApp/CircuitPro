@@ -187,87 +187,130 @@ class SchematicGraph {
     /// Call this repeatedly as the user drags.
     /// It contains the complex BFS logic to update vertex positions.
     public func updateDrag(by delta: CGPoint) {
-        guard let state = dragState else { return }
+        guard var state = dragState else { return }
 
-        var newPositions: [UUID: CGPoint] = [:]
-        var queue: [UUID] = Array(state.verticesToMove)
+        // MARK: - Pre-processing
+        // Detach any selected pins that are being dragged off-axis.
+        for vertexID in state.verticesToMove {
+            guard let vertex = vertices[vertexID], case .pin = vertex.ownership else { continue }
+            
+            let isOffAxis = (adjacency[vertexID] ?? []).contains { edgeID in
+                guard let edge = state.selectedEdges.first(where: { $0.id == edgeID }),
+                      let originalPos = state.originalVertexPositions[vertexID] else { return false }
+                let otherEndID = edge.start == vertexID ? edge.end : edge.start
+                guard let otherEndOrigPos = state.originalVertexPositions[otherEndID] else { return false }
+                
+                let wasHorizontal = abs(originalPos.y - otherEndOrigPos.y) < 1e-6
+                return (wasHorizontal && abs(delta.y) > 1e-6) || (!wasHorizontal && abs(delta.x) > 1e-6)
+            }
+
+            if isOffAxis {
+                let pinOwnership = vertex.ownership
+                let pinPoint = vertex.point
+                
+                vertices[vertexID]?.ownership = .detachedPin
+                
+                let newStaticPinVertex = addVertex(at: pinPoint, ownership: pinOwnership)
+                state.newVertices.insert(newStaticPinVertex.id)
+                addEdge(from: vertexID, to: newStaticPinVertex.id)
+            }
+        }
+        self.dragState = state
         
-        // 1. Initial state: selected vertices move freely
+        // MARK: - Position Calculation
+        var newPositions: [UUID: CGPoint] = [:]
+
+        // Step 1: Calculate naive new positions for all moving vertices.
         for id in state.verticesToMove {
             if let origin = state.originalVertexPositions[id] {
                 newPositions[id] = CGPoint(x: origin.x + delta.x, y: origin.y + delta.y)
             }
         }
         
-        // 2. BFS to propagate constraints
+        // Step 2: Correct positions for detached pins to enforce orthogonality (create L-bends).
+        for vertexID in state.verticesToMove {
+            guard let vertex = vertices[vertexID], vertex.ownership == .detachedPin else { continue }
+            
+            guard let staticPinNeighbor = findNeighbor(of: vertexID, where: { neighborID, _ in
+                if case .pin = self.vertices[neighborID]?.ownership {
+                    return newPositions[neighborID] == nil // Is a non-moving pin
+                }
+                return false
+            }),
+            let movingNeighbor = findNeighbor(of: vertexID, where: { neighborID, edge in
+                return newPositions[neighborID] != nil && state.selectedEdges.contains(where: { $0.id == edge.id })
+            }) else { continue }
+
+            let originalVertexPos = state.originalVertexPositions[vertexID]!
+            let originalMovingNeighborPos = state.originalVertexPositions[movingNeighbor.id]!
+            let newMovingNeighborPos = newPositions[movingNeighbor.id]!
+            
+            let wasHorizontal = abs(originalVertexPos.y - originalMovingNeighborPos.y) < 1e-6
+            
+            if wasHorizontal {
+                newPositions[vertexID] = CGPoint(x: staticPinNeighbor.point.x, y: newMovingNeighborPos.y)
+            } else {
+                newPositions[vertexID] = CGPoint(x: newMovingNeighborPos.x, y: staticPinNeighbor.point.y)
+            }
+        }
+
+        // Step 3: Propagate constraints via BFS to unselected parts of the circuit.
+        var queue: [UUID] = Array(state.verticesToMove)
         var head = 0
         while head < queue.count {
-            let junctionID = queue[head]
-            head += 1
-            
-            guard let junctionNewPos = newPositions[junctionID],
-                  let adjacentEdgeIDs = self.adjacency[junctionID] else { continue }
+            let junctionID = queue[head]; head += 1
+            guard let junctionNewPos = newPositions[junctionID] else { continue }
 
-            for edgeID in adjacentEdgeIDs {
-                guard let edge = self.edges[edgeID] else { continue }
-                
-                // If the edge was part of the initial edge selection, its vertices are already moving.
-                // If not, it's a constraining edge.
-                let isSelectedEdge = state.selectedEdges.contains(where: { $0.id == edgeID })
-                if isSelectedEdge { continue }
-                
+            for edgeID in adjacency[junctionID] ?? [] {
+                guard let edge = edges[edgeID] else { continue }
                 let anchorID = edge.start == junctionID ? edge.end : edge.start
-                if newPositions[anchorID] != nil { continue } // Already processed
-
-                // NEW BEHAVIOR: If we encounter an unselected pin, we "detach" it.
-                // It becomes a movable vertex, and a new static pin vertex is created in its place,
-                // with a new edge connecting them.
-                if var anchorVertex = vertices[anchorID], case .pin = anchorVertex.ownership {
-                    // This is an unselected pin (since selected ones would already be in newPositions).
-                    // Detach it by changing its ownership and creating a new vertex for the pin.
-                    let pinOwnership = anchorVertex.ownership
-                    let pinPoint = anchorVertex.point
-                    
-                    // 1. Mark the original vertex as detached so it becomes movable.
-                    anchorVertex.ownership = .detachedPin
-                    vertices[anchorID] = anchorVertex
-                    
-                    // 2. Create a new, static vertex that will remain at the pin's location.
-                    let newStaticPinVertex = addVertex(at: pinPoint, ownership: pinOwnership)
-                    dragState?.newVertices.insert(newStaticPinVertex.id)
-                    
-                    // 3. Add a new edge connecting the now-movable vertex to the new static pin.
-                    addEdge(from: anchorID, to: newStaticPinVertex.id)
-                    
-                    // Now that we've modified the graph, we let the regular logic below move the
-                    // `anchorID` vertex (which is now `.detachedPin`). The `newStaticPinVertex`
-                    // will act as an immovable anchor if anything tries to propagate to it.
-                }
-
-                // An immovable anchor is a pin that has not been detached.
-                // The new static pin vertices created above will be caught here and remain fixed.
-                if let anchorVertex = vertices[anchorID], case .pin = anchorVertex.ownership {
-                    continue
-                }
-
+                
+                if newPositions[anchorID] != nil { continue } // Already processed.
+                
                 guard let anchorOrigPos = state.originalVertexPositions[anchorID],
                       let junctionOrigPos = state.originalVertexPositions[junctionID] else { continue }
                 
                 let wasHorizontal = abs(anchorOrigPos.y - junctionOrigPos.y) < 1e-6
-                
-                let newAnchorPos: CGPoint
-                if wasHorizontal {
-                    newAnchorPos = CGPoint(x: anchorOrigPos.x, y: junctionNewPos.y)
-                } else { // Was vertical
-                    newAnchorPos = CGPoint(x: junctionNewPos.x, y: anchorOrigPos.y)
+                let isOffAxisPull = (wasHorizontal && abs(junctionNewPos.y - junctionOrigPos.y) > 1e-6) ||
+                                    (!wasHorizontal && abs(junctionNewPos.x - junctionOrigPos.x) > 1e-6)
+
+                if var anchorVertex = vertices[anchorID], case .pin = anchorVertex.ownership {
+                    if isOffAxisPull {
+                        // This is an unselected pin being pulled off-axis. Detach it.
+                        let pinOwnership = anchorVertex.ownership
+                        let pinPoint = anchorVertex.point
+                        
+                        anchorVertex.ownership = .detachedPin
+                        vertices[anchorID] = anchorVertex
+                        
+                        let newStaticPin = addVertex(at: pinPoint, ownership: pinOwnership)
+                        self.dragState?.newVertices.insert(newStaticPin.id)
+                        addEdge(from: anchorID, to: newStaticPin.id)
+                        
+                        // Now that it's detached, calculate its position and add to queue.
+                        if wasHorizontal {
+                            newPositions[anchorID] = CGPoint(x: anchorOrigPos.x, y: junctionNewPos.y)
+                        } else {
+                            newPositions[anchorID] = CGPoint(x: junctionNewPos.x, y: anchorOrigPos.y)
+                        }
+                        queue.append(anchorID)
+                    }
+                    // If not an off-axis pull, the pin is a rigid anchor. Do nothing.
+                    
+                } else {
+                    // This is a regular free vertex. Propagate constraints.
+                    if wasHorizontal {
+                        newPositions[anchorID] = CGPoint(x: anchorOrigPos.x, y: junctionNewPos.y)
+                    } else {
+                        newPositions[anchorID] = CGPoint(x: junctionNewPos.x, y: anchorOrigPos.y)
+                    }
+                    queue.append(anchorID)
                 }
-                
-                newPositions[anchorID] = newAnchorPos
-                queue.append(anchorID)
             }
         }
 
-        // 3. Atomic update: Apply all calculated positions
+        // MARK: - Finalization
+        // Atomically apply all calculated positions.
         for (id, pos) in newPositions {
             self.moveVertex(id: id, to: pos)
         }
@@ -570,6 +613,18 @@ class SchematicGraph {
     
     // MARK: - Net Management
 
+    private func findNeighbor(of vertexID: UUID, where predicate: (UUID, ConnectionEdge) -> Bool) -> ConnectionVertex? {
+        guard let edges = adjacency[vertexID] else { return nil }
+        for edgeID in edges {
+            guard let edge = self.edges[edgeID] else { continue }
+            let neighborID = edge.start == vertexID ? edge.end : edge.start
+            if predicate(neighborID, edge) {
+                return vertices[neighborID]
+            }
+        }
+        return nil
+    }
+    
     private func unifyNetIDs(between vertex1ID: ConnectionVertex.ID, and vertex2ID: ConnectionVertex.ID) {
         let netID1 = vertices[vertex1ID]?.netID
         let netID2 = vertices[vertex2ID]?.netID
