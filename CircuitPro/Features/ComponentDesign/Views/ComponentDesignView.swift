@@ -197,7 +197,7 @@ struct ComponentDesignView: View {
             footprints: [],
             category: componentDesignManager.selectedCategory,
             package: componentDesignManager.selectedPackageType,
-            properties: componentDesignManager.componentProperties
+//            properties: componentDesignManager.componentProperties
         )
 
         let newSymbol = Symbol(

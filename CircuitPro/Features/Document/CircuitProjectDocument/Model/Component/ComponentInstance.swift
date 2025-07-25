@@ -14,7 +14,10 @@ final class ComponentInstance: Identifiable, Codable {
     var id: UUID
 
     var componentUUID: UUID
-    var properties: [ComponentProperty]
+    
+    var propertyOverrides: [PropertyOverride]
+    var adHocProperties: [InstanceAdHocProperty]
+
     var symbolInstance: SymbolInstance
     var footprintInstance: FootprintInstance?
 
@@ -23,14 +26,16 @@ final class ComponentInstance: Identifiable, Codable {
     init(
         id: UUID = UUID(),
         componentUUID: UUID,
-        properties: [ComponentProperty] = [],
+        propertyOverrides: [PropertyOverride] = [],
+        adHocProperties: [InstanceAdHocProperty] = [],
         symbolInstance: SymbolInstance,
         footprintInstance: FootprintInstance? = nil,
         reference: Int = 0
     ) {
         self.id = id
         self.componentUUID = componentUUID
-        self.properties = properties
+        self.propertyOverrides = propertyOverrides
+        self.adHocProperties = adHocProperties
         self.symbolInstance = symbolInstance
         self.footprintInstance = footprintInstance
         self.reference = reference
@@ -39,7 +44,8 @@ final class ComponentInstance: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case _id = "id"
         case _componentUUID = "componentUUID"
-        case _properties = "properties"
+        case _propertyOverrides = "propertyOverrides"
+        case _adHocProperties = "adHocProperties"
         case _symbolInstance = "symbolInstance"
         case _footprintInstance = "footprintInstance"
         case _reference = "reference"

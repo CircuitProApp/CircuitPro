@@ -15,7 +15,7 @@ final class ComponentDesignManager {
     var componentAbbreviation: String = "" { didSet { refreshValidation() } }
     var selectedCategory: ComponentCategory? { didSet { refreshValidation() } }
     var selectedPackageType: PackageType?
-    var componentProperties: [ComponentProperty] = [ComponentProperty(key: nil, value: .single(nil), unit: .init())] { didSet { refreshValidation() } }
+    var componentProperties: [PropertyDefinition] = [PropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())] { didSet { refreshValidation() } }
 
     // MARK: - Validation
     var validationSummary = ValidationSummary()
@@ -66,7 +66,7 @@ final class ComponentDesignManager {
         selectedCategory = nil
         selectedPackageType = nil
         componentProperties = [
-            ComponentProperty(key: nil, value: .single(nil), unit: .init())
+            PropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())
         ]
 
         // 2. Symbol design

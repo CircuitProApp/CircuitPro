@@ -26,7 +26,7 @@ class Component {
     var footprints: [Footprint]
     var category: ComponentCategory?
     var package: PackageType?
-    var properties: [ComponentProperty]
+    var propertyDefinitions: [PropertyDefinition]
 
     init(
         uuid: UUID = UUID(),
@@ -36,7 +36,7 @@ class Component {
         footprints: [Footprint] = [],
         category: ComponentCategory? = nil,
         package: PackageType? = nil,
-        properties: [ComponentProperty] = []
+        propertyDefinitions: [PropertyDefinition] = []
     ) {
         self.uuid = uuid
         self.name = name
@@ -45,6 +45,6 @@ class Component {
         self.footprints = footprints
         self.category = category
         self.package = package
-        self.properties = properties
+        self.propertyDefinitions = propertyDefinitions
     }
 }

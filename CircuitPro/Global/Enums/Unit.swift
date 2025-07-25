@@ -69,7 +69,7 @@ enum BaseUnit: String, CaseIterable, Codable {
       }
 }
 
-struct Unit: CustomStringConvertible, Codable, Equatable {
+struct Unit: CustomStringConvertible, Codable, Equatable, Hashable {
     var prefix: SIPrefix
     var base: BaseUnit?
 

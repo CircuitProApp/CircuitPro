@@ -2,14 +2,14 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct TransferableComponent: Transferable, Codable {
+
     let componentUUID: UUID
     let symbolUUID: UUID
-    let properties: [ComponentProperty]
+    
     init?(component: Component) {
         guard let symbol = component.symbol else { return nil }
         componentUUID = component.uuid
         symbolUUID    = symbol.uuid
-        properties    = component.properties
     }
     
     static var transferRepresentation: some TransferRepresentation {

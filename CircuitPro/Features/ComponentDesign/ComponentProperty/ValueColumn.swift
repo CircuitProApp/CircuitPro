@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ValueColumn: View {
-    @Binding var property: ComponentProperty
+    @Binding var property: PropertyDefinition
 
     var body: some View {
         HStack {
@@ -35,14 +35,14 @@ struct ValueColumn: View {
     private var singleBinding: Binding<Double?> {
         Binding<Double?>(
             get: {
-                if case .single(let val) = property.value {
+                if case .single(let val) = property.defaultValue {
                     return val
                 } else {
                     return nil
                 }
             },
             set: { newVal in
-                property.value = .single(newVal)
+                property.defaultValue = .single(newVal)
             }
         )
     }
@@ -50,15 +50,15 @@ struct ValueColumn: View {
     private var minBinding: Binding<Double?> {
         Binding<Double?>(
             get: {
-                if case .range(let minVal, _) = property.value {
+                if case .range(let minVal, _) = property.defaultValue {
                     return minVal
                 } else {
                     return nil
                 }
             },
             set: { newMin in
-                if case .range(_, let maxVal) = property.value {
-                    property.value = .range(min: newMin, max: maxVal)
+                if case .range(_, let maxVal) = property.defaultValue {
+                    property.defaultValue = .range(min: newMin, max: maxVal)
                 }
             }
         )
@@ -67,15 +67,15 @@ struct ValueColumn: View {
     private var maxBinding: Binding<Double?> {
         Binding<Double?>(
             get: {
-                if case .range(_, let maxVal) = property.value {
+                if case .range(_, let maxVal) = property.defaultValue {
                     return maxVal
                 } else {
                     return nil
                 }
             },
             set: { newMax in
-                if case .range(let minVal, _) = property.value {
-                    property.value = .range(min: minVal, max: newMax)
+                if case .range(let minVal, _) = property.defaultValue {
+                    property.defaultValue = .range(min: minVal, max: newMax)
                 }
             }
         )

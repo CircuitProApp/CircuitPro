@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct UnitColumn: View {
-    @Binding var property: ComponentProperty
+    @Binding var property: PropertyDefinition
 
     var body: some View {
         HStack {

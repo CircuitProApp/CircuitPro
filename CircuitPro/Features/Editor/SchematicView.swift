@@ -91,7 +91,6 @@ struct SchematicView: View {
 
             let instance = ComponentInstance(
                 componentUUID:   comp.componentUUID,
-                properties:      comp.properties,
                 symbolInstance:  symbolInst,
                 footprintInstance: nil,
                 reference:       refNumber
