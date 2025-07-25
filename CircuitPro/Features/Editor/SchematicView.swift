@@ -86,7 +86,7 @@ struct SchematicView: View {
             let symbolInst = SymbolInstance(
                 symbolUUID: comp.symbolUUID,
                 position:   pos,
-                cardinalRotation: .west
+                cardinalRotation: .east
             )
 
             let instance = ComponentInstance(
