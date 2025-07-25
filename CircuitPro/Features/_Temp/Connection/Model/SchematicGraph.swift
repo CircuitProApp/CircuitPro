@@ -11,6 +11,7 @@ import SwiftUI
 enum VertexOwnership: Hashable {
     case free
     case pin(symbolID: UUID, pinID: UUID)
+    case detachedPin // Temporarily marks a vertex that was a pin but is now being dragged
 }
 
 struct ConnectionVertex: Identifiable, Hashable {
@@ -62,6 +63,7 @@ class SchematicGraph {
         let originalVertexPositions: [UUID: CGPoint]
         let selectedEdges: [ConnectionEdge]
         let verticesToMove: Set<UUID>
+        var newVertices: Set<UUID> = []
     }
     private var dragState: DragState?
 
@@ -217,7 +219,33 @@ class SchematicGraph {
                 let anchorID = edge.start == junctionID ? edge.end : edge.start
                 if newPositions[anchorID] != nil { continue } // Already processed
 
-                // Pin-owned vertices that aren't part of the selection are immovable anchors.
+                // NEW BEHAVIOR: If we encounter an unselected pin, we "detach" it.
+                // It becomes a movable vertex, and a new static pin vertex is created in its place,
+                // with a new edge connecting them.
+                if var anchorVertex = vertices[anchorID], case .pin = anchorVertex.ownership {
+                    // This is an unselected pin (since selected ones would already be in newPositions).
+                    // Detach it by changing its ownership and creating a new vertex for the pin.
+                    let pinOwnership = anchorVertex.ownership
+                    let pinPoint = anchorVertex.point
+                    
+                    // 1. Mark the original vertex as detached so it becomes movable.
+                    anchorVertex.ownership = .detachedPin
+                    vertices[anchorID] = anchorVertex
+                    
+                    // 2. Create a new, static vertex that will remain at the pin's location.
+                    let newStaticPinVertex = addVertex(at: pinPoint, ownership: pinOwnership)
+                    dragState?.newVertices.insert(newStaticPinVertex.id)
+                    
+                    // 3. Add a new edge connecting the now-movable vertex to the new static pin.
+                    addEdge(from: anchorID, to: newStaticPinVertex.id)
+                    
+                    // Now that we've modified the graph, we let the regular logic below move the
+                    // `anchorID` vertex (which is now `.detachedPin`). The `newStaticPinVertex`
+                    // will act as an immovable anchor if anything tries to propagate to it.
+                }
+
+                // An immovable anchor is a pin that has not been detached.
+                // The new static pin vertices created above will be caught here and remain fixed.
                 if let anchorVertex = vertices[anchorID], case .pin = anchorVertex.ownership {
                     continue
                 }
@@ -248,10 +276,21 @@ class SchematicGraph {
     /// Call this when the drag gesture ends.
     /// It normalizes the graph and cleans up the temporary state.
     public func endDrag() {
-        guard let state = dragState else { return }
+        guard var state = dragState else { return }
+
+        // After the drag, convert any temporarily detached pins back to free vertices.
+        // Their connection to the actual pin is now a normal edge.
+        for vertexID in vertices.keys {
+            if let vertex = vertices[vertexID] {
+                if case .detachedPin = vertex.ownership {
+                    vertices[vertexID]?.ownership = .free
+                }
+            }
+        }
         
-        // Use the original vertex keys to know which part of the graph was affected.
-        let affectedVertices = Set(state.originalVertexPositions.keys)
+        // Use the original vertex keys AND any new vertices to know which part of the graph was affected.
+        var affectedVertices = Set(state.originalVertexPositions.keys)
+        affectedVertices.formUnion(state.newVertices)
         normalize(around: affectedVertices)
         
         // Clean up
