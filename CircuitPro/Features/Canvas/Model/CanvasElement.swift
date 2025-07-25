@@ -15,6 +15,7 @@ enum CanvasElement: Identifiable, Hashable {
     case pad(Pad)
     case symbol(SymbolElement)
     case text(TextElement)
+    case anchoredText(AnchoredTextElement)
 
     // MARK: – ID
     var id: UUID {
@@ -24,6 +25,7 @@ enum CanvasElement: Identifiable, Hashable {
         case .pad(let pad):             return pad.id
         case .symbol(let symbol):       return symbol.id
         case .text(let text):           return text.id
+        case .anchoredText(let text):   return text.id
         }
     }
 
@@ -41,6 +43,7 @@ enum CanvasElement: Identifiable, Hashable {
         case .pad(let pad):     return pad.shapePrimitives + pad.maskPrimitives
         case .symbol(let sym):  return sym.primitives
         case .text:             return []
+        case .anchoredText:    return []
         }
     }
 
@@ -86,6 +89,7 @@ extension CanvasElement {
         case .pad(let pad):     return pad
         case .symbol(let sym):  return sym
         case .text(let text):   return text
+        case .anchoredText(let at): return at
         }
     }
 }
@@ -95,6 +99,7 @@ extension CanvasElement {
     var isPin: Bool { if case .pin = self { true } else { false } }
     var isPad: Bool { if case .pad = self { true } else { false } }
     var isText: Bool { if case .text = self { true } else { false } }
+    var isAnchoredText: Bool { if case .anchoredText = self { true } else { false } }
 }
 
 // MARK: – Bounding Box
@@ -105,6 +110,7 @@ extension CanvasElement {
         case .pad(let pad):    return pad.boundingBox
         case .symbol(let sym): return sym.boundingBox
         case .text(let text):  return text.boundingBox
+        case .anchoredText(let at): return at.boundingBox
         default:
             return primitives
                 .map(\.boundingBox)
@@ -122,6 +128,7 @@ extension CanvasElement {
         case .pad(let pad):     return pad
         case .symbol(let sym):  return sym
         case .text(let text):   return text
+        case .anchoredText(let at): return at
         }
     }
 }
@@ -136,6 +143,7 @@ extension CanvasElement: Hittable {
         case .pad(let pad):     return pad.hitTest(point, tolerance: tolerance)
         case .symbol(let sym):  return sym.hitTest(point, tolerance: tolerance)
         case .text(let text):   return text.hitTest(point, tolerance: tolerance)
+        case .anchoredText(let at): return at.hitTest(point, tolerance: tolerance)
         }
     }
 }
@@ -155,6 +163,8 @@ extension CanvasElement {
             sym.position = orig + delta; self = .symbol(sym)
         case .text(var text):
             text.position = orig + delta; self = .text(text)
+        case .anchoredText(var at):
+            at.position = orig + delta; self = .anchoredText(at)
         }
     }
 
@@ -165,6 +175,7 @@ extension CanvasElement {
         case .pad(var pad):     pad.rotation = angle; self = .pad(pad)
         case .symbol(var sym):  sym.rotation = angle; self = .symbol(sym)
         case .text(var text):   text.rotation = angle; self = .text(text)
+        case .anchoredText(var at): at.rotation = angle; self = .anchoredText(at)
         }
     }
 }
