@@ -68,6 +68,10 @@ final class WorkbenchInputCoordinator {
         let p = workbench.convert(e.locationInWindow, from: nil)
         if toolTap.handleMouseDown(at: p, event: e) { return }
 
+        // The old code had drag logic outside this block, and a `return` inside,
+        // which prevented dragging with the cursor tool.
+        // The fix is to bring the drag logic inside and handle all cursor-related
+        // mouse down events here.
         if workbench.selectedTool?.id == "cursor" {
             let hitTarget = hitTest.hitTest(
                 at: p, elements: workbench.elements,
@@ -75,52 +79,52 @@ final class WorkbenchInputCoordinator {
             )
 
             if let hitTarget = hitTarget {
-                print("Hit test result: \(hitTarget.debugDescription)")
-
-                // --- THIS IS THE CORRECTED AND REFINED LOGIC ---
+                // --- Item was hit ---
+                
+                // First, update the selection state based on the click.
+                // This is the original selection logic from the file.
                 let idToSelect: UUID?
-
-                // If the user hits a text element, we want to sub-select it.
-                // Because of our improved AnchoredTextElement.hitTest, the "immediateOwner"
-                // will now correctly be the AnchoredTextElement's ID itself.
                 if hitTarget.kind == .text {
                     idToSelect = hitTarget.immediateOwnerID
                 } else {
-                    // For any other kind of hit (primitive, pin, edge), we
-                    // select the top-level container element as before.
                     idToSelect = hitTarget.selectableID
                 }
                 
-                guard let hitID = idToSelect else {
-                    clearSelectionAndStartMarquee(with: e)
-                    return
+                if let hitID = idToSelect {
+                    if e.modifierFlags.contains(.shift) {
+                        if workbench.selectedIDs.contains(hitID) {
+                            workbench.selectedIDs.remove(hitID)
+                        } else {
+                            workbench.selectedIDs.insert(hitID)
+                        }
+                    } else {
+                        if !workbench.selectedIDs.contains(hitID) {
+                            workbench.selectedIDs = [hitID]
+                        }
+                    }
+                    workbench.onSelectionChange?(workbench.selectedIDs)
                 }
 
-                // --- The rest of the selection logic is unchanged ---
-                if e.modifierFlags.contains(.shift) {
-                    if workbench.selectedIDs.contains(hitID) {
-                        workbench.selectedIDs.remove(hitID)
-                    } else {
-                        workbench.selectedIDs.insert(hitID)
-                    }
-                } else {
-                    if !workbench.selectedIDs.contains(hitID) {
-                        workbench.selectedIDs = [hitID]
-                    }
+                // Second, after updating selection, try to start a drag.
+                // The drag gesture will re-check the hit and the selection state.
+                if handleDrag.begin(at: p, event: e) {
+                    activeDrag = handleDrag
+                } else if selDrag.begin(at: p, event: e) {
+                    activeDrag = selDrag
                 }
-                workbench.onSelectionChange?(workbench.selectedIDs)
 
             } else {
+                // --- Empty space was hit ---
                 clearSelectionAndStartMarquee(with: e)
             }
-            return // Return after handling selection logic
+            
+            // We have handled the event for the cursor tool.
+            return
         }
 
-        // 4 ─ otherwise try handle-drag, then selection-drag
+        // For any other tool, only handle-dragging is checked.
         if handleDrag.begin(at: p, event: e) {
             activeDrag = handleDrag
-        } else if selDrag.begin(at: p, event: e) {
-            activeDrag = selDrag
         }
     }
     
