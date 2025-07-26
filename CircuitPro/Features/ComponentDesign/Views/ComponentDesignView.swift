@@ -172,23 +172,38 @@ struct ComponentDesignView: View {
         let canvasSize = symbolCanvasManager.paperSize.canvasSize(orientation: .landscape)
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
 
-        let rawPrimitives: [AnyPrimitive] = 
+        // 1. Process primitives (unchanged)
+        let rawPrimitives: [AnyPrimitive] =
             componentDesignManager.symbolElements.compactMap {
                 if case .primitive(let primitive) = $0 { return primitive }
                 return nil
             }
-        let rawPins = componentDesignManager.pins
-
         let primitives = rawPrimitives.map { prim -> AnyPrimitive in
             var copy = prim
             copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
             return copy
         }
+
+        // 2. Process pins (unchanged)
+        let rawPins = componentDesignManager.pins
         let pins = rawPins.map { pin -> Pin in
             var copy = pin
             copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
             return copy
         }
+
+        // --- THIS IS THE NEW LOGIC FOR TESTING ---
+        // 3. Create hardcoded default text definitions.
+        // We will link them to the component's reference and name.
+        let textDefinitions: [AnchoredTextDefinition] = [
+            AnchoredTextDefinition(
+                // This label will display the reference designator (e.g., "R1")
+                defaultText: componentDesignManager.componentAbbreviation,
+                // Position it 20 points above the symbol's origin
+                relativePosition: CGPoint(x: 0, y: 20)
+            )
+        ]
+        // --- END OF NEW LOGIC ---
 
         let newComponent = Component(
             name: componentDesignManager.componentName,
@@ -197,14 +212,16 @@ struct ComponentDesignView: View {
             footprints: [],
             category: componentDesignManager.selectedCategory,
             package: componentDesignManager.selectedPackageType,
-            propertyDefinitions: componentDesignManager.componentProperties
+            propertyDefinitions: componentDesignManager.componentProperties // Corrected from your provided snippet
         )
 
         let newSymbol = Symbol(
             name: componentDesignManager.componentName,
             component: newComponent,
             primitives: primitives,
-            pins: pins
+            pins: pins,
+            // --- PASS THE NEW DEFINITIONS TO THE SYMBOL ---
+            anchoredTextDefinitions: textDefinitions
         )
 
         newComponent.symbol = newSymbol

@@ -33,7 +33,7 @@ extension Pad: Drawable {
         )]
     }
 
-    func makeHaloParameters() -> DrawingParameters? {
+    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
         let haloWidth: CGFloat = 4.0
         let haloColor = shapePrimitives.first?.color.cgColor.copy(alpha: 0.3) ?? NSColor.systemBlue.withAlphaComponent(0.3).cgColor
         

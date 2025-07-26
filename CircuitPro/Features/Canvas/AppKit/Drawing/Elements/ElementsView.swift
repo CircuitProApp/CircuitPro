@@ -3,25 +3,24 @@ import AppKit
 final class ElementsView: NSView {
 
     // MARK: - Data
+    // We update the observers to call a single, unified update function.
     var elements: [CanvasElement] = [] {
-        didSet { updateElementLayers(from: oldValue) }
+        didSet { redrawLayers() }
     }
     var selectedIDs: Set<UUID> = [] {
-        didSet { updateSelectionLayers() }
+        didSet { redrawLayers() }
     }
     var marqueeSelectedIDs: Set<UUID> = [] {
-        didSet { updateSelectionLayers() }
+        didSet { redrawLayers() }
     }
     
-    // The view still needs to know the magnification for other potential features,
-    // but it no longer needs a didSet observer for halo scaling.
     var magnification: CGFloat = 1.0
 
-    // MARK: – Layer Storage
+    // MARK: – Layer Storage (Unchanged)
     private var elementBodyLayers: [UUID: [CAShapeLayer]] = [:]
     private var selectionHaloLayers: [UUID: CAShapeLayer] = [:]
 
-    // MARK: - Init
+    // MARK: - Init (Unchanged)
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         setupView()
@@ -36,116 +35,58 @@ final class ElementsView: NSView {
         wantsLayer = true
     }
 
-    // MARK: - View Configuration
+    // MARK: - View Configuration (Unchanged)
     override var isOpaque: Bool { false }
     override func hitTest(_: NSPoint) -> NSView? { nil }
 
-    // MARK: - Element Layer Management
-    // This section remains unchanged.
-    private func updateElementLayers(from oldElements: [CanvasElement]) {
+    // MARK: - Unified Layer Management (NEW & REFACTORED)
+    
+    /// This is the new, single entry point for all visual updates.
+    /// It's called whenever elements or selections change.
+    private func redrawLayers() {
         CATransaction.begin()
+        // Disabling animations makes the update feel instantaneous.
         CATransaction.setDisableActions(true)
 
-        let oldElementMap = Dictionary(uniqueKeysWithValues: oldElements.map { ($0.id, $0) })
-        let newElementMap = Dictionary(uniqueKeysWithValues: elements.map { ($0.id, $0) })
-    
-        let oldIDs = Set(oldElementMap.keys)
-        let newIDs = Set(newElementMap.keys)
-
-        let removedIDs = oldIDs.subtracting(newIDs)
-        for id in removedIDs {
-            removeLayers(forElementID: id)
-        }
-        
-        let addedIDs = newIDs.subtracting(oldIDs)
-        for id in addedIDs {
-            if let element = newElementMap[id] {
-                addLayers(for: element)
-            }
-        }
-        
-        let potentiallyModifiedIDs = newIDs.intersection(oldIDs)
-        for id in potentiallyModifiedIDs {
-            if let old = oldElementMap[id], let new = newElementMap[id], new != old {
-                removeLayers(forElementID: id)
-                addLayers(for: new)
-            }
-        }
-
-        CATransaction.commit()
-    }
-
-    private func addLayers(for element: CanvasElement) {
-        guard let hostLayer = layer else { return }
-        
-        // 1. Create Body Layers
-        let bodyParams = element.drawable.makeBodyParameters()
-        let newBodyLayers = bodyParams.map { createLayer(from: $0) }
-        
-        elementBodyLayers[element.id] = newBodyLayers
-        newBodyLayers.forEach { hostLayer.addSublayer($0) }
-        
-        // 2. Re-apply selection if this element is selected
-        let allSelected = selectedIDs.union(marqueeSelectedIDs)
-        if allSelected.contains(element.id) {
-            addSelectionLayer(for: element)
-        }
-    }
-
-    private func removeLayers(forElementID id: UUID) {
-        elementBodyLayers[id]?.forEach { $0.removeFromSuperlayer() }
-        elementBodyLayers.removeValue(forKey: id)
-        
-        selectionHaloLayers[id]?.removeFromSuperlayer()
-        selectionHaloLayers.removeValue(forKey: id)
-    }
-    
-    // MARK: - Selection Layer Management
-    // This section remains unchanged.
-    private func updateSelectionLayers() {
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
+        // 1. Clean Slate: Remove all existing layers.
+        // This is simpler and less error-prone than complex diffing.
+        layer?.sublayers?.forEach { $0.removeFromSuperlayer() }
+        elementBodyLayers.removeAll()
+        selectionHaloLayers.removeAll()
         
         let allSelectedIDs = selectedIDs.union(marqueeSelectedIDs)
-        let activeHaloIDs = Set(selectionHaloLayers.keys)
-        
-        let deselectedIDs = activeHaloIDs.subtracting(allSelectedIDs)
-        for id in deselectedIDs {
-            selectionHaloLayers[id]?.removeFromSuperlayer()
-            selectionHaloLayers.removeValue(forKey: id)
-        }
-        
-        let newlySelectedIDs = allSelectedIDs.subtracting(activeHaloIDs)
-        for id in newlySelectedIDs {
-            if let element = elements.first(where: { $0.id == id }) {
-                addSelectionLayer(for: element)
+
+        // 2. Re-create all layers from the current state.
+        for element in elements {
+            guard let hostLayer = self.layer else { continue }
+            
+            // 2.1. Re-create the body layers for the element.
+            let bodyParams = element.drawable.makeBodyParameters()
+            let newBodyLayers = bodyParams.map { createLayer(from: $0) }
+            elementBodyLayers[element.id] = newBodyLayers
+            newBodyLayers.forEach { hostLayer.addSublayer($0) }
+            
+            // 2.2. Re-create the halo layer for the element using our new context-aware method.
+            // This is the core of the new logic. We pass the full selection context down.
+            // The element itself decides IF and WHAT to halo.
+            if let haloParams = element.drawable.makeHaloParameters(selectedIDs: allSelectedIDs) {
+                
+                // The returned path might be for the whole element OR just a sub-part.
+                let haloLayer = createLayer(from: haloParams)
+                selectionHaloLayers[element.id] = haloLayer
+                
+                // Insert the halo behind the body.
+                if let firstBodyLayer = newBodyLayers.first {
+                    hostLayer.insertSublayer(haloLayer, below: firstBodyLayer)
+                } else {
+                    hostLayer.addSublayer(haloLayer)
+                }
             }
         }
-        
         CATransaction.commit()
     }
-    
-    // --- UPDATED METHOD ---
-    private func addSelectionLayer(for element: CanvasElement) {
-        // 1. Ensure the element can provide a halo and has body layers to draw behind.
-        guard let hostLayer = layer,
-              let haloParams = element.drawable.makeHaloParameters(),
-              let bodyLayers = elementBodyLayers[element.id], !bodyLayers.isEmpty
-        else { return }
-        
-        // 2. Create the halo layer directly from the parameters provided by the drawable.
-        let haloLayer = createLayer(from: haloParams)
-        selectionHaloLayers[element.id] = haloLayer
-        
-        // 3. Insert the halo behind the body.
-        if let firstBodyLayer = bodyLayers.first {
-            hostLayer.insertSublayer(haloLayer, below: firstBodyLayer)
-        } else {
-            hostLayer.addSublayer(haloLayer)
-        }
-    }
 
-    // MARK: - Layer Creation
+    // MARK: - Layer Creation (Unchanged)
     // This helper remains the canonical way to create any layer from parameters.
     private func createLayer(from p: DrawingParameters) -> CAShapeLayer {
         let layer = CAShapeLayer()
@@ -159,7 +100,4 @@ final class ElementsView: NSView {
         layer.fillRule = p.fillRule
         return layer
     }
-    
-    // The specialized createSelectionHaloLayer and updateLayerTransforms methods
-    // have been removed as they are no longer necessary.
 }

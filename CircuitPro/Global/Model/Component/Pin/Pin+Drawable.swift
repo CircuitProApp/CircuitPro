@@ -48,7 +48,7 @@ extension Pin: Drawable {
         return allParameters
     }
     
-    func makeHaloParameters() -> DrawingParameters? {
+    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
            let haloWidth: CGFloat = 4.0
            let textFattenAmount: CGFloat = 1.0 // A small width to fill in the text for the halo
            let outline = CGMutablePath()

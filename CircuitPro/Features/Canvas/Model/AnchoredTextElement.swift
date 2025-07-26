@@ -12,7 +12,7 @@ import SwiftUI
 struct AnchoredTextElement: Identifiable {
     
     /// A unique ID for this specific canvas element instance.
-    let id: UUID
+    var id: UUID
     
     /// The underlying `TextElement` that handles all drawing, styling, and basic transformation.
     /// Its `position` is in absolute world coordinates.
@@ -123,9 +123,16 @@ extension AnchoredTextElement: Drawable {
         return allParameters
     }
 
-    func makeHaloParameters() -> DrawingParameters? {
-        // The selection halo should only surround the text itself. This is correct.
-        textElement.makeHaloParameters()
+    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
+        // 1. Check if this specific AnchoredTextElement is the selected item.
+        guard selectedIDs.contains(self.id) else {
+            // If we are not in the selection set, we should not draw a halo.
+            return nil
+        }
+        
+        // 2. We are selected, so delegate to our textElement to get the actual halo path.
+        // We don't need to pass selectedIDs down further, as we've already made the decision.
+        return textElement.makeHaloParameters()
     }
 }
 

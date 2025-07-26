@@ -64,36 +64,46 @@ final class WorkbenchInputCoordinator {
     // MARK: – Mouse-down
     func mouseDown(_ e: NSEvent) {
 
-        // 1 ─ cancel an in-progress rotation gesture
         if rotation.active { rotation.cancel(); return }
-
         let p = workbench.convert(e.locationInWindow, from: nil)
-
-        // 2 ─ let the active drawing tool try to consume the click
         if toolTap.handleMouseDown(at: p, event: e) { return }
 
-        // 3 ─ hit-test for selection / marquee
         if workbench.selectedTool?.id == "cursor" {
             let hitTarget = hitTest.hitTest(
-                at: p,
-                elements: workbench.elements,
-                schematicGraph: workbench.schematicGraph,
-                magnification: workbench.magnification
+                at: p, elements: workbench.elements,
+                schematicGraph: workbench.schematicGraph, magnification: workbench.magnification
             )
 
-            if let hitTarget = hitTarget, let hitID = hitTarget.selectableID {
+            if let hitTarget = hitTarget {
                 print("Hit test result: \(hitTarget.debugDescription)")
 
+                // --- THIS IS THE CORRECTED AND REFINED LOGIC ---
+                let idToSelect: UUID?
+
+                // If the user hits a text element, we want to sub-select it.
+                // Because of our improved AnchoredTextElement.hitTest, the "immediateOwner"
+                // will now correctly be the AnchoredTextElement's ID itself.
+                if hitTarget.kind == .text {
+                    idToSelect = hitTarget.immediateOwnerID
+                } else {
+                    // For any other kind of hit (primitive, pin, edge), we
+                    // select the top-level container element as before.
+                    idToSelect = hitTarget.selectableID
+                }
+                
+                guard let hitID = idToSelect else {
+                    clearSelectionAndStartMarquee(with: e)
+                    return
+                }
+
+                // --- The rest of the selection logic is unchanged ---
                 if e.modifierFlags.contains(.shift) {
-                    // Shift-click: Toggle selection for the hit element.
                     if workbench.selectedIDs.contains(hitID) {
                         workbench.selectedIDs.remove(hitID)
                     } else {
                         workbench.selectedIDs.insert(hitID)
                     }
                 } else {
-                    // Normal click: If the item isn't already selected, make it the sole selection.
-                    // If it IS already selected, we do nothing, allowing a drag to begin.
                     if !workbench.selectedIDs.contains(hitID) {
                         workbench.selectedIDs = [hitID]
                     }
@@ -101,17 +111,9 @@ final class WorkbenchInputCoordinator {
                 workbench.onSelectionChange?(workbench.selectedIDs)
 
             } else {
-                // Empty space or a non-selectable element was hit.
-                // Clear selection (if shift isn't held) and start marquee.
-                if !e.modifierFlags.contains(.shift) {
-                    if !workbench.selectedIDs.isEmpty {
-                        workbench.selectedIDs.removeAll()
-                        workbench.onSelectionChange?(workbench.selectedIDs)
-                    }
-                }
-                marquee.begin(at: p, event: e)
-                return
+                clearSelectionAndStartMarquee(with: e)
             }
+            return // Return after handling selection logic
         }
 
         // 4 ─ otherwise try handle-drag, then selection-drag
@@ -121,7 +123,19 @@ final class WorkbenchInputCoordinator {
             activeDrag = selDrag
         }
     }
+    
+    private func clearSelectionAndStartMarquee(with event: NSEvent) {
+        if !event.modifierFlags.contains(.shift) {
+            if !workbench.selectedIDs.isEmpty {
+                workbench.selectedIDs.removeAll()
+                workbench.onSelectionChange?(workbench.selectedIDs)
+            }
+        }
+        let p = workbench.convert(event.locationInWindow, from: nil)
+        marquee.begin(at: p, event: event)
+    }
 
+    
     // MARK: – Mouse-dragged
     func mouseDragged(_ e: NSEvent) {
         let p = workbench.convert(e.locationInWindow, from: nil)

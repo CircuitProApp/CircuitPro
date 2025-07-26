@@ -70,7 +70,7 @@ extension TextElement: Drawable {
         ]
     }
 
-    func makeHaloParameters() -> DrawingParameters? {
+    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
         let path = TextUtilities.path(for: text, font: font)
         var transform = CGAffineTransform(translationX: position.x, y: position.y)
             .rotated(by: rotation)

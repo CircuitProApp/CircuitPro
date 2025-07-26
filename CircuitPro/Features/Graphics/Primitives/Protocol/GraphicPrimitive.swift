@@ -19,7 +19,7 @@ protocol GraphicPrimitive:
 }
 
 // MARK: - Drawable Conformance
-extension Drawable where Self: GraphicPrimitive {
+extension GraphicPrimitive {
     
     func makeBodyParameters() -> [DrawingParameters] {
         let params = DrawingParameters(
@@ -33,7 +33,7 @@ extension Drawable where Self: GraphicPrimitive {
         return [params]
     }
 
-    func makeHaloParameters() -> DrawingParameters? {
+    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
         let haloWidth: CGFloat = 4.0
         
         let haloColor = self.color.cgColor.copy(alpha: 0.3) ?? NSColor.systemBlue.withAlphaComponent(0.3).cgColor

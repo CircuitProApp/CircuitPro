@@ -12,8 +12,16 @@ struct AnchoredTextDefinition: Identifiable, Codable, Hashable {
     var defaultText: String
     var relativePosition: CGPoint
     var font: NSFont = .systemFont(ofSize: 12)
-    var color: CGColor = NSColor.labelColor.cgColor
+    var color: CGColor = NSColor.black.cgColor
     var alignment: NSTextAlignment = .center
+    
+    init (
+        defaultText: String,
+        relativePosition: CGPoint
+    ) {
+        self.defaultText = defaultText
+        self.relativePosition = relativePosition
+    }
 
     // MARK: - Manual Codable Conformance
     
