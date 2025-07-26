@@ -100,6 +100,8 @@ final class PreviewView: NSView {
         }
 
         let context = CanvasToolContext(
+            existingPinCount: workbench.elements.reduce(0) { $1.isPin ? $0 + 1 : $0 },
+            existingPadCount: workbench.elements.reduce(0) { $1.isPad ? $0 + 1 : $0 },
             selectedLayer: workbench.selectedLayer,
             magnification: magnification,
             schematicGraph: workbench.schematicGraph

@@ -19,6 +19,11 @@ final class SelectionDragGesture: CanvasDragGesture {
     // Caches for original positions of items being dragged
     private var originalElementPositions: [UUID: CGPoint] = [:]
     private var originalTextPositions:    [UUID: CGPoint] = [:]
+    
+    /// The starting position of the specific item that was hit by the cursor.
+    /// This serves as the anchor point for grid-snapping calculations, ensuring
+    /// that dragging an off-grid item onto a new grid works predictably.
+    private var dragAnchor: CGPoint?
 
     init(workbench: WorkbenchView) { self.workbench = workbench }
 
@@ -37,6 +42,23 @@ final class SelectionDragGesture: CanvasDragGesture {
         let isDraggable = hitTarget.ownerPath.contains { workbench.selectedIDs.contains($0) }
         guard isDraggable else {
             return false
+        }
+        
+        // Set the anchor point for the drag. This is the starting position of the
+        // item actually hit by the cursor, which allows for correct grid snapping
+        // even if the item itself is currently off-grid.
+        if let hitID = hitTarget.selectableID {
+            if let element = workbench.elements.first(where: { $0.id == hitID }) {
+                dragAnchor = element.transformable.position
+            } else {
+                for element in workbench.elements {
+                    if case .symbol(let symbol) = element,
+                       let text = symbol.anchoredTexts.first(where: { $0.id == hitID }) {
+                        dragAnchor = text.position
+                        break
+                    }
+                }
+            }
         }
 
         origin = p
@@ -72,15 +94,30 @@ final class SelectionDragGesture: CanvasDragGesture {
     func drag(to p: CGPoint) {
         guard let o = origin else { return }
 
-        let rawDelta = CGPoint(x: p.x - o.x, y: p.y - o.y)
+        let rawDelta = p - o
 
         if !didMove && hypot(rawDelta.x, rawDelta.y) < threshold {
             return
         }
         didMove = true
         
-        let moveDelta = CGPoint(x: workbench.snapDelta(rawDelta.x),
+        // The old implementation snapped the delta directly, which caused issues
+        // when an item's original position was not on the current grid.
+        //
+        // The new implementation calculates the move delta by first determining
+        // the anchor item's ideal new position, snapping that to the grid, and
+        // then calculating a delta from the anchor's original position. This
+        // ensures the entire selection moves correctly onto the new grid.
+        let moveDelta: CGPoint
+        if let anchor = dragAnchor {
+            let newAnchorPos = anchor + rawDelta
+            let snappedNewAnchorPos = workbench.snap(newAnchorPos)
+            moveDelta = snappedNewAnchorPos - anchor
+        } else {
+            // Fallback to the old method if no anchor was set (should not happen in normal flow).
+            moveDelta = CGPoint(x: workbench.snapDelta(rawDelta.x),
                                 y: workbench.snapDelta(rawDelta.y))
+        }
 
         // --- Part 1: Move all selected elements (top-level and nested) ---
         if !originalElementPositions.isEmpty || !originalTextPositions.isEmpty {
@@ -100,7 +137,7 @@ final class SelectionDragGesture: CanvasDragGesture {
                     for j in symbol.anchoredTexts.indices {
                         let textID = symbol.anchoredTexts[j].id
                         if let basePosition = originalTextPositions[textID] {
-                            let newPosition = CGPoint(x: basePosition.x + moveDelta.x, y: basePosition.y + moveDelta.y)
+                            let newPosition = basePosition + moveDelta
                             symbol.anchoredTexts[j].position = newPosition
                             wasModified = true
                         }
@@ -129,6 +166,7 @@ final class SelectionDragGesture: CanvasDragGesture {
         }
         
         origin = nil
+        dragAnchor = nil
         originalElementPositions.removeAll()
         originalTextPositions.removeAll()
         didMove = false
