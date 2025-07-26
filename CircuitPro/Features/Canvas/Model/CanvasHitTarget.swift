@@ -8,88 +8,77 @@
 import Foundation
 import CoreGraphics
 
-/// Represents the specific part of a connection from the `SchematicGraph` that was hit.
-///
-/// The `connectionID` has been removed. With a unified graph, individual
-/// vertices and edges are the primary hittable objects, not a parent container.
-enum ConnectionPart: Equatable, Hashable {
-    /// A vertex (a connection point, junction, or endpoint) was hit.
-    case vertex(id: UUID, position: CGPoint, type: VertexType)
-    
-    /// An edge (a wire segment) was hit.
-    case edge(id: UUID, at: CGPoint, orientation: LineOrientation)
-}
+/// A unified, detailed result of a hit-test operation on the canvas.
+/// This structure provides the full hierarchical path to the hit component.
+struct CanvasHitTarget: Equatable, Hashable {
 
-/// Represents the specific part of a standard canvas element (e.g., a symbol) that was hit.
-/// This part of the enum remains unchanged.
-enum CanvasElementPart: Equatable, Hashable {
-    case body(id: UUID)
-    case pin(id: UUID, parentSymbolID: UUID?, position: CGPoint)
-    case pad(id: UUID, position: CGPoint)
-}
+    /// Defines the specific kind of component that was hit.
+    enum Kind: Equatable, Hashable {
+        // Canvas Elements
+        case primitive      // A geometric primitive (line, rect, etc.).
+        case pin            // A connection point on a symbol.
+        case pad            // A surface-mount pad on a footprint.
+        case text
 
-/// A detailed result of a hit-test operation on the canvas.
-enum CanvasHitTarget: Equatable, Hashable {
-    /// A part of a standard canvas element was hit.
-    case canvasElement(part: CanvasElementPart)
+        // Schematic Connections
+        case vertex(type: VertexType)
+        case edge(orientation: LineOrientation)
+    }
 
-    /// A part of the schematic's connectivity graph was hit.
-    case connection(part: ConnectionPart)
+    // 1. The unique ID of the specific part that was directly hit.
+    let partID: UUID
+
+    // 2. An array of UUIDs representing the full ownership hierarchy,
+    //    from the top-level element down to the immediate parent.
+    //    For a top-level element, this will contain its own ID.
+    let ownerPath: [UUID]
+
+    // 3. The specific kind of the component that was hit.
+    let kind: Kind
+
+    // 4. The precise location of the hit in world coordinates.
+    let position: CGPoint
 }
 
 
 // MARK: - Helpers & Debugging
 extension CanvasHitTarget {
-    
-    /// The ID of the specific primitive that should be added to the selection set.
-    /// Returns `nil` for primitives that are hittable but not selectable, like vertices.
+
+    /// The ID of the top-level element that should be selected by default.
     var selectableID: UUID? {
-        switch self {
-        case .canvasElement(let part):
-            switch part {
-            case .body(let id):
-                // Hitting the body of a symbol selects the symbol.
-                return id
-            case .pin(let pinID, let parentSymbolID, _):
-                // Hitting a pin selects its parent symbol (if it has one).
-                return parentSymbolID ?? pinID
-            case .pad(let id, _):
-                return id
-            }
-        case .connection(let part):
-            switch part {
-            case .vertex:
-                // Vertices are not directly selectable.
-                return nil
-            case .edge(let id, _, _):
-                // Edges are selectable.
-                return id
-            }
-        }
+        // The top-level owner is the first element in the path.
+        return ownerPath.first
     }
-    
+
+    /// The ID of the immediate parent of the hit part.
+    var immediateOwnerID: UUID? {
+        return ownerPath.last
+    }
+
     /// A convenience property to check if the hit target was a component pin.
-    func hitTargetIsPin() -> Bool {
-        if case .canvasElement(part: .pin) = self {
+    var isPin: Bool {
+        if case .pin = kind {
             return true
         }
         return false
     }
-
-    /// A debug helper to easily identify what was hit.
+    
+    /// A debug helper to easily identify what was hit and its full ownership path.
     var debugDescription: String {
-        switch self {
-        case .canvasElement(let part):
-            switch part {
-            case .body(let id): return "ElementBody(id: ...\(id.uuidString.suffix(4)))"
-            case .pin(let id, _, _): return "Pin(id: ...\(id.uuidString.suffix(4)))"
-            case .pad(let id, _): return "Pad(id: ...\(id.uuidString.suffix(4)))"
-            }
-        case .connection(let part):
-            switch part {
-            case .vertex(let id, _, let type): return "Vertex(\(type), id: ...\(id.uuidString.suffix(4)))"
-            case .edge(let id, _, _): return "Edge(id: ...\(id.uuidString.suffix(4)))"
-            }
+        let kindString: String
+        switch kind {
+        case .primitive: kindString = "Primitive"
+        case .pin: kindString = "Pin"
+        case .pad: kindString = "Pad"
+        case .text: kindString = "Text"
+        case .vertex(let type): kindString = "Vertex(\(type))"
+        case .edge: kindString = "Edge"
         }
+
+        let pathString = ownerPath
+            .map { "...\($0.uuidString.suffix(4))" }
+            .joined(separator: " -> ")
+        
+        return "\(kindString)(part: ...\(partID.uuidString.suffix(4)), path: [\(pathString)])"
     }
 }

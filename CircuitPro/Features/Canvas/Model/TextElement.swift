@@ -90,10 +90,31 @@ extension TextElement: Drawable {
 
 // MARK: - Hittable
 extension TextElement: Hittable {
+
     func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        if boundingBox.insetBy(dx: -tolerance, dy: -tolerance).contains(point) {
-            return .canvasElement(part: .body(id: id))
-        }
-        return nil
+        // 1. The hit detection logic is sound. We check if the point is within
+        //    the element's bounding box, expanded by the tolerance value.
+        let isHit = boundingBox.insetBy(dx: -tolerance, dy: -tolerance).contains(point)
+
+        // 2. If the check fails, then the element was not hit.
+        guard isHit else { return nil }
+        
+        // 3. If a hit occurred, we create the standard CanvasHitTarget to represent it.
+        return CanvasHitTarget(
+            // The part being hit is the TextElement itself.
+            partID: self.id,
+            
+            // As a non-container element, its ownership path just contains its own ID.
+            // If this TextElement is ever placed inside a group, the group's hitTest
+            // will prepend its own ID to this path.
+            ownerPath: [self.id],
+            
+            // For a general-purpose element like this, `.body` is the most
+            // appropriate kind to describe the hit area.
+            kind: .text,
+            
+            // We store the precise location of the hit.
+            position: point
+        )
     }
 }

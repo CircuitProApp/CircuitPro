@@ -201,20 +201,12 @@ final class WorkbenchInputCoordinator {
             magnification: workbench.magnification
         )
 
-        switch hitTarget {
-        case .canvasElement(let part):
-            switch part {
-            case .pin, .pad:
-                NSCursor.crosshair.set()
-            case .body:
-                NSCursor.pointingHand.set()
-            }
-        case .connection(let part):
-            switch part {
-            case .vertex, .edge:
-                NSCursor.crosshair.set()
-            }
-        case nil:
+        switch hitTarget?.kind {
+        case .pin, .pad:
+            NSCursor.crosshair.set()
+        case .primitive:
+            NSCursor.pointingHand.set()
+        default:
             NSCursor.arrow.set()
         }
     }

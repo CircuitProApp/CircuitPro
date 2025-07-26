@@ -68,7 +68,13 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
 
             if endTarget == nil {
                 let newDirection = isStraightLine ? direction.toggled() : direction
-                let newStartTarget = CanvasHitTarget.connection(part: .vertex(id: endVertexID, position: loc, type: .corner))
+                // **UPDATED**: Create the new CanvasHitTarget struct.
+                let newStartTarget = CanvasHitTarget(
+                    partID: endVertexID,
+                    ownerPath: [], // A vertex has no selectable owner.
+                    kind: .vertex(type: .corner),
+                    position: loc
+                )
                 state = .drawing(from: newStartTarget, at: loc, direction: newDirection)
             } else {
                 state = .idle
@@ -79,10 +85,9 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
-        // 1. Ensure we are in the drawing state.
+        // This preview logic remains unchanged as it only depends on state, not the structure of CanvasHitTarget.
         guard case .drawing(_, let startPoint, let direction) = state else { return [] }
 
-        // 2. Determine the corner point based on the current drawing direction.
         let corner: CGPoint
         switch direction {
         case .horizontal:
@@ -91,19 +96,17 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
             corner = CGPoint(x: startPoint.x, y: mouse.y)
         }
         
-        // 3. Create the two-segment path.
         let path = CGMutablePath()
         path.move(to: startPoint)
         path.addLine(to: corner)
         path.addLine(to: mouse)
 
-        // 4. Return the drawing parameters for the preview layer.
         return [DrawingParameters(
             path: path,
-            lineWidth: 1.0,  // Model-space line width
+            lineWidth: 1.0,
             fillColor: nil,
             strokeColor: NSColor.systemBlue.cgColor,
-            lineDashPattern: [4, 2] // Model-space dash pattern
+            lineDashPattern: [4, 2]
         )]
     }
 
@@ -126,22 +129,35 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     
     // MARK: - Private Helpers
     
+    // **UPDATED**: This helper now deconstructs the new CanvasHitTarget struct.
     private func getOrCreateVertex(at point: CGPoint, from target: CanvasHitTarget?, in graph: SchematicGraph) -> UUID {
-        if let target = target, case .canvasElement(let part) = target, case .pin(let pinID, let symbolID, _) = part {
-            return graph.getOrCreatePinVertex(at: point, symbolID: symbolID!, pinID: pinID)
-        } else {
+        guard let target = target else {
             return graph.getOrCreateVertex(at: point)
         }
+
+        // Check if the hit target was a pin.
+        if case .pin = target.kind {
+            // A pin must be owned by a symbol to be connected. The owner is the last ID in the path.
+            if let symbolID = target.ownerPath.last {
+                // The pin's ID is the partID from the hit record.
+                return graph.getOrCreatePinVertex(at: point, symbolID: symbolID, pinID: target.partID)
+            }
+        }
+        
+        // For any other kind of hit (or a pin without an owner), create a standard vertex.
+        return graph.getOrCreateVertex(at: point)
     }
     
+    // **UPDATED**: This helper now checks the `.kind` property of the new struct.
     private func determineInitialDirection(from hitTarget: CanvasHitTarget?) -> DrawingDirection {
         guard let hitTarget = hitTarget else { return .horizontal }
 
-        guard case .connection(let part) = hitTarget,
-              case .edge(_, _, let orientation) = part else {
+        // Check if the hit target was an edge and extract its orientation.
+        guard case .edge(let orientation) = hitTarget.kind else {
             return .horizontal
         }
 
+        // If we hit an edge, the next drawing direction should be perpendicular to it.
         switch orientation {
         case .horizontal: return .vertical
         case .vertical: return .horizontal

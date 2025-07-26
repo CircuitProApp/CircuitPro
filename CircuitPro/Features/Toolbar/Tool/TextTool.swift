@@ -19,6 +19,8 @@ struct TextTool: CanvasTool {
             position: location,
             isEditable: true
         )
-        return .element(.text(newTextElement))
+        
+        let newAnchoredText = AnchoredTextElement(id: .init(), textElement: newTextElement, anchorPosition: location, anchorOwnerID: .init(), sourceDataID: .init(), isFromDefinition: false)
+        return .element(.anchoredText(newAnchoredText))
     }
 }

@@ -62,6 +62,13 @@ extension SymbolElement: Transformable {
     }
 }
 
+extension SymbolElement {
+    var transform: CGAffineTransform {
+        CGAffineTransform(translationX: position.x, y: position.y)
+            .rotated(by: rotation)
+    }
+}
+
 extension SymbolElement: Drawable {
     
     /// Generates the drawing parameters for the symbol's entire body, including all child primitives and pins,
@@ -143,37 +150,53 @@ extension SymbolElement: Drawable {
         )
     }
 }
+
 extension SymbolElement: Hittable {
 
     func hitTest(_ worldPoint: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
 
-        // map the probe into the symbol’s local space
-        let localPoint = worldPoint.applying(
-            CGAffineTransform(translationX: position.x, y: position.y)
-                .rotated(by: rotation)
-                .inverted()
-        )
+        // 1. Transform the world-space point into the symbol's local coordinate space.
+        let localPoint = worldPoint.applying(self.transform.inverted())
 
-        // 1. Check for pin hits first, as they are more specific.
+        // 2. Check for pin hits first.
         for pin in symbol.pins {
-            if pin.hitTest(localPoint, tolerance: tolerance) != nil {
-                // A pin was hit. We need to transform its local position back to world space.
-                let worldPinPosition = pin.position.applying(
-                    CGAffineTransform(translationX: position.x, y: position.y)
-                    .rotated(by: rotation)
+            // Recursively call hitTest on the child pin.
+            if let pinHitResult = pin.hitTest(localPoint, tolerance: tolerance) {
+                
+                // A pin was hit. We now construct a NEW CanvasHitTarget.
+                // We build a new owner path by prepending our symbol's ID to the path from the pin.
+                let newOwnerPath = [self.id] + pinHitResult.ownerPath
+                
+                // Return a new, fully-contextualized hit record.
+                return CanvasHitTarget(
+                    partID: pinHitResult.partID,    // The specific pin that was hit.
+                    ownerPath: newOwnerPath,        // The newly constructed hierarchical path.
+                    kind: pinHitResult.kind,        // The kind of object hit (a .pin).
+                    position: worldPoint            // The original hit position in world space.
                 )
-                return .canvasElement(part: .pin(id: pin.id, parentSymbolID: id, position: worldPinPosition))
             }
         }
 
-        // 2. If no pin was hit, check the main body primitives.
+        // 3. If no pin was hit, check the general body primitives.
         for primitive in symbol.primitives {
-            if primitive.hitTest(localPoint, tolerance: tolerance) != nil {
-                return .canvasElement(part: .body(id: id))
+            // Recursively call hitTest on the child primitive.
+            if let primitiveHitResult = primitive.hitTest(localPoint, tolerance: tolerance) {
+                
+                // A primitive was hit. We construct a NEW CanvasHitTarget.
+                let newOwnerPath = [self.id] + primitiveHitResult.ownerPath
+                
+                // Return a new result, preserving the original hit part and kind,
+                // but updating the path and ensuring the position is in world space.
+                return CanvasHitTarget(
+                    partID: primitiveHitResult.partID,
+                    ownerPath: newOwnerPath,
+                    kind: primitiveHitResult.kind,
+                    position: worldPoint
+                )
             }
         }
         
-        // 3. No hit.
+        // 4. If neither pins nor primitives were hit, the symbol was missed.
         return nil
     }
 }

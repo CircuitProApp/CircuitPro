@@ -131,12 +131,27 @@ extension AnchoredTextElement: Drawable {
 
 extension AnchoredTextElement: Hittable {
     func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        // We ask our inner textElement if it was hit.
-        if textElement.hitTest(point, tolerance: tolerance) != nil {
-            // If it was, we report that *we* were hit, using our own ID.
-            // This allows the canvas to select the whole AnchoredTextElement.
-            return .canvasElement(part: .body(id: self.id))
+        
+        // 1. We only care about hits on the contained text element.
+        // The anchor crosshair is purely visual decoration for now.
+        guard let textHitResult = textElement.hitTest(point, tolerance: tolerance) else {
+            // The text was not hit, so the entire element is considered missed.
+            return nil
         }
-        return nil
+        
+        // 2. The text element was hit. We now establish this AnchoredTextElement
+        // as the selectable owner. We build a new ownership path by prepending
+        // our own ID to the path we received from the textElement.
+        let newOwnerPath = [self.id] + textHitResult.ownerPath
+        
+        // 3. Return a new target that correctly identifies the full hierarchy.
+        // The `partID` and `kind` are passed through from the child, but the
+        // `ownerPath` now reflects that this AnchoredTextElement is the owner.
+        return CanvasHitTarget(
+            partID: textHitResult.partID,
+            ownerPath: newOwnerPath,
+            kind: textHitResult.kind,  // This will be `.text` from the TextElement
+            position: point
+        )
     }
 }
