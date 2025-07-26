@@ -147,13 +147,13 @@ extension AnchoredTextElement: Hittable {
         }
         
         // 2. The text element was hit. We now establish this AnchoredTextElement
-        // as the selectable owner. We build a new ownership path by prepending
-        // our own ID to the path we received from the textElement.
-        let newOwnerPath = [self.id] + textHitResult.ownerPath
+        // as the selectable owner. The ownership path from the child TextElement
+        // is discarded, and a new path is started here.
+        let newOwnerPath = [self.id]
         
-        // 3. Return a new target that correctly identifies the full hierarchy.
+        // 3. Return a new target that correctly identifies this element as the owner.
         // The `partID` and `kind` are passed through from the child, but the
-        // `ownerPath` now reflects that this AnchoredTextElement is the owner.
+        // `ownerPath` now makes this AnchoredTextElement the immediate owner.
         return CanvasHitTarget(
             partID: textHitResult.partID,
             ownerPath: newOwnerPath,
