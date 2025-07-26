@@ -123,16 +123,9 @@ extension AnchoredTextElement: Drawable {
         return allParameters
     }
 
-    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
-        // 1. Check if this specific AnchoredTextElement is the selected item.
-        guard selectedIDs.contains(self.id) else {
-            // If we are not in the selection set, we should not draw a halo.
-            return nil
-        }
-        
-        // 2. We are selected, so delegate to our textElement to get the actual halo path.
-        // We don't need to pass selectedIDs down further, as we've already made the decision.
-        return textElement.makeHaloParameters()
+    /// This element's halo is defined by its contained text element.
+    func makeHaloPath() -> CGPath? {
+        return textElement.makeHaloPath()
     }
 }
 

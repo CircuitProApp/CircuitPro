@@ -33,19 +33,9 @@ extension GraphicPrimitive {
         return [params]
     }
 
-    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
-        let haloWidth: CGFloat = 4.0
-        
-        let haloColor = self.color.cgColor.copy(alpha: 0.3) ?? NSColor.systemBlue.withAlphaComponent(0.3).cgColor
-        let path = makePath()
-        guard !path.isEmpty else { return nil }
-        
-        return DrawingParameters(
-            path: path,
-            lineWidth: haloWidth,
-            fillColor: nil,
-            strokeColor: haloColor
-        )
+    /// Provides the path for the default halo implementation in the `Drawable` protocol.
+    func makeHaloPath() -> CGPath? {
+        return makePath()
     }
 }
 

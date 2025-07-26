@@ -49,41 +49,49 @@ extension Pin: Drawable {
     }
     
     func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
-           let haloWidth: CGFloat = 4.0
-           let textFattenAmount: CGFloat = 1.0 // A small width to fill in the text for the halo
-           let outline = CGMutablePath()
-           
-           // 1. Add primitives to the outline.
-           primitives.forEach { outline.addPath($0.makePath()) }
-           
-           // 2. Add pin number to the outline.
-           if showNumber {
-               var (path, transform) = numberLayout()
-               if let transformedPath = path.copy(using: &transform) {
-                   let fattedText = transformedPath.copy(strokingWithWidth: textFattenAmount, lineCap: .round, lineJoin: .round, miterLimit: 1)
-                   outline.addPath(fattedText)
-               }
-           }
-           
-           // 3. Add pin label to the outline.
-           if showLabel && name.isNotEmpty {
-               var (path, transform) = labelLayout()
-               if let transformedPath = path.copy(using: &transform) {
-                   let fattedText = transformedPath.copy(strokingWithWidth: textFattenAmount, lineCap: .round, lineJoin: .round, miterLimit: 1)
-                   outline.addPath(fattedText)
-               }
-           }
-           
-           guard !outline.isEmpty else { return nil }
-           
-           // 4. Return parameters to STROKE the final unified outline path.
-           return DrawingParameters(
-               path: outline,
-               lineWidth: haloWidth,
-               fillColor: nil,
-               strokeColor: NSColor.systemBlue.withAlphaComponent(0.3).cgColor
-           )
-       }
+        // A pin only shows a halo if it is directly selected.
+        guard selectedIDs.contains(self.id) else { return nil }
+        
+        // The visual shape of the halo is the pin's outline, stroked.
+        guard let outline = makePinOutline() else { return nil }
+        
+        return DrawingParameters(
+            path: outline,
+            lineWidth: 4.0,
+            fillColor: nil,
+            strokeColor: NSColor.systemBlue.withAlphaComponent(0.3).cgColor
+        )
+    }
+
+    /// Creates a single, unified path that represents the pin's entire visible footprint.
+    /// This is used for both halo drawing and hit testing to ensure they are consistent.
+    func makePinOutline() -> CGPath? {
+        let textFattenAmount: CGFloat = 1.0 // A small width to fill in the text for the halo
+        let outline = CGMutablePath()
+        
+        // 1. Add primitives to the outline.
+        primitives.forEach { outline.addPath($0.makePath()) }
+        
+        // 2. Add pin number to the outline.
+        if showNumber {
+            var (path, transform) = numberLayout()
+            if let transformedPath = path.copy(using: &transform) {
+                let fattedText = transformedPath.copy(strokingWithWidth: textFattenAmount, lineCap: .round, lineJoin: .round, miterLimit: 1)
+                outline.addPath(fattedText)
+            }
+        }
+        
+        // 3. Add pin label to the outline.
+        if showLabel && name.isNotEmpty {
+            var (path, transform) = labelLayout()
+            if let transformedPath = path.copy(using: &transform) {
+                let fattedText = transformedPath.copy(strokingWithWidth: textFattenAmount, lineCap: .round, lineJoin: .round, miterLimit: 1)
+                outline.addPath(fattedText)
+            }
+        }
+        
+        return outline.isEmpty ? nil : outline
+    }
 
     // MARK: - Layout Calculations
     

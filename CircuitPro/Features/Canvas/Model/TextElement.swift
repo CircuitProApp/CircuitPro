@@ -70,21 +70,23 @@ extension TextElement: Drawable {
         ]
     }
 
-    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
-        let path = TextUtilities.path(for: text, font: font)
+    func makeHaloPath() -> CGPath? {
+        // 1. Get the raw, un-transformed path for the text glyphs.
+        let rawPath = TextUtilities.path(for: text, font: font)
+
+        // 2. Create a new path by "stroking" the raw path. This creates an outline.
+        let strokedPath = rawPath.copy(
+            strokingWithWidth: 1.0, // A chunky outline for the halo
+            lineCap: .round,       // Use round caps and joins for a softer look
+            lineJoin: .round,
+            miterLimit: 1.0
+        )
+
+        // 3. Apply the element's position and rotation to the new halo path.
         var transform = CGAffineTransform(translationX: position.x, y: position.y)
             .rotated(by: rotation)
 
-        guard let transformedPath = path.copy(using: &transform) else {
-            return nil
-        }
-
-        return DrawingParameters(
-            path: transformedPath,
-            lineWidth: 4.0,
-            fillColor: nil,
-            strokeColor: NSColor.systemBlue.withAlphaComponent(0.3).cgColor
-        )
+        return strokedPath.copy(using: &transform)
     }
 }
 

@@ -34,6 +34,9 @@ extension Pad: Drawable {
     }
 
     func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
+        // A pad only shows a halo if it is directly selected.
+        guard selectedIDs.contains(self.id) else { return nil }
+
         let haloWidth: CGFloat = 4.0
         let haloColor = shapePrimitives.first?.color.cgColor.copy(alpha: 0.3) ?? NSColor.systemBlue.withAlphaComponent(0.3).cgColor
         
@@ -41,11 +44,7 @@ extension Pad: Drawable {
         shapePrimitives.forEach { shapePath.addPath($0.makePath()) }
         guard !shapePath.isEmpty else { return nil }
         
-        // --- FIX IS HERE ---
-        // Removed the "guard let" as copy(strokingWithWidth:) is not optional.
         let thickOutline = shapePath.copy(strokingWithWidth: haloWidth * 2, lineCap: .round, lineJoin: .round, miterLimit: 1)
-        // --- END FIX ---
-
         let enlargedShape: CGPath = thickOutline.union(shapePath)
 
         let finalHaloPath: CGPath
