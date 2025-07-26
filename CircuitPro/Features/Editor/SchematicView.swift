@@ -19,10 +19,10 @@ struct SchematicView: View {
         @Bindable var bindableProjectManager = projectManager
 
         CanvasView(
-            manager:      canvasManager,
+            manager: canvasManager,
             schematicGraph: projectManager.schematicGraph,
-            elements:     $canvasElements,
-            selectedIDs:  $bindableProjectManager.selectedComponentIDs,
+            elements: $canvasElements,
+            selectedIDs: $bindableProjectManager.selectedComponentIDs,
             selectedTool: $selectedTool,
             onComponentDropped: { component, point in
                 addComponents([component], at: point)
@@ -40,16 +40,13 @@ struct SchematicView: View {
         .onChange(of: projectManager.componentInstances) {
             rebuildCanvasElements()
         }
-        
         // Analyze the graph when it changes
         .onChange(of: projectManager.schematicGraph.vertices) { _, _ in updateNets() }
         .onChange(of: projectManager.schematicGraph.edges) { _, _ in updateNets() }
-
         // Persist symbol moves back to the model
         .onChange(of: canvasElements) { _, newValue in
             syncCanvasToModel(newValue)
         }
-        
         // When canvas selection changes, check if we need to deselect in the navigator
         .onChange(of: projectManager.selectedComponentIDs) { _, newSelection in
             let selectedEdges = newSelection.filter { projectManager.schematicGraph.edges[$0] != nil }
@@ -58,14 +55,12 @@ struct SchematicView: View {
             }
         }
     }
-    
+
     private func updateNets() {
         nets = projectManager.schematicGraph.findNets()
     }
 
-    // ───────────────────────────────
     //  MARK: Drag-and-drop Components
-    // ───────────────────────────────
     private func addComponents(
         _ comps: [TransferableComponent],
         at point: CGPoint
@@ -85,15 +80,15 @@ struct SchematicView: View {
 
             let symbolInst = SymbolInstance(
                 symbolUUID: comp.symbolUUID,
-                position:   pos,
+                position: pos,
                 cardinalRotation: .east
             )
 
             let instance = ComponentInstance(
-                componentUUID:   comp.componentUUID,
-                symbolInstance:  symbolInst,
+                componentUUID: comp.componentUUID,
+                symbolInstance: symbolInst,
                 footprintInstance: nil,
-                reference:       refNumber
+                reference: refNumber
             )
 
             projectManager.selectedDesign?.componentInstances.append(instance)
@@ -103,29 +98,25 @@ struct SchematicView: View {
         rebuildCanvasElements()
     }
 
-    // ─────────────────────────
     //  MARK: Build Canvas Model
-    // ─────────────────────────
     private func rebuildCanvasElements() {
         canvasElements = projectManager.designComponents.map { dc in
             .symbol(
                 SymbolElement(
-                    id:       dc.instance.id,
+                    id: dc.instance.id,
                     instance: dc.instance.symbolInstance,
-                    symbol:   dc.definition.symbol!   // already in cache
+                    symbol: dc.definition.symbol!   // already in cache
                 )
             )
         }
     }
 
-    // ─────────────────────────────────────
-    //  MARK: Sync back to SwiftData model
-    // ─────────────────────────────────────
+    // MARK: Sync back to SwiftData model
     private func syncCanvasToModel(_ elements: [CanvasElement]) {
 
         // Only symbol elements remain
         let symbolElements = elements.compactMap { element -> SymbolElement? in
-            if case .symbol(let s) = element { return s }
+            if case .symbol(let symbol) = element { return symbol }
             return nil
         }
 

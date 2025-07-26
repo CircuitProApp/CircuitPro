@@ -172,14 +172,13 @@ extension ComponentDesignManager {
         return Binding<Pin>(
             get: {
                 guard let index = self.symbolElementIndexMap[id],
-                      case .pin(let p) = self.symbolElements[safe: index]
+                      case .pin(let pin) = self.symbolElements[safe: index]
                 else { return pin }
-                return p
+                return pin
             },
             set: { newValue in
                 if let index = self.symbolElementIndexMap[id],
-                   self.symbolElements.indices.contains(index)
-                {
+                   self.symbolElements.indices.contains(index) {
                     self.symbolElements[index] = .pin(newValue)
                 }
             }
@@ -216,14 +215,13 @@ extension ComponentDesignManager {
         return Binding<Pad>(
             get: {
                 guard let index = self.footprintElementIndexMap[id],
-                      case .pad(let p) = self.footprintElements[safe: index]
+                      case .pad(let pad) = self.footprintElements[safe: index]
                 else { return pad }
-                return p
+                return pad
             },
             set: { newValue in
                 if let index = self.footprintElementIndexMap[id],
-                   self.footprintElements.indices.contains(index)
-                {
+                   self.footprintElements.indices.contains(index) {
                     self.footprintElements[index] = .pad(newValue)
                 }
             }
