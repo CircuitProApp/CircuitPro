@@ -8,7 +8,10 @@
 import SwiftUI
 
 struct PinEditorView: View {
-    @Environment(\.componentDesignManager) private var manager
+
+    @Environment(\.componentDesignManager)
+    private var componentDesignManager
+
     @State private var tab: EditorTab = .elements
 
     var body: some View {
@@ -26,16 +29,23 @@ struct PinEditorView: View {
             case .elements:
                 pinSection
             case .geometry:
-                primitiveSection
+                
+                @Bindable var manager = componentDesignManager
+                // Correctly instantiate PrimitiveEditorView
+                PrimitiveEditorView(
+                    primitives: componentDesignManager.symbolPrimitives,
+                    selectedIDs: $manager.selectedSymbolElementIDs,
+                    bindingProvider: componentDesignManager.bindingForPrimitive
+                )
             }
         }
     }
 
     // MARK: - Pins
     private var pinSection: some View {
-        let pins = manager.pins
-        let selectedIDs = manager.selectedSymbolElementIDs
-        let selectedPins = manager.selectedPins.sorted { $0.number < $1.number }
+        let pins = componentDesignManager.pins
+        let selectedIDs = componentDesignManager.selectedSymbolElementIDs
+        let selectedPins = componentDesignManager.selectedPins.sorted { $0.number < $1.number }
 
         return Group {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -57,7 +67,7 @@ struct PinEditorView: View {
             if !selectedPins.isEmpty {
                 Form {
                     ForEach(selectedPins) { pin in
-                        if let binding = manager.bindingForPin(with: pin.id) {
+                        if let binding = componentDesignManager.bindingForPin(with: pin.id) {
                             Section("Pin \(binding.wrappedValue.number) Properties") {
                                 PinPropertiesView(pin: binding)
                             }
@@ -72,55 +82,9 @@ struct PinEditorView: View {
         }
     }
 
-    // MARK: - Geometry primitives
-    private var primitiveSection: some View {
-        let allElements = manager.symbolElements
-        let selectedIDs = manager.selectedSymbolElementIDs
-        let selectedElements = allElements.filter { selectedIDs.contains($0.id) }
-
-        return VStack {
-            // 1. Horizontal selector
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack {
-                    ForEach(allElements) { element in
-                        if case .primitive(let prim) = element {
-                            let isSel = selectedIDs.contains(prim.id)
-                            Text("Primitive")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .directionalPadding(vertical: 5, horizontal: 7.5)
-                                .background(isSel ? .gray.opacity(0.3) : .gray.opacity(0.1))
-                                .clipShape(.rect(cornerRadius: 5))
-                                .onTapGesture { togglePrimitiveSelection(prim) }
-                        }
-                    }
-                }
-            }
-            .scrollClipDisabled()
-
-            // 2. Properties form
-            if !selectedElements.isEmpty {
-                Form {
-                    ForEach(selectedElements) { element in
-                        if case .primitive(let prim) = element {
-                            if let binding = manager.bindingForPrimitive(with: prim.id) {
-                                Section(" Properties") {
-                                    PrimitivePropertiesView(primitive: binding)
-                                }
-                            }
-                        }
-                    }
-                }
-                .formStyle(.grouped)
-                .listStyle(.inset)
-            } else {
-                placeholder("No geometry selected")
-            }
-        }
-    }
     // MARK: - Helpers
     private func togglePinSelection(pin: Pin) {
-        if let element = manager.symbolElements.first(where: {
+        if let element = componentDesignManager.symbolElements.first(where: {
             if case .pin(let pinElement) = $0 {
                 return pinElement.id == pin.id
             } else {
@@ -128,19 +92,11 @@ struct PinEditorView: View {
             }
         }) {
             let id = element.id
-            if manager.selectedSymbolElementIDs.contains(id) {
-                manager.selectedSymbolElementIDs.remove(id)
+            if componentDesignManager.selectedSymbolElementIDs.contains(id) {
+                componentDesignManager.selectedSymbolElementIDs.remove(id)
             } else {
-                manager.selectedSymbolElementIDs.insert(id)
+                componentDesignManager.selectedSymbolElementIDs.insert(id)
             }
-        }
-    }
-    private func togglePrimitiveSelection(_ prim: AnyPrimitive) {
-        let id = prim.id
-        if manager.selectedSymbolElementIDs.contains(id) {
-            manager.selectedSymbolElementIDs.remove(id)
-        } else {
-            manager.selectedSymbolElementIDs.insert(id)
         }
     }
 
@@ -153,49 +109,5 @@ struct PinEditorView: View {
                 .foregroundStyle(.secondary)
             Spacer()
         }
-    }
-}
-
-import SwiftUI
-
-struct PrimitivePropertiesView: View {
-    // 1. Binding to the selected primitive
-    @Binding var primitive: AnyPrimitive
-
-    var body: some View {
-        // 2. Show a read-only summary based on the concrete primitive
-        switch primitive {
-        case .rectangle(let rect):
-            rectangleSummary(rect)
-        case .circle(let circ):
-            circleSummary(circ)
-        default:
-            Text("Unsupported primitive")
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    // 3. Rectangle summary
-    private func rectangleSummary(_ rect: RectanglePrimitive) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Rectangle")
-                .font(.headline)
-            Text("Origin: (\(rect.position.x.formatted()), \(rect.position.y.formatted()))")
-            Text("Size: \(rect.size.width.formatted()) × \(rect.size.height.formatted())")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(6)
-    }
-
-    // 4. Circle summary
-    private func circleSummary(_ circ: CirclePrimitive) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Circle")
-                .font(.headline)
-            Text("Center: (\(circ.position.x.formatted()), \(circ.position.y.formatted()))")
-            Text("Radius: \(circ.radius.formatted())")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(6)
     }
 }

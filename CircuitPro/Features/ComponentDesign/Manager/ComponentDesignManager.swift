@@ -321,3 +321,56 @@ extension ComponentDesignManager {
         )
     }
 }
+
+// MARK: - Footprint primitives
+extension ComponentDesignManager {
+    /// A computed property that filters and returns only the primitive elements from the footprint.
+    var footprintPrimitives: [AnyPrimitive] {
+        footprintElements.compactMap {
+            if case .primitive(let prim) = $0 {
+                return prim
+            }
+            return nil
+        }
+    }
+
+    /// A computed property that returns the currently selected primitives from the footprint.
+    var selectedFootprintPrimitives: [AnyPrimitive] {
+        footprintElements.compactMap {
+            if case .primitive(let prim) = $0, selectedFootprintElementIDs.contains(prim.id) {
+                return prim
+            }
+            return nil
+        }
+    }
+
+    /// Creates a `Binding` for a specific footprint primitive, allowing it to be modified by a SwiftUI view.
+    ///
+    /// - Parameter id: The `UUID` of the primitive to create a binding for.
+    /// - Returns: An optional `Binding<AnyPrimitive>`. Returns `nil` if the primitive isn't found.
+    func bindingForFootprintPrimitive(with id: UUID) -> Binding<AnyPrimitive>? {
+        guard let index = footprintElementIndexMap[id],
+              case .primitive(let prim) = footprintElements[safe: index] else {
+            return nil
+        }
+
+        return Binding(
+            get: {
+                // Safely get the latest version of the primitive on each access.
+                guard let idx = self.footprintElementIndexMap[id],
+                      case .primitive(let p) = self.footprintElements[safe: idx] else {
+                    // Return the captured 'prim' as a fallback.
+                    return prim
+                }
+                return p
+            },
+            set: { newValue in
+                // Safely update the element in the main array.
+                if let idx = self.footprintElementIndexMap[id],
+                   self.footprintElements.indices.contains(idx) {
+                    self.footprintElements[idx] = .primitive(newValue)
+                }
+            }
+        )
+    }
+}
