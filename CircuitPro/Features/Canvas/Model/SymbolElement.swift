@@ -48,19 +48,24 @@ struct SymbolElement: Identifiable {
             let override = instance.anchoredTextOverrides.first { $0.definitionID == definition.id }
             if let override, !override.isVisible { continue }
 
+            // 1. The "anchor" is the text's default position, before any overrides.
+            let anchorAbsolutePos = definition.relativePosition.applying(symbolTransform)
+            
+            // 2. The final position includes any user-defined override.
+            let finalRelativePos = override?.relativePositionOverride ?? definition.relativePosition
+            let finalAbsolutePos = finalRelativePos.applying(symbolTransform)
+
             let text = resolveText(for: definition, with: override)
-            let relativePos = override?.relativePositionOverride ?? definition.relativePosition
-            let absolutePos = relativePos.applying(symbolTransform)
 
             if var existing = self.anchoredTexts.first(where: { $0.sourceDataID == definition.id }) {
-                existing.textElement.position = absolutePos
+                existing.textElement.position = finalAbsolutePos
                 existing.textElement.rotation = self.rotation
                 existing.textElement.text = text
-                existing.anchorPosition = self.position
+                existing.anchorPosition = anchorAbsolutePos // Set the correct anchor
                 updatedTexts.append(existing)
             } else {
-                let textEl = TextElement(id: UUID(), text: text, position: absolutePos, rotation: self.rotation, font: definition.font, color: definition.color)
-                let newElement = AnchoredTextElement(id: UUID(), textElement: textEl, anchorPosition: self.position, anchorOwnerID: self.id, sourceDataID: definition.id, isFromDefinition: true)
+                let textEl = TextElement(id: UUID(), text: text, position: finalAbsolutePos, rotation: self.rotation, font: definition.font, color: definition.color)
+                let newElement = AnchoredTextElement(id: UUID(), textElement: textEl, anchorPosition: anchorAbsolutePos, anchorOwnerID: self.id, sourceDataID: definition.id, isFromDefinition: true)
                 updatedTexts.append(newElement)
             }
         }
@@ -73,11 +78,11 @@ struct SymbolElement: Identifiable {
                 existing.textElement.position = absolutePos
                 existing.textElement.rotation = self.rotation
                 existing.textElement.text = adHoc.text
-                existing.anchorPosition = self.position
+                existing.anchorPosition = absolutePos // Ad-hoc texts are their own anchor
                 updatedTexts.append(existing)
             } else {
                 let textEl = TextElement(id: UUID(), text: adHoc.text, position: absolutePos, rotation: self.rotation, font: adHoc.font, color: adHoc.color)
-                let newElement = AnchoredTextElement(id: UUID(), textElement: textEl, anchorPosition: self.position, anchorOwnerID: self.id, sourceDataID: adHoc.id, isFromDefinition: false)
+                let newElement = AnchoredTextElement(id: UUID(), textElement: textEl, anchorPosition: absolutePos, anchorOwnerID: self.id, sourceDataID: adHoc.id, isFromDefinition: false)
                 updatedTexts.append(newElement)
             }
         }

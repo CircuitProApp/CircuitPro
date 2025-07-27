@@ -178,23 +178,23 @@ final class SelectionDragGesture: CanvasDragGesture {
             let movedTextIDs = Set(symbol.anchoredTexts.map(\.id)).intersection(originalTextPositions.keys)
             guard !movedTextIDs.isEmpty else { continue }
 
-            // To modify the instance data, we follow the established pattern of creating a mutable copy.
             let newInstance = symbol.instance.copy()
 
             for textID in movedTextIDs {
                 guard let text = symbol.anchoredTexts.first(where: { $0.id == textID }) else { continue }
 
                 // Calculate the new position relative to the symbol's origin.
-                let newRelativePosition = text.position.applying(symbol.transform.inverted())
+                // This is now the delta from the text's own anchor.
+                let delta = text.position - text.anchorPosition
+                let originalRelativePos = text.anchorPosition.applying(symbol.transform.inverted())
+                let newRelativePosition = originalRelativePos + delta
 
                 if text.isFromDefinition {
-                    // This text is based on a library definition. We find its override and update it.
                     if let index = newInstance.anchoredTextOverrides.firstIndex(where: {
                         $0.definitionID == text.sourceDataID
                     }) {
                         newInstance.anchoredTextOverrides[index].relativePositionOverride = newRelativePosition
                     } else {
-                        // If no override exists, we must create one.
                         let newOverride = AnchoredTextOverride(
                             definitionID: text.sourceDataID,
                             textOverride: text.textElement.text,
@@ -204,14 +204,12 @@ final class SelectionDragGesture: CanvasDragGesture {
                         newInstance.anchoredTextOverrides.append(newOverride)
                     }
                 } else {
-                    // This is an ad-hoc text added to the instance.
                     if let index = newInstance.adHocTexts.firstIndex(where: { $0.id == text.sourceDataID }) {
                         newInstance.adHocTexts[index].relativePosition = newRelativePosition
                     }
                 }
             }
 
-            // Assign the modified instance back to the symbol and update the element in the main array.
             symbol.instance = newInstance
             updatedElements[i] = .symbol(symbol)
         }
