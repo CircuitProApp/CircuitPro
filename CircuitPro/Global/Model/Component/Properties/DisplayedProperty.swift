@@ -8,7 +8,7 @@
 
 import Foundation
 
-struct DisplayedProperty: Identifiable {
+struct DisplayedProperty: Identifiable, Equatable {
     /// A stable ID for SwiftUI lists.
     let id: UUID
     

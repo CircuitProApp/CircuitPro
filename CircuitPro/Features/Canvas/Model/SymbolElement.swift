@@ -12,26 +12,33 @@ struct SymbolElement: Identifiable {
     let id: UUID
     var instance: SymbolInstance
     let symbol: Symbol
+    var reference: String
+    var properties: [DisplayedProperty]
 
-    // --- 1. CHANGE THIS to a stored property ---
     var anchoredTexts: [AnchoredTextElement]
 
     var primitives: [AnyPrimitive] {
         symbol.primitives + symbol.pins.flatMap(\.primitives)
     }
 
-    // --- 2. ADD AN EXPLICIT INIT ---
-    init(id: UUID, instance: SymbolInstance, symbol: Symbol) {
+    init(
+        id: UUID,
+        instance: SymbolInstance,
+        symbol: Symbol,
+        reference: String,
+        properties: [DisplayedProperty]
+    ) {
         self.id = id
         self.instance = instance
         self.symbol = symbol
-        // Initialize the stored property.
+        self.reference = reference
+        self.properties = properties
+        
         self.anchoredTexts = []
-        // Manually resolve the texts upon creation.
+        
         self.resolveAnchoredTexts()
     }
     
-    // --- 3. CREATE A HELPER to resolve texts ---
     mutating func resolveAnchoredTexts() {
         var updatedTexts: [AnchoredTextElement] = []
         let symbolTransform = self.transform
@@ -41,11 +48,10 @@ struct SymbolElement: Identifiable {
             let override = instance.anchoredTextOverrides.first { $0.definitionID == definition.id }
             if let override, !override.isVisible { continue }
 
-            let text = override?.textOverride ?? definition.defaultText
+            let text = resolveText(for: definition, with: override)
             let relativePos = override?.relativePositionOverride ?? definition.relativePosition
             let absolutePos = relativePos.applying(symbolTransform)
 
-            // Find existing element to preserve its unique ID
             if var existing = self.anchoredTexts.first(where: { $0.sourceDataID == definition.id }) {
                 existing.textElement.position = absolutePos
                 existing.textElement.rotation = self.rotation
@@ -53,7 +59,6 @@ struct SymbolElement: Identifiable {
                 existing.anchorPosition = self.position
                 updatedTexts.append(existing)
             } else {
-                // Or create a new one with a unique ID
                 let textEl = TextElement(id: UUID(), text: text, position: absolutePos, rotation: self.rotation, font: definition.font, color: definition.color)
                 let newElement = AnchoredTextElement(id: UUID(), textElement: textEl, anchorPosition: self.position, anchorOwnerID: self.id, sourceDataID: definition.id, isFromDefinition: true)
                 updatedTexts.append(newElement)
@@ -79,6 +84,24 @@ struct SymbolElement: Identifiable {
         
         self.anchoredTexts = updatedTexts
     }
+    
+    private func resolveText(for definition: AnchoredTextDefinition, with override: AnchoredTextOverride?) -> String {
+        // If there's a text override, it always wins.
+        if let overrideText = override?.textOverride {
+            return overrideText
+        }
+        
+        // Otherwise, resolve the source.
+        switch definition.source {
+        case .static(let text):
+            return text
+        case .dynamic(.reference):
+            return self.reference
+        case .dynamic(.value):
+            // Use the first available property as the "main" value.
+            return properties.first?.value.description ?? "n/a"
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -86,9 +109,10 @@ struct SymbolElement: Identifiable {
 // ═══════════════════════════════════════════════════════════════════════
 extension SymbolElement: Equatable, Hashable {
     static func == (lhs: SymbolElement, rhs: SymbolElement) -> Bool {
-        // An element is only truly equal if its instance data (like position) is also the same.
-        // This is critical for the rendering system to detect changes and redraw elements that have moved.
-        lhs.id == rhs.id && lhs.instance == rhs.instance
+        lhs.id == rhs.id &&
+        lhs.instance == rhs.instance &&
+        lhs.reference == rhs.reference &&
+        lhs.properties == rhs.properties
     }
 
     func hash(into hasher: inout Hasher) {
@@ -103,8 +127,6 @@ extension SymbolElement: Transformable {
             let newInstance = instance.copy()
             newInstance.position = newValue
             self.instance = newInstance
-            // --- 4. UPDATE on change ---
-            // After moving, we must re-resolve texts to update their absolute positions.
             resolveAnchoredTexts()
         }
     }
@@ -115,7 +137,6 @@ extension SymbolElement: Transformable {
             let newInstance = instance.copy()
             newInstance.rotation = newValue
             self.instance = newInstance
-            // --- 4. UPDATE on change ---
             resolveAnchoredTexts()
         }
     }

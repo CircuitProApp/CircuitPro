@@ -9,34 +9,33 @@ import SwiftUI
 
 struct AnchoredTextDefinition: Identifiable, Codable, Hashable {
     var id: UUID = UUID()
-    var defaultText: String
+    var source: TextSource
     var relativePosition: CGPoint
     var font: NSFont = .systemFont(ofSize: 12)
     var color: CGColor = NSColor.black.cgColor
     var alignment: NSTextAlignment = .center
     
     init (
-        defaultText: String,
+        source: TextSource,
         relativePosition: CGPoint
     ) {
-        self.defaultText = defaultText
+        self.source = source
         self.relativePosition = relativePosition
     }
 
     // MARK: - Manual Codable Conformance
     
     enum CodingKeys: String, CodingKey {
-        case id, defaultText, relativePosition, alignment
+        case id, source, relativePosition, alignment
         case fontName, fontSize, colorData
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(UUID.self, forKey: .id)
-        self.defaultText = try container.decode(String.self, forKey: .defaultText)
+        self.source = try container.decode(TextSource.self, forKey: .source)
         self.relativePosition = try container.decode(CGPoint.self, forKey: .relativePosition)
         
-        // --- THIS IS THE FIX for NSTextAlignment ---
         let alignmentRawValue = try container.decode(Int.self, forKey: .alignment)
         self.alignment = NSTextAlignment(rawValue: alignmentRawValue) ?? .center
         
@@ -57,10 +56,8 @@ struct AnchoredTextDefinition: Identifiable, Codable, Hashable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
-        try container.encode(defaultText, forKey: .defaultText)
+        try container.encode(source, forKey: .source)
         try container.encode(relativePosition, forKey: .relativePosition)
-
-        // --- THIS IS THE FIX for NSTextAlignment ---
         try container.encode(alignment.rawValue, forKey: .alignment)
 
         // Encode Font

@@ -113,12 +113,25 @@ struct SchematicView: View {
             if var existingElement = existingElements.removeValue(forKey: instanceID),
                case .symbol(var symbol) = existingElement {
                 
-                // Element exists. Update its instance data if it has changed.
+                // Element exists. Update its data if it has changed.
+                var needsTextResolution = false
                 if symbol.instance != dc.instance.symbolInstance {
                     symbol.instance = dc.instance.symbolInstance
-                    // Manually trigger text resolution because we changed the whole instance
+                    needsTextResolution = true
+                }
+                if symbol.reference != dc.reference {
+                    symbol.reference = dc.reference
+                    needsTextResolution = true
+                }
+                if symbol.properties != dc.displayedProperties {
+                    symbol.properties = dc.displayedProperties
+                    needsTextResolution = true
+                }
+                
+                if needsTextResolution {
                     symbol.resolveAnchoredTexts()
                 }
+                
                 updatedElements.append(.symbol(symbol))
                 
             } else {
@@ -126,7 +139,9 @@ struct SchematicView: View {
                 let newSymbolElement = SymbolElement(
                     id: instanceID,
                     instance: dc.instance.symbolInstance,
-                    symbol: dc.definition.symbol!
+                    symbol: dc.definition.symbol!,
+                    reference: dc.reference,
+                    properties: dc.displayedProperties
                 )
                 updatedElements.append(.symbol(newSymbolElement))
             }

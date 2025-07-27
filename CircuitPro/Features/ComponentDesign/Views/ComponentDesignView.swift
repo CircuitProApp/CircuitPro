@@ -173,19 +173,28 @@ struct ComponentDesignView: View {
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
         var handledElementIDs = Set<UUID>()
 
-        // 1. Process text elements to create anchored text definitions.
+        // 1. Process all text elements to create anchored text definitions.
         var textDefinitions = [AnchoredTextDefinition]()
-        if let abbreviationID = componentDesignManager.abbreviationTextElementID {
-            if let textCanvasElement = componentDesignManager.symbolElements.first(where: { $0.id == abbreviationID }),
-               case .text(let textElement) = textCanvasElement {
-                let relativePosition = CGPoint(x: textElement.position.x - anchor.x, y: textElement.position.y - anchor.y)
-                
-                textDefinitions.append(AnchoredTextDefinition(
-                    defaultText: textElement.text,
-                    relativePosition: relativePosition
-                ))
-                handledElementIDs.insert(abbreviationID)
+        let textCanvasElements = componentDesignManager.symbolElements.compactMap { element -> TextElement? in
+            guard case .text(let textElement) = element else { return nil }
+            return textElement
+        }
+
+        for textElement in textCanvasElements {
+            let relativePosition = CGPoint(x: textElement.position.x - anchor.x, y: textElement.position.y - anchor.y)
+            let source: TextSource
+
+            if textElement.id == componentDesignManager.abbreviationTextElementID {
+                source = .dynamic(.reference)
+            } else {
+                source = .static(textElement.text)
             }
+            
+            textDefinitions.append(AnchoredTextDefinition(
+                source: source,
+                relativePosition: relativePosition
+            ))
+            handledElementIDs.insert(textElement.id)
         }
         
         // 2. Process primitives, excluding any elements that have already been handled.
