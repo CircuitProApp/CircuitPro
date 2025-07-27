@@ -70,6 +70,7 @@ struct PadEditorView: View {
                 }
             }
             .scrollClipDisabled()
+            .contentMargins(.horizontal, 10)
 
             if !selectedPads.isEmpty {
                 Form {

@@ -15,9 +15,9 @@ struct ComponentDesignView: View {
     @State private var symbolCanvasManager = CanvasManager()
     @State private var footprintCanvasManager = CanvasManager()
 
-    @State private var showError   = false
+    @State private var showError = false
     @State private var showWarning = false
-    @State private var messages    = [String]()
+    @State private var messages = [String]()
     @State private var didCreateComponent = false
     @State private var showFeedbackSheet: Bool = false
 

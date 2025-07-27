@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct SymbolDesignStageView: View {
+
     @Environment(\.componentDesignManager)
     private var componentDesignManager
     
@@ -22,9 +23,8 @@ struct SymbolDesignStageView: View {
                     .environment(symbolCanvasManager)
             },
             right: {
-                if componentDesignManager.pins.isNotEmpty || componentDesignManager.symbolPrimitives.isNotEmpty {
+                if componentDesignManager.symbolElements.isNotEmpty {
                     PinEditorView()
-                        .transition(.move(edge: .trailing).combined(with: .blurReplace))
                         .padding()
                 } else {
                     Color.clear

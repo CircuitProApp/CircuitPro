@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ComponentDesignSuccessView: View {
+
     var onClose: () -> Void
     var onCreateAnother: () -> Void
 

@@ -63,6 +63,7 @@ struct PinEditorView: View {
                 }
             }
             .scrollClipDisabled()
+            .contentMargins(.horizontal, 10)
 
             if !selectedPins.isEmpty {
                 Form {

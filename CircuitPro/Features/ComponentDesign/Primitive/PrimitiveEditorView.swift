@@ -36,6 +36,7 @@ struct PrimitiveEditorView: View {
                 }
             }
             .scrollClipDisabled()
+            .contentMargins(.horizontal, 10)
 
             // 2. Properties form for selected primitives
             let selectedPrimitives = primitives.filter { selectedIDs.contains($0.id) }

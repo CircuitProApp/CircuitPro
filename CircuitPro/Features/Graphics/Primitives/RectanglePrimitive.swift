@@ -22,10 +22,17 @@ struct RectanglePrimitive: GraphicPrimitive {
         let halfW = size.width / 2
         let halfH = size.height / 2
 
-        let topLeft = CGPoint(x: position.x - halfW, y: position.y + halfH)
-        let topRight = CGPoint(x: position.x + halfW, y: position.y + halfH)
-        let bottomRight = CGPoint(x: position.x + halfW, y: position.y - halfH)
-        let bottomLeft = CGPoint(x: position.x - halfW, y: position.y - halfH)
+        // Clamp corner radius to avoid over-insetting
+        let clampedCornerRadius = max(0, min(cornerRadius, min(size.width, size.height) * 0.5))
+
+        // Inset the corners by the radius
+        let insetX = clampedCornerRadius
+        let insetY = clampedCornerRadius
+
+        let topLeft = CGPoint(x: position.x - halfW + insetX, y: position.y + halfH - insetY)
+        let topRight = CGPoint(x: position.x + halfW - insetX, y: position.y + halfH - insetY)
+        let bottomRight = CGPoint(x: position.x + halfW - insetX, y: position.y - halfH + insetY)
+        let bottomLeft = CGPoint(x: position.x - halfW + insetX, y: position.y - halfH + insetY)
 
         return [
             Handle(
@@ -46,6 +53,7 @@ struct RectanglePrimitive: GraphicPrimitive {
             )
         ]
     }
+
     mutating func updateHandle(
         _ kind: Handle.Kind,
         to dragPosition: CGPoint,
@@ -87,18 +95,20 @@ struct RectanglePrimitive: GraphicPrimitive {
         }
     }
     func makePath() -> CGPath {
-
         let frame = CGRect(
-            x: position.x - size.width  * 0.5,
+            x: position.x - size.width * 0.5,
             y: position.y - size.height * 0.5,
             width: size.width,
             height: size.height
         )
 
         let path = CGMutablePath()
-        path.addRect(frame)
 
-        // 2. Apply the primitive’s rotation about the rectangle center
+        // Use the corner radius (clamped to not exceed half the smallest dimension)
+        let clampedCornerRadius = max(0, min(cornerRadius, min(size.width, size.height) * 0.5))
+        path.addRoundedRect(in: frame, cornerWidth: clampedCornerRadius, cornerHeight: clampedCornerRadius)
+
+        // Apply rotation about the rectangle's center
         var transform = CGAffineTransform.identity
             .translatedBy(x: position.x, y: position.y)
             .rotated(by: rotation)

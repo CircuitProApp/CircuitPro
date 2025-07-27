@@ -18,7 +18,6 @@ struct FootprintDesignStageView: View {
         StageContentView(
             left: {
                 LayerTypeListView()
-                    .transition(.move(edge: .leading).combined(with: .blurReplace))
                     .padding()
             },
             center: {
@@ -26,9 +25,8 @@ struct FootprintDesignStageView: View {
                     .environment(footprintCanvasManager)
             },
             right: {
-                if componentDesignManager.pads.isNotEmpty {
+                if componentDesignManager.footprintElements.isNotEmpty {
                     PadEditorView()
-                        .transition(.move(edge: .trailing).combined(with: .blurReplace))
                         .padding()
                 } else {
                     Color.clear

@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ComponentDesignStageContainerView: View {
+
     @Binding var currentStage: ComponentDesignStage
 
     @Environment(\.componentDesignManager)

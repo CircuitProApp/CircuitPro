@@ -8,12 +8,14 @@
 import SwiftUI
 
 struct StageContentView<Left: View, Center: View, Right: View>: View {
+
     let left: Left
     let center: Center
     let right: Right
     let width: CGFloat
     let height: CGFloat
     let sidebarWidth: CGFloat
+
     init(
         width: CGFloat = 800,
         height: CGFloat = 500,
