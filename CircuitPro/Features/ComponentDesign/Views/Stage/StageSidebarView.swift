@@ -17,7 +17,6 @@ struct StageSidebarView<Header: View, Content: View>: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
-//            .border(edge: .bottom, style: .gray.opacity(0.3))
             content
         }
         .frame(maxHeight: .infinity)

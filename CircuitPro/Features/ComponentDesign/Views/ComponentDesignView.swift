@@ -35,60 +35,11 @@ struct ComponentDesignView: View {
                 )
                 .navigationTitle("Component Designer")
             } else {
-                VStack {
-                    StageIndicatorView(
-                        currentStage: $currentStage,
-                        validationProvider: componentDesignManager.validationState
-                    )
-                    Spacer()
-                    StageContentView(
-                        left: {
-                            switch currentStage {
-                            case .footprint:
-                                LayerTypeListView()
-                                    .transition(.move(edge: .leading).combined(with: .blurReplace))
-                                    .padding()
-                            default:
-                                Color.clear
-                            }
-                        },
-                        center: {
-                            switch currentStage {
-                            case .component:
-                                ComponentDetailView()
-                            case .symbol:
-                                SymbolDesignView()
-                                    .environment(symbolCanvasManager)
-                            case .footprint:
-                                FootprintDesignView()
-                                    .environment(footprintCanvasManager)
-                            }
-                        },
-                        right: {
-                            switch currentStage {
-                            case .symbol:
-                                if componentDesignManager.pins.isNotEmpty {
-                                    PinEditorView()
-                                        .transition(.move(edge: .trailing).combined(with: .blurReplace))
-                                        .padding()
-                                } else {
-                                    Color.clear
-                                }
-                            case .footprint:
-                                if componentDesignManager.pads.isNotEmpty {
-                                    PadEditorView()
-                                        .transition(.move(edge: .trailing).combined(with: .blurReplace))
-                                        .padding()
-                                } else {
-                                    Color.clear
-                                }
-                            default:
-                                Color.clear
-                            }
-                        }
-                    )
-                    Spacer()
-                }
+                ComponentDesignStageContainerView(
+                    currentStage: $currentStage,
+                    symbolCanvasManager: symbolCanvasManager,
+                    footprintCanvasManager: footprintCanvasManager
+                )
                 .padding()
                 .navigationTitle("Component Designer")
                 .toolbar {
