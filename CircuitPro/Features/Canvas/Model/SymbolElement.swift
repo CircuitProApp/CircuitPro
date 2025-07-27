@@ -153,8 +153,8 @@ extension SymbolElement: Drawable {
             let localHaloPath = CGMutablePath()
             let localDrawables = (symbol.primitives as [any Drawable]) + (symbol.pins as [any Drawable])
             for child in localDrawables {
-                if let haloParams = child.makeHaloParameters() { // We can use the old method here
-                    localHaloPath.addPath(haloParams.path)
+                if let path = child.makeHaloPath() {
+                    localHaloPath.addPath(path)
                 }
             }
             var symbolTransform = self.transform
@@ -164,8 +164,8 @@ extension SymbolElement: Drawable {
             
             // 1.2 Add halos from world-space children (text).
             for textElement in anchoredTexts {
-                if let haloParams = textElement.textElement.makeHaloParameters() {
-                    finalPath.addPath(haloParams.path)
+                if let path = textElement.textElement.makeHaloPath() {
+                    finalPath.addPath(path)
                 }
             }
             

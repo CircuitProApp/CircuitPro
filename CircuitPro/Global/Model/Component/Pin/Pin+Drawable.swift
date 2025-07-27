@@ -93,6 +93,10 @@ extension Pin: Drawable {
         return outline.isEmpty ? nil : outline
     }
 
+    func makeHaloPath() -> CGPath? {
+        return makePinOutline()
+    }
+
     // MARK: - Layout Calculations
     
     func labelLayout() -> (path: CGPath, transform: CGAffineTransform) {
