@@ -171,39 +171,44 @@ struct ComponentDesignView: View {
 
         let canvasSize = symbolCanvasManager.paperSize.canvasSize(orientation: .landscape)
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        var handledElementIDs = Set<UUID>()
 
-        // 1. Process primitives (unchanged)
+        // 1. Process text elements to create anchored text definitions.
+        var textDefinitions = [AnchoredTextDefinition]()
+        if let abbreviationID = componentDesignManager.abbreviationTextElementID {
+            if let textCanvasElement = componentDesignManager.symbolElements.first(where: { $0.id == abbreviationID }),
+               case .text(let textElement) = textCanvasElement {
+                let relativePosition = CGPoint(x: textElement.position.x - anchor.x, y: textElement.position.y - anchor.y)
+                
+                textDefinitions.append(AnchoredTextDefinition(
+                    defaultText: textElement.text,
+                    relativePosition: relativePosition
+                ))
+                handledElementIDs.insert(abbreviationID)
+            }
+        }
+        
+        // 2. Process primitives, excluding any elements that have already been handled.
         let rawPrimitives: [AnyPrimitive] =
-            componentDesignManager.symbolElements.compactMap {
-                if case .primitive(let primitive) = $0 { return primitive }
+            componentDesignManager.symbolElements.compactMap { element in
+                guard !handledElementIDs.contains(element.id) else { return nil }
+                if case .primitive(let primitive) = element { return primitive }
                 return nil
             }
+
         let primitives = rawPrimitives.map { prim -> AnyPrimitive in
             var copy = prim
             copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
             return copy
         }
 
-        // 2. Process pins (unchanged)
+        // 3. Process pins (unchanged)
         let rawPins = componentDesignManager.pins
         let pins = rawPins.map { pin -> Pin in
             var copy = pin
             copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
             return copy
         }
-
-        // --- THIS IS THE NEW LOGIC FOR TESTING ---
-        // 3. Create hardcoded default text definitions.
-        // We will link them to the component's reference and name.
-        let textDefinitions: [AnchoredTextDefinition] = [
-            AnchoredTextDefinition(
-                // This label will display the reference designator (e.g., "R1")
-                defaultText: componentDesignManager.componentAbbreviation,
-                // Position it 20 points above the symbol's origin
-                relativePosition: CGPoint(x: 0, y: 20)
-            )
-        ]
-        // --- END OF NEW LOGIC ---
 
         let newComponent = Component(
             name: componentDesignManager.componentName,
@@ -212,7 +217,7 @@ struct ComponentDesignView: View {
             footprints: [],
             category: componentDesignManager.selectedCategory,
             package: componentDesignManager.selectedPackageType,
-            propertyDefinitions: componentDesignManager.componentProperties // Corrected from your provided snippet
+            propertyDefinitions: componentDesignManager.componentProperties
         )
 
         let newSymbol = Symbol(
@@ -220,7 +225,6 @@ struct ComponentDesignView: View {
             component: newComponent,
             primitives: primitives,
             pins: pins,
-            // --- PASS THE NEW DEFINITIONS TO THE SYMBOL ---
             anchoredTextDefinitions: textDefinitions
         )
 

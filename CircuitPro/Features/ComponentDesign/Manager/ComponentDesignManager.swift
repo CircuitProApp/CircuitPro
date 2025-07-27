@@ -12,7 +12,12 @@ import Observation
 final class ComponentDesignManager {
 
     var componentName: String = "" { didSet { refreshValidation() } }
-    var componentAbbreviation: String = "" { didSet { refreshValidation() } }
+    var componentAbbreviation: String = "" {
+        didSet {
+            updateAbbreviationTextElement()
+            refreshValidation()
+        }
+    }
     var selectedCategory: ComponentCategory? { didSet { refreshValidation() } }
     var selectedPackageType: PackageType?
     var componentProperties: [PropertyDefinition] = [PropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())] { didSet { refreshValidation() } }
@@ -31,6 +36,7 @@ final class ComponentDesignManager {
     var selectedSymbolElementIDs: Set<UUID> = []
     var selectedSymbolTool: AnyCanvasTool = AnyCanvasTool(CursorTool())
     private var symbolElementIndexMap: [UUID: Int] = [:]
+    private(set) var abbreviationTextElementID: UUID?
 
     // MARK: - Footprint
     var footprintElements: [CanvasElement] = [] {
@@ -45,6 +51,55 @@ final class ComponentDesignManager {
 
     var selectedFootprintLayer: CanvasLayer? = .layer0
     var layerAssignments: [UUID: CanvasLayer] = [:]
+    
+    // MARK: Abbreviation Text Element Handling
+    private func updateAbbreviationTextElement() {
+        // 1. Check if an abbreviation text element already exists.
+        if let elementID = abbreviationTextElementID,
+           let index = symbolElementIndexMap[elementID] {
+            
+            // If the new abbreviation is empty, remove the element.
+            if componentAbbreviation.isEmpty {
+                symbolElements.remove(at: index)
+                abbreviationTextElementID = nil
+                return
+            }
+
+            // Otherwise, update the existing element's text.
+            guard case .text(var textElement) = symbolElements[index] else {
+                // This case should ideally not happen if our ID logic is correct.
+                // We'll reset the ID and create a new element to be safe.
+                abbreviationTextElementID = nil
+                if !componentAbbreviation.isEmpty { createAbbreviationTextElement() }
+                return
+            }
+            
+            textElement.text = componentAbbreviation
+            symbolElements[index] = .text(textElement)
+
+        } else if !componentAbbreviation.isEmpty {
+            // 2. If no element exists and the abbreviation is not empty, create one.
+            createAbbreviationTextElement()
+        }
+    }
+
+    private func createAbbreviationTextElement() {
+        // 1. By default, the symbol canvas uses A4 paper in landscape.
+        let defaultPaper = PaperSize.iso(.a4)
+        let canvasSize = defaultPaper.canvasSize(orientation: .landscape)
+
+        // 2. Calculate the center point of this default canvas.
+        let centerPoint = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+
+        // 3. Create the text element at the center.
+        let newElement = TextElement(
+            id: UUID(),
+            text: componentAbbreviation,
+            position: centerPoint
+        )
+        abbreviationTextElementID = newElement.id
+        symbolElements.append(.text(newElement))
+    }
 
     private func updateSymbolIndexMap() {
         symbolElementIndexMap = Dictionary(
@@ -73,6 +128,7 @@ final class ComponentDesignManager {
         symbolElements = []
         selectedSymbolElementIDs = []
         selectedSymbolTool = AnyCanvasTool(CursorTool())
+        abbreviationTextElementID = nil // Reset the tracked ID
 
         // 3. Footprint design
         footprintElements = []
