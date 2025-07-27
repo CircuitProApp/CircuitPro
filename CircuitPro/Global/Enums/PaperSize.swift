@@ -63,11 +63,13 @@ enum PaperSize {
 
     case iso(ISO)
     case ansi(ANSI)
+    case component
 
     var dimensions: (width: Double, height: Double) {
         switch self {
         case .iso(let size):  return size.dimensions
         case .ansi(let size): return size.dimensions
+        case .component:      return (200.0, 200.0)
         }
     }
 
@@ -80,6 +82,7 @@ enum PaperSize {
         switch self {
         case .iso(let size):  return size.name
         case .ansi(let size): return size.name
+        case .component: return "Component"
         }
     }
 

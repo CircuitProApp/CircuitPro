@@ -68,6 +68,13 @@ final class WorkbenchInputCoordinator {
         let point = workbench.convert(event.locationInWindow, from: nil)
         if toolTap.handleMouseDown(at: point, event: event) { return }
 
+        // Prioritize handle dragging, as it's the most specific interaction.
+        // This should be checked before general hit testing.
+        if handleDrag.begin(at: point, event: event) {
+            activeDrag = handleDrag
+            return
+        }
+
         if workbench.selectedTool?.id == "cursor" {
             let hitTarget = hitTest.hitTest(
                 at: point, elements: workbench.elements,
@@ -75,7 +82,7 @@ final class WorkbenchInputCoordinator {
             )
 
             if let hitTarget = hitTarget {
-                // Item was hit
+                // Item was hit. Since handle drag failed, this is a body click.
 
                 // First, update the selection state based on the click.
                 // This is the original selection logic from the file.
@@ -101,11 +108,8 @@ final class WorkbenchInputCoordinator {
                     workbench.onSelectionChange?(workbench.selectedIDs)
                 }
 
-                // Second, after updating selection, try to start a drag.
-                // The drag gesture will re-check the hit and the selection state.
-                if handleDrag.begin(at: point, event: event) {
-                    activeDrag = handleDrag
-                } else if selDrag.begin(at: point, event: event) {
+                // Second, try to start a selection drag.
+                if selDrag.begin(at: point, event: event) {
                     activeDrag = selDrag
                 }
 
@@ -118,10 +122,8 @@ final class WorkbenchInputCoordinator {
             return
         }
 
-        // For any other tool, only handle-dragging is checked.
-        if handleDrag.begin(at: point, event: event) {
-            activeDrag = handleDrag
-        }
+        // For any other tool, handle-dragging was already attempted and failed.
+        // The original code had a check here, but it's now covered above.
     }
 
     private func clearSelectionAndStartMarquee(with event: NSEvent) {

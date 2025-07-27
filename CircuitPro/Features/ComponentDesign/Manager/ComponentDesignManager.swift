@@ -85,8 +85,8 @@ final class ComponentDesignManager {
 
     private func createAbbreviationTextElement() {
         // 1. By default, the symbol canvas uses A4 paper in landscape.
-        let defaultPaper = PaperSize.iso(.a4)
-        let canvasSize = defaultPaper.canvasSize(orientation: .landscape)
+        let defaultPaper = PaperSize.component
+        let canvasSize = defaultPaper.canvasSize()
 
         // 2. Calculate the center point of this default canvas.
         let centerPoint = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)

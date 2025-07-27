@@ -79,6 +79,8 @@ struct ComponentDesignView: View {
         .onAppear {
             symbolCanvasManager.showGuides = true
             footprintCanvasManager.showGuides = true
+            symbolCanvasManager.paperSize = .component
+            footprintCanvasManager.paperSize = .component
         }
         .alert("Error", isPresented: $showError, actions: {
           Button("OK", role: .cancel) { }
