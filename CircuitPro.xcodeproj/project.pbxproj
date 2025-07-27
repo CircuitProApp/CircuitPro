@@ -79,7 +79,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				C71B931B2E360F9300837DA1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				5E5AB35C2D9C60330069B623 /* CircuitPro */,
@@ -151,13 +150,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		C71B931B2E360F9300837DA1 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			productRef = C71B931A2E360F9300837DA1 /* SwiftLint */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		5E5AB3692D9C60340069B623 /* Debug */ = {
@@ -406,11 +398,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */;
 			productName = WelcomeWindow;
-		};
-		C71B931A2E360F9300837DA1 /* SwiftLint */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 5E0B73522DDF58BE0061123B /* XCRemoteSwiftPackageReference "SwiftLintPlugin" */;
-			productName = "plugin:SwiftLint";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

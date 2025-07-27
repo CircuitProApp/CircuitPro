@@ -173,6 +173,10 @@ final class WorkbenchView: NSView {
     override func mouseDragged(with event: NSEvent) { input.mouseDragged(event) }
     override func mouseUp(with event: NSEvent) { input.mouseUp(event) }
 
+    override func rightMouseDown(with event: NSEvent) {
+        input.rightMouseDown(event)
+    }
+
     override func keyDown(with event: NSEvent) {
         if !input.keyDown(event) { super.keyDown(with: event) }
     }

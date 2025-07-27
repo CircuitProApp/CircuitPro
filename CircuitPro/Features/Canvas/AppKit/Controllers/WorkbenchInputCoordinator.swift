@@ -150,6 +150,59 @@ final class WorkbenchInputCoordinator {
         activeDrag = nil
     }
 
+    // MARK: - Right-click
+    func rightMouseDown(_ event: NSEvent) {
+        // Context menus should only appear when the cursor tool is active.
+        guard workbench.selectedTool?.id == "cursor" else { return }
+
+        let point = workbench.convert(event.locationInWindow, from: nil)
+
+        // Hit test to find the element under the cursor
+        let hitTarget = hitTest.hitTest(
+            at: point,
+            elements: workbench.elements,
+            schematicGraph: workbench.schematicGraph,
+            magnification: workbench.magnification
+        )
+
+        guard let hitTarget = hitTarget else {
+            // No specific element was hit. We could show a canvas context menu here.
+            return
+        }
+
+        // Determine the selectable ID from the hit target.
+        let idToSelect: UUID?
+        if hitTarget.kind == .text {
+            idToSelect = hitTarget.immediateOwnerID
+        } else {
+            idToSelect = hitTarget.selectableID
+        }
+
+        guard let hitID = idToSelect else { return }
+
+        // If the right-clicked item is not already in the current selection,
+        // clear the selection and select only the clicked item.
+        if !workbench.selectedIDs.contains(hitID) {
+            workbench.selectedIDs = [hitID]
+            workbench.onSelectionChange?(workbench.selectedIDs)
+        }
+
+        // Create and show the context menu.
+        let menu = NSMenu()
+
+        let deleteItem = NSMenuItem(title: "Delete", action: #selector(deleteMenuAction(_:)), keyEquivalent: "")
+        deleteItem.target = self
+        menu.addItem(deleteItem)
+
+        if !menu.items.isEmpty {
+            menu.popUp(positioning: nil, at: point, in: workbench)
+        }
+    }
+
+    @objc private func deleteMenuAction(_ sender: Any) {
+        deleteSelectedElements()
+    }
+
     // MARK: – Called by the key-command helper
     func enterRotationMode(around point: CGPoint) { rotation.begin(at: point) }
     func cancelRotation() { rotation.cancel() }
