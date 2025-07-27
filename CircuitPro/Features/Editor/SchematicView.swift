@@ -100,15 +100,39 @@ struct SchematicView: View {
 
     //  MARK: Build Canvas Model
     private func rebuildCanvasElements() {
-        canvasElements = projectManager.designComponents.map { dc in
-            .symbol(
-                SymbolElement(
-                    id: dc.instance.id,
-                    instance: dc.instance.symbolInstance,
-                    symbol: dc.definition.symbol!   // already in cache
-                )
-            )
+        let designComponents = projectManager.designComponents
+        var updatedElements: [CanvasElement] = []
+        var existingElements = canvasElements.reduce(into: [UUID: CanvasElement]()) {
+            if case .symbol(let s) = $1 { $0[s.id] = .symbol(s) }
         }
+
+        // Iterate through the source of truth (designComponents)
+        for dc in designComponents {
+            let instanceID = dc.instance.id
+            
+            if var existingElement = existingElements.removeValue(forKey: instanceID),
+               case .symbol(var symbol) = existingElement {
+                
+                // Element exists. Update its instance data if it has changed.
+                if symbol.instance != dc.instance.symbolInstance {
+                    symbol.instance = dc.instance.symbolInstance
+                    // Manually trigger text resolution because we changed the whole instance
+                    symbol.resolveAnchoredTexts()
+                }
+                updatedElements.append(.symbol(symbol))
+                
+            } else {
+                // New element. Create it.
+                let newSymbolElement = SymbolElement(
+                    id: instanceID,
+                    instance: dc.instance.symbolInstance,
+                    symbol: dc.definition.symbol!
+                )
+                updatedElements.append(.symbol(newSymbolElement))
+            }
+        }
+        
+        canvasElements = updatedElements
     }
 
     // MARK: Sync back to SwiftData model
@@ -127,8 +151,8 @@ struct SchematicView: View {
 
         for sym in symbolElements {
             if let idx = insts.firstIndex(where: { $0.id == sym.id }) {
-                insts[idx].symbolInstance.position          = sym.instance.position
-                insts[idx].symbolInstance.cardinalRotation  = sym.instance.cardinalRotation
+                // **FIXED**: Assign the whole instance to persist text override changes.
+                insts[idx].symbolInstance = sym.instance
             }
         }
         projectManager.componentInstances = insts

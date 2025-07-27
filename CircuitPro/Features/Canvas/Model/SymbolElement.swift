@@ -32,8 +32,8 @@ struct SymbolElement: Identifiable {
     }
     
     // --- 3. CREATE A HELPER to resolve texts ---
-    private mutating func resolveAnchoredTexts() {
-        var resolved: [AnchoredTextElement] = []
+    mutating func resolveAnchoredTexts() {
+        var updatedTexts: [AnchoredTextElement] = []
         let symbolTransform = self.transform
 
         // Process definitions from the library symbol
@@ -44,21 +44,40 @@ struct SymbolElement: Identifiable {
             let text = override?.textOverride ?? definition.defaultText
             let relativePos = override?.relativePositionOverride ?? definition.relativePosition
             let absolutePos = relativePos.applying(symbolTransform)
-            let textEl = TextElement(id: UUID(), text: text, position: absolutePos, rotation: self.rotation, font: definition.font, color: definition.color)
 
-            // The ID is now stable, derived from the data source!
-            resolved.append(AnchoredTextElement(id: definition.id, textElement: textEl, anchorPosition: self.position, anchorOwnerID: self.id, sourceDataID: definition.id, isFromDefinition: true))
+            // Find existing element to preserve its unique ID
+            if var existing = self.anchoredTexts.first(where: { $0.sourceDataID == definition.id }) {
+                existing.textElement.position = absolutePos
+                existing.textElement.rotation = self.rotation
+                existing.textElement.text = text
+                existing.anchorPosition = self.position
+                updatedTexts.append(existing)
+            } else {
+                // Or create a new one with a unique ID
+                let textEl = TextElement(id: UUID(), text: text, position: absolutePos, rotation: self.rotation, font: definition.font, color: definition.color)
+                let newElement = AnchoredTextElement(id: UUID(), textElement: textEl, anchorPosition: self.position, anchorOwnerID: self.id, sourceDataID: definition.id, isFromDefinition: true)
+                updatedTexts.append(newElement)
+            }
         }
 
         // Process ad-hoc texts added only to this instance
         for adHoc in instance.adHocTexts {
             let absolutePos = adHoc.relativePosition.applying(symbolTransform)
-            let textEl = TextElement(id: UUID(), text: adHoc.text, position: absolutePos, rotation: self.rotation, font: adHoc.font, color: adHoc.color)
-            
-            // The ID is now stable, derived from the data source!
-            resolved.append(AnchoredTextElement(id: adHoc.id, textElement: textEl, anchorPosition: self.position, anchorOwnerID: self.id, sourceDataID: adHoc.id, isFromDefinition: false))
+
+            if var existing = self.anchoredTexts.first(where: { $0.sourceDataID == adHoc.id }) {
+                existing.textElement.position = absolutePos
+                existing.textElement.rotation = self.rotation
+                existing.textElement.text = adHoc.text
+                existing.anchorPosition = self.position
+                updatedTexts.append(existing)
+            } else {
+                let textEl = TextElement(id: UUID(), text: adHoc.text, position: absolutePos, rotation: self.rotation, font: adHoc.font, color: adHoc.color)
+                let newElement = AnchoredTextElement(id: UUID(), textElement: textEl, anchorPosition: self.position, anchorOwnerID: self.id, sourceDataID: adHoc.id, isFromDefinition: false)
+                updatedTexts.append(newElement)
+            }
         }
-        self.anchoredTexts = resolved
+        
+        self.anchoredTexts = updatedTexts
     }
 }
 
