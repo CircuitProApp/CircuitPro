@@ -8,7 +8,7 @@
 import AppKit
 
 protocol CanvasDragGesture {
-    func begin(at p: CGPoint, event: NSEvent) -> Bool   // returns true if it claimed the drag
-    func drag (to p: CGPoint)
+    func begin(at point: CGPoint, event: NSEvent) -> Bool
+    func drag (to point: CGPoint)
     func end()
 }

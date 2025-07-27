@@ -7,7 +7,6 @@
 
 import AppKit
 
-// MARK: - DrawingSheetView
 final class DrawingSheetView: NSView {
 
     // MARK: Public Properties
@@ -37,7 +36,7 @@ final class DrawingSheetView: NSView {
         super.init(coder: coder)
         setupView()
     }
-    
+
     private func setupView() {
         wantsLayer = true
         // Set view layer to be transparent; backgrounds will be handled by dedicated layers.
@@ -58,27 +57,27 @@ final class DrawingSheetView: NSView {
         // 2. Calculate metrics.
         let hSpacing: CGFloat, vSpacing: CGFloat
         let initialInnerBounds = bounds.insetBy(dx: inset, dy: inset)
-        
+
         switch rulerDivision {
         case .byCount(let count):
-            guard count > 0 else { return }
+            guard count > 0 else { return } // swiftlint:disable:this empty_count
             hSpacing = initialInnerBounds.width / CGFloat(count)
             vSpacing = initialInnerBounds.height / CGFloat(count)
         case .bySpacing(let spacing):
             hSpacing = spacing * unitsPerMM
             vSpacing = spacing * unitsPerMM
         }
-        
+
         let metrics = DrawingMetrics(
             viewBounds: bounds, inset: inset,
             horizontalTickSpacing: hSpacing, verticalTickSpacing: vSpacing,
             cellHeight: cellHeight, cellValues: cellValues
         )
-        
+
         // 3. Create background layers.
         // These are added first to be at the bottom of the layer stack.
         createBackgroundLayers(metrics: metrics)
-        
+
         // 4. Create and collect all foreground content layers.
         managedLayers.append(contentsOf: BorderDrawer().makeLayers(metrics: metrics, color: graphicColor.cgColor))
 
@@ -89,17 +88,23 @@ final class DrawingSheetView: NSView {
             )
             managedLayers.append(contentsOf: drawer.makeLayers(metrics: metrics))
         }
-        
+
         let rulerPositions: [RulerDrawer.Position] = [.top, .bottom, .left, .right]
         rulerPositions.forEach { position in
-            let drawer = RulerDrawer(position: position, graphicColor: graphicColor, safeFont: safeFont, showLabels: showRulerLabels)
+            let drawer = RulerDrawer(
+                position: position,
+                graphicColor: graphicColor,
+                safeFont: safeFont,
+                showLabels:
+                    showRulerLabels
+            )
             managedLayers.append(contentsOf: drawer.makeLayers(metrics: metrics))
         }
-        
+
         // 5. Add all generated layers to the view's main layer.
         managedLayers.forEach { layer?.addSublayer($0) }
     }
-    
+
     /// Creates and adds the background layers for the rulers and title block.
     private func createBackgroundLayers(metrics: DrawingMetrics) {
         // 1. Ruler Background
@@ -108,14 +113,14 @@ final class DrawingSheetView: NSView {
         let rulerBGPath = CGMutablePath()
         rulerBGPath.addRect(metrics.outerBounds)
         rulerBGPath.addRect(metrics.innerBounds)
-        
+
         let rulerBGLayer = CAShapeLayer()
         rulerBGLayer.path = rulerBGPath
         rulerBGLayer.fillRule = .evenOdd
         rulerBGLayer.fillColor = NSColor.white.cgColor
 
         managedLayers.append(rulerBGLayer)
-        
+
         // 2. Title Block Background
         // If there's a title block, create a separate background layer for it.
         if !cellValues.isEmpty {
@@ -131,7 +136,7 @@ final class DrawingSheetView: NSView {
     override var intrinsicContentSize: NSSize {
         sheetSize.canvasSize(scale: unitsPerMM, orientation: orientation)
     }
-    
+
     // MARK: Helpers
     fileprivate func safeFont(size: CGFloat, weight: NSFont.Weight) -> NSFont {
         NSFont.monospacedSystemFont(ofSize: size, weight: weight) ?? NSFont.systemFont(ofSize: size, weight: weight)

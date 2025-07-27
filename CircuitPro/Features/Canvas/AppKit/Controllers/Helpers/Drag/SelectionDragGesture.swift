@@ -3,7 +3,6 @@
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 7/15/25.
-//  Refactored 17/07/25 – stripped connection-specific logic.
 //
 
 import AppKit
@@ -18,8 +17,8 @@ final class SelectionDragGesture: CanvasDragGesture {
 
     // Caches for original positions of items being dragged
     private var originalElementPositions: [UUID: CGPoint] = [:]
-    private var originalTextPositions:    [UUID: CGPoint] = [:]
-    
+    private var originalTextPositions: [UUID: CGPoint] = [:]
+
     /// The starting position of the specific item that was hit by the cursor.
     /// This serves as the anchor point for grid-snapping calculations, ensuring
     /// that dragging an off-grid item onto a new grid works predictably.
@@ -27,10 +26,9 @@ final class SelectionDragGesture: CanvasDragGesture {
 
     init(workbench: WorkbenchView) { self.workbench = workbench }
 
-    // MARK: – Begin
-    func begin(at p: CGPoint, event: NSEvent) -> Bool {
+    func begin(at point: CGPoint, event: NSEvent) -> Bool {
         let hitTarget = workbench.hitTestService.hitTest(
-            at: p,
+            at: point,
             elements: workbench.elements,
             schematicGraph: workbench.schematicGraph,
             magnification: workbench.magnification
@@ -43,7 +41,7 @@ final class SelectionDragGesture: CanvasDragGesture {
         guard isDraggable else {
             return false
         }
-        
+
         // Set the anchor point for the drag. This is the starting position of the
         // item actually hit by the cursor, which allows for correct grid snapping
         // even if the item itself is currently off-grid.
@@ -76,35 +74,31 @@ final class SelectionDragGesture: CanvasDragGesture {
 
             // If the element is not selected, check if it's a symbol with selected texts.
             if case .symbol(let symbol) = element {
-                for text in symbol.anchoredTexts {
-                    if workbench.selectedIDs.contains(text.id) {
-                        originalTextPositions[text.id] = text.position
-                    }
+                for text in symbol.anchoredTexts
+                where workbench.selectedIDs.contains(text.id) {
+                    originalTextPositions[text.id] = text.position
                 }
             }
         }
 
         // Tell the schematic graph to prepare for a drag
         workbench.schematicGraph.beginDrag(selectedIDs: workbench.selectedIDs)
-        
+
         return true
     }
 
     // MARK: – Drag
-    func drag(to p: CGPoint) {
-        guard let o = origin else { return }
+    func drag(to point: CGPoint) {
+        guard let origin else { return }
 
-        let rawDelta = p - o
+        let rawDelta = point - origin
 
         if !didMove && hypot(rawDelta.x, rawDelta.y) < threshold {
             return
         }
         didMove = true
-        
-        // The old implementation snapped the delta directly, which caused issues
-        // when an item's original position was not on the current grid.
-        //
-        // The new implementation calculates the move delta by first determining
+
+        // Calculates the move delta by first determining
         // the anchor item's ideal new position, snapping that to the grid, and
         // then calculating a delta from the anchor's original position. This
         // ensures the entire selection moves correctly onto the new grid.
@@ -115,11 +109,10 @@ final class SelectionDragGesture: CanvasDragGesture {
             moveDelta = snappedNewAnchorPos - anchor
         } else {
             // Fallback to the old method if no anchor was set (should not happen in normal flow).
-            moveDelta = CGPoint(x: workbench.snapDelta(rawDelta.x),
-                                y: workbench.snapDelta(rawDelta.y))
+            moveDelta = CGPoint(x: workbench.snapDelta(rawDelta.x), y: workbench.snapDelta(rawDelta.y))
         }
 
-        // --- Part 1: Move all selected elements (top-level and nested) ---
+        // Part 1: Move all selected elements (top-level and nested)
         if !originalElementPositions.isEmpty || !originalTextPositions.isEmpty {
             var updatedElements = workbench.elements
             for i in updatedElements.indices {
@@ -153,7 +146,7 @@ final class SelectionDragGesture: CanvasDragGesture {
             workbench.onUpdate?(updatedElements)
         }
 
-        // --- Part 2: Update the schematic drag ---
+        // Part 2: Update the schematic drag
         workbench.schematicGraph.updateDrag(by: moveDelta)
     }
 
@@ -164,7 +157,7 @@ final class SelectionDragGesture: CanvasDragGesture {
             commitTextMovement()
             workbench.schematicGraph.endDrag()
         }
-        
+
         origin = nil
         dragAnchor = nil
         originalElementPositions.removeAll()
@@ -196,7 +189,9 @@ final class SelectionDragGesture: CanvasDragGesture {
 
                 if text.isFromDefinition {
                     // This text is based on a library definition. We find its override and update it.
-                    if let index = newInstance.anchoredTextOverrides.firstIndex(where: { $0.definitionID == text.sourceDataID }) {
+                    if let index = newInstance.anchoredTextOverrides.firstIndex(where: {
+                        $0.definitionID == text.sourceDataID
+                    }) {
                         newInstance.anchoredTextOverrides[index].relativePositionOverride = newRelativePosition
                     } else {
                         // If no override exists, we must create one.
@@ -215,7 +210,7 @@ final class SelectionDragGesture: CanvasDragGesture {
                     }
                 }
             }
-            
+
             // Assign the modified instance back to the symbol and update the element in the main array.
             symbol.instance = newInstance
             updatedElements[i] = .symbol(symbol)

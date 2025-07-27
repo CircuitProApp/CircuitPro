@@ -12,22 +12,24 @@ import AppKit
 final class ToolActionController {
 
     unowned let workbench: WorkbenchView
-    let hitTest: WorkbenchHitTestService   // kept for future use
+    let hitTest: WorkbenchHitTestService
 
-    init(workbench: WorkbenchView,
-         hitTest:   WorkbenchHitTestService) {
+    init(
+        workbench: WorkbenchView,
+        hitTest: WorkbenchHitTestService
+    ) {
         self.workbench = workbench
-        self.hitTest   = hitTest
+        self.hitTest = hitTest
     }
 
     /// Returns `true` when the event was consumed.
-    func handleMouseDown(at p: CGPoint, event: NSEvent) -> Bool {
+    func handleMouseDown(at point: CGPoint, event: NSEvent) -> Bool {
 
         guard var tool = workbench.selectedTool,
               tool.id != "cursor" else { return false }
 
-        let snapped = workbench.snap(p)
-        
+        let snapped = workbench.snap(point)
+
         // Perform a hit-test to create a rich context for the tool.
         let hitTarget = workbench.hitTestService.hitTest(
             at: snapped,
@@ -39,11 +41,11 @@ final class ToolActionController {
         let ctx = CanvasToolContext(
             existingPinCount: workbench.elements.reduce(0) { $1.isPin ? $0 + 1 : $0 },
             existingPadCount: workbench.elements.reduce(0) { $1.isPad ? $0 + 1 : $0 },
-            selectedLayer:    workbench.selectedLayer,
-            magnification:    workbench.magnification,
-            hitTarget:        hitTarget,
-            schematicGraph:   workbench.schematicGraph,
-            clickCount:       event.clickCount
+            selectedLayer: workbench.selectedLayer,
+            magnification: workbench.magnification,
+            hitTarget: hitTarget,
+            schematicGraph: workbench.schematicGraph,
+            clickCount: event.clickCount
         )
 
         let result = tool.handleTap(at: snapped, context: ctx)
@@ -55,10 +57,10 @@ final class ToolActionController {
                 workbench.onPrimitiveAdded?(prim.id, ctx.selectedLayer)
             }
             workbench.onUpdate?(workbench.elements)
-        
+
         case .schematicModified:
             break
-            
+
         case .noResult:
             break
         }

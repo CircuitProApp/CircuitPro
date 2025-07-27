@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 7/15/25.
 //
 
-
 import AppKit
 
 /// Tracks a mouse-based rotation gesture for the current selection.
@@ -21,8 +20,8 @@ final class RotationGestureController {
     }
 
     // starts a new gesture (invoked from the “R” key shortcut)
-    func begin(at p: CGPoint) {
-        origin   = p
+    func begin(at point: CGPoint) {
+        origin = point
         isActive = true
     }
 
@@ -34,11 +33,12 @@ final class RotationGestureController {
 
     // called from mouse-move to update the angle
     func update(to cursor: CGPoint) {
-        guard isActive, let o = origin else { return }
+        guard isActive, let origin else { return }
 
-        var angle = atan2(cursor.y - o.y, cursor.x - o.x)
+        var angle = atan2(cursor.y - origin.y, cursor.x - origin.x)
+
         if !NSEvent.modifierFlags.contains(.shift) {
-            let step: CGFloat = .pi / 12          // 15 °
+            let step: CGFloat = .pi / 12 // 15 °
             angle = round(angle / step) * step
         }
 

@@ -1,3 +1,11 @@
+//
+//  PaperSize.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 7/27/25.
+//
+
+// swiftlint:disable identifier_name
 import CoreGraphics
 
 enum PaperOrientation { case portrait, landscape }
@@ -30,25 +38,25 @@ enum PaperSize {
     }
 
     enum ANSI {
-        case letter, tabloid, c, d, e
+        case a, b, c, d, e
 
         var dimensions: (width: Double, height: Double) {
             switch self {
-            case .letter:  return (215.9, 279.4)   //  8.5" × 11"
-            case .tabloid: return (279.4, 431.8)   // 11" × 17"
-            case .c:       return (431.8, 558.8)   // 17" × 22"
-            case .d:       return (558.8, 863.6)   // 22" × 34"
-            case .e:       return (863.6, 1117.6)  // 34" × 44"
+            case .a:  return (215.9, 279.4)     // 8.5" × 11"
+            case .b: return (279.4, 431.8)      // 11" × 17"
+            case .c: return (431.8, 558.8)      // 17" × 22"
+            case .d: return (558.8, 863.6)      // 22" × 34"
+            case .e: return (863.6, 1117.6)     // 34" × 44"
             }
         }
 
         var name: String {
             switch self {
-            case .letter:  return "Letter"
-            case .tabloid: return "Tabloid"
-            case .c:       return "ANSI C"
-            case .d:       return "ANSI D"
-            case .e:       return "ANSI E"
+            case .a:  return "ANSI A"
+            case .b: return "ANSI B"
+            case .c: return "ANSI C"
+            case .d: return "ANSI D"
+            case .e: return "ANSI E"
             }
         }
     }
@@ -58,20 +66,20 @@ enum PaperSize {
 
     var dimensions: (width: Double, height: Double) {
         switch self {
-        case .iso(let s):  return s.dimensions
-        case .ansi(let s): return s.dimensions
+        case .iso(let size):  return size.dimensions
+        case .ansi(let size): return size.dimensions
         }
     }
 
     var aspectRatio: CGFloat {
-        let (w, h) = dimensions
-        return w / h
+        let (width, height) = dimensions
+        return width / height
     }
 
     var name: String {
         switch self {
-        case .iso(let s):  return s.name
-        case .ansi(let s): return s.name
+        case .iso(let size):  return size.name
+        case .ansi(let size): return size.name
         }
     }
 
@@ -80,12 +88,12 @@ enum PaperSize {
         orientation: PaperOrientation = .landscape
     ) -> CGSize {
         let (wMM, hMM) = dimensions
-        let w = CGFloat(wMM) * unitsPerMM
-        let h = CGFloat(hMM) * unitsPerMM
+        let width = CGFloat(wMM) * unitsPerMM
+        let height = CGFloat(hMM) * unitsPerMM
 
         switch orientation {
-        case .portrait:  return CGSize(width: w, height: h)
-        case .landscape: return CGSize(width: h, height: w)
+        case .portrait: return CGSize(width: width, height: height)
+        case .landscape: return CGSize(width: height, height: width)
         }
     }
 

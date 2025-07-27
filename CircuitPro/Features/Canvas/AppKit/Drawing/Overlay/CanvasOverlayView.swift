@@ -37,18 +37,18 @@ class CanvasOverlayView: NSView {
 
     // MARK: - Drawing
     final func updateDrawing() {
-        guard let p = makeDrawingParameters() else { shapeLayer.path = nil; return }
+        guard let parameters = makeDrawingParameters() else { shapeLayer.path = nil; return }
 
         CATransaction.begin(); CATransaction.setDisableActions(true)
         let scale = 1 / max(magnification, .ulpOfOne)
 
-        shapeLayer.path          = p.path
-        shapeLayer.fillColor     = p.fillColor
-        shapeLayer.strokeColor   = p.strokeColor
-        shapeLayer.lineCap       = p.lineCap
-        shapeLayer.lineJoin      = p.lineJoin
-        shapeLayer.lineWidth     = p.lineWidth * scale
-        shapeLayer.lineDashPattern = p.lineDashPattern?.map { NSNumber(value: $0.doubleValue * scale) }
+        shapeLayer.path          = parameters.path
+        shapeLayer.fillColor     = parameters.fillColor
+        shapeLayer.strokeColor   = parameters.strokeColor
+        shapeLayer.lineCap       = parameters.lineCap
+        shapeLayer.lineJoin      = parameters.lineJoin
+        shapeLayer.lineWidth     = parameters.lineWidth * scale
+        shapeLayer.lineDashPattern = parameters.lineDashPattern?.map { NSNumber(value: $0.doubleValue * scale) }
         CATransaction.commit()
     }
 }

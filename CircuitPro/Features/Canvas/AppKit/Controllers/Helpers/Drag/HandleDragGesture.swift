@@ -15,16 +15,16 @@ final class HandleDragGesture: CanvasDragGesture {
 
     init(workbench: WorkbenchView) { self.workbench = workbench }
 
-    func begin(at p: CGPoint, event: NSEvent) -> Bool {
+    func begin(at point: CGPoint, event: NSEvent) -> Bool {
         guard workbench.selectedIDs.count == 1 else { return false }
         let tol = 8.0 / workbench.magnification
 
         for element in workbench.elements
         where workbench.selectedIDs.contains(element.id) && element.isPrimitiveEditable {
-            for h in element.handles()
-            where hypot(p.x - h.position.x, p.y - h.position.y) < tol {
-                active = (element.id, h.kind)
-                if let opp = h.kind.opposite,
+            for handle in element.handles()
+            where hypot(p.x - handle.position.x, p.y - handle.position.y) < tol {
+                active = (element.id, handle.kind)
+                if let opp = handle.kind.opposite,
                    let other = element.handles().first(where: { $0.kind == opp }) {
                     frozenOppositeWorld = other.position
                 }
@@ -34,11 +34,11 @@ final class HandleDragGesture: CanvasDragGesture {
         return false
     }
 
-    func drag(to p: CGPoint) {
+    func drag(to point: CGPoint) {
         guard let (id, kind) = active else { return }
         var updated = workbench.elements
-        let snapped = workbench.snap(p)
-        
+        let snapped = workbench.snap(point)
+
         for i in updated.indices where updated[i].id == id {
             updated[i].updateHandle(kind, to: snapped, opposite: frozenOppositeWorld)
             workbench.elements = updated
@@ -48,7 +48,7 @@ final class HandleDragGesture: CanvasDragGesture {
     }
 
     func end() {
-        active               = nil
-        frozenOppositeWorld  = nil
+        active = nil
+        frozenOppositeWorld = nil
     }
 }

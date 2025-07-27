@@ -30,14 +30,11 @@ struct WorkbenchHitTestService {
         let tolerance = 5.0 / magnification
 
         // 1. Hit-test the schematic graph (vertices and edges).
-        // This is updated to return the new CanvasHitTarget struct.
         if let graphHit = hitTestSchematicGraph(at: point, graph: schematicGraph, tolerance: tolerance) {
             return graphHit
         }
 
         // 2. If no connection was hit, check the canvas elements.
-        // This part requires NO changes. It will correctly receive and return the fully-formed
-        // CanvasHitTarget from the recursive hitTest calls on the elements.
         for element in elements.reversed() {
             if let hit = element.hitTest(point, tolerance: tolerance) {
                 return hit
@@ -65,7 +62,7 @@ struct WorkbenchHitTestService {
                 case 2: type = .corner
                 default: type = .junction
                 }
-                
+
                 // A vertex was hit. Vertices are interactive but not selectable entities themselves.
                 // We create a CanvasHitTarget with an empty ownerPath.
                 return CanvasHitTarget(
@@ -81,11 +78,16 @@ struct WorkbenchHitTestService {
         for edge in graph.edges.values {
             guard let startVertex = graph.vertices[edge.start],
                   let endVertex = graph.vertices[edge.end] else { continue }
-            
+
             // Using a simple distance calculation for the edge hit test.
-            if isPointOnLineSegment(point: point, start: startVertex.point, end: endVertex.point, tolerance: tolerance) {
+            if isPointOnLineSegment(
+                point: point,
+                start: startVertex.point,
+                end: endVertex.point,
+                tolerance: tolerance
+            ) {
                 let orientation: LineOrientation = (startVertex.point.x == endVertex.point.x) ? .vertical : .horizontal
-                
+
                 // An edge was hit. Edges ARE selectable.
                 // The ownerPath contains the edge's own ID.
                 return CanvasHitTarget(
@@ -102,21 +104,37 @@ struct WorkbenchHitTestService {
 }
 
 /// Utility function to check if a point is close to a line segment.
-private func isPointOnLineSegment(point: CGPoint, start p1: CGPoint, end p2: CGPoint, tolerance: CGFloat) -> Bool {
-    let boundingBox = CGRect(origin: p1, size: .zero).union(.init(origin: p2, size: .zero)).insetBy(dx: -tolerance, dy: -tolerance)
+private func isPointOnLineSegment(
+    point: CGPoint,
+    start startPoint: CGPoint,
+    end endPoint: CGPoint,
+    tolerance: CGFloat
+) -> Bool {
+    let boundingBox = CGRect(origin: startPoint, size: .zero)
+        .union(.init(origin: endPoint, size: .zero))
+        .insetBy(dx: -tolerance, dy: -tolerance)
     guard boundingBox.contains(point) else { return false }
 
-    let dx = p2.x - p1.x
-    let dy = p2.y - p1.y
-    
-    if dx == 0 && dy == 0 { return hypot(point.x - p1.x, point.y - p1.y) < tolerance }
+    let deltaX = endPoint.x - startPoint.x
+    let deltaY = endPoint.y - startPoint.y
 
-    let t = ((point.x - p1.x) * dx + (point.y - p1.y) * dy) / (dx * dx + dy * dy)
-    
+    if deltaX == 0 && deltaY == 0 {
+        return hypot(point.x - startPoint.x, point.y - startPoint.y) < tolerance
+    }
+
+    let projectionFactor = ((point.x - startPoint.x) * deltaX + (point.y - startPoint.y) * deltaY) / (deltaX * deltaX + deltaY * deltaY) // swiftlint:disable:this line_length
+
     let closestPoint: CGPoint
-    if t < 0 { closestPoint = p1 }
-    else if t > 1 { closestPoint = p2 }
-    else { closestPoint = CGPoint(x: p1.x + t * dx, y: p1.y + t * dy) }
-    
+    if projectionFactor < 0 {
+        closestPoint = startPoint
+    } else if projectionFactor > 1 {
+        closestPoint = endPoint
+    } else {
+        closestPoint = CGPoint(
+            x: startPoint.x + projectionFactor * deltaX,
+            y: startPoint.y + projectionFactor * deltaY
+        )
+    }
+
     return hypot(point.x - closestPoint.x, point.y - closestPoint.y) < tolerance
 }
