@@ -10,7 +10,7 @@ import CoreGraphics
 import AppKit
 
 /// A type-erased wrapper so we can store heterogeneous primitives in one array.
-enum AnyPrimitive: GraphicPrimitive {
+enum AnyPrimitive: GraphicPrimitive, Identifiable, Hashable {
 
     case line(LinePrimitive)
     case rectangle(RectanglePrimitive)

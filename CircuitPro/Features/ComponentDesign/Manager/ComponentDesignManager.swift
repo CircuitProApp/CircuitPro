@@ -228,9 +228,9 @@ extension ComponentDesignManager {
         return Binding<Pin>(
             get: {
                 guard let index = self.symbolElementIndexMap[id],
-                      case .pin(let pin) = self.symbolElements[safe: index]
+                      case .pin(let currentPin) = self.symbolElements[safe: index]
                 else { return pin }
-                return pin
+                return currentPin
             },
             set: { newValue in
                 if let index = self.symbolElementIndexMap[id],
@@ -271,9 +271,9 @@ extension ComponentDesignManager {
         return Binding<Pad>(
             get: {
                 guard let index = self.footprintElementIndexMap[id],
-                      case .pad(let pad) = self.footprintElements[safe: index]
+                      case .pad(let currentPad) = self.footprintElements[safe: index]
                 else { return pad }
-                return pad
+                return currentPad
             },
             set: { newValue in
                 if let index = self.footprintElementIndexMap[id],
@@ -282,5 +282,62 @@ extension ComponentDesignManager {
                 }
             }
         )
+    }
+}
+
+// MARK: - Symbol primitives
+extension ComponentDesignManager {
+    var symbolPrimitives: [AnyPrimitive] {
+        symbolElements.compactMap {
+            if case .primitive(let prim) = $0 { return prim }
+            return nil
+        }
+    }
+
+    var selectedSymbolPrimitives: [AnyPrimitive] {
+        symbolElements.compactMap {
+            if case .primitive(let prim) = $0,
+               selectedSymbolElementIDs.contains(prim.id) { return prim }
+            return nil
+        }
+    }
+
+    func bindingForPrimitive(with id: UUID) -> Binding<AnyPrimitive>? {
+        guard let index = symbolElementIndexMap[id],
+              case .primitive(let prim) = symbolElements[safe: index] else { return nil }
+
+        return Binding(
+            get: {
+                guard let idx = self.symbolElementIndexMap[id],
+                      case .primitive(let p) = self.symbolElements[safe: idx] else { return prim }
+                return p
+            },
+            set: { newValue in
+                if let idx = self.symbolElementIndexMap[id],
+                   self.symbolElements.indices.contains(idx) {
+                    self.symbolElements[idx] = .primitive(newValue)
+                }
+            }
+        )
+    }
+}
+
+import SwiftUI
+
+enum EditorTab: String, CaseIterable, Identifiable {
+    case elements  = "Elements"
+    case geometry  = "Geometry"
+    var id: Self { self }
+}
+
+struct EditorTabPicker: View {
+    @Binding var selection: EditorTab
+    var body: some View {
+        Picker("", selection: $selection) {
+            ForEach(EditorTab.allCases) { tab in
+                Text(tab.rawValue).tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 }
