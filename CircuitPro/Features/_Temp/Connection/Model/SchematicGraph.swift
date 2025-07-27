@@ -5,6 +5,8 @@
 //  Created by Giorgi Tchelidze on 7/17/25.
 //
 
+//swiftlint:disable cyclomatic_complexity
+//swiftlint:disable identifier_name
 import Foundation
 import SwiftUI
 
@@ -19,11 +21,11 @@ struct ConnectionVertex: Identifiable, Hashable {
     var point: CGPoint
     var ownership: VertexOwnership
     var netID: UUID?
-    
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+
     static func == (lhs: ConnectionVertex, rhs: ConnectionVertex) -> Bool {
         lhs.id == rhs.id
     }
@@ -44,19 +46,19 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         let vertexCount: Int
         let edgeCount: Int
     }
-
+    
     enum ConnectionStrategy {
         case horizontalThenVertical
         case verticalThenHorizontal
     }
-
+    
     // MARK: - Graph State
     private(set) var vertices: [ConnectionVertex.ID: ConnectionVertex] = [:]
     private(set) var edges: [ConnectionEdge.ID: ConnectionEdge] = [:]
     private(set) var adjacency: [ConnectionVertex.ID: Set<ConnectionEdge.ID>] = [:]
     private var netNames: [UUID: String] = [:]
     private var nextNetNumber = 1
-    
+
     // MARK: - Drag State
     private struct DragState {
         let originalVertexPositions: [UUID: CGPoint]
@@ -65,13 +67,13 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         var newVertices: Set<UUID> = []
     }
     private var dragState: DragState?
-    
+
     // MARK: - Public API
     /// Renames a net.
     public func setName(_ name: String, for netID: UUID) {
         netNames[netID] = name
     }
-
+    
     /// The authoritative method for getting a vertex for a given point.
     /// It finds an existing vertex, splits an edge if the point is on one, or creates a new vertex.
     func getOrCreateVertex(at point: CGPoint) -> ConnectionVertex.ID {
@@ -85,7 +87,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         // The point is in empty space.
         return addVertex(at: point, ownership: .free).id
     }
-
+    
     /// Finds a vertex for a pin, or creates one, promoting a junction if necessary.
     func getOrCreatePinVertex(at point: CGPoint, symbolID: UUID, pinID: UUID) -> ConnectionVertex.ID {
         let ownership: VertexOwnership = .pin(symbolID: symbolID, pinID: pinID)
@@ -101,19 +103,23 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         // The pin is in empty space.
         return addVertex(at: point, ownership: ownership).id
     }
-
+    
     /// Creates a new orthogonal connection and normalizes the graph.
-    func connect(from startID: ConnectionVertex.ID, to endID: ConnectionVertex.ID, preferring strategy: ConnectionStrategy = .horizontalThenVertical) {
+    func connect(
+        from startID: ConnectionVertex.ID,
+        to endID: ConnectionVertex.ID,
+        preferring strategy: ConnectionStrategy = .horizontalThenVertical
+    ) {
         guard let startVertex = vertices[startID], let endVertex = vertices[endID] else {
             assertionFailure("Cannot connect non-existent vertices.")
             return
         }
-        
+
         var affectedVertices: Set<ConnectionVertex.ID> = [startID, endID]
-        let from = startVertex.point
-        let to = endVertex.point
-        
-        if from.x == to.x || from.y == to.y {
+        let startPoint = startVertex.point
+        let destinationPoint = endVertex.point
+
+        if startPoint.x == destinationPoint.x || startPoint.y == destinationPoint.y {
             connectStraightLine(from: startVertex, to: endVertex, affectedVertices: &affectedVertices)
         } else {
             handleLShapeConnection(
@@ -156,9 +162,8 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
             vertices[id]?.point = newPoint
         }
     }
-    
-    // MARK: - Drag Lifecycle
 
+    // MARK: - Drag Lifecycle
     /// Call this when a drag gesture begins.
     /// It caches the initial state of the graph needed for calculations.
     public func beginDrag(selectedIDs: Set<UUID>) {
@@ -172,7 +177,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
             return false
         }
         let pinVertexIDs = Set(pinVertices.map(\.id))
-        
+
         // 2. Find vertices connected to selected edges
         let selectedEdges = self.edges.values.filter { selectedIDs.contains($0.id) }
         let edgeVertexIDs = Set(selectedEdges.flatMap { [$0.start, $0.end] })
@@ -186,12 +191,12 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
             verticesToMove: allMovableVertexIDs
         )
     }
-    
+
     /// Call this repeatedly as the user drags.
     /// It contains the complex BFS logic to update vertex positions.
     public func updateDrag(by delta: CGPoint) {
         guard var state = dragState else { return }
-        
+
         // MARK: - Pre-processing
         // Detach any selected pins that are being dragged off-axis.
         for vertexID in state.verticesToMove {
@@ -222,7 +227,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
 
         // MARK: - Position Calculation
         var newPositions: [UUID: CGPoint] = [:]
-        
+
         // Step 1: Calculate naive new positions for all moving vertices.
         for id in state.verticesToMove {
             if let origin = state.originalVertexPositions[id] {
@@ -247,36 +252,36 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
             let originalVertexPos = state.originalVertexPositions[vertexID]!
             let originalMovingNeighborPos = state.originalVertexPositions[movingNeighbor.id]!
             let newMovingNeighborPos = newPositions[movingNeighbor.id]!
-
+            
             let wasHorizontal = abs(originalVertexPos.y - originalMovingNeighborPos.y) < 1e-6
-
+            
             if wasHorizontal {
                 newPositions[vertexID] = CGPoint(x: staticPinNeighbor.point.x, y: newMovingNeighborPos.y)
             } else {
                 newPositions[vertexID] = CGPoint(x: newMovingNeighborPos.x, y: staticPinNeighbor.point.y)
             }
         }
-
+        
         // Step 3: Propagate constraints via BFS to unselected parts of the circuit.
         var queue: [UUID] = Array(state.verticesToMove)
         var head = 0
         while head < queue.count {
             let junctionID = queue[head]; head += 1
             guard let junctionNewPos = newPositions[junctionID] else { continue }
-
+            
             for edgeID in adjacency[junctionID] ?? [] {
                 guard let edge = edges[edgeID] else { continue }
                 let anchorID = edge.start == junctionID ? edge.end : edge.start
-
+                
                 if newPositions[anchorID] != nil { continue } // Already processed.
-
+                
                 guard let anchorOrigPos = state.originalVertexPositions[anchorID],
                       let junctionOrigPos = state.originalVertexPositions[junctionID] else { continue }
-
+                
                 let wasHorizontal = abs(anchorOrigPos.y - junctionOrigPos.y) < 1e-6
                 let isOffAxisPull = (wasHorizontal && abs(junctionNewPos.y - junctionOrigPos.y) > 1e-6) ||
                 (!wasHorizontal && abs(junctionNewPos.x - junctionOrigPos.x) > 1e-6)
-
+                
                 if var anchorVertex = vertices[anchorID], case .pin = anchorVertex.ownership {
                     if isOffAxisPull {
                         // This is an unselected pin being pulled off-axis. Detach it.
@@ -464,8 +469,8 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         // 1. Find the entire continuous run of collinear vertices
         while let current = queue.popLast() {
             run.append(current)
-            let (h, v) = getCollinearNeighbors(for: current)
-            (isHorizontal ? h : v).forEach { neighbor in
+            let (horizontal, vertical) = getCollinearNeighbors(for: current)
+            (isHorizontal ? horizontal : vertical).forEach { neighbor in
                 if !visitedIDs.contains(neighbor.id) {
                     visitedIDs.insert(neighbor.id)
                     queue.append(neighbor)
@@ -485,8 +490,8 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
                 continue
             }
             
-            let (h, v) = getCollinearNeighbors(for: vertex)
-            let collinearNeighborCount = isHorizontal ? h.count : v.count
+            let (horizontal, vertical) = getCollinearNeighbors(for: vertex)
+            let collinearNeighborCount = isHorizontal ? horizontal.count : vertical.count
             
             // Keep a vertex if it's a branch point (T-junction) or a true net endpoint.
             if (adjacency[vertex.id]?.count ?? 0) > collinearNeighborCount {
@@ -677,7 +682,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     // MARK: - Graph Analysis
     func findVertex(at point: CGPoint) -> ConnectionVertex? {
         let tolerance: CGFloat = 1e-6
-        return vertices.values.first { v in abs(v.point.x - point.x) < tolerance && abs(v.point.y - point.y) < tolerance }
+        return vertices.values.first { value in abs(value.point.x - point.x) < tolerance && abs(value.point.y - point.y) < tolerance }
     }
     
     func findEdge(at point: CGPoint) -> ConnectionEdge? {

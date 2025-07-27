@@ -13,7 +13,7 @@ final class MarqueeSelectionGesture {
     unowned let workbench: WorkbenchView
 
     private var origin: CGPoint?
-    private var rect:   CGRect? {
+    private var rect: CGRect? {
         didSet { workbench.marqueeView?.rect = rect }
     }
     private var isAdditive: Bool = false
@@ -21,21 +21,21 @@ final class MarqueeSelectionGesture {
     init(workbench: WorkbenchView) { self.workbench = workbench }
 
     // start when the cursor tool is active and the hit-test finds nothing
-    func begin(at p: CGPoint, event: NSEvent) {
-        origin = p
-        rect   = nil
+    func begin(at point: CGPoint, event: NSEvent) {
+        origin = point
+        rect = nil
         isAdditive = event.modifierFlags.contains(.shift)
     }
 
-    func drag(to p: CGPoint) {
-        guard let o = origin else { return }
-        rect = CGRect(origin: o, size: .zero).union(CGRect(origin: p, size: .zero))
-        
-        guard let r = rect else { return }
+    func drag(to point: CGPoint) {
+        guard let origin else { return }
+        rect = CGRect(origin: origin, size: .zero).union(CGRect(origin: point, size: .zero))
+
+        guard let rect else { return }
 
         // 1. Select canvas elements
         let elementIDs = workbench.elements
-            .filter { $0.boundingBox.intersects(r) }
+            .filter { $0.boundingBox.intersects(rect) }
             .map(\.id)
 
         // 2. Select schematic edges
@@ -44,13 +44,13 @@ final class MarqueeSelectionGesture {
                   let endVertex = workbench.schematicGraph.vertices[edge.end] else {
                 return nil
             }
-            
+
             // Create a bounding box for the edge segment.
             let edgeRect = CGRect(origin: startVertex.point, size: .zero)
                 .union(.init(origin: endVertex.point, size: .zero))
-            
+
             // Select the edge if its bounding box intersects the marquee.
-            return r.intersects(edgeRect) ? edge.id : nil
+            return rect.intersects(edgeRect) ? edge.id : nil
         }
 
         // 3. Combine and update marquee selection
@@ -68,7 +68,7 @@ final class MarqueeSelectionGesture {
         }
         workbench.marqueeSelectedIDs.removeAll()
         origin = nil
-        rect   = nil
+        rect = nil
         isAdditive = false
     }
 

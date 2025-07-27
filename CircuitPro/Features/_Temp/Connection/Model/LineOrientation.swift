@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum LineOrientation {
+enum LineOrientation {
     case horizontal
     case vertical
 }

@@ -22,7 +22,7 @@ final class HandleDragGesture: CanvasDragGesture {
         for element in workbench.elements
         where workbench.selectedIDs.contains(element.id) && element.isPrimitiveEditable {
             for handle in element.handles()
-            where hypot(p.x - handle.position.x, p.y - handle.position.y) < tol {
+            where hypot(point.x - handle.position.x, point.y - handle.position.y) < tol {
                 active = (element.id, handle.kind)
                 if let opp = handle.kind.opposite,
                    let other = element.handles().first(where: { $0.kind == opp }) {

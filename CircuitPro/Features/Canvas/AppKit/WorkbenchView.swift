@@ -12,27 +12,25 @@ final class WorkbenchView: NSView {
 
     // MARK: Sub-views
     weak var backgroundView: DottedBackgroundView?
-    weak var sheetView:      DrawingSheetView?
-    weak var elementsView:   ElementsView?
+    weak var sheetView: DrawingSheetView?
+    weak var elementsView: ElementsView?
     weak var connectionsView: ConnectionsView?
-    weak var previewView:    PreviewView?
-    weak var handlesView:    HandlesView?
-    weak var marqueeView:    MarqueeView?
+    weak var previewView: PreviewView?
+    weak var handlesView: HandlesView?
+    weak var marqueeView: MarqueeView?
     weak var crosshairsView: CrosshairsView?
-    weak var guideView:      GuideView?
+    weak var guideView: GuideView?
 
     // MARK: Model / view-state
     var elements: [CanvasElement] = [] {
         didSet {
             elementsView?.elements  = elements
             handlesView?.elements   = elements
-    
-            
             // Update the schematic graph with new pin positions
             syncPinPositionsToGraph()
         }
     }
-    
+
     var schematicGraph: SchematicGraph = .init() {
         didSet {
             connectionsView?.schematicGraph = schematicGraph
@@ -70,16 +68,16 @@ final class WorkbenchView: NSView {
             guard magnification != oldValue else { return }
             backgroundView?.magnification = magnification
             crosshairsView?.magnification = magnification
-            marqueeView?.magnification    = magnification
-            previewView?.magnification    = magnification
-            handlesView?.magnification    = magnification
+            marqueeView?.magnification = magnification
+            previewView?.magnification = magnification
+            handlesView?.magnification = magnification
             connectionsView?.magnification = magnification
-            guideView?.magnification      = magnification
+            guideView?.magnification = magnification
         }
     }
 
     var isSnappingEnabled: Bool = true
-    var snapGridSize:      CGFloat = 10.0 {
+    var snapGridSize: CGFloat = 10.0 {
         didSet {
             backgroundView?.unitSpacing = snapGridSize
         }
@@ -88,16 +86,16 @@ final class WorkbenchView: NSView {
     var showGuides: Bool = false {
         didSet {
             guard showGuides != oldValue else { return }
-            
+
             let origin = showGuides ? CGPoint(x: bounds.midX, y: bounds.midY) : .zero
-            
+
             backgroundView?.gridOrigin = origin
-            
+
             if let guideView = self.guideView {
                 guideView.isHidden = !showGuides
                 guideView.origin = showGuides ? origin : nil
             }
-            
+
             backgroundView?.needsLayout = true
         }
     }
@@ -110,24 +108,22 @@ final class WorkbenchView: NSView {
 
     var sheetOrientation: PaperOrientation = .landscape
 
-    var sheetCellValues: [String:String] = [:] {
+    var sheetCellValues: [String: String] = [:] {
         didSet { sheetView?.cellValues = sheetCellValues }
     }
 
-    
-
     // MARK: Callbacks
-    var onUpdate:          (([CanvasElement]) -> Void)?
-    var onSelectionChange: ((Set<UUID>)      -> Void)?
-    var onPrimitiveAdded:  ((UUID, CanvasLayer) -> Void)?
-    var onMouseMoved:      ((CGPoint)        -> Void)?
-    var onPinHoverChange:  ((UUID?)          -> Void)?
+    var onUpdate: (([CanvasElement]) -> Void)?
+    var onSelectionChange: ((Set<UUID>) -> Void)?
+    var onPrimitiveAdded: ((UUID, CanvasLayer) -> Void)?
+    var onMouseMoved: ((CGPoint) -> Void)?
+    var onPinHoverChange: ((UUID?) -> Void)?
     var onComponentDropped: ((TransferableComponent, CGPoint) -> Void)?
 
     // MARK: Controllers
-    lazy var layout     = WorkbenchLayoutController(host: self)
-    let  hitTestService    = WorkbenchHitTestService()
-    lazy var input      = WorkbenchInputCoordinator(workbench: self, hitTest: hitTestService)
+    lazy var layout = WorkbenchLayoutController(host: self)
+    let hitTestService = WorkbenchHitTestService()
+    lazy var input = WorkbenchInputCoordinator(workbench: self, hitTest: hitTestService)
 
     var isRotating: Bool { input.isRotating }
 
@@ -139,9 +135,9 @@ final class WorkbenchView: NSView {
         super.init(frame: frame)
         wantsLayer = true
         layer?.backgroundColor = NSColor.white.cgColor
-        
+
         self.registerForDraggedTypes([.transferableComponent])
-        
+
         _ = layout
     }
 
@@ -161,22 +157,24 @@ final class WorkbenchView: NSView {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
-        let area = NSTrackingArea(rect: bounds,
-                                  options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
-                                  owner: self,
-                                  userInfo: nil)
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
         addTrackingArea(area)
     }
 
-    override func mouseMoved(with e: NSEvent)   { input.mouseMoved(e) }
-    override func mouseEntered(with e: NSEvent) { input.mouseMoved(e) }
-    override func mouseExited(with e: NSEvent)  { input.mouseExited() }
-    override func mouseDown(with e: NSEvent)    { input.mouseDown(e) }
-    override func mouseDragged(with e: NSEvent) { input.mouseDragged(e) }
-    override func mouseUp(with e: NSEvent)      { input.mouseUp(e) }
+    override func mouseMoved(with event: NSEvent) { input.mouseMoved(event) }
+    override func mouseEntered(with event: NSEvent) { input.mouseMoved(event) }
+    override func mouseExited(with event: NSEvent) { input.mouseExited() }
+    override func mouseDown(with event: NSEvent) { input.mouseDown(event) }
+    override func mouseDragged(with event: NSEvent) { input.mouseDragged(event) }
+    override func mouseUp(with event: NSEvent) { input.mouseUp(event) }
 
-    override func keyDown(with e: NSEvent) {
-        if !input.keyDown(e) { super.keyDown(with: e) }
+    override func keyDown(with event: NSEvent) {
+        if !input.keyDown(event) { super.keyDown(with: event) }
     }
 
     // MARK: Public helpers
@@ -184,11 +182,13 @@ final class WorkbenchView: NSView {
 
     var snapService: SnapService {
         let origin = showGuides ? CGPoint(x: bounds.midX, y: bounds.midY) : .zero
-        return SnapService(gridSize: snapGridSize,
-                           isEnabled: isSnappingEnabled,
-                           origin: origin)
+        return SnapService(
+            gridSize: snapGridSize,
+            isEnabled: isSnappingEnabled,
+            origin: origin
+        )
     }
-    
+
     /// Ensures the schematic graph has vertices for every symbol pin, that their
     /// positions are up-to-date, and that vertices for deleted symbols are removed.
     private func syncPinPositionsToGraph() {
@@ -205,7 +205,7 @@ final class WorkbenchView: NSView {
             }
             return false
         }
-        
+
         if !verticesToRemove.isEmpty {
             schematicGraph.delete(items: Set(verticesToRemove.map { $0.id }))
         }
@@ -213,7 +213,7 @@ final class WorkbenchView: NSView {
         // 3. Update existing pins and add new ones
         for element in elements {
             guard case .symbol(let symbolElement) = element else { continue }
-            
+
             let transform = CGAffineTransform(translationX: symbolElement.position.x, y: symbolElement.position.y)
                 .rotated(by: symbolElement.rotation)
 
@@ -238,9 +238,9 @@ final class WorkbenchView: NSView {
     }
 
     // old public helpers (still used by all gesture classes)
-    func snap(_ p: CGPoint) -> CGPoint    { snapService.snap(p) }
-    func snapDelta(_ v: CGFloat) -> CGFloat { snapService.snapDelta(v) }
-    
+    func snap(_ point: CGPoint) -> CGPoint { snapService.snap(point) }
+    func snapDelta(_ value: CGFloat) -> CGFloat { snapService.snapDelta(value) }
+
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         input.draggingEntered(sender)
     }
@@ -248,7 +248,7 @@ final class WorkbenchView: NSView {
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
         input.draggingUpdated(sender)
     }
-    
+
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         input.performDragOperation(sender)
     }

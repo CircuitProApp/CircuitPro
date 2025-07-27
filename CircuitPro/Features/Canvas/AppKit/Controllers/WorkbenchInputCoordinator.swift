@@ -12,24 +12,24 @@ final class WorkbenchInputCoordinator {
 
     // MARK: – Dependencies
     unowned let workbench: WorkbenchView
-    let      hitTest:  WorkbenchHitTestService
+    let hitTest: WorkbenchHitTestService
 
     // MARK: – Gesture helpers
-    private lazy var rotation   = RotationGestureController(workbench: workbench)
-    private lazy var marquee    = MarqueeSelectionGesture(workbench: workbench)
+    private lazy var rotation = RotationGestureController(workbench: workbench)
+    private lazy var marquee = MarqueeSelectionGesture(workbench: workbench)
     private lazy var handleDrag = HandleDragGesture(workbench: workbench)
-    private lazy var selDrag    = SelectionDragGesture(workbench: workbench)
-    private lazy var toolTap    = ToolActionController(workbench: workbench,
-                                                       hitTest:   hitTest)
-    private lazy var keyCmds    = WorkbenchKeyCommandController(workbench: workbench,
-                                                                coordinator: self)
+    private lazy var selDrag = SelectionDragGesture(workbench: workbench)
+    private lazy var toolTap = ToolActionController(workbench: workbench, hitTest: hitTest)
+    private lazy var keyCmds = WorkbenchKeyCommandController(workbench: workbench, coordinator: self)
 
     /// The drag recogniser that currently owns the pointer, if any.
     private var activeDrag: CanvasDragGesture?
 
     // MARK: – Init
-    init(workbench: WorkbenchView,
-         hitTest:   WorkbenchHitTestService) {
+    init(
+        workbench: WorkbenchView,
+        hitTest: WorkbenchHitTestService
+    ) {
         self.workbench = workbench
         self.hitTest   = hitTest
     }
@@ -38,23 +38,23 @@ final class WorkbenchInputCoordinator {
     var isRotating: Bool { rotation.active }
 
     // MARK: – Keyboard
-    func keyDown(_ e: NSEvent) -> Bool { keyCmds.handle(e) }
+    func keyDown(_ event: NSEvent) -> Bool { keyCmds.handle(event) }
 
     // MARK: – Mouse-move
-    func mouseMoved(_ e: NSEvent) {
-        let p = workbench.convert(e.locationInWindow, from: nil)
+    func mouseMoved(_ event: NSEvent) {
+        let point = workbench.convert(event.locationInWindow, from: nil)
 
         // Cross-hairs & coordinate read-out
-        let snapped = workbench.snap(p)
+        let snapped = workbench.snap(point)
         workbench.crosshairsView?.location = snapped
         workbench.onMouseMoved?(snapped)
 
         // Live hit-testing for cursor feedback
-        updateCursor(at: p)
+        updateCursor(at: point)
 
         // Preview & live rotation
-        rotation.update(to: p)
-        workbench.previewView?.updateMouseLocation(to: p)
+        rotation.update(to: point)
+        workbench.previewView?.updateMouseLocation(to: point)
     }
 
     func mouseExited() {
@@ -62,25 +62,21 @@ final class WorkbenchInputCoordinator {
     }
 
     // MARK: – Mouse-down
-    func mouseDown(_ e: NSEvent) {
+    func mouseDown(_ event: NSEvent) {
 
         if rotation.active { rotation.cancel(); return }
-        let p = workbench.convert(e.locationInWindow, from: nil)
-        if toolTap.handleMouseDown(at: p, event: e) { return }
+        let point = workbench.convert(event.locationInWindow, from: nil)
+        if toolTap.handleMouseDown(at: point, event: event) { return }
 
-        // The old code had drag logic outside this block, and a `return` inside,
-        // which prevented dragging with the cursor tool.
-        // The fix is to bring the drag logic inside and handle all cursor-related
-        // mouse down events here.
         if workbench.selectedTool?.id == "cursor" {
             let hitTarget = hitTest.hitTest(
-                at: p, elements: workbench.elements,
+                at: point, elements: workbench.elements,
                 schematicGraph: workbench.schematicGraph, magnification: workbench.magnification
             )
 
             if let hitTarget = hitTarget {
-                // --- Item was hit ---
-                
+                // Item was hit
+
                 // First, update the selection state based on the click.
                 // This is the original selection logic from the file.
                 let idToSelect: UUID?
@@ -89,9 +85,9 @@ final class WorkbenchInputCoordinator {
                 } else {
                     idToSelect = hitTarget.selectableID
                 }
-                
+
                 if let hitID = idToSelect {
-                    if e.modifierFlags.contains(.shift) {
+                    if event.modifierFlags.contains(.shift) {
                         if workbench.selectedIDs.contains(hitID) {
                             workbench.selectedIDs.remove(hitID)
                         } else {
@@ -107,27 +103,27 @@ final class WorkbenchInputCoordinator {
 
                 // Second, after updating selection, try to start a drag.
                 // The drag gesture will re-check the hit and the selection state.
-                if handleDrag.begin(at: p, event: e) {
+                if handleDrag.begin(at: point, event: event) {
                     activeDrag = handleDrag
-                } else if selDrag.begin(at: p, event: e) {
+                } else if selDrag.begin(at: point, event: event) {
                     activeDrag = selDrag
                 }
 
             } else {
-                // --- Empty space was hit ---
-                clearSelectionAndStartMarquee(with: e)
+                // Empty space was hit
+                clearSelectionAndStartMarquee(with: event)
             }
-            
+
             // We have handled the event for the cursor tool.
             return
         }
 
         // For any other tool, only handle-dragging is checked.
-        if handleDrag.begin(at: p, event: e) {
+        if handleDrag.begin(at: point, event: event) {
             activeDrag = handleDrag
         }
     }
-    
+
     private func clearSelectionAndStartMarquee(with event: NSEvent) {
         if !event.modifierFlags.contains(.shift) {
             if !workbench.selectedIDs.isEmpty {
@@ -135,31 +131,28 @@ final class WorkbenchInputCoordinator {
                 workbench.onSelectionChange?(workbench.selectedIDs)
             }
         }
-        let p = workbench.convert(event.locationInWindow, from: nil)
-        marquee.begin(at: p, event: event)
+        let point = workbench.convert(event.locationInWindow, from: nil)
+        marquee.begin(at: point, event: event)
     }
 
-    
     // MARK: – Mouse-dragged
-    func mouseDragged(_ e: NSEvent) {
-        let p = workbench.convert(e.locationInWindow, from: nil)
+    func mouseDragged(_ event: NSEvent) {
+        let point = workbench.convert(event.locationInWindow, from: nil)
 
-        if marquee.active { marquee.drag(to: p); return }
-        activeDrag?.drag(to: p)
+        if marquee.active { marquee.drag(to: point); return }
+        activeDrag?.drag(to: point)
     }
 
     // MARK: – Mouse-up
-    func mouseUp(_ e: NSEvent) {
-
+    func mouseUp(_ event: NSEvent) {
         if marquee.active { marquee.end() }
         activeDrag?.end()
         activeDrag = nil
-
     }
 
     // MARK: – Called by the key-command helper
-    func enterRotationMode(around p: CGPoint) { rotation.begin(at: p) }
-    func cancelRotation()                     { rotation.cancel()    }
+    func enterRotationMode(around point: CGPoint) { rotation.begin(at: point) }
+    func cancelRotation() { rotation.cancel() }
 
     // MARK: – Helpers for key-commands
     func handleReturnKeyPress() {
@@ -177,7 +170,7 @@ final class WorkbenchInputCoordinator {
             break
         }
         workbench.selectedTool = tool
-        
+
     }
 
     func deleteSelectedElements() {
@@ -191,9 +184,6 @@ final class WorkbenchInputCoordinator {
         workbench.selectedIDs.removeAll()
         workbench.onSelectionChange?([])
         workbench.onUpdate?(workbench.elements)
-        
-        // Force a redraw of the connections.
-        
     }
 
     // MARK: – Public reset
@@ -245,7 +235,7 @@ extension WorkbenchInputCoordinator {
         }
         return []
     }
-    
+
     func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let pasteboard = sender.draggingPasteboard
         guard pasteboard.canReadItem(withDataConformingToTypes: [UTType.transferableComponent.identifier]) else {
@@ -255,14 +245,14 @@ extension WorkbenchInputCoordinator {
         guard let data = pasteboard.data(forType: .transferableComponent) else {
             return false
         }
-        
+
         do {
             let component = try JSONDecoder().decode(TransferableComponent.self, from: data)
             let pointInView = workbench.convert(sender.draggingLocation, from: nil)
-            
+
             workbench.onComponentDropped?(component, pointInView)
             workbench.window?.makeFirstResponder(workbench)
-            
+
             return true
 
         } catch {

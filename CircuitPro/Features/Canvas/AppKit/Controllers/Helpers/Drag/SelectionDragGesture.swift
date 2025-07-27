@@ -59,7 +59,7 @@ final class SelectionDragGesture: CanvasDragGesture {
             }
         }
 
-        origin = p
+        origin = point
         originalElementPositions.removeAll()
         originalTextPositions.removeAll()
         didMove = false

@@ -9,6 +9,7 @@ import SwiftUI
 import AppKit
 
 struct ConnectionTool: CanvasTool, Equatable, Hashable {
+
     let id = "connection"
     let symbolName = CircuitProSymbols.Schematic.connectionWire
     let label = "Connection"

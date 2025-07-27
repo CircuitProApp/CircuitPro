@@ -98,9 +98,9 @@ enum PaperSize {
     }
 
     static let schematicDefaults: [PaperSize] = [
-        .iso(.a3), .iso(.a4), .ansi(.letter)
+        .iso(.a3), .iso(.a4), .ansi(.a)
     ]
     static let layoutDefaults: [PaperSize] = [
-        .iso(.a2), .iso(.a3), .ansi(.letter)
+        .iso(.a2), .iso(.a3), .ansi(.a)
     ]
 }

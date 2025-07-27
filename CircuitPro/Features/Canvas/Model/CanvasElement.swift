@@ -153,7 +153,7 @@ extension CanvasElement {
     mutating func moveTo(originalPosition orig: CGPoint, offset delta: CGPoint) {
         switch self {
         case .primitive(var primitive):
-            primitive.position = orig + delta; self = .primitive(p)
+            primitive.position = orig + delta; self = .primitive(primitive)
         case .pin(var pin):
             pin.position = orig + delta; self = .pin(pin)
         case .pad(var pad):
@@ -163,7 +163,7 @@ extension CanvasElement {
         case .text(var text):
             text.position = orig + delta; self = .text(text)
         case .anchoredText(var anchoredText):
-            anchoredText.position = orig + delta; self = .anchoredText(at)
+            anchoredText.position = orig + delta; self = .anchoredText(anchoredText)
         }
     }
 
