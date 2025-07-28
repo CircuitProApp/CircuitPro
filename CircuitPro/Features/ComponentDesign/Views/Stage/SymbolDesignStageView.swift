@@ -17,7 +17,7 @@ struct SymbolDesignStageView: View {
 
     var body: some View {
         StageContentView(
-            left: { Color.clear },
+            left: { SymbolElementListView() },
             center: {
                 SymbolDesignView()
                     .environment(symbolCanvasManager)
