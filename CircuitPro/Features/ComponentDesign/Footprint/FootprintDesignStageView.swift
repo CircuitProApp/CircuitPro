@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct FootprintDesignStageView: View {
+
     @Environment(\.componentDesignManager)
     private var componentDesignManager
 

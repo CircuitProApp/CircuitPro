@@ -19,11 +19,18 @@ struct SymbolElementListView: View {
                 .padding(10)
 
             if componentDesignManager.symbolElements.isEmpty {
-                ContentUnavailableView(
-                    "No Symbol Elements",
-                    systemImage: "square.on.circle",
-                    description: Text("Add pins and primitives to the symbol from the toolbar.")
-                )
+                ContentUnavailableView {
+                    Label {
+                        Text("No Symbol Elements")
+                            .font(.headline)
+                    } icon: {
+                        Image(systemName: "square.on.circle")
+                    }
+                } description: {
+                    Text("Add pins and primitives to the symbol from the toolbar.")
+                        .font(.callout)
+                        .fontWeight(.semibold)
+                }
                 .frame(maxHeight: .infinity)
             } else {
                 List(selection: $manager.selectedSymbolElementIDs) {
