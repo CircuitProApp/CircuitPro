@@ -24,7 +24,7 @@ struct SymbolDesignStageView: View {
             },
             right: {
                 if componentDesignManager.symbolElements.isNotEmpty {
-                    PinEditorView()
+                    SymbolPropertiesEditorView()
                         .padding()
                 } else {
                     Color.clear

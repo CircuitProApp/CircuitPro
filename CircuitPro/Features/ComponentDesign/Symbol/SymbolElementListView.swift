@@ -21,7 +21,7 @@ struct SymbolElementListView: View {
             if componentDesignManager.symbolElements.isEmpty {
                 ContentUnavailableView(
                     "No Symbol Elements",
-                    systemImage: "square.on.circle.dashed",
+                    systemImage: "square.on.circle",
                     description: Text("Add pins and primitives to the symbol from the toolbar.")
                 )
             } else {

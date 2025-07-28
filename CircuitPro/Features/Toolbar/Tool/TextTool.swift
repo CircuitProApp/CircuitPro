@@ -17,10 +17,10 @@ struct TextTool: CanvasTool {
             id: UUID(),
             text: "text",
             position: location,
-            isEditable: true
+            isEditable: false
         )
         
         let newAnchoredText = AnchoredTextElement(id: .init(), textElement: newTextElement, anchorPosition: location, anchorOwnerID: .init(), sourceDataID: .init(), isFromDefinition: false)
-        return .element(.anchoredText(newAnchoredText))
+        return .element(.text(newTextElement))
     }
 }

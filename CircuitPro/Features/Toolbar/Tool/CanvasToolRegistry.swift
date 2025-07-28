@@ -26,12 +26,12 @@ enum CanvasToolRegistry {
     ]
 
     static let symbolDesignTools: [AnyCanvasTool] =
-    cursor + graphicsTools + [AnyCanvasTool(PinTool())] + text + ruler
+    cursor + graphicsTools + [AnyCanvasTool(PinTool())] + ruler
 
     static let footprintDesignTools: [AnyCanvasTool] =
     cursor + graphicsTools + [AnyCanvasTool(PadTool())] + ruler
 
     static let schematicTools: [AnyCanvasTool] =
-    cursor + [AnyCanvasTool(ConnectionTool())] + ruler + text
+    cursor + [AnyCanvasTool(ConnectionTool())] + ruler
 
 }

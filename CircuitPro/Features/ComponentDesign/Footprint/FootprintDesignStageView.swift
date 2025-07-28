@@ -17,7 +17,7 @@ struct FootprintDesignStageView: View {
     var body: some View {
         StageContentView(
             left: {
-                LayerTypeListView()
+               FootprintElementListView()
                     .padding()
             },
             center: {
@@ -26,7 +26,7 @@ struct FootprintDesignStageView: View {
             },
             right: {
                 if componentDesignManager.footprintElements.isNotEmpty {
-                    PadEditorView()
+                    FootprintPropertiesEditorView()
                         .padding()
                 } else {
                     Color.clear
