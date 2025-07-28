@@ -33,12 +33,23 @@ struct StageContentView<Left: View, Center: View, Right: View>: View {
     }
     var body: some View {
         HStack(spacing: 0) {
-            left.frame(width: sidebarWidth, height: height)
+            left
+                .frame(maxWidth: sidebarWidth)
+                .frame(minWidth: sidebarWidth/1.25)
+                .frame(height: height)
                 .zIndex(0)
-            center.frame(width: width, height: height)
+                .clipAndStroke(with: RoundedRectangle(cornerRadius: 15))
+                .padding()
+            center
+                .frame(width: width, height: height)
                 .zIndex(1)
-            right.frame(width: sidebarWidth, height: height)
+            right
+                .frame(maxWidth: sidebarWidth)
+                .frame(minWidth: sidebarWidth/1.25)
+                .frame(height: height)
                 .zIndex(0)
+                .clipAndStroke(with: RoundedRectangle(cornerRadius: 15))
+                .padding()
         }
     }
 }

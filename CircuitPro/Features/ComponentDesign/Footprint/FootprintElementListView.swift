@@ -2,7 +2,7 @@
 //  FootprintElementListView.swift
 //  CircuitPro
 //
-//  Created by Gemini on 28.07.25.
+//  Created by Giorgi Tchelidze on 28.07.25.
 //
 
 import SwiftUI
@@ -10,40 +10,36 @@ import SwiftUI
 struct FootprintElementListView: View {
     @Environment(\.componentDesignManager) private var componentDesignManager
 
-    // ID for a selectable item in the outline. Can be a layer or an element.
+    // Unified selection ID for any item, drives the List's native selection.
     private enum OutlineItemID: Hashable {
         case layer(CanvasLayer)
         case element(UUID)
     }
 
-    // A unified, identifiable item for the hierarchical list.
+    // The identifiable data model for the hierarchical list.
     private struct OutlineItem: Identifiable {
-        var id: OutlineItemID {
-            switch content {
-            case .layer(let layer): return .layer(layer)
-            case .element(let element): return .element(element.id)
-            }
-        }
+        let id: OutlineItemID
         let content: Content
-        var children: [OutlineItem]?
-
+        let children: [OutlineItem]? // MUST be optional for the List initializer
+        
         enum Content {
             case layer(CanvasLayer)
             case element(CanvasElement)
         }
     }
-
-    // This is the local selection state for the List.
+    
+    // The List's selection state.
     @State private var selection: Set<OutlineItemID> = []
 
     var body: some View {
         @Bindable var manager = componentDesignManager
         
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("Footprint Elements")
-                .font(.title2.weight(.semibold))
-                .padding([.horizontal, .top])
-
+                .font(.title3.weight(.semibold))
+                .padding(10)
+            
+            // Use the canonical hierarchical List initializer.
             List(outlineData, children: \.children, selection: $selection) { item in
                 switch item.content {
                 case .layer(let layer):
@@ -52,21 +48,16 @@ struct FootprintElementListView: View {
                     elementRow(for: element)
                 }
             }
+            // CRITICAL: .sidebar style is designed for outlines and prevents the layout shift.
             .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
         }
-        .frame(minWidth: 240)
-        .onChange(of: selection) {
-            updateManagerFromSelection()
-        }
-        .onChange(of: manager.selectedFootprintElementIDs) {
-            updateSelectionFromManager()
-        }
-        .onChange(of: manager.selectedFootprintLayer) {
-            updateSelectionFromManager()
-        }
-        .onAppear {
-            updateSelectionFromManager()
-        }
+        // This is now the single source of truth for synchronizing selection.
+        .onChange(of: selection) { handleSelectionChange() }
+        // Sync our local state if the manager changes programmatically.
+        .onChange(of: manager.selectedFootprintLayer) { syncSelectionFromManager() }
+        .onChange(of: manager.selectedFootprintElementIDs) { syncSelectionFromManager() }
+        .onAppear { syncSelectionFromManager() }
     }
 
     // MARK: - View Builders
@@ -78,6 +69,7 @@ struct FootprintElementListView: View {
                 .foregroundStyle(layer.kind?.defaultColor ?? .gray)
             Text(layer.kind?.label ?? "No Layer")
                 .fontWeight(.semibold)
+            Spacer()
         }
     }
 
@@ -85,7 +77,6 @@ struct FootprintElementListView: View {
     private func elementRow(for element: CanvasElement) -> some View {
         switch element {
         case .pad(let pad):
-            // Your Pad model might use 'number' or 'designator'. Adjust as needed.
             Label("Pad \(pad.number)", systemImage: "square.fill.on.square")
         case .primitive(let primitive):
             Label(primitive.displayName, systemImage: "path")
@@ -94,68 +85,54 @@ struct FootprintElementListView: View {
         }
     }
     
-    // MARK: - Data & State Management
+    // MARK: - Data & State Helpers
 
-    /// Creates the hierarchical data structure for the list in a fixed order.
+    /// Assembles the data for the hierarchical `List`.
     private var outlineData: [OutlineItem] {
-        // 1. Group existing elements by layer for efficient lookup.
         let elementsByLayer = Dictionary(
             grouping: componentDesignManager.footprintElements,
             by: { componentDesignManager.layerAssignments[$0.id] ?? .layer0 }
         )
-
-        // 2. Create the list of layers in the desired, fixed order.
-        var orderedLayers: [CanvasLayer] = []
-        orderedLayers.append(.layer0) // Start with the "No Layer" option.
+        
+        var orderedLayers: [CanvasLayer] = [.layer0]
         orderedLayers.append(contentsOf: LayerKind.footprintLayers.map { CanvasLayer(kind: $0) })
         
-        // 3. Build the final array of OutlineItems, preserving the specified order.
         return orderedLayers.map { layer in
-            let childElements = elementsByLayer[layer] ?? []
-            let children = childElements.map { element in
-                OutlineItem(content: .element(element), children: nil)
+            let childElements = (elementsByLayer[layer] ?? []).map { element in
+                OutlineItem(id: .element(element.id), content: .element(element), children: nil)
             }
-            return OutlineItem(content: .layer(layer), children: children.isEmpty ? nil : children)
+            // CRITICAL: This ensures every layer is treated as a branch, even if empty.
+            return OutlineItem(id: .layer(layer), content: .layer(layer), children: childElements)
         }
     }
     
-    /// Updates the `ComponentDesignManager` when the local `selection` changes.
-    private func updateManagerFromSelection() {
+    // MARK: - Selection Synchronization Logic
+    
+    private func handleSelectionChange() {
         var newSelectedLayer: CanvasLayer? = nil
         var newSelectedElementIDs: Set<UUID> = []
 
-        let selectedLayerID = selection.first {
-            if case .layer = $0 { return true } else { return false }
-        }
+        let layerSelection = selection.first { if case .layer = $0 { return true } else { return false } }
 
-        if let selectedLayerID, case .layer(let layer) = selectedLayerID {
+        if let layerSelection, case .layer(let layer) = layerSelection {
             newSelectedLayer = layer
+            if selection.count > 1 { self.selection = [layerSelection] }
         } else {
-            for itemID in selection {
-                if case .element(let uuid) = itemID {
-                    newSelectedElementIDs.insert(uuid)
-                }
-            }
+            newSelectedElementIDs = Set(selection.compactMap {
+                if case .element(let uuid) = $0 { return uuid } else { return nil }
+            })
         }
         
-        // Prevent feedback loops by checking for actual changes before updating.
-        if componentDesignManager.selectedFootprintLayer != newSelectedLayer {
-            componentDesignManager.selectedFootprintLayer = newSelectedLayer
-        }
-        if componentDesignManager.selectedFootprintElementIDs != newSelectedElementIDs {
-            componentDesignManager.selectedFootprintElementIDs = newSelectedElementIDs
-        }
+        componentDesignManager.selectedFootprintLayer = newSelectedLayer
+        componentDesignManager.selectedFootprintElementIDs = newSelectedElementIDs
     }
     
-    /// Updates the local `selection` when the `ComponentDesignManager` changes.
-    private func updateSelectionFromManager() {
+    private func syncSelectionFromManager() {
         var newSelection: Set<OutlineItemID> = []
         if let selectedLayer = componentDesignManager.selectedFootprintLayer {
             newSelection.insert(.layer(selectedLayer))
         } else {
-            for elementID in componentDesignManager.selectedFootprintElementIDs {
-                newSelection.insert(.element(elementID))
-            }
+            componentDesignManager.selectedFootprintElementIDs.forEach { newSelection.insert(.element($0)) }
         }
         
         if self.selection != newSelection {

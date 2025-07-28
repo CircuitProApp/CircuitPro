@@ -18,7 +18,7 @@ struct ComponentDesignStageContainerView: View {
     let footprintCanvasManager: CanvasManager
 
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             StageIndicatorView(
                 currentStage: $currentStage,
                 validationProvider: componentDesignManager.validationState

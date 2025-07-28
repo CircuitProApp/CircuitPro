@@ -18,19 +18,13 @@ struct FootprintDesignStageView: View {
         StageContentView(
             left: {
                FootprintElementListView()
-                    .padding()
             },
             center: {
                 FootprintDesignView()
                     .environment(footprintCanvasManager)
             },
             right: {
-                if componentDesignManager.footprintElements.isNotEmpty {
-                    FootprintPropertiesEditorView()
-                        .padding()
-                } else {
-                    Color.clear
-                }
+                FootprintPropertiesEditorView()
             }
         )
     }

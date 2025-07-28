@@ -12,11 +12,11 @@ struct SymbolElementListView: View {
 
     var body: some View {
         @Bindable var manager = componentDesignManager
-        VStack(alignment: .leading) {
-            Text("Elements")
-                .font(.title2.weight(.semibold))
-                .padding(.horizontal)
-                .padding(.top)
+        
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Symbol Elements")
+                .font(.title3.weight(.semibold))
+                .padding(10)
 
             if componentDesignManager.symbolElements.isEmpty {
                 ContentUnavailableView(
@@ -24,6 +24,7 @@ struct SymbolElementListView: View {
                     systemImage: "square.on.circle",
                     description: Text("Add pins and primitives to the symbol from the toolbar.")
                 )
+                .frame(maxHeight: .infinity)
             } else {
                 List(selection: $manager.selectedSymbolElementIDs) {
                     ForEach(componentDesignManager.symbolElements) { element in
@@ -31,10 +32,10 @@ struct SymbolElementListView: View {
                             .tag(element.id)
                     }
                 }
-                .listStyle(.sidebar)
+                .listStyle(.inset)
+                .scrollContentBackground(.hidden)
             }
         }
-        .frame(minWidth: 220)
     }
 
     @ViewBuilder
@@ -56,4 +57,5 @@ struct SymbolElementListView: View {
         }
     }
 }
+
 

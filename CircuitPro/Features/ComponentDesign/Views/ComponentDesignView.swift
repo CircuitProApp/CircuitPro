@@ -40,7 +40,6 @@ struct ComponentDesignView: View {
                     symbolCanvasManager: symbolCanvasManager,
                     footprintCanvasManager: footprintCanvasManager
                 )
-                .padding()
                 .navigationTitle("Component Designer")
                 .toolbar {
                     ToolbarItem {

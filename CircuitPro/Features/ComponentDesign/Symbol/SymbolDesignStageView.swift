@@ -17,18 +17,15 @@ struct SymbolDesignStageView: View {
 
     var body: some View {
         StageContentView(
-            left: { SymbolElementListView() },
+            left: {
+                SymbolElementListView()
+            },
             center: {
                 SymbolDesignView()
                     .environment(symbolCanvasManager)
             },
             right: {
-                if componentDesignManager.symbolElements.isNotEmpty {
-                    SymbolPropertiesEditorView()
-                        .padding()
-                } else {
-                    Color.clear
-                }
+                SymbolPropertiesEditorView()
             }
         )
     }

@@ -9,10 +9,12 @@ import SwiftUI
 
 struct ComponentDetailStageView: View {
     var body: some View {
-        StageContentView(
-            left: { Color.clear },
-            center: { ComponentDetailView() },
-            right: { Color.clear }
-        )
+        StageContentView {
+            EmptyView()
+        } center: {
+            ComponentDetailView()
+        } right: {
+            EmptyView()
+        }
     }
 }

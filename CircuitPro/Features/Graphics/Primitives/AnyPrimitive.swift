@@ -162,3 +162,16 @@ enum AnyPrimitive: GraphicPrimitive, Identifiable, Hashable {
         }
     }
 }
+
+extension AnyPrimitive {
+    var displayName: String {
+        switch self {
+        case .rectangle:
+            "Rectangle"
+        case .circle:
+            "Circle"
+        case .line:
+            "Line"
+        }
+    }
+}

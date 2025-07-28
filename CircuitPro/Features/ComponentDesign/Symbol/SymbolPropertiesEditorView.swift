@@ -13,11 +13,12 @@ struct SymbolPropertiesEditorView: View {
     var body: some View {
         
         @Bindable var manager = componentDesignManager
+    
         VStack {
             if componentDesignManager.selectedSymbolElementIDs.isEmpty {
                 placeholder("No elements selected")
             } else {
-                Form {
+       
                     // Section for Pins
                     ForEach($manager.symbolElements) { $element in
                         if case .pin(let pin) = element, componentDesignManager.selectedSymbolElementIDs.contains(pin.id) {
@@ -41,9 +42,8 @@ struct SymbolPropertiesEditorView: View {
                             }
                         }
                     }
-                }
-                .formStyle(.grouped)
-                .listStyle(.inset)
+                
+
             }
         }
     }

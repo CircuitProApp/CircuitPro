@@ -28,7 +28,7 @@ extension GraphicPrimitive {
             fillColor: filled ? color.cgColor : nil,
             strokeColor: filled ? nil : color.cgColor,
             lineCap: .round,
-            lineJoin: .round
+            lineJoin: .miter
         )
         return [params]
     }

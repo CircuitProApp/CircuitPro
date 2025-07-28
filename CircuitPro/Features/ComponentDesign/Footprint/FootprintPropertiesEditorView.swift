@@ -5,14 +5,6 @@
 //  Created by Giorgi Tchelidze on 7/28/25.
 //
 
-
-//
-//  FootprintPropertiesEditorView.swift
-//  CircuitPro
-//
-//  Created by Gemini on 28.07.25.
-//
-
 import SwiftUI
 
 struct FootprintPropertiesEditorView: View {
@@ -21,12 +13,12 @@ struct FootprintPropertiesEditorView: View {
     var body: some View {
         @Bindable var manager = componentDesignManager
         
-        VStack {
+        VStack { 
             // 1. Show a placeholder if no footprint elements are selected.
             if manager.selectedFootprintElementIDs.isEmpty {
                 placeholder("No elements selected")
             } else {
-                Form {
+    
                     // 2. Section for Pads
                     // Iterate over all footprint elements to find the selected pads.
                     ForEach($manager.footprintElements) { $element in
@@ -55,9 +47,6 @@ struct FootprintPropertiesEditorView: View {
                         }
                     }
                 }
-                .formStyle(.grouped)
-                .listStyle(.inset)
-            }
         }
     }
 

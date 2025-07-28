@@ -162,6 +162,15 @@ struct PrimitivePropertiesView: View {
                     }
                 ))
             }
+            DoubleField(title: "rotation", value: Binding(
+                get: { line.rotation },
+                set: { newValue in
+                    if case .line(var l) = primitive {
+                        l.rotation = newValue
+                        primitive = .line(l)
+                    }
+                }
+            ))
         }
     }
 }
