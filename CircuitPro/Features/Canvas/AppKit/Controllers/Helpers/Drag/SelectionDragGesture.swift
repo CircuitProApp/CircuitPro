@@ -19,10 +19,10 @@ final class SelectionDragGesture: CanvasDragGesture {
     private var originalElementPositions: [UUID: CGPoint] = [:]
     private var originalTextPositions: [UUID: CGPoint] = [:]
 
-    /// The starting position of the specific item that was hit by the cursor.
+    /// The starting position and size of the specific item that was hit by the cursor.
     /// This serves as the anchor point for grid-snapping calculations, ensuring
     /// that dragging an off-grid item onto a new grid works predictably.
-    private var dragAnchor: CGPoint?
+    private var dragAnchor: (position: CGPoint, size: CGSize?, snapsToCenter: Bool)?
 
     init(workbench: WorkbenchView) { self.workbench = workbench }
 
@@ -47,12 +47,16 @@ final class SelectionDragGesture: CanvasDragGesture {
         // even if the item itself is currently off-grid.
         if let hitID = hitTarget.selectableID {
             if let element = workbench.elements.first(where: { $0.id == hitID }) {
-                dragAnchor = element.transformable.position
+                let position = element.transformable.position
+                let size = element.primitive?.size
+                // Default to center snapping for non-primitive elements.
+                let snapsToCenter = element.primitive?.snapsToCenter ?? true
+                dragAnchor = (position, size, snapsToCenter)
             } else {
                 for element in workbench.elements {
                     if case .symbol(let symbol) = element,
                        let text = symbol.anchoredTexts.first(where: { $0.id == hitID }) {
-                        dragAnchor = text.position
+                        dragAnchor = (text.position, text.boundingBox.size, true)
                         break
                     }
                 }
@@ -104,9 +108,23 @@ final class SelectionDragGesture: CanvasDragGesture {
         // ensures the entire selection moves correctly onto the new grid.
         let moveDelta: CGPoint
         if let anchor = dragAnchor {
-            let newAnchorPos = anchor + rawDelta
-            let snappedNewAnchorPos = workbench.snap(newAnchorPos)
-            moveDelta = snappedNewAnchorPos - anchor
+            let newAnchorPos = anchor.position + rawDelta
+            let snappedNewAnchorPos: CGPoint
+
+            // Use corner-snapping for rectangles, and center-snapping for everything else.
+            if let size = anchor.size, size != .zero, !anchor.snapsToCenter {
+                let halfSize = CGPoint(x: size.width / 2, y: size.height / 2)
+                let originalCorner = anchor.position - halfSize
+                let newCorner = newAnchorPos - halfSize
+                let snappedNewCorner = workbench.snap(newCorner)
+
+                let cornerDelta = snappedNewCorner - originalCorner
+                snappedNewAnchorPos = anchor.position + cornerDelta
+            } else {
+                snappedNewAnchorPos = workbench.snap(newAnchorPos)
+            }
+
+            moveDelta = snappedNewAnchorPos - anchor.position
         } else {
             // Fallback to the old method if no anchor was set (should not happen in normal flow).
             moveDelta = CGPoint(x: workbench.snapDelta(rawDelta.x), y: workbench.snapDelta(rawDelta.y))

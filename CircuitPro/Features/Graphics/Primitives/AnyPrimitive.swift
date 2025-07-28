@@ -119,6 +119,26 @@ enum AnyPrimitive: GraphicPrimitive, Identifiable, Hashable {
         }
     }
 
+    var size: CGSize {
+        switch self {
+        case .rectangle(let rectangle):
+            return rectangle.size
+        case .circle(let circle):
+            return CGSize(width: circle.radius * 2, height: circle.radius * 2)
+        case .line(let line):
+            let width = abs(line.end.x - line.start.x)
+            let height = abs(line.end.y - line.start.y)
+            return CGSize(width: width, height: height)
+        }
+    }
+
+    var snapsToCenter: Bool {
+        switch self {
+        case .rectangle: return false // uses corner snapping
+        case .line, .circle: return true // uses center snapping
+        }
+    }
+
     func handles() -> [Handle] {
         switch self {
         case .line(let line): return line.handles()

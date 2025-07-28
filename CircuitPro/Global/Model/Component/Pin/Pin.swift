@@ -57,7 +57,6 @@ extension Pin {
             id: .init(),
             start: legStart,
             end: position,
-            rotation: 0,
             strokeWidth: 1,
             color: .init(color: .blue)
         )

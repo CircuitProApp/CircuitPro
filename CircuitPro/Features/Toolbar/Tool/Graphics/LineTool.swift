@@ -21,7 +21,6 @@ struct LineTool: CanvasTool {
                 id: UUID(),
                 start: start,
                 end: location,
-                rotation: 0,
                 strokeWidth: 1, // This is the persistent model stroke width
                 color: .init(color: context.selectedLayer.color)
             )

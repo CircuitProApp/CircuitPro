@@ -38,9 +38,10 @@ final class HandleDragGesture: CanvasDragGesture {
         guard let (id, kind) = active else { return }
         var updated = workbench.elements
         let snapped = workbench.snap(point)
+        let snappedOpposite = frozenOppositeWorld.map { workbench.snap($0) }
 
         for i in updated.indices where updated[i].id == id {
-            updated[i].updateHandle(kind, to: snapped, opposite: frozenOppositeWorld)
+            updated[i].updateHandle(kind, to: snapped, opposite: snappedOpposite)
             workbench.elements = updated
             workbench.onUpdate?(updated)
             return

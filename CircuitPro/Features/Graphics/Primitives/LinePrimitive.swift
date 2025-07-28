@@ -12,11 +12,11 @@ struct LinePrimitive: GraphicPrimitive {
     let id: UUID
     var start: CGPoint
     var end: CGPoint
-    var rotation: CGFloat
     var strokeWidth: CGFloat
-    var filled: Bool = false
+    var filled: Bool = false // A line can't be filled, but protocol might require it.
     var color: SDColor
 
+    /// The position is the center point of the line.
     var position: CGPoint {
         get {
             CGPoint(
@@ -25,8 +25,9 @@ struct LinePrimitive: GraphicPrimitive {
             )
         }
         set {
-            let deltaX = newValue.x - position.x
-            let deltaY = newValue.y - position.y
+            let currentPos = self.position
+            let deltaX = newValue.x - currentPos.x
+            let deltaY = newValue.y - currentPos.y
             start.x += deltaX
             start.y += deltaY
             end.x += deltaX
@@ -34,13 +35,28 @@ struct LinePrimitive: GraphicPrimitive {
         }
     }
 
+    /// Rotation is a computed property, derived from the start and end points.
+    /// It is not stored, which was the source of previous bugs.
+    var rotation: CGFloat {
+        get {
+            atan2(end.y - start.y, end.x - start.x)
+        }
+        set {
+            // Setting rotation on a line primitive is complex and not
+            // a standard user interaction. We rotate the line around its
+            // center point.
+            let center = self.position
+            let currentAngle = self.rotation
+            let angleDelta = newValue - currentAngle
+            start = start.rotated(around: center, by: angleDelta)
+            end = end.rotated(around: center, by: angleDelta)
+        }
+    }
+
     func handles() -> [Handle] {
-        let mid = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
-        let rotatedStart = start.rotated(around: mid, by: rotation)
-        let rotatedEnd = end.rotated(around: mid, by: rotation)
-        return [
-            Handle(kind: .lineStart, position: rotatedStart),
-            Handle(kind: .lineEnd, position: rotatedEnd)
+        [
+            Handle(kind: .lineStart, position: start),
+            Handle(kind: .lineEnd, position: end)
         ]
     }
 
@@ -49,39 +65,24 @@ struct LinePrimitive: GraphicPrimitive {
         to dragWorld: CGPoint,
         opposite oppWorld: CGPoint?
     ) {
-        guard let oppWorld = oppWorld else { return }
-        // Calculate new rotation based on dragged and opposite points
-        let deltaX = dragWorld.x - oppWorld.x
-        let deltaY = dragWorld.y - oppWorld.y
-        rotation = atan2(deltaY, deltaX)
-
-        // Reset line to unrotated state using new direction
-        let mid = CGPoint(
-            x: (dragWorld.x + oppWorld.x) / 2,
-            y: (dragWorld.y + oppWorld.y) / 2
-        )
-        let dragLocal = dragWorld.rotated(around: mid, by: -rotation)
-        let oppLocal  = oppWorld.rotated(around: mid, by: -rotation)
-
+        // The drag gesture provides the new snapped position for the handle
+        // being dragged. We just need to update the corresponding point.
+        // The other point of the line remains fixed at its current position.
         switch kind {
-        case .lineStart: start = dragLocal; end = oppLocal
-        case .lineEnd:   start = oppLocal;  end = dragLocal
-        default: break
+        case .lineStart:
+            self.start = dragWorld
+        case .lineEnd:
+            self.end = dragWorld
+        default:
+            break
         }
     }
 
     func makePath() -> CGPath {
-
         let path = CGMutablePath()
         path.move(to: start)
         path.addLine(to: end)
-
-        var transform = CGAffineTransform
-            .identity
-            .translatedBy(x: position.x, y: position.y)
-            .rotated(by: rotation)
-            .translatedBy(x: -position.x, y: -position.y)
-
-        return path.copy(using: &transform) ?? path
+        return path
     }
 }
+
