@@ -175,3 +175,16 @@ extension AnyPrimitive {
         }
     }
 }
+
+extension AnyPrimitive {
+    var symbol: String {
+        switch self {
+        case .rectangle:
+            CircuitProSymbols.Graphic.rectangle
+        case .circle:
+            CircuitProSymbols.Graphic.circle
+        case .line:
+            CircuitProSymbols.Graphic.line
+        }
+    }
+}

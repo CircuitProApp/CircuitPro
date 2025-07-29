@@ -53,7 +53,7 @@ extension Pad {
                 rotation: rotation,                // already in radians
                 strokeWidth: 1,
                 filled: true,
-                color: .init(color: .blue)
+                color: .init(color: .red)
             )
             return [.rectangle(rect)]
 
@@ -64,7 +64,7 @@ extension Pad {
                 position: position,
                 rotation: rotation,
                 strokeWidth: 0.2,
-                color: .init(color: .blue),
+                color: .init(color: .red),
                 filled: true
             )
             return [.circle(circle)]

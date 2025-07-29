@@ -37,7 +37,7 @@ extension Pad: Drawable {
         // A pad only shows a halo if it is directly selected.
         guard selectedIDs.contains(self.id) else { return nil }
 
-        let haloWidth: CGFloat = 4.0
+        let haloWidth: CGFloat = 1.0
         let haloColor = shapePrimitives.first?.color.cgColor.copy(alpha: 0.3) ?? NSColor.systemBlue.withAlphaComponent(0.3).cgColor
         
         let shapePath = CGMutablePath()

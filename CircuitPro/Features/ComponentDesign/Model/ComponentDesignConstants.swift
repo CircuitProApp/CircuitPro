@@ -8,5 +8,5 @@
 import Foundation
 
 struct ComponentDesignConstants {
-    static let sidebarWidth: CGFloat = 230
+    static let sidebarWidth: CGFloat = 250
 }

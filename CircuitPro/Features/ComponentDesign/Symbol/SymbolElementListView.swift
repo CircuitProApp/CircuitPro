@@ -51,7 +51,7 @@ struct SymbolElementListView: View {
         case .pin(let pin):
             Label("Pin \(pin.number)", systemImage: "mappin.and.ellipse")
         case .primitive(let primitive):
-            Label(primitive.displayName, systemImage: "square.on.circle")
+            Label(primitive.displayName, systemImage: primitive.symbol)
         case .text(let textElement):
             if textElement.id == componentDesignManager.referenceDesignatorPrefixTextElementID {
                 Label("Reference Designator Prefix", systemImage: "textformat.alt")

@@ -30,17 +30,19 @@ struct FloatingPointField<T: BinaryFloatingPoint>: View {
 
     // 3. Body
     var body: some View {
-//        VStack {
-//       
             TextField(title, text: $text)
                 .focused($isFocused)
                 .textFieldStyle(.plain)
-                .background(.secondary)
-                .contentMargins(.horizontal, 15)
+                .directionalPadding(vertical: 2.5, horizontal: 5)
+                .padding(.trailing, 12.5)
+                .background(.ultraThinMaterial)
+                .clipAndStroke(with: .rect(cornerRadius: 5))
                 .overlay(alignment: .trailing) {
                     Text(title)
                         .font(.caption)
+                        .padding(.horizontal, 5)
                 }
+                .focusRing(isFocused, shape: .rect(cornerRadius: 5))
                 .onAppear {
                     let displayValue = (value * displayMultiplier) + displayOffset
                     text = formatted(displayValue)
@@ -61,8 +63,6 @@ struct FloatingPointField<T: BinaryFloatingPoint>: View {
                     validateAndCommit()
                     isFocused = false
                 }
-//            Text(title)
-//        }
     }
 
     // 4. Private Methods
