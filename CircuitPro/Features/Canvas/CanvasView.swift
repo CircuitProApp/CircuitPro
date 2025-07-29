@@ -17,6 +17,8 @@ struct CanvasView: NSViewRepresentable {
         let workbench: WorkbenchView
         let documentContainer: DocumentContainerView
 
+        var didSetupInitialScroll = false
+
         init() {
             self.workbench = WorkbenchView(frame: .zero)
             self.documentContainer = DocumentContainerView(workbench: workbench)
@@ -41,14 +43,7 @@ struct CanvasView: NSViewRepresentable {
         // Set a background color to create the "out of bounds" area
         scrollView.drawsBackground = false
 
-        // Initial setup
-        DispatchQueue.main.async {
-            let clip = scrollView.contentView.bounds.size
-            let doc = documentContainer.frame.size
-            let origin = NSPoint(x: (doc.width - clip.width) * 0.5, y: (doc.height - clip.height) * 0.5)
-            scrollView.contentView.scroll(to: origin)
-            scrollView.reflectScrolledClipView(scrollView.contentView)
-        }
+        // Initial setup handled in updateNSView
         
         scrollView.postsBoundsChangedNotifications = true
         NotificationCenter.default.addObserver(
@@ -82,6 +77,32 @@ struct CanvasView: NSViewRepresentable {
         
         if workbench.frame.size != workbenchSize {
             workbench.frame.size = workbenchSize
+        }
+
+        // Perform initial scroll positioning once
+        if !context.coordinator.didSetupInitialScroll {
+            context.coordinator.didSetupInitialScroll = true
+            DispatchQueue.main.async {
+                let clip = scrollView.contentView.bounds.size
+                let boardHeight = workbench.bounds.height
+                let origin: NSPoint
+
+                if self.manager.scrollOrigin == .zero {
+                    let doc = documentContainer.frame.size
+                    origin = NSPoint(
+                        x: (doc.width - clip.width) * 0.5,
+                        y: (doc.height - clip.height) * 0.5
+                    )
+                } else {
+                    origin = NSPoint(
+                        x: self.manager.scrollOrigin.x,
+                        y: boardHeight - self.manager.scrollOrigin.y - clip.height
+                    )
+                }
+
+                scrollView.contentView.scroll(to: origin)
+                scrollView.reflectScrolledClipView(scrollView.contentView)
+            }
         }
         
         // Pass state to Workbench
