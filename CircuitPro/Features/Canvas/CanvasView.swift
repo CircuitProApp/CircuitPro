@@ -29,26 +29,17 @@ struct CanvasView: NSViewRepresentable {
         let documentContainer = context.coordinator.documentContainer
 
         // Scroll view scaffolding
-        let scrollView = NSScrollView()
+        let scrollView = CenteringNSScrollView()
         scrollView.documentView = documentContainer
         scrollView.hasHorizontalScroller = true
         scrollView.hasVerticalScroller = true
         scrollView.allowsMagnification = true
         scrollView.minMagnification = ZoomStep.minZoom
         scrollView.maxMagnification = ZoomStep.maxZoom
-        scrollView.magnification = manager.magnification        
+        scrollView.magnification = manager.magnification
         
         // Set a background color to create the "out of bounds" area
         scrollView.drawsBackground = false
-
-        // Initial setup
-        DispatchQueue.main.async {
-            let clip = scrollView.contentView.bounds.size
-            let doc = documentContainer.frame.size
-            let origin = NSPoint(x: (doc.width - clip.width) * 0.5, y: (doc.height - clip.height) * 0.5)
-            scrollView.contentView.scroll(to: origin)
-            scrollView.reflectScrolledClipView(scrollView.contentView)
-        }
         
         scrollView.postsBoundsChangedNotifications = true
         NotificationCenter.default.addObserver(
