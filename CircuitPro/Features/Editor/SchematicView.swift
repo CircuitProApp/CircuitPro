@@ -67,10 +67,10 @@ struct SchematicView: View {
     ) {
         let pos = canvasManager.snap(point)
 
-        // 2. Current max reference per component UUID
+        // 2. Current max referenceDesignatorIndex per component UUID
         let instances = projectManager.selectedDesign?.componentInstances ?? []
         var nextRef: [UUID: Int] = instances.reduce(into: [:]) { dict, inst in
-            dict[inst.componentUUID] = max(dict[inst.componentUUID] ?? 0, inst.reference)
+            dict[inst.componentUUID] = max(dict[inst.componentUUID] ?? 0, inst.referenceDesignatorIndex)
         }
 
         // 3. Add each dropped component
@@ -119,8 +119,8 @@ struct SchematicView: View {
                     symbol.instance = dc.instance.symbolInstance
                     needsTextResolution = true
                 }
-                if symbol.reference != dc.reference {
-                    symbol.reference = dc.reference
+                if symbol.reference != dc.referenceDesignator {
+                    symbol.reference = dc.referenceDesignator
                     needsTextResolution = true
                 }
                 if symbol.properties != dc.displayedProperties {
@@ -140,7 +140,7 @@ struct SchematicView: View {
                     id: instanceID,
                     instance: dc.instance.symbolInstance,
                     symbol: dc.definition.symbol!,
-                    reference: dc.reference,
+                    reference: dc.referenceDesignator,
                     properties: dc.displayedProperties
                 )
                 updatedElements.append(.symbol(newSymbolElement))

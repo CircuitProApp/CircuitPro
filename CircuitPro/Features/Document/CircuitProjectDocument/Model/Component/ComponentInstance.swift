@@ -21,7 +21,7 @@ final class ComponentInstance: Identifiable, Codable {
     var symbolInstance: SymbolInstance
     var footprintInstance: FootprintInstance?
 
-    var reference: Int
+    var referenceDesignatorIndex: Int
 
     init(
         id: UUID = UUID(),
@@ -38,7 +38,7 @@ final class ComponentInstance: Identifiable, Codable {
         self.adHocProperties = adHocProperties
         self.symbolInstance = symbolInstance
         self.footprintInstance = footprintInstance
-        self.reference = reference
+        self.referenceDesignatorIndex = reference
     }
 
     enum CodingKeys: String, CodingKey {
@@ -48,7 +48,7 @@ final class ComponentInstance: Identifiable, Codable {
         case _adHocProperties = "adHocProperties"
         case _symbolInstance = "symbolInstance"
         case _footprintInstance = "footprintInstance"
-        case _reference = "reference"
+        case _referenceDesignatorIndex = "referenceDesignatorIndex"
     }
 }
 

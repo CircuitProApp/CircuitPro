@@ -12,9 +12,9 @@ import Observation
 final class ComponentDesignManager {
 
     var componentName: String = "" { didSet { refreshValidation() } }
-    var componentAbbreviation: String = "" {
+    var referenceDesignatorPrefix: String = "" {
         didSet {
-            updateAbbreviationTextElement()
+            updateReferenceDesignatorPrefixTextElement()
             refreshValidation()
         }
     }
@@ -36,7 +36,7 @@ final class ComponentDesignManager {
     var selectedSymbolElementIDs: Set<UUID> = []
     var selectedSymbolTool: AnyCanvasTool = AnyCanvasTool(CursorTool())
     private var symbolElementIndexMap: [UUID: Int] = [:]
-    private(set) var abbreviationTextElementID: UUID?
+    private(set) var referenceDesignatorPrefixTextElementID: UUID?
 
     // MARK: - Footprint
     var footprintElements: [CanvasElement] = [] {
@@ -52,16 +52,16 @@ final class ComponentDesignManager {
     var selectedFootprintLayer: CanvasLayer? = .layer0
     var layerAssignments: [UUID: CanvasLayer] = [:]
     
-    // MARK: Abbreviation Text Element Handling
-    private func updateAbbreviationTextElement() {
-        // 1. Check if an abbreviation text element already exists.
-        if let elementID = abbreviationTextElementID,
+    // MARK: RefDes Text Element Handling
+    private func updateReferenceDesignatorPrefixTextElement() {
+        // 1. Check if an referenceDesignatorPrefix text element already exists.
+        if let elementID = referenceDesignatorPrefixTextElementID,
            let index = symbolElementIndexMap[elementID] {
             
-            // If the new abbreviation is empty, remove the element.
-            if componentAbbreviation.isEmpty {
+            // If the new referenceDesignatorPrefix is empty, remove the element.
+            if referenceDesignatorPrefix.isEmpty {
                 symbolElements.remove(at: index)
-                abbreviationTextElementID = nil
+                referenceDesignatorPrefixTextElementID = nil
                 return
             }
 
@@ -69,21 +69,21 @@ final class ComponentDesignManager {
             guard case .text(var textElement) = symbolElements[index] else {
                 // This case should ideally not happen if our ID logic is correct.
                 // We'll reset the ID and create a new element to be safe.
-                abbreviationTextElementID = nil
-                if !componentAbbreviation.isEmpty { createAbbreviationTextElement() }
+                referenceDesignatorPrefixTextElementID = nil
+                if !referenceDesignatorPrefix.isEmpty { createReferenceDesignatorPrefixTextElement() }
                 return
             }
             
-            textElement.text = componentAbbreviation
+            textElement.text = referenceDesignatorPrefix
             symbolElements[index] = .text(textElement)
 
-        } else if !componentAbbreviation.isEmpty {
-            // 2. If no element exists and the abbreviation is not empty, create one.
-            createAbbreviationTextElement()
+        } else if !referenceDesignatorPrefix.isEmpty {
+            // 2. If no element exists and the referenceDesignatorPrefix is not empty, create one.
+            createReferenceDesignatorPrefixTextElement()
         }
     }
 
-    private func createAbbreviationTextElement() {
+    private func createReferenceDesignatorPrefixTextElement() {
         // 1. By default, the symbol canvas uses A4 paper in landscape.
         let defaultPaper = PaperSize.component
         let canvasSize = defaultPaper.canvasSize()
@@ -94,10 +94,10 @@ final class ComponentDesignManager {
         // 3. Create the text element at the center.
         let newElement = TextElement(
             id: UUID(),
-            text: componentAbbreviation,
+            text: referenceDesignatorPrefix,
             position: centerPoint
         )
-        abbreviationTextElementID = newElement.id
+        referenceDesignatorPrefixTextElementID = newElement.id
         symbolElements.append(.text(newElement))
     }
 
@@ -117,7 +117,7 @@ final class ComponentDesignManager {
     func resetAll() {
         // 1. Component metadata
         componentName = ""
-        componentAbbreviation = ""
+        referenceDesignatorPrefix = ""
         selectedCategory = nil
         selectedPackageType = nil
         componentProperties = [
@@ -128,7 +128,7 @@ final class ComponentDesignManager {
         symbolElements = []
         selectedSymbolElementIDs = []
         selectedSymbolTool = AnyCanvasTool(CursorTool())
-        abbreviationTextElementID = nil // Reset the tracked ID
+        referenceDesignatorPrefixTextElementID = nil // Reset the tracked ID
 
         // 3. Footprint design
         footprintElements = []

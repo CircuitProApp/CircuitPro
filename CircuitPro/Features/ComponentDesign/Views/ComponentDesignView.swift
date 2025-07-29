@@ -136,7 +136,7 @@ struct ComponentDesignView: View {
             let relativePosition = CGPoint(x: textElement.position.x - anchor.x, y: textElement.position.y - anchor.y)
             let source: TextSource
 
-            if textElement.id == componentDesignManager.abbreviationTextElementID {
+            if textElement.id == componentDesignManager.referenceDesignatorPrefixTextElementID {
                 source = .dynamic(.reference)
             } else {
                 source = .static(textElement.text)
@@ -173,7 +173,7 @@ struct ComponentDesignView: View {
 
         let newComponent = Component(
             name: componentDesignManager.componentName,
-            abbreviation: componentDesignManager.componentAbbreviation,
+            referenceDesignatorPrefix: componentDesignManager.referenceDesignatorPrefix,
             symbol: nil,
             footprints: [],
             category: componentDesignManager.selectedCategory,

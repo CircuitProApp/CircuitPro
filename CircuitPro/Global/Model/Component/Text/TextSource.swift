@@ -19,7 +19,7 @@ enum TextSource: Codable, Hashable {
 
 /// Specifies which dynamic property of a component should be displayed.
 enum DynamicProperty: Codable, Hashable {
-    /// The component's unique reference designator (e.g., "R1", "C2").
+    /// The component's unique referenceDesignatorIndex designator (e.g., "R1", "C2").
     case reference
     
     /// The main "value" of the component (e.g., "10kΩ", "100µF").

@@ -26,15 +26,15 @@ struct ComponentDetailView: View {
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
                         .validationStatus(componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.name))
                 }
-                SectionView("Abbreviation") {
-                    TextField("e.g. LED", text: $manager.componentAbbreviation)
+                SectionView("Reference Designator Prefix") {
+                    TextField("e.g. LED", text: $manager.referenceDesignatorPrefix)
                         .textFieldStyle(.plain)
                         .font(.title3)
                         .padding(10)
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
                         .frame(width: 200)
-                        .validationStatus(componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.abbreviation))
+                        .validationStatus(componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.referenceDesignatorPrefix))
                 }
             }
 

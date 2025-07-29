@@ -18,7 +18,7 @@ class Component {
     var name: String
 
     @Attribute(.unique)
-    var abbreviation: String
+    var referenceDesignatorPrefix: String
 
     @Relationship(deleteRule: .cascade, inverse: \Symbol.component)
     var symbol: Symbol?
@@ -31,7 +31,7 @@ class Component {
     init(
         uuid: UUID = UUID(),
         name: String,
-        abbreviation: String,
+        referenceDesignatorPrefix: String,
         symbol: Symbol? = nil,
         footprints: [Footprint] = [],
         category: ComponentCategory? = nil,
@@ -40,7 +40,7 @@ class Component {
     ) {
         self.uuid = uuid
         self.name = name
-        self.abbreviation = abbreviation
+        self.referenceDesignatorPrefix = referenceDesignatorPrefix
         self.symbol = symbol
         self.footprints = footprints
         self.category = category

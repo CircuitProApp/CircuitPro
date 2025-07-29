@@ -17,8 +17,8 @@ struct DesignComponent: Identifiable, Hashable {
 
     var id: UUID { instance.id }
 
-    var reference: String {
-        definition.abbreviation + instance.reference.description
+    var referenceDesignator: String {
+        definition.referenceDesignatorPrefix + instance.referenceDesignatorIndex.description
     }
     
     var displayedProperties: [DisplayedProperty] {

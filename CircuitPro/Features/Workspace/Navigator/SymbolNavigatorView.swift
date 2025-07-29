@@ -58,7 +58,7 @@ struct SymbolNavigatorView: View {
                 Text(designComponent.definition.name)
                     .foregroundStyle(.primary)
                 Spacer()
-                Text(designComponent.reference)
+                Text(designComponent.referenceDesignator)
                     .foregroundStyle(.secondary)
                     .monospaced()
             }

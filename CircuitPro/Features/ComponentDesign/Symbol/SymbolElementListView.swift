@@ -53,8 +53,8 @@ struct SymbolElementListView: View {
         case .primitive(let primitive):
             Label(primitive.displayName, systemImage: "square.on.circle")
         case .text(let textElement):
-            if textElement.id == componentDesignManager.abbreviationTextElementID {
-                Label("Abbreviation Text", systemImage: "textformat.alt")
+            if textElement.id == componentDesignManager.referenceDesignatorPrefixTextElementID {
+                Label("Reference Designator Prefix", systemImage: "textformat.alt")
             } else {
                 Label("\"\(textElement.text)\"", systemImage: "text.bubble")
             }

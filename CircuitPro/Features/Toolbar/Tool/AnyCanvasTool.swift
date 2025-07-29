@@ -22,7 +22,7 @@ struct AnyCanvasTool: CanvasTool {
     private let box: ToolBoxBase          // <— keeps the ToolBox alive
 
      init<T: CanvasTool>(_ tool: T) {
-         let storage = ToolBox(tool)       // class wrapper, reference-type
+         let storage = ToolBox(tool)       // class wrapper, referenceDesignatorIndex-type
          self.box = storage
 
          id         = tool.id
