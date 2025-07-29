@@ -18,31 +18,26 @@ struct SymbolPropertiesEditorView: View {
             if componentDesignManager.selectedSymbolElementIDs.isEmpty {
                 placeholder("No elements selected")
             } else {
-       
+                ScrollView {
                     // Section for Pins
                     ForEach($manager.symbolElements) { $element in
                         if case .pin(let pin) = element, componentDesignManager.selectedSymbolElementIDs.contains(pin.id) {
                             // Safely unwrap the binding to the pin
                             if let pinBinding = $element.pin {
-                                Section("Pin \(pin.number) Properties") {
-                                    PinPropertiesView(pin: pinBinding)
-                                }
+                         
+                                PinPropertiesView(pin: pinBinding)
+                                
                             }
-                        }
-                    }
-
-                    // Section for Primitives
-                    ForEach($manager.symbolElements) { $element in
-                        if case .primitive(let primitive) = element, componentDesignManager.selectedSymbolElementIDs.contains(primitive.id) {
+                        } else if case .primitive(let primitive) = element, componentDesignManager.selectedSymbolElementIDs.contains(primitive.id) {
                             // Safely unwrap the binding to the primitive
                             if let primitiveBinding = $element.primitive {
-                                Section("\(primitive.displayName) Properties") {
-                                    PrimitivePropertiesView(primitive: primitiveBinding)
-                                }
+                             
+                                PrimitivePropertiesView(primitive: primitiveBinding)
+                                
                             }
                         }
                     }
-                
+                }
 
             }
         }

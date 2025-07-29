@@ -9,25 +9,33 @@ import SwiftUI
 
 /// A reusable control for editing the X and Y values of any CGPoint binding.
 struct PointControlView: View {
+
     var title: String = "Position"
     @Binding var point: CGPoint
     var displayOffset: CGPoint = .zero
 
     var body: some View {
-        VStack(alignment: .leading) {
-            Text(title).font(.headline)
+        VStack {
             HStack {
-                FloatingPointField(
-                    title: "x",
-                    value: $point.x,
-                    displayOffset: displayOffset.x
-                )
-                FloatingPointField(
-                    title: "y",
-                    value: $point.y,
-                    displayOffset: displayOffset.y
-                )
+                Text(title).font(.headline)
+                Spacer()
             }
+         
+              
+                HStack {
+                    Spacer()
+                    FloatingPointField(
+                        title: "X",
+                        value: $point.x,
+                        displayOffset: displayOffset.x
+                    )
+                    FloatingPointField(
+                        title: "Y",
+                        value: $point.y,
+                        displayOffset: displayOffset.y
+                    )
+                }
+            
         }
     }
 }

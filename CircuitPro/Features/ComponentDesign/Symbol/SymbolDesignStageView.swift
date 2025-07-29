@@ -16,17 +16,17 @@ struct SymbolDesignStageView: View {
     private var symbolCanvasManager
 
     var body: some View {
-        StageContentView(
-            left: {
-                SymbolElementListView()
-            },
-            center: {
-                SymbolDesignView()
-                    .environment(symbolCanvasManager)
-            },
-            right: {
-                SymbolPropertiesEditorView()
-            }
-        )
+//        StageContentView(
+//            left: {
+//          
+//            },
+//            center: {
+//             
+//            },
+//            right: {
+//            
+//            }
+//        )
+Text("HEllo")
     }
 }

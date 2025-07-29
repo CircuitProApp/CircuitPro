@@ -43,13 +43,17 @@ struct RectanglePropertiesView: View {
                 point: $rectangle.position,
                    displayOffset: PaperSize.component.centerOffset()
                )
+            Divider()
             HStack {
-                FloatingPointField(title: "width", value: $rectangle.size.width)
-                FloatingPointField(title: "height", value: $rectangle.size.height)
+                FloatingPointField(title: "W", value: $rectangle.size.width)
+                FloatingPointField(title: "H", value: $rectangle.size.height)
             }
+            Divider()
             RotationControlView(object: $rectangle)
+            Divider()
             StrokeAndFillControlView(object: $rectangle)
-            FloatingPointField(title: "corner radius", value: $rectangle.cornerRadius)
+            Divider()
+            FloatingPointField(title: "Corner Radius", value: $rectangle.cornerRadius)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(6)

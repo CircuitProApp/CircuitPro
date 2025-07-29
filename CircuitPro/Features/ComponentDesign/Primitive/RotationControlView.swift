@@ -38,19 +38,15 @@ struct RotationControlView<T: Transformable>: View {
                     range: 0...360,
                     isContinuous: true
                 )
-                .frame(width: 60, height: 60)
 
                 // The DoubleField ALSO uses the exact same adapter binding,
                 // ensuring they are perfectly in sync.
                 FloatingPointField(
                     title: "", // Title is provided by the Text view above
                     value: rotationInDegrees,
-                    maxDecimalPlaces: 1
+                    maxDecimalPlaces: 1,
+                    suffix: "°"
                 )
-                .frame(width: 70) // Give it a specific width
-                
-                Text("deg")
-                    .foregroundStyle(.secondary)
             }
         }
     }

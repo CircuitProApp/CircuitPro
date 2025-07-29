@@ -28,7 +28,6 @@ struct FootprintDesignView: View {
                 layerAssignments: $bindableComponentDesignManager.layerAssignments
             )
         )
-
         .overlay(alignment: .leading) {
             FootprintDesignToolbarView()
                 .padding(10)
@@ -44,6 +43,5 @@ struct FootprintDesignView: View {
             .background(.ultraThinMaterial)
 
         }
-        .clipAndStroke(with: .rect(cornerRadius: 20))
     }
 }

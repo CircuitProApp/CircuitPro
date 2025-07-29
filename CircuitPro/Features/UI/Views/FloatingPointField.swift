@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct FloatingPointField<T: BinaryFloatingPoint>: View {
+    // 1. Properties
     let title: String
     @Binding var value: T
     var placeholder: String = ""
@@ -19,45 +20,75 @@ struct FloatingPointField<T: BinaryFloatingPoint>: View {
     var displayMultiplier: T = 1.0
     /// Constant added to the scaled value for display
     var displayOffset: T = 0.0
+    
+    // Optional suffix for units like "mm" or "°"
+    var suffix: String?
 
+    // 2. State
     @State private var text: String = ""
     @FocusState private var isFocused: Bool
 
+    // 3. Body
     var body: some View {
-        TextField(title, text: $text)
-            .focused($isFocused)
-            .onAppear {
-                let displayValue = (value * displayMultiplier) + displayOffset
-                text = formatted(displayValue)
-            }
-            .onChange(of: value) { _, newValue in
-                // Update text field if the binding value changes from outside
-                let displayValue = (newValue * displayMultiplier) + displayOffset
-                text = formatted(displayValue)
-            }
-            .onChange(of: isFocused) { _, focused in
-                if !focused {
-                    validateAndCommit()
+//        VStack {
+//       
+            TextField(title, text: $text)
+                .focused($isFocused)
+                .textFieldStyle(.plain)
+                .background(.secondary)
+                .contentMargins(.horizontal, 15)
+                .overlay(alignment: .trailing) {
+                    Text(title)
+                        .font(.caption)
                 }
-            }
-            .onSubmit {
-                validateAndCommit()
-                isFocused = false
-            }
+                .onAppear {
+                    let displayValue = (value * displayMultiplier) + displayOffset
+                    text = formatted(displayValue)
+                }
+                .onChange(of: value) { _, newValue in
+                    // Update text only if not focused to avoid disrupting user input
+                    if !isFocused {
+                        let displayValue = (newValue * displayMultiplier) + displayOffset
+                        text = formatted(displayValue)
+                    }
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if !focused {
+                        validateAndCommit()
+                    }
+                }
+                .onSubmit {
+                    validateAndCommit()
+                    isFocused = false
+                }
+//            Text(title)
+//        }
     }
 
+    // 4. Private Methods
     private func validateAndCommit() {
-        let filtered = filterInput(text)
+        // MODIFIED: Logic to strip the suffix before validation.
         
-        // 1. Convert the filtered string to a 'Double' first.
+        // 1. Prepare the input string by trimming whitespace.
+        var inputText = text.trimmingCharacters(in: .whitespaces)
+        
+        // 2. If a suffix exists, remove it from the end of the input string.
+        if let suffix = suffix, !suffix.isEmpty, inputText.hasSuffix(suffix) {
+            inputText = String(inputText.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
+        }
+        
+        // 3. Filter the remaining string to ensure it's a valid number.
+        let filtered = filterInput(inputText)
+        
+        // 4. Attempt to convert the filtered string to our numeric type.
         if let doubleVal = Double(filtered) {
-            // 2. Convert the Double to our generic type 'T'.
             let genericVal = T(doubleVal)
 
             let internalValue = (genericVal - displayOffset) / displayMultiplier
             let clamped = clamp(internalValue, to: range)
-            value = clamped
+            value = clamped // Commit the valid value
             
+            // Re-format the text with the suffix for display consistency.
             let displayValue = (clamped * displayMultiplier) + displayOffset
             text = formatted(displayValue)
         } else {
@@ -101,11 +132,19 @@ struct FloatingPointField<T: BinaryFloatingPoint>: View {
     }
 
     private func formatted(_ value: T) -> String {
+        // MODIFIED: Appends the suffix to the formatted number string.
         let formatter = NumberFormatter()
         formatter.minimumFractionDigits = 1
         formatter.maximumFractionDigits = maxDecimalPlaces
         formatter.minimumIntegerDigits = 1
-        // Convert T to Double for formatting, as NSNumber works reliably with it.
-        return formatter.string(from: NSNumber(value: Double(value))) ?? ""
+        
+        let numberString = formatter.string(from: NSNumber(value: Double(value))) ?? ""
+        
+        // Append a space and the suffix if it exists.
+        if let suffix = suffix, !suffix.isEmpty {
+            return "\(numberString) \(suffix)"
+        } else {
+            return numberString
+        }
     }
 }

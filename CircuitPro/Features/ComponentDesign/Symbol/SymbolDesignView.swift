@@ -36,6 +36,5 @@ struct SymbolDesignView: View {
             .background(.ultraThinMaterial)
 
         }
-        .clipAndStroke(with: .rect(cornerRadius: 20))
     }
 }

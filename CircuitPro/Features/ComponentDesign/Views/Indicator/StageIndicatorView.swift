@@ -15,12 +15,12 @@ struct StageIndicatorView: View {
                 .onTapGesture { currentStage = stage }
                 if stage != .footprint {
                     Image(systemName: CircuitProSymbols.Generic.chevronRight)
-                        .imageScale(.large)
+                        .imageScale(.medium)
                         .fontWeight(.semibold)
                         .foregroundStyle(.tertiary)
                 }
             }
         }
-        .padding()
+        .padding(10)
     }
 }

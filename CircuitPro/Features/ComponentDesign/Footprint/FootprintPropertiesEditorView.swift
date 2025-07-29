@@ -18,7 +18,7 @@ struct FootprintPropertiesEditorView: View {
             if manager.selectedFootprintElementIDs.isEmpty {
                 placeholder("No elements selected")
             } else {
-    
+                ScrollView {
                     // 2. Section for Pads
                     // Iterate over all footprint elements to find the selected pads.
                     ForEach($manager.footprintElements) { $element in
@@ -32,7 +32,7 @@ struct FootprintPropertiesEditorView: View {
                             }
                         }
                     }
-
+                    
                     // 3. Section for Primitives
                     // Iterate again to find the selected primitives.
                     ForEach($manager.footprintElements) { $element in
@@ -47,6 +47,7 @@ struct FootprintPropertiesEditorView: View {
                         }
                     }
                 }
+            }
         }
     }
 

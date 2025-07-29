@@ -26,8 +26,9 @@ struct StagePill: View {
                     .foregroundStyle(.white, .yellow)
             }
         }
-        .padding(10)
-        .font(.headline)
+        .padding(5)
+        .font(.subheadline)
+        .fontWeight(.semibold)
         .background(isSelected ? .blue : .clear)
         .foregroundStyle(isSelected ? .white : .secondary)
         .clipShape(.capsule)

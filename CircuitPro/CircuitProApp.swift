@@ -56,6 +56,7 @@ struct CircuitProApp: App {
 
         Window("Component Design", id: "ComponentDesignWindow") {
             ComponentDesignView()
+                .frame(minWidth: 800, minHeight: 600)
                 .modelContainer(ModelContainerManager.shared.container)
                 .environment(\.componentDesignManager, componentDesignManager)
         }
