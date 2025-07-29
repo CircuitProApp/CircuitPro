@@ -1,3 +1,11 @@
+//
+//  StageIndicatorView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 7/29/25.
+//
+
+
 import SwiftUI
 
 struct StageIndicatorView: View {
@@ -7,12 +15,13 @@ struct StageIndicatorView: View {
     var body: some View {
         HStack {
             ForEach(ComponentDesignStage.allCases) { stage in
-                StagePill(
+                StagePillButton(
                     stage: stage,
                     isSelected: currentStage == stage,
-                    validationState: validationProvider(stage)
+                    validationState: validationProvider(stage),
+                    action: { currentStage = stage }
                 )
-                .onTapGesture { currentStage = stage }
+                
                 if stage != .footprint {
                     Image(systemName: CircuitProSymbols.Generic.chevronRight)
                         .fontWeight(.semibold)
