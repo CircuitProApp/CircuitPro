@@ -23,24 +23,40 @@ struct FloatingPointField<T: BinaryFloatingPoint>: View {
     
     // Optional suffix for units like "mm" or "°"
     var suffix: String?
+    
+    var titleDisplayMode: TitleDisplayMode = .overlay
 
     // 2. State
     @State private var text: String = ""
     @FocusState private var isFocused: Bool
+    
+    enum TitleDisplayMode {
+        case label
+        case overlay
+    }
 
     // 3. Body
     var body: some View {
-            TextField(title, text: $text)
+        HStack {
+            if titleDisplayMode == .label {
+                Text(title)
+                    .font(.subheadline)
+            }
+          
+            TextField("", text: $text)
+                .frame(width: 50)
                 .focused($isFocused)
                 .textFieldStyle(.plain)
                 .directionalPadding(vertical: 2.5, horizontal: 5)
-                .padding(.trailing, 12.5)
+                .padding(.trailing, titleDisplayMode == .overlay ? 12.5 : 0)
                 .background(.ultraThinMaterial)
                 .clipAndStroke(with: .rect(cornerRadius: 5))
                 .overlay(alignment: .trailing) {
-                    Text(title)
-                        .font(.caption)
-                        .padding(.horizontal, 5)
+                    if titleDisplayMode == .overlay {
+                        Text(title)
+                            .font(.caption)
+                            .padding(.horizontal, 5)
+                    }
                 }
                 .focusRing(isFocused, shape: .rect(cornerRadius: 5))
                 .onAppear {
@@ -54,6 +70,13 @@ struct FloatingPointField<T: BinaryFloatingPoint>: View {
                         text = formatted(displayValue)
                     }
                 }
+                .onChange(of: range) { _, newRange in
+                    // When the range changes, ensure the current value is still valid.
+                    let clamped = clamp(value, to: newRange)
+                    if clamped != value {
+                        value = clamped
+                    }
+                }
                 .onChange(of: isFocused) { _, focused in
                     if !focused {
                         validateAndCommit()
@@ -63,6 +86,7 @@ struct FloatingPointField<T: BinaryFloatingPoint>: View {
                     validateAndCommit()
                     isFocused = false
                 }
+        }
     }
 
     // 4. Private Methods

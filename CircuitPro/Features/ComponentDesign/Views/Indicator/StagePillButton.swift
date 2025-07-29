@@ -1,5 +1,5 @@
 //
-//  StagePill.swift
+//  StagePillButton.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 7/10/25.
@@ -30,15 +30,15 @@ struct StagePillButton: View {
                         .foregroundStyle(.white, .yellow)
                 }
             }
-            
+            .font(.subheadline)
+            .fontWeight(.semibold)
+            .foregroundStyle(isSelected ? .blue : .secondary)
+            .directionalPadding(vertical: 5, horizontal: 7.5)
+            .background(backgroundStyle())
+            .clipShape(.capsule)
+
         }
         .buttonStyle(.plain)
-        .directionalPadding(vertical: 5, horizontal: 7.5)
-        .font(.subheadline)
-        .fontWeight(.semibold)
-        .background(backgroundStyle())
-        .foregroundStyle(isSelected ? .blue : .secondary)
-        .clipShape(.capsule)
         .onHover { hovering in
             self.isHovering = hovering
         }

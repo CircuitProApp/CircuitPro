@@ -17,6 +17,10 @@ struct RectanglePrimitive: GraphicPrimitive {
     var strokeWidth: CGFloat
     var filled: Bool
     var color: SDColor
+    
+    var maximumCornerRadius: CGFloat {
+        return min(size.width, size.height) / 2
+    }
 
     func handles() -> [Handle] {
         let halfW = size.width / 2

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PrimitivePropertiesView: View {
     @Binding var primitive: AnyPrimitive
-
+    
     var body: some View {
         switch primitive {
         case .rectangle:
@@ -38,43 +38,60 @@ struct RectanglePropertiesView: View {
     
     
     var body: some View {
-        VStack(alignment: .leading) {
-            PointControlView(
-                point: $rectangle.position,
-                   displayOffset: PaperSize.component.centerOffset()
-               )
-            Divider()
-            HStack {
+        VStack(alignment: .leading, spacing: 15) {
+            InspectorSection(title: "Size") {
                 FloatingPointField(title: "W", value: $rectangle.size.width)
                 FloatingPointField(title: "H", value: $rectangle.size.height)
             }
+            Divider()
+            PointControlView(
+                point: $rectangle.position,
+                displayOffset: PaperSize.component.centerOffset()
+            )
             Divider()
             RotationControlView(object: $rectangle)
             Divider()
             StrokeAndFillControlView(object: $rectangle)
             Divider()
-            FloatingPointField(title: "Corner Radius", value: $rectangle.cornerRadius)
+            InspectorSection(title: "Corner Radius") {
+                Slider(value: $rectangle.cornerRadius, in: 0...rectangle.maximumCornerRadius)
+                    .labelsHidden()
+                FloatingPointField(
+                    title: "",
+                    value: $rectangle.cornerRadius,
+                    range: 0...rectangle.maximumCornerRadius,
+                    maxDecimalPlaces: 2,
+                    titleDisplayMode: .label)
+            }
+       
+           
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(6)
+        .padding()
     }
 }
 
 struct CirclePropertiesView: View {
     @Binding var circle: CirclePrimitive
-
+    
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 15) {
+            InspectorSection(title: "Size") {
+                FloatingPointField(title: "Radius", value: $circle.radius, titleDisplayMode: .label)
+            }
+            Divider()
             PointControlView(
                 point: $circle.position,
-                   displayOffset: PaperSize.component.centerOffset()
-               )
+                displayOffset: PaperSize.component.centerOffset()
+            )
+            Divider()
             RotationControlView(object: $circle)
+            Divider()
             StrokeAndFillControlView(object: $circle)
-            FloatingPointField(title: "Radius", value: $circle.radius)
+            
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(6)
+        .padding()
     }
 }
 
@@ -82,20 +99,24 @@ struct LinePropertiesView: View {
     @Binding var line: LinePrimitive
     
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 15) {
             PointControlView(
                 title: "Start Point",
                 point: $line.start,
-                   displayOffset: PaperSize.component.centerOffset()
-               )
+                displayOffset: PaperSize.component.centerOffset()
+            )
             PointControlView(
                 title: "End Point",
                 point: $line.end,
-                   displayOffset: PaperSize.component.centerOffset()
-               )
-            StrokeAndFillControlView(object: $line)
+                displayOffset: PaperSize.component.centerOffset()
+            )
+            Divider()
             RotationControlView(object: $line)
+            Divider()
+            StrokeAndFillControlView(object: $line)
+    
         }
+        .padding()
     }
 }
 
@@ -114,7 +135,7 @@ extension Binding where Value == AnyPrimitive {
             set: { self.wrappedValue = .rectangle($0) }
         )
     }
-
+    
     var circle: Binding<CirclePrimitive>? {
         guard case .circle = self.wrappedValue else { return nil }
         return Binding<CirclePrimitive>(

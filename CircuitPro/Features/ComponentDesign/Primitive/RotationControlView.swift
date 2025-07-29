@@ -10,44 +10,32 @@ import SwiftUI
 struct RotationControlView<T: Transformable>: View {
     @Binding var object: T
 
-    // This is our adapter binding. It encapsulates all the logic to translate
-    // between the model's data (radians, CW) and the UI's representation (degrees, CCW).
     private var rotationInDegrees: Binding<CGFloat> {
-        Binding<CGFloat>(
+        Binding(
             get: {
-                // Convert model's rotation (radians, positive is CW) to UI's value (degrees, positive is CCW)
                 let degrees = -object.rotation * 180 / .pi
-                // Normalize to a positive 0-360 range for the slider UI
                 return (degrees.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
             },
-            set: { newValueInDegrees in
-                // Convert UI's value (degrees, positive is CCW) back to the model's rotation (radians, positive is CW)
-                let modelDegrees = -newValueInDegrees
+            set: {
+                let modelDegrees = -$0
                 object.rotation = modelDegrees * .pi / 180
             }
         )
     }
 
     var body: some View {
-        VStack(alignment: .leading) {
-            Text("Rotation").font(.headline)
-            HStack(spacing: 8) {
-                // The RadialSlider uses our adapter binding
-                RadialSlider(
-                    value: rotationInDegrees,
-                    range: 0...360,
-                    isContinuous: true
-                )
-
-                // The DoubleField ALSO uses the exact same adapter binding,
-                // ensuring they are perfectly in sync.
-                FloatingPointField(
-                    title: "", // Title is provided by the Text view above
-                    value: rotationInDegrees,
-                    maxDecimalPlaces: 1,
-                    suffix: "°"
-                )
-            }
+        InspectorSection(title: "Rotate") {
+            RadialSlider(
+                value: rotationInDegrees,
+                range: 0...360,
+                isContinuous: true
+            )
+            FloatingPointField(
+                title: "",
+                value: rotationInDegrees,
+                maxDecimalPlaces: 1,
+                suffix: "°"
+            )
         }
     }
 }
