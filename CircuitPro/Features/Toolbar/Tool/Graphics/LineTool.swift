@@ -48,8 +48,9 @@ struct LineTool: CanvasTool {
         )]
     }
 
-    mutating func handleEscape() {
-        start = nil
+    mutating func handleEscape() -> Bool {
+        defer { start = nil }
+        return start != nil
     }
 
     mutating func handleBackspace() {

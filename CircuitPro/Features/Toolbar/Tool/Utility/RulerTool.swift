@@ -111,10 +111,12 @@ struct RulerTool: CanvasTool {
         return allParameters
     }
 
-    mutating func handleEscape() {
+    mutating func handleEscape() -> Bool {
+        let hadState = start != nil || end != nil || clicks != 0
         start = nil
         end = nil
         clicks = 0
+        return hadState
     }
 
     mutating func handleBackspace() {

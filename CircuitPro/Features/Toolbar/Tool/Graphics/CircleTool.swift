@@ -42,8 +42,9 @@ struct CircleTool: CanvasTool {
         )]
     }
 
-    mutating func handleEscape() {
-        center = nil
+    mutating func handleEscape() -> Bool {
+        defer { center = nil }
+        return center != nil
     }
 
     mutating func handleBackspace() {

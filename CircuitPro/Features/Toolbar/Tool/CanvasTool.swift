@@ -21,7 +21,7 @@ protocol CanvasTool: Hashable {
     // NEW: keyboard actions -------------------------------------------------
     /// Called when the user presses the Escape key while this tool is active.
     /// Tools can reset any in-progress state here.
-    mutating func handleEscape()
+    mutating func handleEscape() -> Bool
 
     /// Called when the Backspace key is pressed. Tools should undo the most
     /// recent step of the operation if possible.
@@ -44,7 +44,7 @@ extension CanvasTool {
 
     mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] { [] }
 
-    mutating func handleEscape() {}
+    mutating func handleEscape() -> Bool { false }
 
     mutating func handleBackspace() {}
 

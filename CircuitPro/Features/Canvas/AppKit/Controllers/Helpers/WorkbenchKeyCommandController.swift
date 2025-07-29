@@ -49,8 +49,12 @@ final class WorkbenchKeyCommandController {
         // Escape
         case "\u{1b}":
             if var tool = workbench.selectedTool, tool.id != "cursor" {
-                tool.handleEscape()
-                workbench.selectedTool = tool
+                let canceled = tool.handleEscape()
+                if canceled {
+                    workbench.selectedTool = tool
+                } else {
+                    workbench.selectedTool = AnyCanvasTool(CursorTool())
+                }
                 return true
             }
 

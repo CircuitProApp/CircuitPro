@@ -112,8 +112,12 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     // MARK: - Tool State Management
-    mutating func handleEscape() {
-        if case .drawing = state { state = .idle }
+    mutating func handleEscape() -> Bool {
+        if case .drawing = state {
+            state = .idle
+            return true
+        }
+        return false
     }
 
     mutating func handleReturn() -> CanvasToolResult {
