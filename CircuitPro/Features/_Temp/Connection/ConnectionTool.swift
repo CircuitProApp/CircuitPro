@@ -112,8 +112,12 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     // MARK: - Tool State Management
-    mutating func handleEscape() {
-        if case .drawing = state { state = .idle }
+    mutating func handleEscape() -> Bool {
+        if case .drawing = state {
+            state = .idle
+            return true // State was successfully cleared.
+        }
+        return false // Tool was already idle.
     }
 
     mutating func handleReturn() -> CanvasToolResult {
@@ -125,7 +129,8 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     mutating func handleBackspace() {
-        // TODO: Implement backspace
+        // This tool requires a more complex undo stack for backspace,
+        // so for now it does nothing.
     }
     
     // MARK: - Private Helpers

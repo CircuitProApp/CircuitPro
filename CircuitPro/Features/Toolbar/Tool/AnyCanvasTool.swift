@@ -15,7 +15,7 @@ struct AnyCanvasTool: CanvasTool {
 
     private let _handleTap: (CGPoint, CanvasToolContext) -> CanvasToolResult
     private let _preview: (CGPoint, CanvasToolContext) -> [DrawingParameters]
-    private let _handleEscape: () -> Void
+    private let _handleEscape: () -> Bool
     private let _handleBackspace: () -> Void
     private let _handleRotate: () -> Void
     private let _handleReturn: () -> CanvasToolResult
@@ -46,11 +46,12 @@ struct AnyCanvasTool: CanvasTool {
         }
 
         // ----- handleEscape -------------------------------------------------
-        _handleEscape = {
-            var inner = storage.tool
-            inner.handleEscape()
-            storage.tool = inner
-        }
+         _handleEscape = {
+             var inner = storage.tool
+             let handled = inner.handleEscape()
+             storage.tool = inner
+             return handled
+         }
 
         // ----- handleBackspace ----------------------------------------------
         _handleBackspace = {
@@ -84,7 +85,7 @@ struct AnyCanvasTool: CanvasTool {
         _preview(mouse, context)
     }
 
-    mutating func handleEscape() {
+    mutating func handleEscape() -> Bool {
         _handleEscape()
     }
 

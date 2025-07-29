@@ -2,7 +2,7 @@
 //  CenteringNSScrollView.swift
 //  CircuitPro
 //
-//  Created by Gemini on 7/29/25.
+//  Created by Giorgi Tchelidze on 7/29/25.
 //
 
 import AppKit

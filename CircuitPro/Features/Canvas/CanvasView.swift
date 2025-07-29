@@ -85,6 +85,10 @@ struct CanvasView: NSViewRepresentable {
         workbench.snapGridSize = manager.gridSpacing.rawValue * 10.0
         workbench.showGuides = manager.showGuides
         
+        if workbench.selectedTool?.id != selectedTool.id {
+             workbench.selectedTool = selectedTool
+        }
+        
         // Pass configuration to Workbench
         workbench.crosshairsStyle = manager.crosshairsStyle
         workbench.paperSize = manager.paperSize
@@ -96,6 +100,7 @@ struct CanvasView: NSViewRepresentable {
         // Callbacks
         workbench.onUpdate = { self.elements = $0 }
         workbench.onSelectionChange = { self.selectedIDs = $0 }
+        workbench.onToolChange = { self.selectedTool = $0 }
         workbench.onMouseMoved = { position in self.manager.mouseLocation = position }
         workbench.onComponentDropped = onComponentDropped
         workbench.onPinHoverChange = { id in

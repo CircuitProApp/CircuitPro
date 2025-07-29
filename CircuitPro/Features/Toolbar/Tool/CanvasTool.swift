@@ -21,7 +21,8 @@ protocol CanvasTool: Hashable {
     // NEW: keyboard actions -------------------------------------------------
     /// Called when the user presses the Escape key while this tool is active.
     /// Tools can reset any in-progress state here.
-    mutating func handleEscape()
+    /// Returns bool if any progress was cleared.
+    mutating func handleEscape() -> Bool
 
     /// Called when the Backspace key is pressed. Tools should undo the most
     /// recent step of the operation if possible.

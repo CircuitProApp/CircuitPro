@@ -54,6 +54,14 @@ final class WorkbenchView: NSView {
 
     var selectedTool: AnyCanvasTool? {
         didSet {
+            // We only want to notify the binding when the *type* of tool changes,
+            // not when its internal state changes. Comparing by ID is perfect for this.
+            if oldValue?.id != selectedTool?.id {
+                // If the selectedTool is set to nil (or anything else),
+                // we'll provide a valid tool to the callback, defaulting to the CursorTool.
+                // This ensures the non-optional `@Binding` in CanvasView always has a value.
+                onToolChange?(selectedTool ?? AnyCanvasTool(CursorTool()))
+            }
             previewView?.selectedTool = selectedTool
             self.becomeFirstResponderIfAppropriate()
         }
@@ -115,6 +123,7 @@ final class WorkbenchView: NSView {
     var onSelectionChange: ((Set<UUID>) -> Void)?
     var onPrimitiveAdded: ((UUID, CanvasLayer) -> Void)?
     var onMouseMoved: ((CGPoint) -> Void)?
+    var onToolChange: ((AnyCanvasTool) -> Void)?
     var onPinHoverChange: ((UUID?) -> Void)?
     var onComponentDropped: ((TransferableComponent, CGPoint) -> Void)?
 

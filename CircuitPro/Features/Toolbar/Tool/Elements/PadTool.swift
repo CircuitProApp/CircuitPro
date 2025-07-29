@@ -40,6 +40,10 @@ struct PadTool: CanvasTool {
 
         return previewPad.makeBodyParameters()
     }
+    
+    mutating func handleEscape() -> Bool {
+        return false
+    }
 
     mutating func handleRotate() {
         let all = CardinalRotation.allCases

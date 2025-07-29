@@ -4,6 +4,7 @@
 //
 //  Created by Giorgi Tchelidze on 4/30/25.
 //
+
 import SwiftUI
 
 struct LineTool: CanvasTool {
@@ -47,8 +48,12 @@ struct LineTool: CanvasTool {
         )]
     }
 
-    mutating func handleEscape() {
-        start = nil
+    mutating func handleEscape() -> Bool {
+        if start != nil {
+            start = nil
+            return true
+        }
+        return false
     }
 
     mutating func handleBackspace() {

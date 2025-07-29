@@ -65,7 +65,7 @@ struct RulerTool: CanvasTool {
 
             let drawTick: (CGPoint) -> Void = { center in
                 let tickStart = CGPoint(x: center.x - unitPerp.x * tickLength, y: center.y - unitPerp.y * tickLength)
-                let tickEnd = CGPoint(x: center.x + unitPerp.x * tickLength, y: center.y + unitPerp.y * tickLength)
+                let tickEnd = CGPoint(x: center.x + unitPerp.y * tickLength, y: center.y + unitPerp.y * tickLength)
                 linePath.move(to: tickStart)
                 linePath.addLine(to: tickEnd)
             }
@@ -111,10 +111,14 @@ struct RulerTool: CanvasTool {
         return allParameters
     }
 
-    mutating func handleEscape() {
-        start = nil
-        end = nil
-        clicks = 0
+    mutating func handleEscape() -> Bool {
+        if clicks > 0 {
+            start = nil
+            end = nil
+            clicks = 0
+            return true // State was cleared.
+        }
+        return false // Tool was already idle.
     }
 
     mutating func handleBackspace() {

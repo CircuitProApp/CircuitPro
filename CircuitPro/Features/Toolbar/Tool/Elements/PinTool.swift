@@ -40,6 +40,10 @@ struct PinTool: CanvasTool {
 
         return previewPin.makeBodyParameters()
     }
+    
+    mutating func handleEscape() -> Bool {
+        return false
+    }
 
     mutating func handleRotate() {
         let all = CardinalRotation.allCases

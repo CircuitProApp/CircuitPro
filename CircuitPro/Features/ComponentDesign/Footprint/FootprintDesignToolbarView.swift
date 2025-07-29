@@ -12,18 +12,17 @@ struct FootprintDesignToolbarView: View {
     private var componentDesignManager
 
     var body: some View {
+        @Bindable var manager = componentDesignManager
         ToolbarView<AnyCanvasTool>(
             tools: CanvasToolRegistry.footprintDesignTools,
+            selectedTool: $manager.selectedFootprintTool,
             dividerBefore: { tool in
                 tool.id == "ruler"
             },
             dividerAfter: { tool in
                 tool.id == "cursor" || tool.id == "circle"
             },
-            imageName: { $0.symbolName },
-            onToolSelected: { tool in
-                componentDesignManager.selectedFootprintTool = tool
-            }
+            imageName: { $0.symbolName }
         )
     }
 }

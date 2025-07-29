@@ -13,16 +13,14 @@ struct SchematicToolbarView: View {
     var body: some View {
         ToolbarView<AnyCanvasTool>(
             tools: CanvasToolRegistry.schematicTools,
+            selectedTool: $selectedSchematicTool,
             dividerBefore: { tool in
                 tool.id == "ruler"
             },
             dividerAfter: { tool in
                 tool.id == "cursor"
             },
-            imageName: { $0.symbolName },
-            onToolSelected: { tool in
-                selectedSchematicTool = tool
-            }
+            imageName: { $0.symbolName }
         )
     }
 }

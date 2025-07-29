@@ -42,11 +42,16 @@ struct CircleTool: CanvasTool {
         )]
     }
 
-    mutating func handleEscape() {
-        center = nil
+    mutating func handleEscape() -> Bool {
+        if center != nil {
+            center = nil
+            return true // State was cleared.
+        }
+        return false // No state to clear.
     }
 
     mutating func handleBackspace() {
+        // For a simple one-step tool, Backspace and Escape do the same thing.
         center = nil
     }
 }

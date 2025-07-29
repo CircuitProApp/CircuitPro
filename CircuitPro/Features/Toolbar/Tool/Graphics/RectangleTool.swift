@@ -45,8 +45,12 @@ struct RectangleTool: CanvasTool {
         )]
     }
 
-    mutating func handleEscape() {
-        start = nil
+    mutating func handleEscape() -> Bool {
+        if start != nil {
+            start = nil
+            return true // State was cleared.
+        }
+        return false // No state to clear.
     }
 
     mutating func handleBackspace() {

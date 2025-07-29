@@ -10,27 +10,25 @@ import SwiftUI
 /// A generic toolbar driven by any CanvasTool.
 struct ToolbarView<Tool: CanvasTool>: View {
     let tools: [Tool]
+    @Binding var selectedTool: Tool
     let dividerBefore: ((Tool) -> Bool)?
     let dividerAfter: ((Tool) -> Bool)?
     let imageName: (Tool) -> String
-    let onToolSelected: (Tool) -> Void
 
-    @State private var selectedTool: Tool
     @State private var hoveredTool: Tool?
 
     init(
         tools: [Tool],
+        selectedTool: Binding<Tool>,
         dividerBefore: ((Tool) -> Bool)? = nil,
         dividerAfter: ((Tool) -> Bool)? = nil,
-        imageName: @escaping (Tool) -> String,
-        onToolSelected: @escaping (Tool) -> Void
+        imageName: @escaping (Tool) -> String
     ) {
         self.tools = tools
+        self._selectedTool = selectedTool
         self.dividerBefore = dividerBefore
         self.dividerAfter = dividerAfter
         self.imageName = imageName
-        self.onToolSelected = onToolSelected
-        _selectedTool = State(initialValue: tools.first!)
     }
 
     var body: some View {
@@ -67,7 +65,6 @@ struct ToolbarView<Tool: CanvasTool>: View {
 
         return Button {
             selectedTool = tool
-            onToolSelected(tool)
         } label: {
             Group {
                 if tool.id == "connection" {
