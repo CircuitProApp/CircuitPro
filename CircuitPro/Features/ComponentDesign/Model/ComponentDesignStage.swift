@@ -16,8 +16,8 @@ enum ComponentDesignStage: String, Displayable, CaseIterable {
     var label: String {
         switch self {
         case .component: return "Component Details"
-        case .symbol: return "Symbol Creation"
-        case .footprint: return "Footprint Creation"
+        case .symbol: return "Symbol"
+        case .footprint: return "Footprint"
         }
     }
 

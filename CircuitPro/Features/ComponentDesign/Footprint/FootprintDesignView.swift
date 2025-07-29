@@ -14,34 +14,39 @@ struct FootprintDesignView: View {
 
     @Environment(\.componentDesignManager)
     private var componentDesignManager
+    
+    @State private var isCollapsed: Bool = true
 
     var body: some View {
         @Bindable var bindableComponentDesignManager = componentDesignManager
 
-        CanvasView(
-            manager: canvasManager, schematicGraph: .init(),
-            elements: $bindableComponentDesignManager.footprintElements,
-            selectedIDs: $bindableComponentDesignManager.selectedFootprintElementIDs,
-            selectedTool: $bindableComponentDesignManager.selectedFootprintTool,
-            layerBindings: CanvasLayerBindings(
-                selectedLayer: $bindableComponentDesignManager.selectedFootprintLayer,
-                layerAssignments: $bindableComponentDesignManager.layerAssignments
+        SplitPaneView(isCollapsed: $isCollapsed) {
+            CanvasView(
+                manager: canvasManager, schematicGraph: .init(),
+                elements: $bindableComponentDesignManager.footprintElements,
+                selectedIDs: $bindableComponentDesignManager.selectedFootprintElementIDs,
+                selectedTool: $bindableComponentDesignManager.selectedFootprintTool,
+                layerBindings: CanvasLayerBindings(
+                    selectedLayer: $bindableComponentDesignManager.selectedFootprintLayer,
+                    layerAssignments: $bindableComponentDesignManager.layerAssignments
+                )
             )
-        )
-        .overlay(alignment: .leading) {
-            FootprintDesignToolbarView()
+
+            .overlay(alignment: .leading) {
+     
+                FootprintDesignToolbarView()
+                
                 .padding(10)
-        }
-        .overlay(alignment: .bottom) {
+            }
+        } handle: {
             HStack {
                 CanvasControlView(editorType: .layout)
                 Spacer()
                 GridSpacingControlView()
                 ZoomControlView()
             }
-            .padding(10)
-            .background(.ultraThinMaterial)
-
+        } secondary: {
+            Text("WIP")
         }
     }
 }

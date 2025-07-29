@@ -7,34 +7,36 @@ struct SymbolDesignView: View {
 
     @Environment(\.componentDesignManager)
     private var componentDesignManager
+    
+    @State private var isCollapsed: Bool = true
 
     var body: some View {
 
         @Bindable var bindableComponentDesignManager = componentDesignManager
 
-        CanvasView(
-            manager: canvasManager, schematicGraph: .init(),
-            elements: $bindableComponentDesignManager.symbolElements,
-            selectedIDs: $bindableComponentDesignManager.selectedSymbolElementIDs,
-            selectedTool: $bindableComponentDesignManager.selectedSymbolTool
-        )
+        SplitPaneView(isCollapsed: $isCollapsed) {
+            CanvasView(
+                manager: canvasManager, schematicGraph: .init(),
+                elements: $bindableComponentDesignManager.symbolElements,
+                selectedIDs: $bindableComponentDesignManager.selectedSymbolElementIDs,
+                selectedTool: $bindableComponentDesignManager.selectedSymbolTool
+            )
 
-        .overlay(alignment: .leading) {
- 
-            SymbolDesignToolbarView()
-            
-            .padding(10)
-        }
-        .overlay(alignment: .bottom) {
+            .overlay(alignment: .leading) {
+     
+                SymbolDesignToolbarView()
+                
+                .padding(10)
+            }
+        } handle: {
             HStack {
                 CanvasControlView(editorType: .layout)
                 Spacer()
                 GridSpacingControlView()
                 ZoomControlView()
             }
-            .padding(10)
-            .background(.ultraThinMaterial)
-
+        } secondary: {
+            Text("WIP")
         }
     }
 }

@@ -46,10 +46,9 @@ struct EditorView: View {
             } handle: {
                 StatusBarView(
                     canvasManager: selectedCanvasManager,
-                    editorType: selectedEditor,
-                    showUtilityArea: $showUtilityArea
+                    editorType: selectedEditor
                 )
-                .padding(.horizontal, 12.5)
+           
             } secondary: {
                 UtilityAreaView()
             }

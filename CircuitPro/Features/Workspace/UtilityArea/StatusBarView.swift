@@ -12,8 +12,6 @@ struct StatusBarView: View {
     var canvasManager: CanvasManager
     var editorType: EditorType
 
-    @Binding var showUtilityArea: Bool
-
     var body: some View {
         HStack {
             CanvasControlView(editorType: editorType)
@@ -41,20 +39,11 @@ struct StatusBarView: View {
                 .foregroundStyle(.quinary)
                 .frame(height: 12)
                 .padding(.trailing, 4)
-            Button {
-                self.showUtilityArea.toggle()
-            } label: {
-                Image(systemName: CircuitProSymbols.Workspace.toggleUtilityArea)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 13, height: 13)
-                    .fontWeight(.light)
-            }
-            .buttonStyle(.borderless)
+
         }
     }
 }
 
 #Preview {
-    StatusBarView(canvasManager: .init(), editorType: .schematic, showUtilityArea: .constant(true))
+    StatusBarView(canvasManager: .init(), editorType: .schematic)
 }

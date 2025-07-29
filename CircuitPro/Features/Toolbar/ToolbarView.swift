@@ -41,7 +41,7 @@ struct ToolbarView<Tool: CanvasTool>: View {
             }
             .scrollIndicators(.never)
         }
-        .background(.thinMaterial)
+        .background(.ultraThinMaterial)
         .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3), lineWidth: 1)
         .buttonStyle(.borderless)
     }

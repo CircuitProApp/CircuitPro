@@ -52,7 +52,7 @@ struct ComponentDesignView: View {
                         .directionalPadding(vertical: 5, horizontal: 7.5)
                         .foregroundStyle(.white)
                         .background(Color.blue)
-                        .clipAndStroke(with: RoundedRectangle(cornerRadius: 5))
+                        .clipShape(.rect(cornerRadius: 5))
                     }
                 }
                 .onChange(of: componentDesignManager.componentProperties) {

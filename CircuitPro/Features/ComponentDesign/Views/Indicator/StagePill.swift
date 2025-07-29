@@ -26,11 +26,11 @@ struct StagePill: View {
                     .foregroundStyle(.white, .yellow)
             }
         }
-        .padding(5)
+        .directionalPadding(vertical: 5, horizontal: 7.5)
         .font(.subheadline)
         .fontWeight(.semibold)
-        .background(isSelected ? .blue : .clear)
-        .foregroundStyle(isSelected ? .white : .secondary)
+        .background(isSelected ? AnyShapeStyle(.blue.quaternary) : AnyShapeStyle(.clear))
+        .foregroundStyle(isSelected ? .blue : .secondary)
         .clipShape(.capsule)
         .animation(.default, value: validationState)
     }
