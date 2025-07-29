@@ -55,9 +55,7 @@ final class WorkbenchView: NSView {
     var selectedTool: AnyCanvasTool? {
         didSet {
             previewView?.selectedTool = selectedTool
-            if window?.firstResponder != self {
-                window?.makeFirstResponder(self)
-            }
+            self.becomeFirstResponderIfAppropriate()
         }
     }
 
@@ -191,6 +189,21 @@ final class WorkbenchView: NSView {
             isEnabled: isSnappingEnabled,
             origin: origin
         )
+    }
+    /// Requests that the workbench become the first responder, but only if another
+    /// text input view does not already have focus. This prevents the workbench
+    /// from stealing focus while the user is typing in a properties panel.
+    func becomeFirstResponderIfAppropriate() {
+        // Check if the current first responder is a text view (the field editor for NSTextField)
+        if window?.firstResponder?.isKind(of: NSTextView.self) == true {
+            // The user is typing somewhere else. Do not steal focus.
+            return
+        }
+        
+        // Otherwise, it's safe to become the first responder.
+        if window?.firstResponder != self {
+            window?.makeFirstResponder(self)
+        }
     }
 
     /// Ensures the schematic graph has vertices for every symbol pin, that their

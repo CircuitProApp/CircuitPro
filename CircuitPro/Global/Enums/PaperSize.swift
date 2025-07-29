@@ -100,6 +100,17 @@ enum PaperSize {
         }
     }
 
+    func centerOffset(
+        scale unitsPerMM: CGFloat = 10,
+        orientation: PaperOrientation = .landscape
+    ) -> CGPoint {
+        let sizeInPoints = self.canvasSize(scale: unitsPerMM, orientation: orientation)
+        return CGPoint(
+            x: -sizeInPoints.width / 2,
+            y: -sizeInPoints.height / 2
+        )
+    }
+    
     static let schematicDefaults: [PaperSize] = [
         .iso(.a3), .iso(.a4), .ansi(.a)
     ]

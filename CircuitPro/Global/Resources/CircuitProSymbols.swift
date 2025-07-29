@@ -93,7 +93,7 @@ extension CircuitProSymbols {
     }
     
     enum Symbol {
-        static let pin = "point.topleft.down.to.point.bottomright.curvepath"
+        static let pin = "mappin"
     }
     
     enum Footprint {
