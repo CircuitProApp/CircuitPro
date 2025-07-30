@@ -22,7 +22,7 @@ struct PadPropertiesView: View {
 
     var body: some View {
         Group {
-            IntegerField(title: "Number", value: $pad.number)
+            InspectorNumericField(title: "Number", value: $pad.number)
 
             Picker("Pad Type", selection: $pad.type) {
                 ForEach(PadType.allCases) { padType in

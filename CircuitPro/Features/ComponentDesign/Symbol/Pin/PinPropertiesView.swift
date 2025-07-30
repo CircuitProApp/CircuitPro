@@ -17,7 +17,7 @@ struct PinPropertiesView: View {
                 Toggle("Show Name", isOn: $pin.showLabel)
             }
 
-            IntegerField(title: "Number", value: $pin.number)
+            InspectorNumericField(title: "Number", value: $pin.number)
 
             Toggle("Show Number", isOn: $pin.showNumber)
 
