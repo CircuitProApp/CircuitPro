@@ -2,7 +2,7 @@ Business Source License 1.1
 
 Parameters
 ===========
-
+```text
 Licensor:          Giorgi Tchelidze
 Licensed Work:     Circuit Pro
 Additional Use Grant:
@@ -16,7 +16,7 @@ Additional Use Grant:
 
 Change Date:       2029‑01‑01
 Change License:    Apache License, Version 2.0
-
+```
 -----------------------------------------------------------------------------
 
 Business Source License 1.1
