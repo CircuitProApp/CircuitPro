@@ -14,25 +14,14 @@ struct NumericField<T: NumericType>: View {
     var range: ClosedRange<T>?
     var allowNegative: Bool = true
     
-    /// The maximum number of decimal places to allow and display.
-    /// If nil, it defaults to 0 for Integers and 3 for floating-point types.
     var maxDecimalPlaces: Int?
-    
-    /// Multiplier applied to the internal value for display (e.g., storing meters, displaying millimeters).
     var displayMultiplier: T = 1
-    /// Constant added to the scaled value for display.
     var displayOffset: T = 0
-    
-    // Optional suffix for units like "mm" or "°".
     var suffix: String?
-    
-    // The focus state is passed from the parent view.
     var isFocused: FocusState<Bool>.Binding
 
-    // 3.2. State
     @State private var text: String = ""
 
-    // 3.3. Computed Properties
     private var isInteger: Bool { T.self == Int.self }
     
     private var effectiveMaxDecimalPlaces: Int {
@@ -41,31 +30,52 @@ struct NumericField<T: NumericType>: View {
         }
         return isInteger ? 0 : 3
     }
+    
+    // This custom binding is the core of the solution.
+    // It separates the text representation for display from the text for editing.
+    private var textBinding: Binding<String> {
+        Binding<String>(
+            get: {
+                // If focused, show the user's live input from our @State buffer.
+                if isFocused.wrappedValue {
+                    return text
+                } else {
+                    // If not focused, show the canonical, formatted value from the @Binding.
+                    // This prevents feedback loops from external updates (e.g., a slider).
+                    let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
+                    return formatted(displayValue, forEditing: false)
+                }
+            },
+            set: { newValue in
+                // This is called by the TextField as the user types.
+                // It only updates our local @State buffer during editing.
+                self.text = newValue
+            }
+        )
+    }
 
-    // 3.4. Body
     var body: some View {
-        TextField(placeholder, text: $text)
+        TextField(placeholder, text: textBinding)
             .focused(isFocused)
             .onAppear {
+                // On initial view appearance, set the text state from the canonical value.
                 let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-                text = formatted(displayValue)
-            }
-            .onChange(of: value) { _, newValue in
-                // Update text only if not focused to avoid disrupting user input.
-                if !isFocused.wrappedValue {
-                    let displayValue = (newValue.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-                    text = formatted(displayValue)
-                }
+                text = formatted(displayValue, forEditing: false)
             }
             .onChange(of: range) { _, newRange in
-                // When the range changes, ensure the current value is still valid.
                 let clamped = clamp(value, to: newRange)
                 if clamped != value {
                     value = clamped
                 }
             }
             .onChange(of: isFocused.wrappedValue) { _, focused in
-                if !focused {
+                if focused {
+                    // 1. Prepare text for editing when focus is GAINED.
+                    // We use a simpler format (without the suffix) for a better UX.
+                    let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
+                    text = formatted(displayValue, forEditing: true)
+                } else {
+                    // 2. Commit changes when focus is LOST.
                     validateAndCommit()
                 }
             }
@@ -75,52 +85,35 @@ struct NumericField<T: NumericType>: View {
             }
     }
 
-    // 4. Private Methods
     private func validateAndCommit() {
-        // 1. Prepare input string.
         var inputText = text.trimmingCharacters(in: .whitespaces)
         
-        // 2. Remove suffix if it exists.
         if let suffix = suffix, !suffix.isEmpty, inputText.hasSuffix(suffix) {
             let chopped = String(inputText.dropLast(suffix.count))
-            // Also trim potential space before the suffix, e.g., "123.4 mm"
             inputText = chopped.trimmingCharacters(in: .whitespaces)
         }
         
-        // 3. Filter the string to ensure it's a valid number.
         let filtered = filterInput(inputText)
         
-        // 4. Attempt to convert filtered string to a number.
         if let doubleVal = Double(filtered) {
-            // Apply inverse display transform to get the internal value.
-            // All calculations are done in Double precision for consistency.
             let internalValueDouble = (doubleVal - displayOffset.doubleValue) / displayMultiplier.doubleValue
-            
-            // Convert back to the generic type T and clamp.
             let internalValue = T(internalValueDouble)
             let clamped = clamp(internalValue, to: range)
-            value = clamped // Commit the valid value.
+            value = clamped
             
-            // Re-format the text with the suffix for display consistency.
             let displayValue = (clamped.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-            text = formatted(displayValue)
+            text = formatted(displayValue, forEditing: false)
         } else {
-            // If input is invalid, revert to the last known good value.
             let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-            text = formatted(displayValue)
+            text = formatted(displayValue, forEditing: false)
         }
     }
 
     private func filterInput(_ input: String) -> String {
-        // Allow numbers, negative sign, and a single decimal point (if not an integer).
         var allowedChars = CharacterSet(charactersIn: "0123456789-")
-        if !isInteger {
-            allowedChars.insert(".")
-        }
-        
+        if !isInteger { allowedChars.insert(".") }
         var result = input.components(separatedBy: allowedChars.inverted).joined()
 
-        // Ensure negative sign is only at the start.
         if allowNegative {
             if result.first == "-" {
                 result = "-" + result.dropFirst().filter { $0 != "-" }
@@ -131,13 +124,11 @@ struct NumericField<T: NumericType>: View {
             result.removeAll { $0 == "-" }
         }
 
-        // Handle decimal places for non-integer types.
         if !isInteger {
             let decimalParts = result.split(separator: ".")
             if decimalParts.count > 2 {
                 result = decimalParts.prefix(2).joined(separator: ".")
             }
-            
             if let dotIndex = result.firstIndex(of: "."), effectiveMaxDecimalPlaces > 0 {
                 let afterDecimal = result[result.index(after: dotIndex)...]
                 if afterDecimal.count > effectiveMaxDecimalPlaces {
@@ -145,7 +136,6 @@ struct NumericField<T: NumericType>: View {
                 }
             }
         }
-
         return result
     }
 
@@ -154,17 +144,18 @@ struct NumericField<T: NumericType>: View {
         return min(max(x, bounds.lowerBound), bounds.upperBound)
     }
 
-    private func formatted(_ value: Double) -> String {
+    // Updated 'formatted' function to optionally exclude the suffix for a better editing UX.
+    private func formatted(_ value: Double, forEditing: Bool = false) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.minimumIntegerDigits = 1
-        // Set minimum fraction digits to 0 so we don't show ".0" for whole numbers.
         formatter.minimumFractionDigits = 0
         formatter.maximumFractionDigits = effectiveMaxDecimalPlaces
         
         let numberString = formatter.string(from: NSNumber(value: value)) ?? ""
         
-        if let suffix = suffix, !suffix.isEmpty {
+        // Only add the suffix when not in editing mode.
+        if let suffix = suffix, !suffix.isEmpty, !forEditing {
             return "\(numberString) \(suffix)"
         } else {
             return numberString
