@@ -13,7 +13,7 @@ struct AboutFooterView: View {
         FooterView(
             primaryView: {
                 Link(destination: URL(string: "https://github.com/CircuitProApp/CircuitPro/blob/main/LICENSE.md")!) {
-                    Text("MIT License")
+                    Text("BSL‑1.1 License")
                         .underline()
                 }
                 .focusable(false)
