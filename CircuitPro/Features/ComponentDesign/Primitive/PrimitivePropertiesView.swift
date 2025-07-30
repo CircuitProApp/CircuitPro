@@ -74,6 +74,8 @@ struct CirclePropertiesView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
+            Text("Circle Properties")
+                .font(.title3.weight(.semibold))
             InspectorSection(title: "Size") {
                 InspectorNumericField(title: "Radius", value: $circle.radius, titleDisplayMode: .label)
             }

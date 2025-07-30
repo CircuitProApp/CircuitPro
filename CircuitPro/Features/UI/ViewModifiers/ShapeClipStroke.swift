@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ShapeClipStroke<S: Shape>: ViewModifier {
+struct ShapeClipStroke<S: InsettableShape>: ViewModifier {
     let shape: S
     let strokeColor: Color
     let lineWidth: CGFloat
@@ -15,6 +15,7 @@ struct ShapeClipStroke<S: Shape>: ViewModifier {
     func body(content: Content) -> some View {
         content
             .clipShape(shape)
+            .containerShape(shape)
             .overlay {
                 shape
                     .stroke(strokeColor, lineWidth: lineWidth)
@@ -23,7 +24,7 @@ struct ShapeClipStroke<S: Shape>: ViewModifier {
 }
 
 extension View {
-    func clipAndStroke<S: Shape>(
+    func clipAndStroke<S: InsettableShape>(
         with shape: S,
         strokeColor: Color = .gray.opacity(0.3),
         lineWidth: CGFloat = 1

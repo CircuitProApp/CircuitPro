@@ -8,17 +8,21 @@
 import SwiftUI
 
 struct RotationControlView<T: Transformable>: View {
+
     @Binding var object: T
+    
+    var tickCount: Int? = nil
+    var tickStepDegrees: CGFloat?
+    var snapsToTicks: Bool = false
 
     private var rotationInDegrees: Binding<CGFloat> {
         Binding(
             get: {
-                let degrees = -object.rotation * 180 / .pi
+                let degrees = object.rotation * 180 / .pi
                 return (degrees.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
             },
             set: {
-                let modelDegrees = -$0
-                object.rotation = modelDegrees * .pi / 180
+                object.rotation = $0 * .pi / 180
             }
         )
     }
@@ -28,7 +32,11 @@ struct RotationControlView<T: Transformable>: View {
             RadialSlider(
                 value: rotationInDegrees,
                 range: 0...360,
-                isContinuous: true
+                zeroAngle: .east,
+                isContinuous: true,
+                tickCount: tickCount,
+                tickStepDegrees: tickStepDegrees,
+                snapsToTicks: snapsToTicks
             )
             InspectorNumericField(
                 title: "",

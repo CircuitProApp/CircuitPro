@@ -8,20 +8,31 @@
 import SwiftUI
 import AppKit
 
-public struct RadialSlider<T: BinaryFloatingPoint>: NSViewRepresentable {
+struct RadialSlider<T: NumericType>: NSViewRepresentable {
+    
+    // MARK: - ZeroAngle Enum
+    public enum ZeroAngle {
+        /// 0 degrees is at the 12 o'clock position, increasing clockwise. (NSSlider's native behavior)
+        case north
+        /// 0 degrees is at the 3 o'clock position, increasing counter-clockwise. (Standard Cartesian)
+        case east
+    }
+
     // MARK: - Public API
     @Binding public var value: T
-    public var range: ClosedRange<T> = 0...360
-    public var isContinuous: Bool = true
-    public var tickCount: Int? = nil
-    public var tickStepDegrees: T? = nil
-    public var snapsToTicks: Bool = false
-    public var isEnabled: Bool = true
-    public var altIncrementValue: T? = nil
+    public var range: ClosedRange<T>
+    public var zeroAngle: ZeroAngle
+    public var isContinuous: Bool
+    public var tickCount: Int?
+    public var tickStepDegrees: T?
+    public var snapsToTicks: Bool
+    public var isEnabled: Bool
+    public var altIncrementValue: T?
 
     public init(
         value: Binding<T>,
         range: ClosedRange<T>,
+        zeroAngle: ZeroAngle = .north,
         isContinuous: Bool = true,
         tickCount: Int? = nil,
         tickStepDegrees: T? = nil,
@@ -31,6 +42,7 @@ public struct RadialSlider<T: BinaryFloatingPoint>: NSViewRepresentable {
     ) {
         self._value = value
         self.range = range
+        self.zeroAngle = zeroAngle
         self.isContinuous = isContinuous
         self.tickCount = tickCount
         self.tickStepDegrees = tickStepDegrees
@@ -46,17 +58,16 @@ public struct RadialSlider<T: BinaryFloatingPoint>: NSViewRepresentable {
             cell.sliderType = .circular
         }
 
-        slider.minValue = Double(range.lowerBound)
-        slider.maxValue = Double(range.upperBound)
-        slider.doubleValue = Double(value)
-        
+        slider.minValue = range.lowerBound.doubleValue
+        slider.maxValue = range.upperBound.doubleValue
+        slider.doubleValue = context.coordinator.toSliderValue(value.doubleValue)
+
         slider.isContinuous = isContinuous
         slider.isEnabled = isEnabled
-        // 1. We will NOT set allowsTickMarkValuesOnly. We handle snapping ourselves.
         slider.numberOfTickMarks = computedTickCount()
 
         if let alt = altIncrementValue {
-            slider.altIncrementValue = Double(alt)
+            slider.altIncrementValue = alt.doubleValue
         }
 
         slider.target = context.coordinator
@@ -64,26 +75,28 @@ public struct RadialSlider<T: BinaryFloatingPoint>: NSViewRepresentable {
         return slider
     }
 
-    public func updateNSView(_ slider: NSSlider, context: Context) {
-        if let cell = slider.cell as? NSSliderCell, cell.sliderType != .circular {
+    public func updateNSView(_ nsView: NSSlider, context: Context) {
+        if let cell = nsView.cell as? NSSliderCell, cell.sliderType != .circular {
             cell.sliderType = .circular
         }
 
-        slider.isContinuous = isContinuous
-        slider.isEnabled = isEnabled
+        nsView.isContinuous = isContinuous
+        nsView.isEnabled = isEnabled
 
-        if slider.minValue != Double(range.lowerBound) { slider.minValue = Double(range.lowerBound) }
-        if slider.maxValue != Double(range.upperBound) { slider.maxValue = Double(range.upperBound) }
-        
+        if nsView.minValue != range.lowerBound.doubleValue { nsView.minValue = range.lowerBound.doubleValue }
+        if nsView.maxValue != range.upperBound.doubleValue { nsView.maxValue = range.upperBound.doubleValue }
+
         let ticks = computedTickCount()
-        if slider.numberOfTickMarks != ticks { slider.numberOfTickMarks = ticks }
+        if nsView.numberOfTickMarks != ticks { nsView.numberOfTickMarks = ticks }
 
-        if abs(slider.doubleValue - Double(value)) > 0.0001 {
-             slider.doubleValue = Double(value)
+        let modelValue = value.doubleValue
+        let sliderValue = context.coordinator.toSliderValue(modelValue)
+        if abs(nsView.doubleValue - sliderValue) > 0.0001 {
+             nsView.doubleValue = sliderValue
         }
 
         if let alt = altIncrementValue {
-             slider.altIncrementValue = Double(alt)
+             nsView.altIncrementValue = alt.doubleValue
         }
     }
 
@@ -92,42 +105,62 @@ public struct RadialSlider<T: BinaryFloatingPoint>: NSViewRepresentable {
     public final class Coordinator: NSObject {
         var parent: RadialSlider
         init(_ parent: RadialSlider) { self.parent = parent }
-        
-        // 2. This is the new, robust snapping logic
+
         @objc func changed(_ sender: NSSlider) {
-            var rawValue = sender.doubleValue
-            
-            // If snapping is enabled, calculate the snapped value ourselves
-            if parent.snapsToTicks, let step = parent.tickStepDegrees, step > 0 {
-                let stepAsDouble = Double(step)
+            let sliderValue = sender.doubleValue
+            var modelValue = self.toModelValue(sliderValue)
+
+            if parent.snapsToTicks, let step = parent.tickStepDegrees?.doubleValue, step > 0 {
+                let numSteps = (modelValue / step).rounded()
+                let snappedValue = numSteps * step
+                let clampedValue = max(parent.range.lowerBound.doubleValue, min(snappedValue, parent.range.upperBound.doubleValue))
                 
-                // Calculate how many steps fit into the current value from the slider
-                let numSteps = (rawValue / stepAsDouble).rounded()
-                
-                // The new value is simply the number of steps multiplied by the step value
-                let snappedValue = numSteps * stepAsDouble
-                
-                // Clamp the snapped value to the slider's range to avoid over/undershooting at the ends
-                let clampedValue = max(Double(parent.range.lowerBound), min(snappedValue, Double(parent.range.upperBound)))
-                
-                // If the slider isn't already at the clamped value, set it.
-                // This provides correct visual feedback to the user.
-                if abs(sender.doubleValue - clampedValue) > 0.0001 {
-                    sender.doubleValue = clampedValue
+                let newSliderValue = self.toSliderValue(clampedValue)
+                if abs(sender.doubleValue - newSliderValue) > 0.0001 {
+                    sender.doubleValue = newSliderValue
                 }
-                rawValue = clampedValue
+                modelValue = clampedValue
             }
-            
-            // Update the binding with the (potentially snapped) value
-            parent.value = T(rawValue)
+
+            parent.value = T(modelValue)
+        }
+        
+        // MARK: - Coordinate Conversion
+        private func normalize(_ angle: Double) -> Double {
+            let result = angle.truncatingRemainder(dividingBy: 360)
+            return result < 0 ? result + 360 : result
+        }
+
+        /// Converts a value from the parent's coordinate system to the NSSlider's native system.
+        func toSliderValue(_ modelValue: Double) -> Double {
+            switch parent.zeroAngle {
+            case .north:
+                // Model and slider coordinate systems match, no conversion needed.
+                return modelValue
+            case .east:
+                // Convert from Model(0°=E, CCW) to Slider(0°=N, CW)
+                return normalize(-modelValue + 90)
+            }
+        }
+
+        /// Converts a value from the NSSlider's native coordinate system to the parent's system.
+        func toModelValue(_ sliderValue: Double) -> Double {
+            switch parent.zeroAngle {
+            case .north:
+                // Model and slider coordinate systems match, no conversion needed.
+                return sliderValue
+            case .east:
+                // Convert from Slider(0°=N, CW) to Model(0°=E, CCW)
+                return normalize(-sliderValue + 90)
+            }
         }
     }
 
     // MARK: - Helpers
     private func computedTickCount() -> Int {
-        if let step = tickStepDegrees, step > 0 {
+        if let step = tickStepDegrees, step > (0 as T) {
             let span = range.upperBound - range.lowerBound
-            let segments = max(0, Int((Double(span) / Double(step)).rounded(.towardZero)))
+            let segments = max(0, Int((span.doubleValue / step.doubleValue).rounded(.towardZero)))
             return segments + 1
         }
         return max(0, tickCount ?? 0)

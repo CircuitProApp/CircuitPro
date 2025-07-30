@@ -60,12 +60,7 @@ struct InspectorNumericField<T: NumericType>: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .frame(width: 70)
-            .textFieldStyle(.plain)
-            .directionalPadding(vertical: 2.5, horizontal: 5)
-            .background(.ultraThinMaterial)
-            .clipAndStroke(with: .rect(cornerRadius: 5))
-            .focusRing(isFieldFocused, shape: .rect(cornerRadius: 5))
+            .inspectorField(width: 60)
         }
     }
 }

@@ -1,0 +1,38 @@
+//
+//  InspectorTextFieldStyle.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 7/30/25.
+//
+
+import SwiftUI
+
+struct InspectorFieldStyle: ViewModifier {
+
+    @Environment(\.inspectorFieldWidth)
+    private var overrideWidth
+
+    @FocusState private var isFocused: Bool
+    
+    let width: CGFloat
+    
+    func body(content: Content) -> some View {
+        let finalWidth = overrideWidth ?? width
+        
+        content
+            .frame(width: finalWidth)
+            .focused($isFocused)
+            .textFieldStyle(.plain)
+            .multilineTextAlignment(.trailing)
+            .directionalPadding(vertical: 2.5, horizontal: 5)
+            .background(.ultraThinMaterial)
+            .clipAndStroke(with: .rect(cornerRadius: 5))
+            .focusRing(isFocused, shape: .rect(cornerRadius: 6))
+    }
+}
+
+extension View {
+    func inspectorField(width: CGFloat = 80) -> some View {
+        modifier(InspectorFieldStyle(width: width))
+    }
+}

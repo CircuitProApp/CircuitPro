@@ -11,13 +11,17 @@ struct PinPropertiesView: View {
     @Binding var pin: Pin
 
     var body: some View {
-        Group {
-            TextField("Name", text: $pin.name, prompt: Text("e.g SCL"))
+        VStack(alignment: .trailing) {
+            Text("Pin Properties")
+                .font(.title3.weight(.semibold))
+            InspectorTextField(title: "Name", text: $pin.name)
             if pin.name.isNotEmpty {
                 Toggle("Show Name", isOn: $pin.showLabel)
             }
 
-            InspectorNumericField(title: "Number", value: $pin.number)
+            InspectorNumericField(title: "Number", value: $pin.number, titleDisplayMode: .label)
+                .environment(\.inspectorFieldWidth, 80)
+            RotationControlView(object: $pin, tickCount: 3, tickStepDegrees: 90, snapsToTicks: true)
 
             Toggle("Show Number", isOn: $pin.showNumber)
 
@@ -32,5 +36,6 @@ struct PinPropertiesView: View {
                 }
             }
         }
+        .padding()
     }
 }
