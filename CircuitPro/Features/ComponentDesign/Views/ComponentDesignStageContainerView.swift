@@ -23,7 +23,7 @@ struct ComponentDesignStageContainerView: View {
             NavigationSplitView {
                 VStack {
                     switch currentStage {
-                    case .component:
+                    case .details:
                         EmptyView()
                             .toolbar(removing: .sidebarToggle)
                     case .symbol:
@@ -32,11 +32,11 @@ struct ComponentDesignStageContainerView: View {
                         FootprintElementListView()
                     }
                 }
-                .navigationSplitViewColumnWidth(currentStage == .component ? 0 : ComponentDesignConstants.sidebarWidth)
+                .navigationSplitViewColumnWidth(currentStage == .details ? 0 : ComponentDesignConstants.sidebarWidth)
             } content: {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack {
-                        if currentStage == .component {
+                        if currentStage == .details {
                             Spacer()
                                 .frame(width: ComponentDesignConstants.sidebarWidth)
                         }
@@ -50,7 +50,7 @@ struct ComponentDesignStageContainerView: View {
                    
                     Divider()
                     switch currentStage {
-                    case .component:
+                    case .details:
     
                             HStack {
                                 Spacer()
@@ -73,7 +73,7 @@ struct ComponentDesignStageContainerView: View {
             } detail: {
                 VStack {
                 switch currentStage {
-                case .component:
+                case .details:
                     EmptyView()
                 case .symbol:
                     SymbolPropertiesEditorView()
@@ -81,7 +81,7 @@ struct ComponentDesignStageContainerView: View {
                     FootprintPropertiesEditorView()
                 }
                 }
-                .navigationSplitViewColumnWidth(currentStage == .component ? 0 : ComponentDesignConstants.sidebarWidth)
+                .navigationSplitViewColumnWidth(currentStage == .details ? 0 : ComponentDesignConstants.sidebarWidth)
        
             }
             .navigationTransition(.automatic)

@@ -40,8 +40,8 @@ struct RectanglePropertiesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             InspectorSection(title: "Size") {
-                FloatingPointField(title: "W", value: $rectangle.size.width)
-                FloatingPointField(title: "H", value: $rectangle.size.height)
+                InspectorNumericField(title: "W", value: $rectangle.size.width)
+                InspectorNumericField(title: "H", value: $rectangle.size.height)
             }
             Divider()
             PointControlView(
@@ -56,15 +56,13 @@ struct RectanglePropertiesView: View {
             InspectorSection(title: "Corner Radius") {
                 Slider(value: $rectangle.cornerRadius, in: 0...rectangle.maximumCornerRadius)
                     .labelsHidden()
-                FloatingPointField(
+                InspectorNumericField(
                     title: "",
                     value: $rectangle.cornerRadius,
                     range: 0...rectangle.maximumCornerRadius,
-                    maxDecimalPlaces: 2,
+                    maxDecimalPlaces: 1,
                     titleDisplayMode: .label)
-            }
-       
-           
+            }           
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -77,7 +75,7 @@ struct CirclePropertiesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             InspectorSection(title: "Size") {
-                FloatingPointField(title: "Radius", value: $circle.radius, titleDisplayMode: .label)
+                InspectorNumericField(title: "Radius", value: $circle.radius, titleDisplayMode: .label)
             }
             Divider()
             PointControlView(

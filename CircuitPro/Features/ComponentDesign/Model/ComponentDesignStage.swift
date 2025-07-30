@@ -9,13 +9,13 @@ import SwiftUI
 protocol StageRequirement: Hashable { }
 
 enum ComponentDesignStage: String, Displayable, CaseIterable {
-    case component
+    case details
     case symbol
     case footprint
 
     var label: String {
         switch self {
-        case .component: return "Component Details"
+        case .details: return "Details"
         case .symbol: return "Symbol"
         case .footprint: return "Footprint"
         }
@@ -38,7 +38,7 @@ enum ComponentDesignStage: String, Displayable, CaseIterable {
         var warnings: [StageValidationError] = []
 
         switch self {
-        case .component:
+        case .details:
             if manager.componentName.trimmingCharacters(in: .whitespaces).isEmpty {
                 errors.append(.init(message: "Component name is required.", requirement: ComponentRequirement.name))
             }

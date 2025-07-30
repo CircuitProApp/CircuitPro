@@ -30,7 +30,7 @@ struct RotationControlView<T: Transformable>: View {
                 range: 0...360,
                 isContinuous: true
             )
-            FloatingPointField(
+            InspectorNumericField(
                 title: "",
                 value: rotationInDegrees,
                 maxDecimalPlaces: 1,

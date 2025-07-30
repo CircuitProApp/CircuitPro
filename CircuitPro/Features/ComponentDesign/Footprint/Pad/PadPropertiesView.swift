@@ -44,7 +44,7 @@ struct PadPropertiesView: View {
                             .transition(.opacity.combined(with: .scale))
                     }
                     fieldWithUnit {
-                        FloatingPointField(
+                        InspectorNumericField(
                             title: "Drill Diameter",
                             value: Binding(
                                 get: { pad.drillDiameter ?? 0.0 },
@@ -70,14 +70,14 @@ struct PadPropertiesView: View {
             Group {
                 if pad.isCircle {
                     fieldWithUnit {
-                        FloatingPointField(title: "Radius", value: $pad.radius, displayMultiplier: 0.1)
+                        InspectorNumericField(title: "Radius", value: $pad.radius, displayMultiplier: 0.1)
                     }
                 } else {
                     fieldWithUnit {
-                        FloatingPointField(title: "Width", value: $pad.width, displayMultiplier: 0.1)
+                        InspectorNumericField(title: "Width", value: $pad.width, displayMultiplier: 0.1)
                     }
                     fieldWithUnit {
-                        FloatingPointField(title: "Height", value: $pad.height, displayMultiplier: 0.1)
+                        InspectorNumericField(title: "Height", value: $pad.height, displayMultiplier: 0.1)
                     }
                 }
             }

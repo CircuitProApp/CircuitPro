@@ -11,7 +11,7 @@ struct ComponentDesignView: View {
     @Environment(\.componentDesignManager)
     private var componentDesignManager
 
-    @State private var currentStage: ComponentDesignStage = .component
+    @State private var currentStage: ComponentDesignStage = .details
     @State private var symbolCanvasManager = CanvasManager()
     @State private var footprintCanvasManager = CanvasManager()
 
@@ -197,7 +197,7 @@ struct ComponentDesignView: View {
     // 5. Reset state if user wants to create another
     private func resetForNewComponent() {
         componentDesignManager.resetAll()
-        currentStage = .component
+        currentStage = .details
         symbolCanvasManager = CanvasManager()
         footprintCanvasManager = CanvasManager()
         didCreateComponent = false

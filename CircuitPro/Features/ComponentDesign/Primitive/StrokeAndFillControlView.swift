@@ -18,7 +18,7 @@ struct StrokeAndFillControlView<T: GraphicPrimitive>: View {
     var body: some View {
         InspectorSection(title: "Style") {
             VStack(alignment: .trailing) {
-                FloatingPointField(
+                InspectorNumericField(
                     title: "Stroke Width",
                     value: $object.strokeWidth,
                     range: 0...100,

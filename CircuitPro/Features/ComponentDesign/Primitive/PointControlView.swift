@@ -15,12 +15,12 @@ struct PointControlView: View {
 
     var body: some View {
         InspectorSection(title: title) {
-            FloatingPointField(
+            InspectorNumericField(
                 title: "X",
                 value: $point.x,
                 displayOffset: displayOffset.x
             )
-            FloatingPointField(
+            InspectorNumericField(
                 title: "Y",
                 value: $point.y,
                 displayOffset: displayOffset.y
