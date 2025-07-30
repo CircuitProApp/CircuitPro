@@ -59,7 +59,7 @@ struct ComponentDesignStageContainerView: View {
                                 Spacer()
                                     .frame(width: ComponentDesignConstants.sidebarWidth)
                             }
-                            .padding(.vertical, 25)
+                            .directionalPadding(vertical: 25, horizontal: 15)
                      
                     case .symbol:
                         SymbolDesignView()

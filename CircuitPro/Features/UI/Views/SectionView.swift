@@ -17,15 +17,14 @@ struct SectionView<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading) {
-            if let title = title {
+        VStack(alignment: .leading, spacing: 0) {
+            if let title {
                 Text(title)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fontWeight(.semibold)
                     .padding(5)
             }
-
             content()
         }
     }
