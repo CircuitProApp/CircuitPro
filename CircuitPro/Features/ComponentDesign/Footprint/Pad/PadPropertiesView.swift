@@ -25,12 +25,14 @@ struct PadPropertiesView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
+            Text("Pad Properties")
+                .font(.title3.weight(.semibold))
             InspectorSection("Identity and Type") {
                 InspectorRow("Number") {
-                    HStack(spacing: 4) {
+             
                         InspectorNumericField(value: $pad.number)
                         Color.clear
-                    }
+                    
                 }
                 InspectorRow("Pad Type") {
                     Picker("Pad Type", selection: $pad.type) {
@@ -43,7 +45,7 @@ struct PadPropertiesView: View {
                 }
                 
                 InspectorRow("Drill Diameter") {
-                    HStack(spacing: 4) {
+          
                
                         
                         InspectorNumericField(
@@ -57,6 +59,7 @@ struct PadPropertiesView: View {
                         .environment(\.focusRingColor, isTooLarge ? .red : .clear)
                         .disabled(pad.type != .throughHole)
                         
+                    Group {
                         if isTooLarge {
                             ZStack {
                                 Image(systemName: CircuitProSymbols.Workspace.ruleChecks)
@@ -69,17 +72,18 @@ struct PadPropertiesView: View {
                                             .padding(7.5)
                                     }
                                     .transition(.blurReplace)
-                               
+                                
                             }
-                      
+                            
                             .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             Color.clear
                         }
-                      
-                        
                     }
                     .animation(.default, value: isTooLarge)
+                        
+                    
+                  
                 }
                 
             }
@@ -87,7 +91,7 @@ struct PadPropertiesView: View {
             InspectorSection("Transform") {
                 PointControlView(title: "Position", point: $pad.position, displayOffset: PaperSize.component.centerOffset())
       
-                RotationControlView(object: $pad, tickStepDegrees: 90)
+                RotationControlView(object: $pad, tickStepDegrees: 90, snapsToTicks: true)
             }
             Divider()
             InspectorSection("Display") {
@@ -104,10 +108,11 @@ struct PadPropertiesView: View {
                 }
                 if pad.isCircle {
                     InspectorRow("Radius") {
-                        HStack(spacing: 4) {
-                            InspectorNumericField(value: $pad.radius, displayMultiplier: 0.1, suffix: "mm")
+                
+                        InspectorNumericField(value: $pad.radius, displayMultiplier: 0.1, suffix: "mm")
                                 .environment(\.focusRingColor, isTooLarge ? .red : .clear)
-                        }
+                        Color.clear
+                        
                     }
                     
                     
@@ -115,14 +120,15 @@ struct PadPropertiesView: View {
                     
                 } else {
                     InspectorRow("Dimensions") {
-                        HStack(spacing: 4) {
+                     
                             InspectorNumericField(title: "W", value: $pad.width, displayMultiplier: 0.1, suffix: "mm")
                             
                             
                             InspectorNumericField(title: "H", value: $pad.height, displayMultiplier: 0.1, suffix: "mm")
-                        }
-                        .environment(\.focusRingColor, isTooLarge ? .red : .clear)
+                       
+                        
                     }
+                    .environment(\.focusRingColor, isTooLarge ? .red : .clear)
                     
                     
                 }

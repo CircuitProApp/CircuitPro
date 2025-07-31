@@ -12,6 +12,8 @@ struct PinPropertiesView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
+            Text("Pin Properties")
+                .font(.title3.weight(.semibold))
             
             // 1. Identity and Type Section
             InspectorSection("Identity and Type") {
@@ -44,7 +46,7 @@ struct PinPropertiesView: View {
             InspectorSection("Transform") {
                 PointControlView(title: "Position", point: $pin.position, displayOffset: PaperSize.component.centerOffset())
        
-                RotationControlView(object: $pin, tickStepDegrees: 90)
+                RotationControlView(object: $pin, tickStepDegrees: 90, snapsToTicks: true)
             }
 
             Divider()

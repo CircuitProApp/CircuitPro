@@ -23,7 +23,7 @@ struct InspectorSection<Content: View>: View {
             Text(title)
                 .font(.headline)
 
-            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 10) {
                 content()
             }
         }

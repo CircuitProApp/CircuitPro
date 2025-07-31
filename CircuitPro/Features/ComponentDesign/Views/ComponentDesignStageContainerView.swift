@@ -18,7 +18,6 @@ struct ComponentDesignStageContainerView: View {
     let footprintCanvasManager: CanvasManager
     
     var body: some View {
-        
         NavigationSplitView {
             VStack {
                 sidebarContent
@@ -37,12 +36,12 @@ struct ComponentDesignStageContainerView: View {
                 detailContent
             }
             .navigationSplitViewColumnWidth(currentStage == .details ? 0 : ComponentDesignConstants.sidebarWidth)
-            
         }
-        
     }
     
-    var stageIndicator: some View {
+    // MARK: - Subviews
+    
+    private var stageIndicator: some View {
         HStack {
             StageIndicatorView(
                 currentStage: $currentStage,
@@ -51,16 +50,13 @@ struct ComponentDesignStageContainerView: View {
             .if(currentStage == .details) {
                 $0.offset(.init(width: ComponentDesignConstants.sidebarWidth, height: 0))
             }
-           
-            
             Spacer()
-            
         }
         .background(.windowBackground)
     }
     
     @ViewBuilder
-    var sidebarContent: some View {
+    private var sidebarContent: some View {
         switch currentStage {
         case .details:
             EmptyView()
@@ -73,19 +69,27 @@ struct ComponentDesignStageContainerView: View {
     }
     
     @ViewBuilder
-    var detailContent: some View {
+    private var detailContent: some View {
         switch currentStage {
         case .details:
             EmptyView()
+
         case .symbol:
-            SymbolPropertiesEditorView()
+            selectionBasedDetailView(
+                count: componentDesignManager.selectedSymbolElementIDs.count,
+                content: SymbolPropertiesEditorView.init
+            )
+
         case .footprint:
-            FootprintPropertiesEditorView()
+            selectionBasedDetailView(
+                count: componentDesignManager.selectedFootprintElementIDs.count,
+                content: FootprintPropertiesEditorView.init
+            )
         }
     }
     
     @ViewBuilder
-    var stageContent: some View {
+    private var stageContent: some View {
         switch currentStage {
         case .details:
             HStack {
@@ -102,6 +106,27 @@ struct ComponentDesignStageContainerView: View {
         case .footprint:
             FootprintDesignView()
                 .environment(footprintCanvasManager)
+        }
+    }
+
+    @ViewBuilder
+    private func selectionBasedDetailView<Content: View>(
+        count: Int,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        switch count {
+        case 0:
+            Text("No Selection")
+                .font(.callout)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case 1:
+            content()
+        default:
+            Text("Multiple Items Selected")
+                .font(.callout)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }

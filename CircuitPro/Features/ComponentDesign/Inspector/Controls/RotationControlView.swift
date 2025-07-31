@@ -30,7 +30,7 @@ struct RotationControlView<T: Transformable>: View {
     var body: some View {
         
         InspectorRow("Rotate") {
-            HStack(spacing: 4) {
+  
                 RadialSlider(
                     value: rotationInDegrees,
                     range: 0...360,
@@ -40,13 +40,13 @@ struct RotationControlView<T: Transformable>: View {
                     tickStepDegrees: tickStepDegrees,
                     snapsToTicks: snapsToTicks
                 )
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 InspectorNumericField(
                     title: "°",
                     value: rotationInDegrees,
                     maxDecimalPlaces: 1
                 )
-            }
+            
             
         }
     }

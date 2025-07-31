@@ -11,23 +11,28 @@ struct PrimitivePropertiesView: View {
     @Binding var primitive: AnyPrimitive
     
     var body: some View {
-        switch primitive {
-        case .rectangle:
-            if let rectBinding = $primitive.rectangle {
-                RectanglePropertiesView(rectangle: rectBinding)
+        VStack(alignment: .leading, spacing: 15) {
+            Text("\(primitive.displayName) Properties")
+                .font(.title3.weight(.semibold))
+            switch primitive {
+            case .rectangle:
+                if let rectBinding = $primitive.rectangle {
+                    RectanglePropertiesView(rectangle: rectBinding)
+                }
+            case .circle:
+                if let circBinding = $primitive.circle {
+                    CirclePropertiesView(circle: circBinding)
+                }
+            case .line:
+                if let lineBinding = $primitive.line {
+                    LinePropertiesView(line: lineBinding)
+                }
+            default:
+                Text("Unsupported primitive")
+                    .foregroundStyle(.secondary)
             }
-        case .circle:
-            if let circBinding = $primitive.circle {
-                CirclePropertiesView(circle: circBinding)
-            }
-        case .line:
-            if let lineBinding = $primitive.line {
-                LinePropertiesView(line: lineBinding)
-            }
-        default:
-            Text("Unsupported primitive")
-                .foregroundStyle(.secondary)
         }
+        .padding(10)
     }
 }
 
@@ -38,7 +43,7 @@ struct RectanglePropertiesView: View {
     
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
+       
             InspectorSection("Transform") {
           
                     PointControlView(
@@ -48,10 +53,10 @@ struct RectanglePropertiesView: View {
                     )
                 
                 InspectorRow("Size") {
-                    HStack(spacing: 4) {
+                  
                         InspectorNumericField(title: "W", value: $rectangle.size.width)
                         InspectorNumericField(title: "H", value: $rectangle.size.height)
-                    }
+                    
             
                 }
           
@@ -61,9 +66,7 @@ struct RectanglePropertiesView: View {
          
             Divider()
             PrimitiveStyleControlView(object: $rectangle)        
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
+
     }
 }
 
@@ -71,9 +74,8 @@ struct CirclePropertiesView: View {
     @Binding var circle: CirclePrimitive
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            Text("Circle Properties")
-                .font(.title3.weight(.semibold))
+
+           
             InspectorSection("Transform") {
 
                 PointControlView(
@@ -85,6 +87,7 @@ struct CirclePropertiesView: View {
           
                 InspectorRow("Radius") {
                     InspectorNumericField(value: $circle.radius)
+                    Color.clear
                 }
              
                 RotationControlView(object: $circle)
@@ -94,9 +97,7 @@ struct CirclePropertiesView: View {
             Divider()
             PrimitiveStyleControlView(object: $circle)
             
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
+  
     }
 }
 
@@ -104,7 +105,7 @@ struct LinePropertiesView: View {
     @Binding var line: LinePrimitive
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
+
             InspectorSection("Transform") {
                 PointControlView(
                     title: "Start Point",
@@ -122,8 +123,7 @@ struct LinePropertiesView: View {
             Divider()
             PrimitiveStyleControlView(object: $line)
     
-        }
-        .padding()
+ 
     }
 }
 

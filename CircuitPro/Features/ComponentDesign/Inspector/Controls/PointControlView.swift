@@ -16,7 +16,7 @@ struct PointControlView: View {
     var body: some View {
 
         InspectorRow(title) {
-            HStack(spacing: 4) {
+          
                 InspectorNumericField(
                     title: "X",
                     value: $point.x,
@@ -27,7 +27,7 @@ struct PointControlView: View {
                     value: $point.y,
                     displayOffset: displayOffset.y
                 )
-            }
+            
             
         }
     }

@@ -33,7 +33,7 @@ struct PrimitiveStyleControlView<T: GraphicPrimitive>: View {
     var body: some View {
         InspectorSection("Style") {
             InspectorRow("Stroke") {
-                HStack(spacing: 4) {
+              
                     InspectorNumericField(
                         title: "W",
                         value: $object.strokeWidth,
@@ -41,7 +41,7 @@ struct PrimitiveStyleControlView<T: GraphicPrimitive>: View {
                     )
                     .disabled(isFillable && object.filled)
                     Color.clear
-                }
+                
             }
             if !isFillable {
                 InspectorRow("Filled") {
@@ -52,7 +52,7 @@ struct PrimitiveStyleControlView<T: GraphicPrimitive>: View {
             
             if let cornerRadius = cornerRadiusBinding {
                 InspectorRow("Corners") {
-                    HStack(spacing: 4) {
+             
                         Slider(value: cornerRadius, in: 0...(($object.wrappedValue as! RectanglePrimitive).maximumCornerRadius))
                             .controlSize(.small)
                         InspectorNumericField(
@@ -64,7 +64,7 @@ struct PrimitiveStyleControlView<T: GraphicPrimitive>: View {
                           
                         
                     
-                    }
+                    
                     
    
                 }

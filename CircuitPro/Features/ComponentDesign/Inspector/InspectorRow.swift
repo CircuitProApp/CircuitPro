@@ -35,7 +35,9 @@ struct InspectorRow<Content: View>: View {
             .frame(width: 80, alignment: .trailing)
             .gridColumnAlignment(.trailing)
 
-            content()
+            HStack(spacing: 6) {
+                content()
+            }
         }
     }
 }
