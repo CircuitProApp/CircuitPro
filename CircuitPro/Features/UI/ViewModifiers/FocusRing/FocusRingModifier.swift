@@ -11,6 +11,8 @@ struct FocusRingModifier<S: InsettableShape>: ViewModifier {
     let isFocused: Bool
     let shape: S
 
+    @Environment(\.focusRingColor) private var fallbackRingColor
+
     func body(content: Content) -> some View {
         if #available(macOS 14.0, *) {
             content
@@ -19,7 +21,9 @@ struct FocusRingModifier<S: InsettableShape>: ViewModifier {
                 .background(
                     shape
                         .stroke(
-                            isFocused ? Color(NSColor.keyboardFocusIndicatorColor) : Color.clear,
+                            isFocused
+                                ? Color(nsColor: .keyboardFocusIndicatorColor)
+                                : fallbackRingColor,
                             lineWidth: 3
                         )
                         .animation(.easeInOut(duration: 0.1), value: isFocused)

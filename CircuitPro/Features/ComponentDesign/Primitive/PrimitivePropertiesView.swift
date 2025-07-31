@@ -39,8 +39,15 @@ struct RectanglePropertiesView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
-            InspectorSection(title: "Size") {
-                InspectorRow {
+            InspectorSection("Transform") {
+          
+                    PointControlView(
+                        title: "Position",
+                        point: $rectangle.position,
+                        displayOffset: PaperSize.component.centerOffset()
+                    )
+                
+                InspectorRow("Size") {
                     HStack(spacing: 4) {
                         InspectorNumericField(title: "W", value: $rectangle.size.width)
                         InspectorNumericField(title: "H", value: $rectangle.size.height)
@@ -48,28 +55,12 @@ struct RectanglePropertiesView: View {
             
                 }
           
-         
+                RotationControlView(object: $rectangle)
+                
             }
+         
             Divider()
-            PointControlView(
-                point: $rectangle.position,
-                displayOffset: PaperSize.component.centerOffset()
-            )
-            Divider()
-            RotationControlView(object: $rectangle)
-            Divider()
-            PrimitiveStyleControlView(object: $rectangle)
-            Divider()
-            InspectorSection(title: "Corner Radius") {
-                Slider(value: $rectangle.cornerRadius, in: 0...rectangle.maximumCornerRadius)
-                    .labelsHidden()
-                InspectorNumericField(
-                    title: "",
-                    value: $rectangle.cornerRadius,
-                    range: 0...rectangle.maximumCornerRadius,
-                    maxDecimalPlaces: 1,
-                    titleDisplayMode: .label)
-            }           
+            PrimitiveStyleControlView(object: $rectangle)        
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -83,16 +74,23 @@ struct CirclePropertiesView: View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Circle Properties")
                 .font(.title3.weight(.semibold))
-            InspectorSection(title: "Size") {
-                InspectorNumericField(title: "Radius", value: $circle.radius, titleDisplayMode: .label)
+            InspectorSection("Transform") {
+
+                PointControlView(
+                    title: "Position",
+                    point: $circle.position,
+                    displayOffset: PaperSize.component.centerOffset()
+                )
+                
+          
+                InspectorRow("Radius") {
+                    InspectorNumericField(value: $circle.radius)
+                }
+             
+                RotationControlView(object: $circle)
+                
             }
-            Divider()
-            PointControlView(
-                point: $circle.position,
-                displayOffset: PaperSize.component.centerOffset()
-            )
-            Divider()
-            RotationControlView(object: $circle)
+    
             Divider()
             PrimitiveStyleControlView(object: $circle)
             
@@ -107,18 +105,20 @@ struct LinePropertiesView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
-            PointControlView(
-                title: "Start Point",
-                point: $line.start,
-                displayOffset: PaperSize.component.centerOffset()
-            )
-            PointControlView(
-                title: "End Point",
-                point: $line.end,
-                displayOffset: PaperSize.component.centerOffset()
-            )
-            Divider()
-            RotationControlView(object: $line)
+            InspectorSection("Transform") {
+                PointControlView(
+                    title: "Start Point",
+                    point: $line.start,
+                    displayOffset: PaperSize.component.centerOffset()
+                )
+                PointControlView(
+                    title: "End Point",
+                    point: $line.end,
+                    displayOffset: PaperSize.component.centerOffset()
+                )
+                RotationControlView(object: $line)
+            }
+
             Divider()
             PrimitiveStyleControlView(object: $line)
     

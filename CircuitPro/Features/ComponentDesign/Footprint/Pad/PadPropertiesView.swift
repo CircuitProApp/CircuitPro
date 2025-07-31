@@ -8,90 +8,129 @@
 import SwiftUI
 
 struct PadPropertiesView: View {
-
+    
     @State private var showDrillDialog: Bool = false
-
+    
     @Binding var pad: Pad
     
     var isTooLarge: Bool {
-        let drill = pad.drillDiameter ?? 0.0
+        guard pad.type == .throughHole else { return false }
+
+        guard let drill = pad.drillDiameter, drill > 0 else { return false }
+
         return pad.isCircle
-            ? drill > pad.radius
-            : drill > pad.width || drill > pad.height
+        ? drill > pad.radius
+        : drill > pad.width || drill > pad.height
     }
-
+    
     var body: some View {
-        Group {
-            InspectorNumericField(title: "Number", value: $pad.number)
-
-            Picker("Pad Type", selection: $pad.type) {
-                ForEach(PadType.allCases) { padType in
-                    Text(padType.label).tag(padType)
-                }
-            }
-
-            if pad.type == .throughHole {
-                HStack {
-                    if isTooLarge {
-                        Image(systemName: CircuitProSymbols.Workspace.ruleChecks)
-                            .symbolVariant(.fill)
-                            .foregroundStyle(.primary, .yellow)
-                            .onHover { _ in showDrillDialog.toggle() }
-                            .popover(isPresented: $showDrillDialog) {
-                                Text("Drill diameter exceeds pad size.")
-                                    .padding(7.5)
-                            }
-                            .transition(.opacity.combined(with: .scale))
+        VStack(alignment: .leading, spacing: 15) {
+            InspectorSection("Identity and Type") {
+                InspectorRow("Number") {
+                    HStack(spacing: 4) {
+                        InspectorNumericField(value: $pad.number)
+                        Color.clear
                     }
-                    fieldWithUnit {
+                }
+                InspectorRow("Pad Type") {
+                    Picker("Pad Type", selection: $pad.type) {
+                        ForEach(PadType.allCases) { padType in
+                            Text(padType.label).tag(padType)
+                        }
+                    }
+                    .labelsHidden()
+                    .controlSize(.small)
+                }
+                
+                InspectorRow("Drill Diameter") {
+                    HStack(spacing: 4) {
+               
+                        
                         InspectorNumericField(
-                            title: "Drill Diameter",
                             value: Binding(
                                 get: { pad.drillDiameter ?? 0.0 },
                                 set: { pad.drillDiameter = $0 }
                             ),
-                            displayMultiplier: 0.1
+                            displayMultiplier: 0.1,
+                            suffix: "mm"
                         )
+                        .environment(\.focusRingColor, isTooLarge ? .red : .clear)
+                        .disabled(pad.type != .throughHole)
+                        
+                        if isTooLarge {
+                            ZStack {
+                                Image(systemName: CircuitProSymbols.Workspace.ruleChecks)
+                                    .symbolVariant(.fill)
+                                    .foregroundStyle(.primary, .yellow)
+                                
+                                    .onHover { _ in showDrillDialog.toggle() }
+                                    .popover(isPresented: $showDrillDialog) {
+                                        Text("Drill diameter exceeds pad size.")
+                                            .padding(7.5)
+                                    }
+                                    .transition(.blurReplace)
+                               
+                            }
+                      
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            Color.clear
+                        }
+                      
+                        
                     }
-                    .foregroundStyle(isTooLarge ? .red : .primary)
+                    .animation(.default, value: isTooLarge)
                 }
-                .animation(.default, value: isTooLarge)
-           
+                
             }
-
-            Picker("Shape", selection: Binding(
-                get: { pad.isCircle ? "Circle" : "Rectangle" },
-                set: { pad.shape = $0 == "Circle" ? .circle(radius: 5) : .rect(width: 5, height: 10) }
-            )) {
-                Text("Circle").tag("Circle")
-                Text("Rectangle").tag("Rectangle")
+            Divider()
+            InspectorSection("Transform") {
+                PointControlView(title: "Position", point: $pad.position, displayOffset: PaperSize.component.centerOffset())
+      
+                RotationControlView(object: $pad, tickStepDegrees: 90)
             }
-
-            Group {
+            Divider()
+            InspectorSection("Display") {
+                InspectorRow("Shape") {
+                    Picker("Shape", selection: Binding(
+                        get: { pad.isCircle ? "Circle" : "Rectangle" },
+                        set: { pad.shape = $0 == "Circle" ? .circle(radius: 5) : .rect(width: 5, height: 10) }
+                    )) {
+                        Text("Circle").tag("Circle")
+                        Text("Rectangle").tag("Rectangle")
+                    }
+                    .labelsHidden()
+                    .controlSize(.small)
+                }
                 if pad.isCircle {
-                    fieldWithUnit {
-                        InspectorNumericField(title: "Radius", value: $pad.radius, displayMultiplier: 0.1)
+                    InspectorRow("Radius") {
+                        HStack(spacing: 4) {
+                            InspectorNumericField(value: $pad.radius, displayMultiplier: 0.1, suffix: "mm")
+                                .environment(\.focusRingColor, isTooLarge ? .red : .clear)
+                        }
                     }
+                    
+                    
+                    
+                    
                 } else {
-                    fieldWithUnit {
-                        InspectorNumericField(title: "Width", value: $pad.width, displayMultiplier: 0.1)
+                    InspectorRow("Dimensions") {
+                        HStack(spacing: 4) {
+                            InspectorNumericField(title: "W", value: $pad.width, displayMultiplier: 0.1, suffix: "mm")
+                            
+                            
+                            InspectorNumericField(title: "H", value: $pad.height, displayMultiplier: 0.1, suffix: "mm")
+                        }
+                        .environment(\.focusRingColor, isTooLarge ? .red : .clear)
                     }
-                    fieldWithUnit {
-                        InspectorNumericField(title: "Height", value: $pad.height, displayMultiplier: 0.1)
-                    }
+                    
+                    
                 }
             }
-            .foregroundStyle(isTooLarge ? .red : .primary)
-        }
-    }
 
-    /// Generic wrapper for unit-labeled numeric fields
-    private func fieldWithUnit(@ViewBuilder content: () -> some View) -> some View {
-        HStack(alignment: .bottom, spacing: 2) {
-            content()
-            Text("mm")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            
+            
         }
+        .padding(10)
     }
 }

@@ -70,7 +70,7 @@ struct EditorView: View {
                             selectedEditor == .schematic ?
                             AnyShapeStyle(Color.blue.quaternary) : AnyShapeStyle(Color.clear)
                         )
-                        .foregroundStyle(selectedEditor == .schematic ? .primary : .secondary)
+                        .foregroundStyle(selectedEditor == .schematic ? .blue : .secondary)
                         .clipShape(.rect(cornerRadius: 4))
                 }
                 .buttonStyle(.plain)
@@ -84,7 +84,7 @@ struct EditorView: View {
                             selectedEditor == .layout ?
                             AnyShapeStyle(Color.blue.quaternary) : AnyShapeStyle(Color.clear)
                         )
-                        .foregroundStyle(selectedEditor == .layout ? .primary : .secondary)
+                        .foregroundStyle(selectedEditor == .layout ? .blue : .secondary)
                         .clipShape(.rect(cornerRadius: 4))
                 }
                 .buttonStyle(.plain)

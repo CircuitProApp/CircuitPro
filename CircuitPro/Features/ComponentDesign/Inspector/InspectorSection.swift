@@ -11,7 +11,12 @@ import SwiftUI
 struct InspectorSection<Content: View>: View {
 
     var title: String
-    @ViewBuilder var content: () -> Content
+    var content: () -> Content
+    
+    init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
+        self.title = title
+        self.content = content
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
