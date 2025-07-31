@@ -54,13 +54,13 @@ final class WorkbenchView: NSView {
 
     var selectedTool: AnyCanvasTool? {
         didSet {
-            // We only want to notify the binding when the *type* of tool changes,
-            // not when its internal state changes. Comparing by ID is perfect for this.
             if oldValue?.id != selectedTool?.id {
-                // If the selectedTool is set to nil (or anything else),
-                // we'll provide a valid tool to the callback, defaulting to the CursorTool.
-                // This ensures the non-optional `@Binding` in CanvasView always has a value.
-                onToolChange?(selectedTool ?? AnyCanvasTool(CursorTool()))
+                // By dispatching this asynchronously, we ensure that the SwiftUI state
+                // is not modified during the view update cycle. The change is scheduled
+                // for the next iteration of the main run loop.
+                DispatchQueue.main.async {
+                    self.onToolChange?(self.selectedTool ?? AnyCanvasTool(CursorTool()))
+                }
             }
             previewView?.selectedTool = selectedTool
             self.becomeFirstResponderIfAppropriate()

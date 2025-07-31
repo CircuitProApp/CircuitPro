@@ -39,7 +39,6 @@ struct RulerTool: CanvasTool {
         return .noResult
     }
 
-    // This now correctly returns an array of DrawingParameters.
     mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
         guard let start = start else { return [] }
         let color: NSColor = .black
@@ -116,9 +115,9 @@ struct RulerTool: CanvasTool {
             start = nil
             end = nil
             clicks = 0
-            return true // State was cleared.
+            return true
         }
-        return false // Tool was already idle.
+        return false
     }
 
     mutating func handleBackspace() {

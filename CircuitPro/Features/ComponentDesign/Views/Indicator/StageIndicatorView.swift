@@ -15,12 +15,13 @@ struct StageIndicatorView: View {
     var body: some View {
         HStack {
             ForEach(ComponentDesignStage.allCases) { stage in
-                StagePillButton(
+                StageButton(
                     stage: stage,
                     isSelected: currentStage == stage,
                     validationState: validationProvider(stage),
                     action: { currentStage = stage }
                 )
+
                 
                 if stage != .footprint {
                     Image(systemName: CircuitProSymbols.Generic.chevronRight)

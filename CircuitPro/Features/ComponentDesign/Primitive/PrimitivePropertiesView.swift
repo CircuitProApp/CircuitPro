@@ -40,8 +40,15 @@ struct RectanglePropertiesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             InspectorSection(title: "Size") {
-                InspectorNumericField(title: "W", value: $rectangle.size.width)
-                InspectorNumericField(title: "H", value: $rectangle.size.height)
+                InspectorRow {
+                    HStack(spacing: 4) {
+                        InspectorNumericField(title: "W", value: $rectangle.size.width)
+                        InspectorNumericField(title: "H", value: $rectangle.size.height)
+                    }
+            
+                }
+          
+         
             }
             Divider()
             PointControlView(
@@ -51,7 +58,7 @@ struct RectanglePropertiesView: View {
             Divider()
             RotationControlView(object: $rectangle)
             Divider()
-            StrokeAndFillControlView(object: $rectangle)
+            PrimitiveStyleControlView(object: $rectangle)
             Divider()
             InspectorSection(title: "Corner Radius") {
                 Slider(value: $rectangle.cornerRadius, in: 0...rectangle.maximumCornerRadius)
@@ -87,7 +94,7 @@ struct CirclePropertiesView: View {
             Divider()
             RotationControlView(object: $circle)
             Divider()
-            StrokeAndFillControlView(object: $circle)
+            PrimitiveStyleControlView(object: $circle)
             
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -113,7 +120,7 @@ struct LinePropertiesView: View {
             Divider()
             RotationControlView(object: $line)
             Divider()
-            StrokeAndFillControlView(object: $line)
+            PrimitiveStyleControlView(object: $line)
     
         }
         .padding()

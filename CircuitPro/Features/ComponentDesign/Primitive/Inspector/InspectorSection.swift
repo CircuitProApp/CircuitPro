@@ -7,20 +7,18 @@
 
 import SwiftUI
 
-/// A reusable layout for inspector controls with a title and trailing content.
+/// A reusable view for creating a titled section in an inspector.
 struct InspectorSection<Content: View>: View {
+
     var title: String
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        VStack {
-            HStack {
-                Text(title)
-                    .font(.headline)
-                Spacer()
-            }
-            HStack {
-                Spacer()
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+
+            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
                 content()
             }
         }

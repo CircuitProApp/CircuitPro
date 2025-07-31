@@ -1,5 +1,5 @@
 //
-//  StagePillButton.swift
+//  StageButton.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 7/10/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct StagePillButton: View {
+struct StageButton: View {
 
     @State private var isHovering = false
 

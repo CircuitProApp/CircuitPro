@@ -6,7 +6,21 @@
 //
 import SwiftUI
 
-protocol StageRequirement: Hashable { }
+protocol StageRequirement: Hashable {}
+
+enum FootprintStageMode: Displayable {
+    case create
+    case select
+    
+    var label: String {
+        switch self {
+        case .create:
+            "Create"
+        case .select:
+            "Select"
+        }
+    }
+}
 
 enum ComponentDesignStage: String, Displayable, CaseIterable {
     case details

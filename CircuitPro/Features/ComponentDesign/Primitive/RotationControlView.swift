@@ -29,21 +29,25 @@ struct RotationControlView<T: Transformable>: View {
 
     var body: some View {
         InspectorSection(title: "Rotate") {
-            RadialSlider(
-                value: rotationInDegrees,
-                range: 0...360,
-                zeroAngle: .east,
-                isContinuous: true,
-                tickCount: tickCount,
-                tickStepDegrees: tickStepDegrees,
-                snapsToTicks: snapsToTicks
-            )
-            InspectorNumericField(
-                title: "",
-                value: rotationInDegrees,
-                maxDecimalPlaces: 1,
-                suffix: "°"
-            )
+            InspectorRow {
+                HStack(spacing: 4) {
+                    RadialSlider(
+                        value: rotationInDegrees,
+                        range: 0...360,
+                        zeroAngle: .east,
+                        isContinuous: true,
+                        tickCount: tickCount,
+                        tickStepDegrees: tickStepDegrees,
+                        snapsToTicks: snapsToTicks
+                    )
+                    .frame(maxWidth: .infinity)
+                    InspectorNumericField(
+                        title: "°",
+                        value: rotationInDegrees,
+                        maxDecimalPlaces: 1
+                    )
+                }
+            }
         }
     }
 }

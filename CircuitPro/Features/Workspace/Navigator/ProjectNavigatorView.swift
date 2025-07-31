@@ -13,9 +13,7 @@ struct ProjectNavigatorView: View {
     private var projectManager
 
     var document: CircuitProjectDocument
-    
-    @State private var schematicNavigatorView: SchematicNavigatorType = .symbols
-    
+
     enum SchematicNavigatorType: Displayable {
         case symbols
         case connections
@@ -30,6 +28,10 @@ struct ProjectNavigatorView: View {
         }
     }
 
+    @State private var schematicNavigatorView: SchematicNavigatorType = .symbols
+    
+    @Namespace private var namespace
+
     var body: some View {
         @Bindable var bindableProjectManager = projectManager
 
@@ -40,36 +42,40 @@ struct ProjectNavigatorView: View {
 
             VStack(spacing: 0) {
                 HStack(spacing: 2.5) {
-                    Button {
-                        schematicNavigatorView = .symbols
-                    } label: {
-                        Text("Symbols")
+                    ForEach(SchematicNavigatorType.allCases, id: \.self) { tab in
+                        Button {
+                            withAnimation(.snappy(duration: 0.25)) {
+                                schematicNavigatorView = tab
+                            }
+                        } label: {
+                            Text(tab.label)
+                                .padding(.vertical, 2.5)
+                                .padding(.horizontal, 7.5)
+                                .background {
+                                    if schematicNavigatorView == tab {
+                                        RoundedRectangle(cornerRadius: 5)
+                                            .fill(.blue)
+                                            .matchedGeometryEffect(id: "selection-background", in: namespace)
+                                    }
+                                }
+                                .foregroundStyle(schematicNavigatorView == tab ? .white : .secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                    .directionalPadding(vertical: 2.5, horizontal: 7.5)
-                    .background(schematicNavigatorView == .symbols ? .blue : .clear)
-                    .foregroundStyle(schematicNavigatorView == .symbols ? .white : .secondary)
-                    .clipShape(.rect(cornerRadius: 5))
-                    
-                    Button {
-                        schematicNavigatorView = .connections
-                    } label: {
-                        Text("Connections")
-                    }
-                    .buttonStyle(.plain)
-                    .directionalPadding(vertical: 2.5, horizontal: 7.5)
-                    .background(schematicNavigatorView == .connections ? .blue : .clear)
-                    .foregroundStyle(schematicNavigatorView == .connections ? .white : .secondary)
-                    .clipShape(.rect(cornerRadius: 5))
                 }
                 .frame(height: 28)
                 .font(.callout)
+
                 Divider().foregroundStyle(.quinary)
+
                 switch schematicNavigatorView {
                 case .symbols:
                     SymbolNavigatorView(document: document)
+                        .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .leading)))
+           
                 case .connections:
                     ConnectionNavigatorView(document: document)
+                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .trailing)))
                 }
             }
         }

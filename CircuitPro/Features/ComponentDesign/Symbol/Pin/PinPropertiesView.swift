@@ -11,31 +11,69 @@ struct PinPropertiesView: View {
     @Binding var pin: Pin
 
     var body: some View {
-        VStack(alignment: .trailing) {
-            Text("Pin Properties")
-                .font(.title3.weight(.semibold))
-            InspectorTextField(title: "Name", text: $pin.name)
-            if pin.name.isNotEmpty {
-                Toggle("Show Name", isOn: $pin.showLabel)
-            }
+        VStack(alignment: .leading, spacing: 15) {
+            
+            // 1. Identity and Type Section
+            InspectorSection(title: "Identity and Type") {
+                // The Grid handles the two-column layout for this section.
+            
+                    InspectorRow(title: "Name") {
+                        TextField("e.g. SDA", text: $pin.name)
+                            .inspectorField()
+                    }
+                    InspectorRow(title: "Number") {
+                        InspectorNumericField(title: "Number", value: $pin.number, titleDisplayMode: .hidden)
+                    }
 
-            InspectorNumericField(title: "Number", value: $pin.number, titleDisplayMode: .label)
-                .environment(\.inspectorFieldWidth, 80)
+                    InspectorRow(title: "Function") {
+                        Picker("Function", selection: $pin.type) {
+                            ForEach(PinType.allCases) { pinType in
+                                Text(pinType.label).tag(pinType)
+                            }
+                        }
+                        .labelsHidden()
+                        .controlSize(.small)
+                    }
+                
+            }
+            Divider()
+
+            // 2. Display Section
+            InspectorSection(title: "Display") {
+               
+                InspectorRow(title: "Length") {
+                    Picker("Length", selection: $pin.lengthType) {
+                        ForEach(PinLengthType.allCases) { pinLengthType in
+                            Text(pinLengthType.label).tag(pinLengthType)
+                        }
+                    }
+                    .labelsHidden()
+                    .controlSize(.small)
+                }
+       
+                GridRow {
+                    // This control spans both columns and is placed on its own row.
+                    Toggle("Show Name", isOn: $pin.showLabel)
+                        .gridCellColumns(2)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .disabled(pin.name.isEmpty)
+                }
+                
+                GridRow {
+                    Toggle("Show Number", isOn: $pin.showNumber)
+                        .gridCellColumns(2)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                
+            }
+            Divider()
+            PointControlView(title: "Position", point: $pin.position, displayOffset: PaperSize.component.centerOffset())
+            Divider()
             RotationControlView(object: $pin, tickCount: 3, tickStepDegrees: 90, snapsToTicks: true)
-
-            Toggle("Show Number", isOn: $pin.showNumber)
-
-            Picker("Function", selection: $pin.type) {
-                ForEach(PinType.allCases) { pinType in
-                    Text(pinType.label).tag(pinType)
-                }
-            }
-            Picker("Length", selection: $pin.lengthType) {
-                ForEach(PinLengthType.allCases) { pinLengthType in
-                    Text(pinLengthType.label).tag(pinLengthType)
-                }
-            }
         }
-        .padding()
+        .padding(10)
     }
 }

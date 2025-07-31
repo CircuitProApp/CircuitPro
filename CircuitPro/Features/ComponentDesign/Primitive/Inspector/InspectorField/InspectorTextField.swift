@@ -29,7 +29,7 @@ struct InspectorTextField: View {
                     .foregroundColor(.secondary)
             }
             TextField(placeholder, text: $text)
-                .inspectorField(width: 80)
+                .inspectorField()
         }
     }
 }

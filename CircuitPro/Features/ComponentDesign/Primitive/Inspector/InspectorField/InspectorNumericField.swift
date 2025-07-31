@@ -27,13 +27,14 @@ struct InspectorNumericField<T: NumericType>: View {
     enum TitleDisplayMode {
         case label
         case integrated
+        case hidden
     }
 
     @FocusState private var isFieldFocused: Bool
     
     var body: some View {
         HStack(spacing: 5) {
-            if titleDisplayMode == .label {
+            if titleDisplayMode == .label && titleDisplayMode != .hidden {
                 Text(title)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -54,13 +55,13 @@ struct InspectorNumericField<T: NumericType>: View {
                 )
                 
                 // 3.2.1. Integrated Title
-                if titleDisplayMode == .integrated {
+                if titleDisplayMode == .integrated && titleDisplayMode != .hidden {
                     Text(title)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            .inspectorField(width: 60)
+            .inspectorField()
         }
     }
 }

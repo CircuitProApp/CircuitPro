@@ -49,37 +49,46 @@ struct SymbolNavigatorView: View {
     var body: some View {
         @Bindable var bindableProjectManager = projectManager
 
-        List(
-            projectManager.designComponents,
-            id: \.id,
-            selection: $bindableProjectManager.selectedComponentIDs
-        ) { designComponent in
-            HStack {
-                Text(designComponent.definition.name)
-                    .foregroundStyle(.primary)
-                Spacer()
-                Text(designComponent.referenceDesignator)
-                    .foregroundStyle(.secondary)
-                    .monospaced()
+        if projectManager.designComponents.isEmpty {
+            VStack {
+                Text("No Symbols")
+                    .font(.callout)
+                    .foregroundColor(.secondary)
             }
-            .onAppear(perform: {
-                print(designComponent.definition.propertyDefinitions)
-            })
-            .frame(height: 14)
-            .listRowSeparator(.hidden)
-            .contextMenu {
-                let multi = bindableProjectManager.selectedComponentIDs.contains(designComponent.id) && bindableProjectManager.selectedComponentIDs.count > 1
-                Button(role: .destructive) {
-                    performDelete(on: designComponent, selected: &bindableProjectManager.selectedComponentIDs)
-                } label: {
-                    Text(multi
-                         ? "Delete Selected (\(bindableProjectManager.selectedComponentIDs.count))"
-                         : "Delete")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            List(
+                projectManager.designComponents,
+                id: \.id,
+                selection: $bindableProjectManager.selectedComponentIDs
+            ) { designComponent in
+                HStack {
+                    Text(designComponent.definition.name)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text(designComponent.referenceDesignator)
+                        .foregroundStyle(.secondary)
+                        .monospaced()
+                }
+                .onAppear(perform: {
+                    print(designComponent.definition.propertyDefinitions)
+                })
+                .frame(height: 14)
+                .listRowSeparator(.hidden)
+                .contextMenu {
+                    let multi = bindableProjectManager.selectedComponentIDs.contains(designComponent.id) && bindableProjectManager.selectedComponentIDs.count > 1
+                    Button(role: .destructive) {
+                        performDelete(on: designComponent, selected: &bindableProjectManager.selectedComponentIDs)
+                    } label: {
+                        Text(multi
+                             ? "Delete Selected (\(bindableProjectManager.selectedComponentIDs.count))"
+                             : "Delete")
+                    }
                 }
             }
+            .listStyle(.inset)
+            .scrollContentBackground(.hidden)
+            .environment(\.defaultMinListRowHeight, 14)
         }
-        .listStyle(.inset)
-        .scrollContentBackground(.hidden)
-        .environment(\.defaultMinListRowHeight, 14)
     }
 }

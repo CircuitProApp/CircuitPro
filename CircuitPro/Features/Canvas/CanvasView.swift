@@ -85,10 +85,6 @@ struct CanvasView: NSViewRepresentable {
         workbench.snapGridSize = manager.gridSpacing.rawValue * 10.0
         workbench.showGuides = manager.showGuides
         
-        if workbench.selectedTool?.id != selectedTool.id {
-             workbench.selectedTool = selectedTool
-        }
-        
         // Pass configuration to Workbench
         workbench.crosshairsStyle = manager.crosshairsStyle
         workbench.paperSize = manager.paperSize

@@ -13,17 +13,18 @@ struct InspectorFieldStyle: ViewModifier {
     private var overrideWidth
 
     @FocusState private var isFocused: Bool
-    
-    let width: CGFloat
-    
+
+    let width: CGFloat?
+
     func body(content: Content) -> some View {
         let finalWidth = overrideWidth ?? width
-        
+
         content
-            .frame(width: finalWidth)
             .focused($isFocused)
+            .if(finalWidth != nil) {
+                $0.frame(width: finalWidth)
+            }
             .textFieldStyle(.plain)
-            .multilineTextAlignment(.trailing)
             .directionalPadding(vertical: 2.5, horizontal: 5)
             .background(.ultraThinMaterial)
             .clipAndStroke(with: .rect(cornerRadius: 5))
@@ -32,7 +33,7 @@ struct InspectorFieldStyle: ViewModifier {
 }
 
 extension View {
-    func inspectorField(width: CGFloat = 80) -> some View {
+    func inspectorField(width: CGFloat? = nil) -> some View {
         modifier(InspectorFieldStyle(width: width))
     }
 }

@@ -11,6 +11,8 @@ import Observation
 @Observable
 final class ComponentDesignManager {
 
+    var footprintMode: FootprintStageMode = .create
+    
     var componentName: String = "" { didSet { refreshValidation() } }
     var referenceDesignatorPrefix: String = "" {
         didSet {

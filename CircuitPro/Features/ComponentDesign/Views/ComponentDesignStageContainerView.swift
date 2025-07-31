@@ -18,73 +18,90 @@ struct ComponentDesignStageContainerView: View {
     let footprintCanvasManager: CanvasManager
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            
-            NavigationSplitView {
-                VStack {
-                    switch currentStage {
-                    case .details:
-                        EmptyView()
-                            .toolbar(removing: .sidebarToggle)
-                    case .symbol:
-                        SymbolElementListView()
-                    case .footprint:
-                        FootprintElementListView()
-                    }
-                }
-                .navigationSplitViewColumnWidth(currentStage == .details ? 0 : ComponentDesignConstants.sidebarWidth)
-            } content: {
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        if currentStage == .details {
-                            Spacer()
-                                .frame(width: ComponentDesignConstants.sidebarWidth)
-                        }
-                      
-                        StageIndicatorView(
-                            currentStage: $currentStage,
-                            validationProvider: componentDesignManager.validationState
-                        )
-                        Spacer()
-                    }
-                   
-                    Divider()
-                    switch currentStage {
-                    case .details:
-    
-                            HStack {
-                                Spacer()
-                                    .frame(width: ComponentDesignConstants.sidebarWidth)
-                                ComponentDetailView()
-                                Spacer()
-                                    .frame(width: ComponentDesignConstants.sidebarWidth)
-                            }
-                            .directionalPadding(vertical: 25, horizontal: 15)
-                     
-                    case .symbol:
-                        SymbolDesignView()
-                            .environment(symbolCanvasManager)
-                    case .footprint:
-                        FootprintDesignView()
-                            .environment(footprintCanvasManager)
-                    }
-                }
-                
-            } detail: {
-                VStack {
-                switch currentStage {
-                case .details:
-                    EmptyView()
-                case .symbol:
-                    SymbolPropertiesEditorView()
-                case .footprint:
-                    FootprintPropertiesEditorView()
-                }
-                }
-                .navigationSplitViewColumnWidth(currentStage == .details ? 0 : ComponentDesignConstants.sidebarWidth)
-       
+        
+        NavigationSplitView {
+            VStack {
+                sidebarContent
             }
-            .navigationTransition(.automatic)
+            .navigationSplitViewColumnWidth(currentStage == .details ? 0 : ComponentDesignConstants.sidebarWidth)
+        } content: {
+            VStack(alignment: .leading, spacing: 0) {
+                stageIndicator
+                Divider()
+                VStack(spacing: 0) {
+                    stageContent
+                }
+            }
+        } detail: {
+            VStack {
+                detailContent
+            }
+            .navigationSplitViewColumnWidth(currentStage == .details ? 0 : ComponentDesignConstants.sidebarWidth)
+            
+        }
+        
+    }
+    
+    var stageIndicator: some View {
+        HStack {
+            StageIndicatorView(
+                currentStage: $currentStage,
+                validationProvider: componentDesignManager.validationState
+            )
+            .if(currentStage == .details) {
+                $0.offset(.init(width: ComponentDesignConstants.sidebarWidth, height: 0))
+            }
+           
+            
+            Spacer()
+            
+        }
+        .background(.windowBackground)
+    }
+    
+    @ViewBuilder
+    var sidebarContent: some View {
+        switch currentStage {
+        case .details:
+            EmptyView()
+                .toolbar(removing: .sidebarToggle)
+        case .symbol:
+            SymbolElementListView()
+        case .footprint:
+            FootprintElementListView()
+        }
+    }
+    
+    @ViewBuilder
+    var detailContent: some View {
+        switch currentStage {
+        case .details:
+            EmptyView()
+        case .symbol:
+            SymbolPropertiesEditorView()
+        case .footprint:
+            FootprintPropertiesEditorView()
+        }
+    }
+    
+    @ViewBuilder
+    var stageContent: some View {
+        switch currentStage {
+        case .details:
+            HStack {
+                Spacer()
+                    .frame(width: ComponentDesignConstants.sidebarWidth)
+                ComponentDetailView()
+                Spacer()
+                    .frame(width: ComponentDesignConstants.sidebarWidth)
+            }
+            .directionalPadding(vertical: 25, horizontal: 15)
+        case .symbol:
+            SymbolDesignView()
+                .environment(symbolCanvasManager)
+        case .footprint:
+            FootprintDesignView()
+                .environment(footprintCanvasManager)
         }
     }
 }

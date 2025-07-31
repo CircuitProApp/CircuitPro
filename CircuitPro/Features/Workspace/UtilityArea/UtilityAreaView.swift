@@ -10,14 +10,11 @@ import SwiftData
 
 enum UtilityAreaTab: Displayable {
 
-    case design
     case appLibrary
     case userLibrary
 
     var label: String {
         switch self {
-        case .design:
-            return "Design Library"
         case .appLibrary:
             return "App Library"
         case .userLibrary:
@@ -27,8 +24,6 @@ enum UtilityAreaTab: Displayable {
 
     var icon: String {
         switch self {
-        case .design:
-            return CircuitProSymbols.Design.design.replacingOccurrences(of: ".fill", with: "")
         case .appLibrary:
             return "books.vertical"
         case .userLibrary:
@@ -78,7 +73,7 @@ struct UtilityAreaView: View {
     private var components: [Component]
 
     @State private var selectedCategory: ComponentCategoryFilter = .all
-    @State private var selectedTab: UtilityAreaTab = .design
+    @State private var selectedTab: UtilityAreaTab = .appLibrary
 
     var filteredComponents: [Component] {
         switch selectedCategory {
@@ -111,8 +106,6 @@ struct UtilityAreaView: View {
     private var selectionView: some View {
         Group {
             switch selectedTab {
-            case .design:
-                EmptyView()
             case .appLibrary:
                 List(
                     [ComponentCategoryFilter.all] + ComponentCategory.allCases.map { .category($0) },
@@ -143,7 +136,7 @@ struct UtilityAreaView: View {
                     Image(systemName: tab == selectedTab ? "\(tab.icon).fill" : tab.icon)
                         .font(.system(size: 12.5))
                         .foregroundStyle(selectedTab == tab ? .blue : .secondary)
-                        .if(tab == .design) { view in
+                        .if(tab == .appLibrary) { view in
                             view.padding(.top, 12.5)
                         }
                 }
@@ -159,15 +152,6 @@ struct UtilityAreaView: View {
     private var contentView: some View {
         Group {
             switch selectedTab {
-            case .design:
-                ScrollView {
-                    VStack {
-                        ForEach(projectManager.designComponents) { designComponent in
-                            Text(designComponent.definition.name)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                }
             case .appLibrary:
                 ComponentGridView(filteredComponents) { component in
                     ComponentCardView(component: component)

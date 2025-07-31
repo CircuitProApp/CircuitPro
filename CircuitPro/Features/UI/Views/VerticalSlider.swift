@@ -10,8 +10,8 @@ import SwiftUI
 struct VerticalSlider: NSViewRepresentable {
     @Binding var value: Double
     var bounds: ClosedRange<Double>
-    var tickMarks: Int = 5 // Number of tick marks
-    var onlyAllowTickValues: Bool = false // Snap to tick marks or not
+    var tickMarks: Int = 5
+    var onlyAllowTickValues: Bool = false
 
     class Coordinator: NSObject {
         var value: Binding<Double>
@@ -36,7 +36,7 @@ struct VerticalSlider: NSViewRepresentable {
         slider.minValue = bounds.lowerBound
         slider.maxValue = bounds.upperBound
         slider.doubleValue = value
-        // ✅ Tick mark setup
+
         slider.numberOfTickMarks = tickMarks
         slider.allowsTickMarkValuesOnly = onlyAllowTickValues
         slider.tickMarkPosition = .leading // Could also be `.trailing`
