@@ -43,7 +43,7 @@ struct PrimitiveStyleControlView<T: GraphicPrimitive>: View {
                     Color.clear
                 
             }
-            if !isFillable {
+            if isFillable {
                 InspectorRow("Filled") {
                     Toggle("Filled", isOn: $object.filled)
                         .labelsHidden()
