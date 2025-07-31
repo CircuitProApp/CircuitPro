@@ -11,16 +11,16 @@ struct FootprintElementListView: View {
     @Environment(\.componentDesignManager) private var componentDesignManager
 
     // Unified selection ID for any item, drives the List's native selection.
-    private enum OutlineItemID: Hashable {
+    enum OutlineItemID: Hashable {
         case layer(CanvasLayer)
         case element(UUID)
     }
 
     // The identifiable data model for the hierarchical list.
-    private struct OutlineItem: Identifiable {
+    struct OutlineItem: Identifiable {
         let id: OutlineItemID
         let content: Content
-        let children: [OutlineItem]? // MUST be optional for the List initializer
+        let children: [OutlineItem]?
         
         enum Content {
             case layer(CanvasLayer)
@@ -30,6 +30,7 @@ struct FootprintElementListView: View {
     
     // The List's selection state.
     @State private var selection: Set<OutlineItemID> = []
+    @State private var expandedLayers: Set<CanvasLayer> = []
 
     var body: some View {
         @Bindable var manager = componentDesignManager
@@ -39,28 +40,56 @@ struct FootprintElementListView: View {
                 .font(.title3.weight(.semibold))
                 .padding(10)
             
-            // Use the canonical hierarchical List initializer.
-            List(outlineData, children: \.children, selection: $selection) { item in
-                switch item.content {
-                case .layer(let layer):
-                    layerRow(for: layer)
-                case .element(let element):
-                    elementRow(for: element)
+            List(selection: $selection) {
+                ForEach(outlineData) { item in
+                    disclosureGroupRow(for: item)
                 }
             }
-            // CRITICAL: .sidebar style is designed for outlines and prevents the layout shift.
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
         }
-        // This is now the single source of truth for synchronizing selection.
         .onChange(of: selection) { handleSelectionChange() }
-        // Sync our local state if the manager changes programmatically.
         .onChange(of: manager.selectedFootprintLayer) { syncSelectionFromManager() }
         .onChange(of: manager.selectedFootprintElementIDs) { syncSelectionFromManager() }
-        .onAppear { syncSelectionFromManager() }
+        .onAppear {
+            syncSelectionFromManager()
+            expandedLayers = Set(outlineData.compactMap { $0.content.layerValue })
+        }
     }
 
+    
     // MARK: - View Builders
+
+    @ViewBuilder
+    private func disclosureGroupRow(for item: OutlineItem) -> some View {
+        if case .layer(let layer) = item.content {
+            let isExpandedBinding = Binding<Bool>(
+                get: { expandedLayers.contains(layer) },
+                set: { isExpanded in
+                    if isExpanded {
+                        expandedLayers.insert(layer)
+                    } else {
+                        expandedLayers.remove(layer)
+                    }
+                }
+            )
+            
+            DisclosureGroup(
+                isExpanded: isExpandedBinding,
+                content: {
+                    ForEach(item.children ?? []) { childItem in
+                        if case .element(let element) = childItem.content {
+                            elementRow(for: element)
+                        }
+                    }
+                },
+                label: {
+                    layerRow(for: layer)
+                }
+            )
+        }
+    }
+
 
     @ViewBuilder
     private func layerRow(for layer: CanvasLayer) -> some View {
@@ -77,9 +106,9 @@ struct FootprintElementListView: View {
     private func elementRow(for element: CanvasElement) -> some View {
         switch element {
         case .pad(let pad):
-            Label("Pad \(pad.number)", systemImage: "square.fill.on.square")
+            Label("Pad \(pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
         case .primitive(let primitive):
-            Label(primitive.displayName, systemImage: "path")
+            Label(primitive.displayName, systemImage: primitive.symbol)
         default:
             EmptyView()
         }
@@ -89,9 +118,18 @@ struct FootprintElementListView: View {
 
     /// Assembles the data for the hierarchical `List`.
     private var outlineData: [OutlineItem] {
+        
+        let copperLayer = CanvasLayer(kind: .copper)
+        
         let elementsByLayer = Dictionary(
             grouping: componentDesignManager.footprintElements,
-            by: { componentDesignManager.layerAssignments[$0.id] ?? .layer0 }
+            by: { element in
+                if case .pad = element {
+                    return copperLayer
+                } else {
+                    return componentDesignManager.layerAssignments[element.id] ?? .layer0
+                }
+            }
         )
         
         var orderedLayers: [CanvasLayer] = [.layer0]
@@ -101,7 +139,6 @@ struct FootprintElementListView: View {
             let childElements = (elementsByLayer[layer] ?? []).map { element in
                 OutlineItem(id: .element(element.id), content: .element(element), children: nil)
             }
-            // CRITICAL: This ensures every layer is treated as a branch, even if empty.
             return OutlineItem(id: .layer(layer), content: .layer(layer), children: childElements)
         }
     }
@@ -138,5 +175,12 @@ struct FootprintElementListView: View {
         if self.selection != newSelection {
             self.selection = newSelection
         }
+    }
+}
+
+extension FootprintElementListView.OutlineItem.Content {
+    var layerValue: CanvasLayer? {
+        if case .layer(let layer) = self { return layer }
+        return nil
     }
 }

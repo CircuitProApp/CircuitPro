@@ -39,6 +39,23 @@ extension GraphicPrimitive {
     }
 }
 
+extension GraphicPrimitive {
+    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
+        guard selectedIDs.contains(self.id) else { return nil }
+
+        guard let path = makeHaloPath(), !path.isEmpty else { return nil }
+
+        let haloColor = self.color.nsColor.withAlphaComponent(0.3).cgColor
+
+        return DrawingParameters(
+            path: path,
+            lineWidth: 4.0,
+            fillColor: nil,
+            strokeColor: haloColor
+        )
+    }
+}
+
 // MARK: - Other Shared Implementations
 extension GraphicPrimitive {
 

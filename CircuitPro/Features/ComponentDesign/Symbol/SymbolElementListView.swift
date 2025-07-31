@@ -49,7 +49,7 @@ struct SymbolElementListView: View {
     private func rowView(for element: CanvasElement) -> some View {
         switch element {
         case .pin(let pin):
-            Label("Pin \(pin.number)", systemImage: "mappin.and.ellipse")
+            Label("Pin \(pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
         case .primitive(let primitive):
             Label(primitive.displayName, systemImage: primitive.symbol)
         case .text(let textElement):
