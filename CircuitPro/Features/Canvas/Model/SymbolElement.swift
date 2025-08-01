@@ -91,20 +91,47 @@ struct SymbolElement: Identifiable {
     }
     
     private func resolveText(for definition: AnchoredTextDefinition, with override: AnchoredTextOverride?) -> String {
-        // If there's a text override, it always wins.
+        // Override always wins
         if let overrideText = override?.textOverride {
             return overrideText
         }
         
-        // Otherwise, resolve the source.
         switch definition.source {
         case .static(let text):
             return text
-        case .dynamic(.reference):
-            return self.reference
-        case .dynamic(.value):
-            // Use the first available property as the "main" value.
-            return properties.first?.value.description ?? "n/a"
+                
+        case .dynamic(let dynamicProperty):
+            switch dynamicProperty {
+            case .componentName:
+                return self.symbol.name
+
+            case .reference:
+                return self.reference
+                
+            case .property(let definitionID):
+                // 1. Find the property instance that matches the definition ID.
+                guard let prop = self.properties.first(where: { $0.sourceDefinitionID == definitionID }) else {
+                    return "n/a"
+                }
+                
+                // 2. Use the definition's displayOptions to build the string.
+                var parts: [String] = []
+                let options = definition.displayOptions
+                
+                if options.showKey {
+                    parts.append("\(prop.key.label):")
+                }
+                
+                if options.showValue {
+                    parts.append(prop.value.description)
+                }
+                
+                if options.showUnit, !prop.unit.symbol.isEmpty {
+                    parts.append(prop.unit.symbol)
+                }
+                
+                return parts.joined(separator: " ")
+            }
         }
     }
 }

@@ -32,11 +32,15 @@ struct SymbolPropertiesEditorView: View {
                             PrimitivePropertiesView(primitive: primitiveBinding)
                             
                         }
+                    } else if case .text(let text) = element, componentDesignManager.selectedSymbolElementIDs.contains(text.id) {
+                        if let textBinding = $element.text {
+                            
+                            TextPropertiesView(textElement: textBinding)
+                            
+                        }
                     }
                 }
             }
-
-            
         }
     }
 }

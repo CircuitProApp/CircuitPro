@@ -75,8 +75,9 @@ extension CircuitProSymbols {
         static let connectionWire = "connection.wire"
     }
     
-    enum Tool {
-        static let text = "character.textbox"
+    enum Text {
+        static let textBox = "character.textbox"
+        static let textBoxSparkle = "character.textbox.badge.sparkles"
     }
     
     enum Graphic {

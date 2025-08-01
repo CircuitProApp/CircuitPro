@@ -21,8 +21,7 @@ enum TextSource: Codable, Hashable {
 enum DynamicProperty: Codable, Hashable {
     /// The component's unique referenceDesignatorIndex designator (e.g., "R1", "C2").
     case reference
+    case componentName
     
-    /// The main "value" of the component (e.g., "10kΩ", "100µF").
-    /// This is a shortcut for the most common dynamic property.
-    case value
+    case property(definitionID: UUID)
 }
