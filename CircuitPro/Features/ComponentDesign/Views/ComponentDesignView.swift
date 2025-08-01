@@ -1,3 +1,10 @@
+//
+//  ComponentDesignView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 18.06.25.
+//
+
 import SwiftUI
 
 struct ComponentDesignView: View {
@@ -93,9 +100,7 @@ struct ComponentDesignView: View {
         })
     }
 
-    // 4. Build and insert component
     private func createComponent() {
-        // --- Validation (Unchanged) ---
         if !componentDesignManager.validateForCreation() {
             let errorMessages = componentDesignManager.validationSummary.errors.values
                 .flatMap { $0 }
@@ -118,11 +123,9 @@ struct ComponentDesignView: View {
             return
         }
 
-        // --- Symbol Creation (Updated Logic) ---
         let canvasSize = symbolCanvasManager.paperSize.canvasSize(orientation: .landscape)
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
 
-        // 1. Process all text elements to create anchored text definitions.
         var textDefinitions = [AnchoredTextDefinition]()
         let textCanvasElements = componentDesignManager.symbolElements.compactMap { element -> TextElement? in
             guard case .text(let textElement) = element else { return nil }
@@ -133,17 +136,14 @@ struct ComponentDesignView: View {
             let relativePosition = CGPoint(x: textElement.position.x - anchor.x, y: textElement.position.y - anchor.y)
             
             if let source = componentDesignManager.textSourceMap[textElement.id] {
-                // THIS IS THE MODIFIED PART:
-                // Get the display options for this element from the manager.
                 let displayOptions = componentDesignManager.textDisplayOptionsMap[textElement.id, default: .allVisible]
                 
                 textDefinitions.append(AnchoredTextDefinition(
                     source: source,
                     relativePosition: relativePosition,
-                    displayOptions: displayOptions // Pass the options during creation.
+                    displayOptions: displayOptions
                 ))
             } else {
-                // Static text doesn't have display options.
                 textDefinitions.append(AnchoredTextDefinition(
                     source: .static(textElement.text),
                     relativePosition: relativePosition
@@ -151,7 +151,6 @@ struct ComponentDesignView: View {
             }
         }
         
-        // 2. Process primitives (excluding text elements).
         let rawPrimitives: [AnyPrimitive] = componentDesignManager.symbolElements.compactMap { element in
             if case .primitive(let primitive) = element { return primitive }
             return nil
@@ -163,7 +162,6 @@ struct ComponentDesignView: View {
             return copy
         }
 
-        // 3. Process pins (their logic is separate and correct).
         let rawPins = componentDesignManager.pins
         let pins = rawPins.map { pin -> Pin in
             var copy = pin
@@ -171,7 +169,6 @@ struct ComponentDesignView: View {
             return copy
         }
 
-        // --- Database Insertion (Unchanged) ---
         let newComponent = Component(
             name: componentDesignManager.componentName,
             referenceDesignatorPrefix: componentDesignManager.referenceDesignatorPrefix,
@@ -187,18 +184,15 @@ struct ComponentDesignView: View {
             component: newComponent,
             primitives: primitives,
             pins: pins,
-            // Use the new, correctly generated text definitions.
             anchoredTextDefinitions: textDefinitions
         )
 
         newComponent.symbol = newSymbol
         modelContext.insert(newComponent)
-        didCreateComponent = true  // Flip the flag to show the success view.
+        didCreateComponent = true
     }
 
-    // 5. Reset state if user wants to create another (Unchanged)
     private func resetForNewComponent() {
-        // This correctly calls the updated `resetAll` method in the manager.
         componentDesignManager.resetAll()
         currentStage = .details
         symbolCanvasManager = CanvasManager()

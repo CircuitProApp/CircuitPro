@@ -1,3 +1,10 @@
+//
+//  ComponentDesignSuccessView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 18.06.25.
+//
+
 import SwiftUI
 
 struct ComponentDesignSuccessView: View {
