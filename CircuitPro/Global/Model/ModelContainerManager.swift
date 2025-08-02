@@ -20,8 +20,7 @@ final class ModelContainerManager {
                 schema: Schema([
                     Component.self,
                     Symbol.self,
-                    Footprint.self,
-                    Model.self
+                    Footprint.self
                 ]),
                 allowsSave: true
             )
@@ -31,7 +30,6 @@ final class ModelContainerManager {
                     Component.self,
                     Symbol.self,
                     Footprint.self,
-                    Model.self,
                 configurations: appLibraryConfig
             )
 

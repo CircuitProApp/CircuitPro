@@ -18,22 +18,22 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
     var cardinalRotation: CardinalRotation = .west
     
     // 1. ADD THIS: Stores overrides for text defined in the master symbol.
-    var anchoredTextOverrides: [AnchoredTextOverride]
+    var textOverrides: [TextOverride]
     // 2. ADD THIS: Stores new text added only to this specific instance.
-    var adHocTexts: [InstanceAdHocText]
+    var textInstances: [TextInstance]
 
     var rotation: CGFloat {
         get { cardinalRotation.radians }
         set { cardinalRotation = .closest(to: newValue) }
     }
 
-    init(id: UUID = UUID(), symbolUUID: UUID, position: CGPoint, cardinalRotation: CardinalRotation = .west, anchoredTextOverrides: [AnchoredTextOverride] = [], adHocTexts: [InstanceAdHocText] = []) {
+    init(id: UUID = UUID(), symbolUUID: UUID, position: CGPoint, cardinalRotation: CardinalRotation = .west, textOverrides: [TextOverride] = [], textInstances: [TextInstance] = []) {
         self.id = id
         self.symbolUUID = symbolUUID
         self.position = position
         self.cardinalRotation = cardinalRotation
-        self.anchoredTextOverrides = anchoredTextOverrides
-        self.adHocTexts = adHocTexts
+        self.textOverrides = textOverrides
+        self.textInstances = textInstances
     }
 
     enum CodingKeys: String, CodingKey {
@@ -41,8 +41,8 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
         case _symbolUUID = "symbolUUID"
         case _position = "position"
         case _cardinalRotation = "rotation"
-        case _anchoredTextOverrides = "anchoredTextOverrides"
-        case _adHocTexts = "adHocTexts"
+        case _textOverrides = "textOverrides"
+        case _textInstances = "textInstances"
     }
     
     /// Creates a new instance with the same property values.
@@ -51,8 +51,8 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
                        symbolUUID: symbolUUID,
                        position: position,
                        cardinalRotation: cardinalRotation,
-                       anchoredTextOverrides: anchoredTextOverrides,
-                       adHocTexts: adHocTexts
+                       textOverrides: textOverrides,
+                       textInstances: textInstances
         )
     }
 }
@@ -64,7 +64,7 @@ extension SymbolInstance: Equatable {
         lhs.symbolUUID == rhs.symbolUUID &&
         lhs.position == rhs.position &&
         lhs.cardinalRotation == rhs.cardinalRotation &&
-        lhs.anchoredTextOverrides == rhs.anchoredTextOverrides &&
-        lhs.adHocTexts == rhs.adHocTexts
+        lhs.textOverrides == rhs.textOverrides &&
+        lhs.textInstances == rhs.textInstances
     }
 }

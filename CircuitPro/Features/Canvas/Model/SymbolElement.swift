@@ -8,25 +8,28 @@
 import SwiftUI
 
 struct SymbolElement: Identifiable {
-
+    
     let id: UUID
     var instance: SymbolInstance
     let symbol: Symbol
     var reference: String
     var properties: [ResolvedProperty]
 
+    // This array now holds the final, display-ready canvas elements.
     var anchoredTexts: [AnchoredTextElement]
 
     var primitives: [AnyPrimitive] {
         symbol.primitives + symbol.pins.flatMap(\.primitives)
     }
 
+    // The initializer is now much simpler. It accepts fully resolved text data.
     init(
         id: UUID,
         instance: SymbolInstance,
         symbol: Symbol,
         reference: String,
-        properties: [ResolvedProperty]
+        properties: [ResolvedProperty],
+        resolvedTexts: [ResolvedText] // New parameter
     ) {
         self.id = id
         self.instance = instance
@@ -34,108 +37,17 @@ struct SymbolElement: Identifiable {
         self.reference = reference
         self.properties = properties
         
-        self.anchoredTexts = []
-        
-        // Initial resolution of all text elements.
-        self.resolveAnchoredTexts()
-    }
-    
-    mutating func resolveAnchoredTexts() {
-        var updatedTexts: [AnchoredTextElement] = []
-        let symbolTransform = self.transform
-
-        // Process definitions from the library symbol
-        for definition in symbol.anchoredTextDefinitions {
-            let override = instance.anchoredTextOverrides.first { $0.definitionID == definition.id }
-            if let override, !override.isVisible { continue }
-
-            let anchorAbsolutePos = definition.relativePosition.applying(symbolTransform)
-            let finalRelativePos = override?.relativePositionOverride ?? definition.relativePosition
-            let finalAbsolutePos = finalRelativePos.applying(symbolTransform)
-
-            let text = resolveText(for: definition, with: override)
-
-            if var existing = self.anchoredTexts.first(where: { $0.sourceDataID == definition.id }) {
-                existing.textElement.position = finalAbsolutePos
-                existing.textElement.rotation = self.rotation
-                existing.textElement.text = text
-                existing.anchorPosition = anchorAbsolutePos
-                updatedTexts.append(existing)
-            } else {
-                let textEl = TextElement(id: UUID(), text: text, position: finalAbsolutePos, rotation: self.rotation, font: definition.font, color: definition.color)
-                let newElement = AnchoredTextElement(id: UUID(), textElement: textEl, anchorPosition: anchorAbsolutePos, anchorOwnerID: self.id, sourceDataID: definition.id, isFromDefinition: true)
-                updatedTexts.append(newElement)
-            }
-        }
-
-        // Process ad-hoc texts added only to this instance
-        for adHoc in instance.adHocTexts {
-            let absolutePos = adHoc.relativePosition.applying(symbolTransform)
-
-            if var existing = self.anchoredTexts.first(where: { $0.sourceDataID == adHoc.id }) {
-                existing.textElement.position = absolutePos
-                existing.textElement.rotation = self.rotation
-                existing.textElement.text = adHoc.text
-                existing.anchorPosition = absolutePos
-                updatedTexts.append(existing)
-            } else {
-                let textEl = TextElement(id: UUID(), text: adHoc.text, position: absolutePos, rotation: self.rotation, font: adHoc.font, color: adHoc.color)
-                let newElement = AnchoredTextElement(id: UUID(), textElement: textEl, anchorPosition: absolutePos, anchorOwnerID: self.id, sourceDataID: adHoc.id, isFromDefinition: false)
-                updatedTexts.append(newElement)
-            }
-        }
-        
-        self.anchoredTexts = updatedTexts
-    }
-    
-    private func resolveText(for definition: AnchoredTextDefinition, with override: AnchoredTextOverride?) -> String {
-        // Override text always has the highest priority.
-        if let overrideText = override?.textOverride {
-            return overrideText
-        }
-        
-        switch definition.source {
-        case .static(let text):
-            return text
-                
-        case .dynamic(let dynamicProperty):
-            switch dynamicProperty {
-            case .componentName:
-                return self.symbol.name
-
-            case .reference:
-                return self.reference
-                
-            case .property(let definitionID):
-                // Find the property that corresponds to the definition we need to display.
-                // This now safely checks the `source` enum of the `ResolvedProperty`.
-                guard let prop = self.properties.first(where: {
-                    if case .definition(let defID) = $0.source {
-                        return defID == definitionID
-                    }
-                    return false
-                }) else {
-                    return "n/a"
-                }
-                
-                // Use the definition's displayOptions to build the final string.
-                var parts: [String] = []
-                let options = definition.displayOptions
-                
-                if options.showKey {
-                    parts.append("\(prop.key.label):")
-                }
-                
-                if options.showValue {
-                    parts.append(prop.value.description)
-                }
-                
-                if options.showUnit, !prop.unit.symbol.isEmpty {
-                    parts.append(prop.unit.symbol)
-                }
-                
-                return parts.joined(separator: " ")
-            }
+        // The complex resolution logic is GONE. We simply map the resolved data
+        // into the final canvas elements that know how to draw themselves.
+        let symbolTransform = CGAffineTransform(translationX: instance.position.x, y: instance.position.y)
+            .rotated(by: instance.rotation)
+            
+        self.anchoredTexts = resolvedTexts.map { resolvedText -> AnchoredTextElement in
+            AnchoredTextElement(
+                resolvedText: resolvedText,
+                parentID: id,
+                parentTransform: symbolTransform
+            )
         }
     }
 }
@@ -163,7 +75,8 @@ extension SymbolElement: Transformable {
             let newInstance = instance.copy()
             newInstance.position = newValue
             self.instance = newInstance
-            resolveAnchoredTexts()
+            // Call the new, efficient updater method.
+            updateAnchoredTextPositions()
         }
     }
 
@@ -173,8 +86,47 @@ extension SymbolElement: Transformable {
             let newInstance = instance.copy()
             newInstance.rotation = newValue
             self.instance = newInstance
-            resolveAnchoredTexts()
+            // Call the new, efficient updater method.
+            updateAnchoredTextPositions()
         }
+    }
+}
+
+// Add this new private helper method to the main SymbolElement struct or in a private extension.
+private extension SymbolElement {
+    
+    /// Efficiently updates the world coordinates of all child text elements after the parent symbol moves or rotates.
+    /// This replaces the expensive `resolveAnchoredTexts` method for simple transformations.
+    mutating func updateAnchoredTextPositions() {
+        // Get the parent symbol's new transform.
+        let newParentTransform = self.transform
+
+        // Create a new array to store the updated text elements.
+        var updatedTexts: [AnchoredTextElement] = []
+        
+        // Iterate through the existing text elements.
+        for var canvasText in self.anchoredTexts {
+            // Reconstruct the original resolved data to get the relative positions.
+            // This is necessary because the canvas element only stores absolute positions.
+            let resolvedText = canvasText.toResolvedText(parentTransform: newParentTransform)
+            
+            // Recalculate the absolute world positions using the new transform.
+            canvasText.anchorPosition = resolvedText.anchorRelativePosition.applying(newParentTransform)
+            canvasText.textElement.position = resolvedText.relativePosition.applying(newParentTransform)
+            canvasText.textElement.rotation = newParentTransform.rotationAngle // Match parent rotation
+            
+            updatedTexts.append(canvasText)
+        }
+        
+        // Replace the old array with the updated one.
+        self.anchoredTexts = updatedTexts
+    }
+}
+
+// Helper to extract rotation from CGAffineTransform
+private extension CGAffineTransform {
+    var rotationAngle: CGFloat {
+        return atan2(b, a)
     }
 }
 

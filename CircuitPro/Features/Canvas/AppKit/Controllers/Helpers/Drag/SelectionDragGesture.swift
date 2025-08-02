@@ -208,22 +208,22 @@ final class SelectionDragGesture: CanvasDragGesture {
                 let newRelativePosition = originalRelativePos + delta
 
                 if text.isFromDefinition {
-                    if let index = newInstance.anchoredTextOverrides.firstIndex(where: {
+                    if let index = newInstance.textOverrides.firstIndex(where: {
                         $0.definitionID == text.sourceDataID
                     }) {
-                        newInstance.anchoredTextOverrides[index].relativePositionOverride = newRelativePosition
+                        newInstance.textOverrides[index].relativePositionOverride = newRelativePosition
                     } else {
-                        let newOverride = AnchoredTextOverride(
+                        let newOverride = TextOverride(
                             definitionID: text.sourceDataID,
                             textOverride: text.textElement.text,
                             relativePositionOverride: newRelativePosition,
                             isVisible: true
                         )
-                        newInstance.anchoredTextOverrides.append(newOverride)
+                        newInstance.textOverrides.append(newOverride)
                     }
                 } else {
-                    if let index = newInstance.adHocTexts.firstIndex(where: { $0.id == text.sourceDataID }) {
-                        newInstance.adHocTexts[index].relativePosition = newRelativePosition
+                    if let index = newInstance.textInstances.firstIndex(where: { $0.id == text.sourceDataID }) {
+                        newInstance.textInstances[index].relativePosition = newRelativePosition
                     }
                 }
             }

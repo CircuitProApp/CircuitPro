@@ -14,6 +14,7 @@ struct TextElement: Identifiable {
     var rotation: CGFloat = 0.0
     var font: NSFont = .systemFont(ofSize: 12)
     var color: CGColor = NSColor.black.cgColor
+    var alignment: NSTextAlignment = .left
     var isEditable: Bool = false
 }
 

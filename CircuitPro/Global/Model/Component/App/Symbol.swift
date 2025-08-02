@@ -21,7 +21,7 @@ class Symbol {
     var primitives: [AnyPrimitive]
     var pins: [Pin]
     
-    var anchoredTextDefinitions: [AnchoredTextDefinition]
+    var textDefinitions: [TextDefinition]
 
     init(
         uuid: UUID = UUID(),
@@ -29,13 +29,13 @@ class Symbol {
         component: Component? = nil,
         primitives: [AnyPrimitive] = [],
         pins: [Pin] = [],
-        anchoredTextDefinitions: [AnchoredTextDefinition] = []
+        textDefinitions: [TextDefinition] = []
     ) {
         self.uuid = uuid
         self.name = name
         self.component = component
         self.primitives = primitives
         self.pins = pins
-        self.anchoredTextDefinitions = anchoredTextDefinitions
+        self.textDefinitions = textDefinitions
     }
 }

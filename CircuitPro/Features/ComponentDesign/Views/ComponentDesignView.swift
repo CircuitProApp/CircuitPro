@@ -127,7 +127,7 @@ struct ComponentDesignView: View {
         let canvasSize = symbolCanvasManager.paperSize.canvasSize(orientation: .landscape)
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
 
-        var textDefinitions = [AnchoredTextDefinition]()
+        var textDefinitions = [TextDefinition]()
         let textCanvasElements = symbolEditor.elements.compactMap { $0.asTextElement }
 
         for textElement in textCanvasElements {
@@ -136,13 +136,13 @@ struct ComponentDesignView: View {
             if let source = symbolEditor.textSourceMap[textElement.id] {
                 let displayOptions = symbolEditor.textDisplayOptionsMap[textElement.id, default: .allVisible]
                 
-                textDefinitions.append(AnchoredTextDefinition(
+                textDefinitions.append(TextDefinition(
                     source: source,
                     relativePosition: relativePosition,
                     displayOptions: displayOptions
                 ))
             } else {
-                textDefinitions.append(AnchoredTextDefinition(
+                textDefinitions.append(TextDefinition(
                     source: .static(textElement.text),
                     relativePosition: relativePosition
                 ))
@@ -179,7 +179,7 @@ struct ComponentDesignView: View {
             component: newComponent,
             primitives: primitives,
             pins: pins,
-            anchoredTextDefinitions: textDefinitions
+            textDefinitions: textDefinitions
         )
 
         newComponent.symbol = newSymbol

@@ -8,36 +8,76 @@
 import SwiftUI
 
 /// Represents a text element on the canvas that is visually and logically
-/// anchored to a parent element, like a symbol.
+/// anchored to a parent element. It is a pure "view model" for the canvas,
+/// initialized from a `ResolvedText` object.
 struct AnchoredTextElement: Identifiable {
     
-    /// A unique ID for this specific canvas element instance.
-    var id: UUID
+    /// A unique ID for this specific canvas element instance, used for SwiftUI diffing.
+    let id: UUID
     
     /// The underlying `TextElement` that handles all drawing, styling, and basic transformation.
     /// Its `position` is in absolute world coordinates.
     var textElement: TextElement
 
-    // MARK: - Anchor properties
-    
     /// The absolute world position of the parent object's anchor point.
-    /// This is used to draw a connector line when the text is being moved.
     var anchorPosition: CGPoint
     
     /// The unique ID of the CanvasElement that owns this text's anchor.
-    /// This generic name allows it to be linked to a SymbolElement, a NetElement, etc.
     let anchorOwnerID: UUID
     
-    // MARK: - Data-binding properties
-    
-    /// A stable ID that links this canvas element back to its source data model
-    /// (either an `AnchoredTextDefinition` or an `InstanceAdHocText`).
-    let sourceDataID: UUID
-    
-    /// A flag indicating whether this text originates from a library definition
-    /// (`true`) or is an ad-hoc addition on the instance (`false`).
-    /// This tells our saving logic which array to modify.
-    let isFromDefinition: Bool
+    // --- Data Provenance ---
+    // This replaces `sourceDataID` and `isFromDefinition` with a single, clearer source.
+    /// The data origin, used to reconstruct the `ResolvedText` object for saving changes.
+    let origin: TextOrigin
+
+    /// Initializes a canvas-ready element from a resolved data model.
+    ///
+    /// - Parameters:
+    ///   - resolvedText: The fully resolved text data.
+    ///   - parentID: The ID of the parent element (e.g., `SymbolElement`).
+    ///   - parentTransform: The affine transform of the parent, used to calculate absolute world coordinates.
+    init(resolvedText: ResolvedText, parentID: UUID, parentTransform: CGAffineTransform) {
+        self.id = resolvedText.id
+        self.anchorOwnerID = parentID
+        self.origin = resolvedText.origin
+
+        // 1. Calculate the absolute world positions from the parent's transform
+        // and the text's relative positions.
+        self.anchorPosition = resolvedText.anchorRelativePosition.applying(parentTransform)
+        let absoluteTextPosition = resolvedText.relativePosition.applying(parentTransform)
+        
+        // 2. Create the underlying drawable TextElement.
+        self.textElement = TextElement(
+            id: UUID(), // Transient ID for the sub-element
+            text: resolvedText.text,
+            position: absoluteTextPosition,
+            rotation: parentTransform.rotationAngle, // Text rotation should match its parent
+            font: resolvedText.font,
+            color: resolvedText.color,
+            alignment: resolvedText.alignment
+        )
+    }
+}
+
+// MARK: - Committing Changes
+extension AnchoredTextElement {
+    /// Converts the canvas element's state back into a `ResolvedText` data model,
+    /// ready to be passed to the "committer" logic on the `SymbolInstance`.
+    func toResolvedText(parentTransform: CGAffineTransform) -> ResolvedText {
+        // Use the inverse transform to convert world coordinates back to the parent's local space.
+        let inverseTransform = parentTransform.inverted()
+        let newRelativePosition = self.textElement.position.applying(inverseTransform)
+        
+        return ResolvedText(
+            origin: self.origin,
+            text: self.textElement.text,
+            font: self.textElement.font,
+            color: self.textElement.color,
+            alignment: self.textElement.alignment,
+            relativePosition: newRelativePosition,
+            anchorRelativePosition: self.anchorPosition.applying(inverseTransform)
+        )
+    }
 }
 
 // MARK: - Protocol Conformances (via Delegation)
@@ -46,8 +86,6 @@ struct AnchoredTextElement: Identifiable {
 // as it already knows how to be drawn, sized, and hit-tested.
 
 extension AnchoredTextElement: Equatable, Hashable {
-    // For equality, we check our own ID, the state of the text element,
-    // and the anchor position, as a change in any of these requires a redraw.
     static func == (lhs: AnchoredTextElement, rhs: AnchoredTextElement) -> Bool {
         lhs.id == rhs.id &&
         lhs.textElement == rhs.textElement &&
@@ -124,6 +162,12 @@ extension AnchoredTextElement: Drawable {
     /// This element's halo is defined by its contained text element.
     func makeHaloPath() -> CGPath? {
         return textElement.makeHaloPath()
+    }
+}
+
+private extension CGAffineTransform {
+    var rotationAngle: CGFloat {
+        return atan2(b, a)
     }
 }
 

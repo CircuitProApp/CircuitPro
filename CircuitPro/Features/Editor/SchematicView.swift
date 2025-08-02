@@ -99,6 +99,7 @@ struct SchematicView: View {
     }
 
     //  MARK: Build Canvas Model (Resolver)
+    // MARK: Build Canvas Model (Resolver)
     private func rebuildCanvasElements() {
         let designComponents = projectManager.designComponents
         var updatedElements: [CanvasElement] = []
@@ -109,39 +110,52 @@ struct SchematicView: View {
         for dc in designComponents {
             let instanceID = dc.instance.id
             
+            // 1. Resolve Properties (as before)
             let resolvedProperties = PropertyResolver.resolve(from: dc.definition, and: dc.instance)
+            
+            // 2. NEW: Resolve Texts using our new TextResolver
+            let resolvedTexts = TextResolver.resolve(
+                from: dc.definition.symbol!,
+                and: dc.instance.symbolInstance,
+                with: resolvedProperties, // Pass properties for dynamic text like ">Resistance"
+                referenceDesignator: dc.referenceDesignator
+            )
             
             if var existingElement = existingElements.removeValue(forKey: instanceID),
                case .symbol(var symbol) = existingElement {
                 
-                var needsTextResolution = false
+                var needsDataUpdate = false // A flag to check if we need to regenerate texts
                 if symbol.instance != dc.instance.symbolInstance {
                     symbol.instance = dc.instance.symbolInstance
-                    needsTextResolution = true
+                    needsDataUpdate = true
                 }
                 if symbol.reference != dc.referenceDesignator {
                     symbol.reference = dc.referenceDesignator
-                    needsTextResolution = true
+                    needsDataUpdate = true
                 }
-
                 if symbol.properties != resolvedProperties {
                     symbol.properties = resolvedProperties
-                    needsTextResolution = true
+                    needsDataUpdate = true
                 }
                 
-                if needsTextResolution {
-                    symbol.resolveAnchoredTexts()
+                if needsDataUpdate {
+                    // One of the core data pieces changed, so we must regenerate the
+                    // anchored text elements with the new resolved data.
+                    let symbolTransform = CGAffineTransform(translationX: dc.instance.symbolInstance.position.x, y: dc.instance.symbolInstance.position.y).rotated(by: dc.instance.symbolInstance.rotation)
+                    symbol.anchoredTexts = resolvedTexts.map { AnchoredTextElement(resolvedText: $0, parentID: instanceID, parentTransform: symbolTransform) }
                 }
                 
                 updatedElements.append(.symbol(symbol))
                 
             } else {
+                // A new element is created, passing in BOTH resolved properties and texts.
                 let newSymbolElement = SymbolElement(
                     id: instanceID,
                     instance: dc.instance.symbolInstance,
                     symbol: dc.definition.symbol!,
                     reference: dc.referenceDesignator,
-                    properties: resolvedProperties
+                    properties: resolvedProperties,
+                    resolvedTexts: resolvedTexts // The new parameter
                 )
                 updatedElements.append(.symbol(newSymbolElement))
             }
@@ -166,12 +180,20 @@ struct SchematicView: View {
             
             let instance = insts[idx]
             
-            // Sync geometry (position & rotation)
+            // Sync geometry
             instance.symbolInstance = sym.instance
             
-            // This now correctly calls the updated `update(with:)` method, completing the loop.
+            // Sync properties (as before)
             for editedProperty in sym.properties {
                 instance.update(with: editedProperty)
+            }
+            
+            // NEW: Sync all text changes
+            let symbolTransform = CGAffineTransform(translationX: sym.instance.position.x, y: sym.instance.position.y).rotated(by: sym.instance.rotation)
+            for canvasText in sym.anchoredTexts {
+                let editedText = canvasText.toResolvedText(parentTransform: symbolTransform)
+                // The `SymbolInstance` knows how to handle the commit logic.
+                instance.symbolInstance.update(with: editedText)
             }
         }
         
