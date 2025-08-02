@@ -8,7 +8,7 @@
 import SwiftUI
 /// A unified view model representing a property to be displayed in the UI.
 /// It has been "resolved" from its source (definition or ad-hoc) and is ready for display and editing.
-struct ResolvedProperty: Identifiable, Hashable {
+struct ResolvedProperty: PropertyCore, Identifiable, Hashable {
     /// A stable ID for SwiftUI, derived from the source.
     var id: UUID {
         switch source {

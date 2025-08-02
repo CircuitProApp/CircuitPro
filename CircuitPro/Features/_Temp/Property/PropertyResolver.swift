@@ -7,38 +7,25 @@
 
 import Foundation
 
-/// A stateless controller responsible for resolving component properties for UI display.
 struct PropertyResolver {
 
-    /// Resolves the properties from a component definition and its instance into a single list
-    /// of display-ready `ResolvedProperty` view models.
     static func resolve(from definition: Component, and instance: ComponentInstance) -> [ResolvedProperty] {
         
-        // Create a fast lookup for overridden values.
+        // The override lookup remains the same.
         let overrideValues = Dictionary(
             uniqueKeysWithValues: instance.propertyOverrides.map { ($0.definitionID, $0.value) }
         )
 
-        // Process all properties defined in the master component.
-        let definitionProperties = definition.propertyDefinitions.map { definition -> ResolvedProperty in
-            let currentValue = overrideValues[definition.id] ?? definition.defaultValue
-            
-            return ResolvedProperty(
-                source: .definition(definitionID: definition.id),
-                key: definition.key,
-                value: currentValue,
-                unit: definition.unit
-            )
+        // The resolver is now beautifully simple. It just tells each definition to resolve itself,
+        // passing in any relevant override.
+        let definitionProperties = definition.propertyDefinitions.map {
+            $0.resolve(withOverriddenValue: overrideValues[$0.id])
         }
 
-        // Process all ad-hoc properties stored on the instance.
-        let instanceProperties = instance.adHocProperties.map { instance -> ResolvedProperty in
-            return ResolvedProperty(
-                source: .instance(instanceID: instance.id),
-                key: instance.key,
-                value: instance.value,
-                unit: instance.unit
-            )
+        // The resolver tells each instance property to resolve itself.
+        // There's no concept of an override here, so we pass nil.
+        let instanceProperties = instance.propertyInstances.map {
+            $0.resolve(withOverriddenValue: nil)
         }
 
         return definitionProperties + instanceProperties

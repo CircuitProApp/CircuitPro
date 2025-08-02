@@ -12,11 +12,10 @@ import SwiftUI
 final class ComponentInstance: Identifiable, Codable {
 
     var id: UUID
-
     var componentUUID: UUID
     
     var propertyOverrides: [PropertyOverride]
-    var adHocProperties: [PropertyInstance]
+    var propertyInstances: [PropertyInstance] // Correctly renamed from adHocProperties
 
     var symbolInstance: SymbolInstance
     var footprintInstance: FootprintInstance?
@@ -27,7 +26,7 @@ final class ComponentInstance: Identifiable, Codable {
         id: UUID = UUID(),
         componentUUID: UUID,
         propertyOverrides: [PropertyOverride] = [],
-        adHocProperties: [PropertyInstance] = [],
+        propertyInstances: [PropertyInstance] = [], // Correctly renamed
         symbolInstance: SymbolInstance,
         footprintInstance: FootprintInstance? = nil,
         reference: Int = 0
@@ -35,7 +34,7 @@ final class ComponentInstance: Identifiable, Codable {
         self.id = id
         self.componentUUID = componentUUID
         self.propertyOverrides = propertyOverrides
-        self.adHocProperties = adHocProperties
+        self.propertyInstances = propertyInstances // Correctly renamed
         self.symbolInstance = symbolInstance
         self.footprintInstance = footprintInstance
         self.referenceDesignatorIndex = reference
@@ -45,7 +44,7 @@ final class ComponentInstance: Identifiable, Codable {
         case _id = "id"
         case _componentUUID = "componentUUID"
         case _propertyOverrides = "propertyOverrides"
-        case _adHocProperties = "adHocProperties"
+        case _propertyInstances = "propertyInstances" // Correctly renamed
         case _symbolInstance = "symbolInstance"
         case _footprintInstance = "footprintInstance"
         case _referenceDesignatorIndex = "referenceDesignatorIndex"
@@ -54,13 +53,9 @@ final class ComponentInstance: Identifiable, Codable {
 
 // MARK: - Hashable
 extension ComponentInstance: Hashable {
-
-    // Two component instances are considered equal if they carry the same `id`.
     public static func == (lhs: ComponentInstance, rhs: ComponentInstance) -> Bool {
         lhs.id == rhs.id
     }
-
-    // The `id` is also the only thing we need to hash – it is already unique.
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }

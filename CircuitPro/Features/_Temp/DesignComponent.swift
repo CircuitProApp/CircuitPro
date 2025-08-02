@@ -20,15 +20,14 @@ struct DesignComponent: Identifiable, Hashable {
     var referenceDesignator: String {
         definition.referenceDesignatorPrefix + instance.referenceDesignatorIndex.description
     }
-    
-    /// The properties are now resolved by our dedicated controller.
+
     var displayedProperties: [ResolvedProperty] {
         return PropertyResolver.resolve(from: definition, and: instance)
     }
     
     /// When the UI makes an edit, it can call this simple method.
     func save(editedProperty: ResolvedProperty) {
-        // The instance itself knows how to handle the commit logic.
-        instance.commit(changeTo: editedProperty)
+        // Correctly calls the `update(with:)` method instead of the old `commit(changeTo:)`.
+        instance.update(with: editedProperty)
     }
 }

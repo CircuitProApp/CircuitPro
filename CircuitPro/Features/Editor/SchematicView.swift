@@ -67,8 +67,6 @@ struct SchematicView: View {
     ) {
         let pos = canvasManager.snap(point)
 
-        // This logic remains unchanged, as it correctly sets up the initial instance
-        // before any property resolution is needed.
         let instances = projectManager.selectedDesign?.componentInstances ?? []
         var nextRef: [UUID: Int] = instances.reduce(into: [:]) { dict, inst in
             dict[inst.componentUUID] = max(dict[inst.componentUUID] ?? 0, inst.referenceDesignatorIndex)
@@ -84,8 +82,10 @@ struct SchematicView: View {
                 cardinalRotation: .east
             )
 
+            // This initializer now correctly uses `propertyInstances`.
             let instance = ComponentInstance(
                 componentUUID: comp.componentUUID,
+                propertyInstances: [],
                 symbolInstance: symbolInst,
                 footprintInstance: nil,
                 reference: refNumber
@@ -109,8 +109,6 @@ struct SchematicView: View {
         for dc in designComponents {
             let instanceID = dc.instance.id
             
-            // This function now acts as a client to the "Resolver".
-            // It calls the centralized logic to get the display-ready properties.
             let resolvedProperties = PropertyResolver.resolve(from: dc.definition, and: dc.instance)
             
             if var existingElement = existingElements.removeValue(forKey: instanceID),
@@ -125,8 +123,7 @@ struct SchematicView: View {
                     symbol.reference = dc.referenceDesignator
                     needsTextResolution = true
                 }
-                
-                // The SymbolElement's properties are now compared against the newly resolved list.
+
                 if symbol.properties != resolvedProperties {
                     symbol.properties = resolvedProperties
                     needsTextResolution = true
@@ -139,7 +136,6 @@ struct SchematicView: View {
                 updatedElements.append(.symbol(symbol))
                 
             } else {
-                // A new SymbolElement is created using the resolved properties.
                 let newSymbolElement = SymbolElement(
                     id: instanceID,
                     instance: dc.instance.symbolInstance,
@@ -173,11 +169,9 @@ struct SchematicView: View {
             // Sync geometry (position & rotation)
             instance.symbolInstance = sym.instance
             
-            // This function now acts as a client to the "Committer".
-            // It iterates through the properties from the UI and tells the instance
-            // to commit each change, without needing to know *how* it's committed.
+            // This now correctly calls the updated `update(with:)` method, completing the loop.
             for editedProperty in sym.properties {
-                instance.commit(changeTo: editedProperty)
+                instance.update(with: editedProperty)
             }
         }
         
