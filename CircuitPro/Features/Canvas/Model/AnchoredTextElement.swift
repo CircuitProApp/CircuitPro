@@ -12,46 +12,31 @@ import SwiftUI
 /// initialized from a `ResolvedText` object.
 struct AnchoredTextElement: Identifiable {
     
-    /// A unique ID for this specific canvas element instance, used for SwiftUI diffing.
     let id: UUID
     
-    /// The underlying `TextElement` that handles all drawing, styling, and basic transformation.
-    /// Its `position` is in absolute world coordinates.
     var textElement: TextElement
-
-    /// The absolute world position of the parent object's anchor point.
     var anchorPosition: CGPoint
-    
-    /// The unique ID of the CanvasElement that owns this text's anchor.
     let anchorOwnerID: UUID
     
     // --- Data Provenance ---
-    // This replaces `sourceDataID` and `isFromDefinition` with a single, clearer source.
-    /// The data origin, used to reconstruct the `ResolvedText` object for saving changes.
+    // The link back to the data model for saving changes.
     let origin: TextOrigin
 
-    /// Initializes a canvas-ready element from a resolved data model.
-    ///
-    /// - Parameters:
-    ///   - resolvedText: The fully resolved text data.
-    ///   - parentID: The ID of the parent element (e.g., `SymbolElement`).
-    ///   - parentTransform: The affine transform of the parent, used to calculate absolute world coordinates.
     init(resolvedText: ResolvedText, parentID: UUID, parentTransform: CGAffineTransform) {
-        self.id = resolvedText.id
+        // Generate a new, unique ID for this instance on the canvas.
+        self.id = UUID()
+        
         self.anchorOwnerID = parentID
         self.origin = resolvedText.origin
 
-        // 1. Calculate the absolute world positions from the parent's transform
-        // and the text's relative positions.
-        self.anchorPosition = resolvedText.anchorRelativePosition.applying(parentTransform)
         let absoluteTextPosition = resolvedText.relativePosition.applying(parentTransform)
+        self.anchorPosition = resolvedText.anchorRelativePosition.applying(parentTransform)
         
-        // 2. Create the underlying drawable TextElement.
         self.textElement = TextElement(
-            id: UUID(), // Transient ID for the sub-element
+            id: resolvedText.id, // The textElement can keep the source ID for its own needs.
             text: resolvedText.text,
             position: absoluteTextPosition,
-            rotation: parentTransform.rotationAngle, // Text rotation should match its parent
+            rotation: parentTransform.rotationAngle,
             font: resolvedText.font,
             color: resolvedText.color,
             alignment: resolvedText.alignment
@@ -173,26 +158,17 @@ private extension CGAffineTransform {
 
 extension AnchoredTextElement: Hittable {
     func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        
-        // 1. We only care about hits on the contained text element.
-        // The anchor crosshair is purely visual decoration for now.
         guard let textHitResult = textElement.hitTest(point, tolerance: tolerance) else {
-            // The text was not hit, so the entire element is considered missed.
             return nil
         }
         
-        // 2. The text element was hit. We now establish this AnchoredTextElement
-        // as the selectable owner. The ownership path from the child TextElement
-        // is discarded, and a new path is started here.
+        // THIS IS THE FIX: The ownerPath now starts with THIS element's unique canvas ID.
         let newOwnerPath = [self.id]
         
-        // 3. Return a new target that correctly identifies this element as the owner.
-        // The `partID` and `kind` are passed through from the child, but the
-        // `ownerPath` now makes this AnchoredTextElement the immediate owner.
         return CanvasHitTarget(
             partID: textHitResult.partID,
             ownerPath: newOwnerPath,
-            kind: textHitResult.kind,  // This will be `.text` from the TextElement
+            kind: textHitResult.kind,
             position: point
         )
     }

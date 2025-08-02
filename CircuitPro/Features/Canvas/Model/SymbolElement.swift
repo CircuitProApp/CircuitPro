@@ -57,10 +57,13 @@ struct SymbolElement: Identifiable {
 
 extension SymbolElement: Equatable, Hashable {
     static func == (lhs: SymbolElement, rhs: SymbolElement) -> Bool {
+        // Compare all properties that define the visual state of the element.
         lhs.id == rhs.id &&
         lhs.instance == rhs.instance &&
         lhs.reference == rhs.reference &&
-        lhs.properties == rhs.properties
+        lhs.properties == rhs.properties &&
+        // THIS IS THE CRITICAL FIX:
+        lhs.anchoredTexts == rhs.anchoredTexts
     }
 
     func hash(into hasher: inout Hasher) {
@@ -72,26 +75,37 @@ extension SymbolElement: Transformable {
     var position: CGPoint {
         get { instance.position }
         set {
+            // 1. Calculate the delta of the move.
+            let delta = newValue - self.position
+            
+            // 2. Create a new SymbolInstance with the new position.
             let newInstance = instance.copy()
             newInstance.position = newValue
             self.instance = newInstance
-            // Call the new, efficient updater method.
-            updateAnchoredTextPositions()
+
+            // 3. Apply the *same delta* to all child text elements.
+            //    This moves them in lock-step with the parent.
+            for i in anchoredTexts.indices {
+                anchoredTexts[i].position += delta
+                anchoredTexts[i].anchorPosition += delta // Also move the visual anchor point
+            }
         }
     }
 
     var rotation: CGFloat {
         get { instance.rotation }
         set {
+            // Rotation is more complex because it pivots around an origin.
+            // The simplest, most robust way is to regenerate the texts.
             let newInstance = instance.copy()
             newInstance.rotation = newValue
             self.instance = newInstance
-            // Call the new, efficient updater method.
+            
+            // We call our new, efficient position updater.
             updateAnchoredTextPositions()
         }
     }
 }
-
 // Add this new private helper method to the main SymbolElement struct or in a private extension.
 private extension SymbolElement {
     

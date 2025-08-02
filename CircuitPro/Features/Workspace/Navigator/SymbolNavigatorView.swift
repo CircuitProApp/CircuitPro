@@ -70,9 +70,6 @@ struct SymbolNavigatorView: View {
                         .foregroundStyle(.secondary)
                         .monospaced()
                 }
-                .onAppear(perform: {
-                    print(designComponent.definition.propertyDefinitions)
-                })
                 .frame(height: 14)
                 .listRowSeparator(.hidden)
                 .contextMenu {

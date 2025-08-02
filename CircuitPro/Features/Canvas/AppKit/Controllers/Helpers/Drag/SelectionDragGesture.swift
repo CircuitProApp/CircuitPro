@@ -54,10 +54,17 @@ final class SelectionDragGesture: CanvasDragGesture {
                 dragAnchor = (position, size, snapsToCenter)
             } else {
                 for element in workbench.elements {
-                    if case .symbol(let symbol) = element,
-                       let text = symbol.anchoredTexts.first(where: { $0.id == hitID }) {
-                        dragAnchor = (text.position, text.boundingBox.size, true)
-                        break
+                    if case .symbol(let symbol) = element {
+                        for text in symbol.anchoredTexts {
+                            // THIS LOGIC IS NOW CORRECT!
+                            // `workbench.selectedIDs` contains the unique `AnchoredTextElement.id`.
+                            // `text.id` is now also that unique ID.
+                            // Therefore, this check will only be true for the one specific text element that was selected.
+                            if workbench.selectedIDs.contains(text.id) {
+                                // The key for the dictionary is the unique ID. The bug is fixed.
+                                originalTextPositions[text.id] = text.position
+                            }
+                        }
                     }
                 }
             }
@@ -171,8 +178,6 @@ final class SelectionDragGesture: CanvasDragGesture {
     // MARK: – End
     func end() {
         if didMove {
-            // Commit any movements to the underlying data model.
-            commitTextMovement()
             workbench.schematicGraph.endDrag()
         }
 
@@ -181,58 +186,5 @@ final class SelectionDragGesture: CanvasDragGesture {
         originalElementPositions.removeAll()
         originalTextPositions.removeAll()
         didMove = false
-    }
-
-    /// After a drag, this method persists the new positions of any moved
-    /// anchored text elements back into the symbol's instance data model.
-    /// This prevents the text from snapping back to its old position on the next redraw.
-    private func commitTextMovement() {
-        guard !originalTextPositions.isEmpty else { return }
-
-        var updatedElements = workbench.elements
-        for i in updatedElements.indices {
-            guard case .symbol(var symbol) = updatedElements[i] else { continue }
-
-            let movedTextIDs = Set(symbol.anchoredTexts.map(\.id)).intersection(originalTextPositions.keys)
-            guard !movedTextIDs.isEmpty else { continue }
-
-            let newInstance = symbol.instance.copy()
-
-            for textID in movedTextIDs {
-                guard let text = symbol.anchoredTexts.first(where: { $0.id == textID }) else { continue }
-
-                // Calculate the new position relative to the symbol's origin.
-                // This is now the delta from the text's own anchor.
-                let delta = text.position - text.anchorPosition
-                let originalRelativePos = text.anchorPosition.applying(symbol.transform.inverted())
-                let newRelativePosition = originalRelativePos + delta
-
-                if text.isFromDefinition {
-                    if let index = newInstance.textOverrides.firstIndex(where: {
-                        $0.definitionID == text.sourceDataID
-                    }) {
-                        newInstance.textOverrides[index].relativePositionOverride = newRelativePosition
-                    } else {
-                        let newOverride = TextOverride(
-                            definitionID: text.sourceDataID,
-                            textOverride: text.textElement.text,
-                            relativePositionOverride: newRelativePosition,
-                            isVisible: true
-                        )
-                        newInstance.textOverrides.append(newOverride)
-                    }
-                } else {
-                    if let index = newInstance.textInstances.firstIndex(where: { $0.id == text.sourceDataID }) {
-                        newInstance.textInstances[index].relativePosition = newRelativePosition
-                    }
-                }
-            }
-
-            symbol.instance = newInstance
-            updatedElements[i] = .symbol(symbol)
-        }
-
-        workbench.elements = updatedElements
-        workbench.onUpdate?(updatedElements)
     }
 }

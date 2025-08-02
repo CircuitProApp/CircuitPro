@@ -64,36 +64,55 @@ final class WorkbenchInputCoordinator {
     // MARK: – Mouse-down
     func mouseDown(_ event: NSEvent) {
 
-        if rotation.active { rotation.cancel(); return }
+        // First, check for and cancel any active rotation gesture.
+        if rotation.active {
+            rotation.cancel()
+            return
+        }
+        
         let point = workbench.convert(event.locationInWindow, from: nil)
-        if toolTap.handleMouseDown(at: point, event: event) { return }
+        
+        // If a tool other than the cursor is active, let it handle the tap first.
+        if toolTap.handleMouseDown(at: point, event: event) {
+            return
+        }
 
-        // Prioritize handle dragging, as it's the most specific interaction.
-        // This should be checked before general hit testing.
+        // Prioritize dragging a resize/edit handle, as it's the most specific interaction.
         if handleDrag.begin(at: point, event: event) {
             activeDrag = handleDrag
             return
         }
 
+        // From here on, we assume the Cursor tool is active or no other tool consumed the event.
         if workbench.selectedTool?.id == "cursor" {
+            
             let hitTarget = hitTest.hitTest(
-                at: point, elements: workbench.elements,
-                schematicGraph: workbench.schematicGraph, magnification: workbench.magnification
+                at: point,
+                elements: workbench.elements,
+                schematicGraph: workbench.schematicGraph,
+                magnification: workbench.magnification
             )
 
+            // --- Logic for when an item was hit ---
             if let hitTarget = hitTarget {
-                // Item was hit. Since handle drag failed, this is a body click.
-
-                // First, update the selection state based on the click.
-                // This is the original selection logic from the file.
+                
+                // ---- THIS IS THE CRITICAL LOGIC THAT IS NOW FIXED ----
+                // We determine the correct, unique ID to select.
                 let idToSelect: UUID?
                 if hitTarget.kind == .text {
+                    // If text was hit, we get the `immediateOwnerID`.
+                    // Because we updated `AnchoredTextElement.hitTest`, this is now GUARANTEED
+                    // to be the unique canvas `id` of the specific `AnchoredTextElement`
+                    // that was clicked, NOT the shared data model ID.
                     idToSelect = hitTarget.immediateOwnerID
                 } else {
+                    // For任何 else, get the top-level selectable ID.
                     idToSelect = hitTarget.selectableID
                 }
 
+                // Now, `hitID` is guaranteed to be unique for the clicked element.
                 if let hitID = idToSelect {
+                    // Handle standard selection logic (Shift key for additive selection).
                     if event.modifierFlags.contains(.shift) {
                         if workbench.selectedIDs.contains(hitID) {
                             workbench.selectedIDs.remove(hitID)
@@ -101,29 +120,32 @@ final class WorkbenchInputCoordinator {
                             workbench.selectedIDs.insert(hitID)
                         }
                     } else {
+                        // If not holding Shift, only select the clicked item if it's not
+                        // already the sole selected item.
                         if !workbench.selectedIDs.contains(hitID) {
                             workbench.selectedIDs = [hitID]
                         }
                     }
+                    // Notify the rest of the app about the selection change.
                     workbench.onSelectionChange?(workbench.selectedIDs)
                 }
+                // ---- END OF FIXED LOGIC ----
 
-                // Second, try to start a selection drag.
+                // After updating the selection, we attempt to begin a drag.
+                // This will now work correctly because `selectedIDs` contains unique IDs.
                 if selDrag.begin(at: point, event: event) {
                     activeDrag = selDrag
                 }
 
             } else {
-                // Empty space was hit
+                // --- Logic for when empty space was hit ---
+                // Clear the current selection (if not shift-clicking) and start the marquee.
                 clearSelectionAndStartMarquee(with: event)
             }
 
-            // We have handled the event for the cursor tool.
+            // The cursor tool has handled the event.
             return
         }
-
-        // For any other tool, handle-dragging was already attempted and failed.
-        // The original code had a check here, but it's now covered above.
     }
 
     private func clearSelectionAndStartMarquee(with event: NSEvent) {

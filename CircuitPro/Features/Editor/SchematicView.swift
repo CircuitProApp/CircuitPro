@@ -171,33 +171,32 @@ struct SchematicView: View {
             return nil
         }
 
-        var insts = projectManager.componentInstances
-        let keepIDs = Set(symbolElements.map(\.id))
-        insts.removeAll { !keepIDs.contains($0.id) }
+        let insts = projectManager.componentInstances
 
         for sym in symbolElements {
-            guard let idx = insts.firstIndex(where: { $0.id == sym.id }) else { continue }
+            // Find the authoritative instance from the project manager's list.
+            guard let instance = insts.first(where: { $0.id == sym.id }) else { continue }
             
-            let instance = insts[idx]
+            // 1. Sync Geometry: Update the SymbolInstance directly.
+            // This check prevents redundant updates if only properties/text changed.
+            if instance.symbolInstance != sym.instance {
+                instance.symbolInstance = sym.instance
+            }
             
-            // Sync geometry
-            instance.symbolInstance = sym.instance
-            
-            // Sync properties (as before)
+            // 2. Sync Properties: Tell the ComponentInstance to update itself.
             for editedProperty in sym.properties {
                 instance.update(with: editedProperty)
             }
             
-            // NEW: Sync all text changes
-            let symbolTransform = CGAffineTransform(translationX: sym.instance.position.x, y: sym.instance.position.y).rotated(by: sym.instance.rotation)
+            // 3. THIS IS THE FIX: Sync Text Changes
+            // We tell the SymbolInstance (nested inside the ComponentInstance) to update itself.
             for canvasText in sym.anchoredTexts {
-                let editedText = canvasText.toResolvedText(parentTransform: symbolTransform)
-                // The `SymbolInstance` knows how to handle the commit logic.
+                let editedText = canvasText.toResolvedText(parentTransform: sym.transform)
                 instance.symbolInstance.update(with: editedText)
             }
         }
         
-        projectManager.componentInstances = insts
+        // Announce that the document has changed, so it can be saved.
         document.updateChangeCount(.changeDone)
     }
 }
