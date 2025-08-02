@@ -20,7 +20,6 @@ struct InspectorFieldStyle: ViewModifier {
         let finalWidth = overrideWidth ?? width
 
         content
-            .onTapGesture { isFocused = true }
             .focused($isFocused)
             .if(finalWidth != nil) {
                 $0.frame(width: finalWidth)
@@ -36,6 +35,8 @@ struct InspectorFieldStyle: ViewModifier {
             }
             .clipAndStroke(with: .rect(cornerRadius: 5))
             .focusRing(isFocused, shape: .rect(cornerRadius: 6))
+            .onTapGesture { isFocused = true }
+            .onSubmit { isFocused = false }
     }
 }
 
