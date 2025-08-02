@@ -149,13 +149,13 @@ extension CanvasEditorManager {
             let options = textDisplayOptionsMap[elementID, default: .allVisible]
             var parts: [String] = []
             
-            if options.showKey, let label = prop.key?.label, !label.isEmpty {
-                parts.append("\(label):")
+            if options.showKey {
+                parts.append("\(prop.key.label):")
             }
             
             if options.showValue {
                 let valueDescription = prop.defaultValue.description
-                parts.append(valueDescription.isEmpty ? "{{VALUE}}" : valueDescription)
+                parts.append(valueDescription.isEmpty ? "?" : valueDescription)
             }
             
             if options.showUnit, !prop.unit.symbol.isEmpty {

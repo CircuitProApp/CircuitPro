@@ -34,8 +34,8 @@ struct ComponentDetailView: View {
                         .padding(10)
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
-                        .validationStatus(componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.name))
                         .focusRing(focusedField == .name, shape: .rect(cornerRadius: 8.5))
+                        .environment(\.focusRingColor, componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.name).contains(.error) ? .red : .clear)
                 }
                 SectionView("Reference Designator Prefix") {
                     TextField("e.g. LED", text: $manager.referenceDesignatorPrefix)
@@ -46,8 +46,8 @@ struct ComponentDetailView: View {
                         .background(.ultraThinMaterial)
                         .clipAndStroke(with: .rect(cornerRadius: 7.5))
                         .frame(width: 250)
-                        .validationStatus(componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.referenceDesignatorPrefix))
                         .focusRing(focusedField == .referencePrefix, shape: .rect(cornerRadius: 8.5))
+                        .environment(\.focusRingColor, componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.referenceDesignatorPrefix).contains(.error) ? .red : .clear)
                 }
             }
 
@@ -80,7 +80,7 @@ struct ComponentDetailView: View {
             }
             SectionView("Properties") {
                 ComponentPropertiesView(
-                    componentProperties: $manager.componentProperties,
+                    componentProperties: $manager.draftProperties,
                     validationState: componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.properties)
                 )
             }

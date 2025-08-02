@@ -33,11 +33,31 @@ final class ComponentDesignManager {
     }
     var selectedPackageType: PackageType?
 
-    var componentProperties: [PropertyDefinition] = [PropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())] {
+    /// The internal state for properties being edited in the UI.
+    /// The key can be nil because a user can add a new row before selecting a key.
+    var draftProperties: [DraftPropertyDefinition] = [DraftPropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())] {
         didSet {
-            symbolEditor.synchronizeSymbolTextWithProperties(properties: componentProperties)
-            footprintEditor.synchronizeSymbolTextWithProperties(properties: componentProperties)
+            // We still use the computed `componentProperties` for synchronization and validation.
+            let validProperties = componentProperties
+            symbolEditor.synchronizeSymbolTextWithProperties(properties: validProperties)
+            footprintEditor.synchronizeSymbolTextWithProperties(properties: validProperties)
             didUpdateComponentData()
+        }
+    }
+    
+    /// A computed property that returns only the valid, non-optional `PropertyDefinition`s.
+    /// This is the canonical data that should be used for saving the component and for any logic
+    /// that requires a valid property key.
+    var componentProperties: [PropertyDefinition] {
+        draftProperties.compactMap { draft in
+            guard let key = draft.key else { return nil }
+            return PropertyDefinition(
+                id: draft.id,
+                key: key,
+                defaultValue: draft.defaultValue,
+                unit: draft.unit,
+                warnsOnEdit: draft.warnsOnEdit
+            )
         }
     }
 
@@ -66,7 +86,7 @@ final class ComponentDesignManager {
         referenceDesignatorPrefix = ""
         selectedCategory = nil
         selectedPackageType = nil
-        componentProperties = [PropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())]
+        draftProperties = [DraftPropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())]
         
         symbolEditor.reset()
         footprintEditor.reset()

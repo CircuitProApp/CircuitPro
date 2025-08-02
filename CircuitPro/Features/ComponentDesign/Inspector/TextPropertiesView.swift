@@ -107,7 +107,7 @@ struct TextPropertiesView: View {
         case .dynamic(.reference):
             return "Reference Designator"
         case .dynamic(.property(let defID)):
-            return componentDesignManager.componentProperties.first { $0.id == defID }?.key?.label ?? "Property"
+            return componentDesignManager.componentProperties.first { $0.id == defID }?.key.label ?? "Property"
         case .static(let txt):
             return "Static: \(txt)"
         }

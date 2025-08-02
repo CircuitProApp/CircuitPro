@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct PropertyColumn: View {
-    @Binding var property: PropertyDefinition
-    let allProperties: [PropertyDefinition]
+    @Binding var property: DraftPropertyDefinition
+    let allProperties: [DraftPropertyDefinition]
 
     var body: some View {
         Menu {

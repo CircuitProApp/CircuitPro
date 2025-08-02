@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ValueColumn: View {
-    @Binding var property: PropertyDefinition
+    @Binding var property: DraftPropertyDefinition
 
     var body: some View {
         HStack {

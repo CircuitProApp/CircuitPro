@@ -22,8 +22,8 @@ struct SymbolElementListView: View {
         var sources: [(String, TextSource)] = []
         if !componentData.name.isEmpty { sources.append(("Name", .dynamic(.componentName))) }
         if !componentData.prefix.isEmpty { sources.append(("Reference", .dynamic(.reference))) }
-        for propDef in componentData.properties where propDef.key?.label != nil && !propDef.key!.label.isEmpty {
-            sources.append((propDef.key!.label, .dynamic(.property(definitionID: propDef.id))))
+        for propDef in componentData.properties {
+            sources.append((propDef.key.label, .dynamic(.property(definitionID: propDef.id))))
         }
         return sources
     }
@@ -103,7 +103,7 @@ struct SymbolElementListView: View {
                 case .dynamic(.reference):
                     Label("Reference Designator", systemImage: "textformat.alt")
                 case .dynamic(.property(let definitionID)):
-                    let displayName = componentData.properties.first { $0.id == definitionID }?.key?.label ?? "Dynamic Property"
+                    let displayName = componentData.properties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
                     Label(displayName, systemImage: "tag.fill")
                 case .static:
                     Label("\"\(textElement.text)\"", systemImage: "text.bubble.fill")

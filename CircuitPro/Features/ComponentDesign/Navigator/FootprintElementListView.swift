@@ -35,6 +35,20 @@ struct FootprintElementListView: View {
     private var footprintEditor: CanvasEditorManager {
         componentDesignManager.footprintEditor
     }
+    
+    private var componentData: (name: String, prefix: String, properties: [PropertyDefinition]) {
+        (componentDesignManager.componentName, componentDesignManager.referenceDesignatorPrefix, componentDesignManager.componentProperties)
+    }
+    
+    private var availableTextSources: [(displayName: String, source: TextSource)] {
+        var sources: [(String, TextSource)] = []
+        if !componentData.name.isEmpty { sources.append(("Name", .dynamic(.componentName))) }
+        if !componentData.prefix.isEmpty { sources.append(("Reference", .dynamic(.reference))) }
+        for propDef in componentData.properties {
+            sources.append((propDef.key.label, .dynamic(.property(definitionID: propDef.id))))
+        }
+        return sources
+    }
 
     var body: some View {
         @Bindable var manager = footprintEditor
@@ -51,6 +65,32 @@ struct FootprintElementListView: View {
             }
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
+            
+            List {
+                ForEach(availableTextSources, id: \.source) { item in
+                    HStack {
+                        Text(item.displayName)
+                        Spacer()
+                        Button {
+                            footprintEditor.addTextToSymbol(
+                                source: item.source,
+                                displayName: item.displayName,
+                                componentData: componentData
+                            )
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(footprintEditor.placedTextSources.contains(item.source))
+                        .help(
+                            footprintEditor.placedTextSources.contains(item.source)
+                                ? "Property is already on the footprint"
+                                : "Add property to footprint"
+                        )
+                    }
+                }
+            }
+            .listStyle(.bordered(alternatesRowBackgrounds: true))
         }
         .onChange(of: selection) { handleSelectionChange() }
         .onChange(of: manager.selectedLayer) { syncSelectionFromManager() }
@@ -113,6 +153,22 @@ struct FootprintElementListView: View {
             Label("Pad \(pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
         case .primitive(let primitive):
             Label(primitive.displayName, systemImage: primitive.symbol)
+        case .text(let textElement):
+            if let source = footprintEditor.textSourceMap[textElement.id] {
+                switch source {
+                case .dynamic(.componentName):
+                    Label("Component Name", systemImage: "c.square.fill")
+                case .dynamic(.reference):
+                    Label("Reference Designator", systemImage: "textformat.alt")
+                case .dynamic(.property(let definitionID)):
+                    let displayName = componentData.properties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
+                    Label(displayName, systemImage: "tag.fill")
+                case .static:
+                    Label("\"\(textElement.text)\"", systemImage: "text.bubble.fill")
+                }
+            } else {
+                Label("\"\(textElement.text)\"", systemImage: "text.bubble.fill")
+            }
         default:
             EmptyView()
         }
