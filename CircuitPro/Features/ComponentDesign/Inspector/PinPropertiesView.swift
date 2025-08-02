@@ -25,7 +25,7 @@ struct PinPropertiesView: View {
                     }
                     InspectorRow("Number") {
                         HStack(spacing: 0) {
-                            InspectorNumericField(title: "Number", value: $pin.number, titleDisplayMode: .hidden)
+                            InspectorNumericField(value: $pin.number)
                             Color.clear
                         }
                     }

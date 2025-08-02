@@ -15,7 +15,7 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
 
     var symbolUUID: UUID
     var position: CGPoint
-    var cardinalRotation: CardinalRotation = .west
+    var cardinalRotation: CardinalRotation = .east
     
     // 1. ADD THIS: Stores overrides for text defined in the master symbol.
     var textOverrides: [TextOverride]
@@ -27,7 +27,7 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
         set { cardinalRotation = .closest(to: newValue) }
     }
 
-    init(id: UUID = UUID(), symbolUUID: UUID, position: CGPoint, cardinalRotation: CardinalRotation = .west, textOverrides: [TextOverride] = [], textInstances: [TextInstance] = []) {
+    init(id: UUID = UUID(), symbolUUID: UUID, position: CGPoint, cardinalRotation: CardinalRotation = .east, textOverrides: [TextOverride] = [], textInstances: [TextInstance] = []) {
         self.id = id
         self.symbolUUID = symbolUUID
         self.position = position

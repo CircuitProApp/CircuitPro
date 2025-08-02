@@ -20,13 +20,20 @@ struct InspectorFieldStyle: ViewModifier {
         let finalWidth = overrideWidth ?? width
 
         content
+            .onTapGesture { isFocused = true }
             .focused($isFocused)
             .if(finalWidth != nil) {
                 $0.frame(width: finalWidth)
             }
             .textFieldStyle(.plain)
             .directionalPadding(vertical: 2.5, horizontal: 5)
-            .background(.ultraThinMaterial)
+            .background {
+                if isFocused {
+                    Color(NSColor.textBackgroundColor)
+                } else {
+                    Rectangle().fill(.ultraThinMaterial)
+                }
+            }
             .clipAndStroke(with: .rect(cornerRadius: 5))
             .focusRing(isFocused, shape: .rect(cornerRadius: 6))
     }

@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct NumericField<T: NumericType>: View {
-
     @Binding var value: T
     var placeholder: String = ""
     var range: ClosedRange<T>?
@@ -18,94 +17,72 @@ struct NumericField<T: NumericType>: View {
     var displayMultiplier: T = 1
     var displayOffset: T = 0
     var suffix: String?
-    var isFocused: FocusState<Bool>.Binding
 
     @State private var text: String = ""
+    @FocusState private var isEditing: Bool
 
     private var isInteger: Bool { T.self == Int.self }
-    
+
     private var effectiveMaxDecimalPlaces: Int {
         if let maxDecimalPlaces = maxDecimalPlaces {
             return isInteger ? 0 : maxDecimalPlaces
         }
         return isInteger ? 0 : 3
     }
-    
-    // This custom binding is the core of the solution.
-    // It separates the text representation for display from the text for editing.
-    private var textBinding: Binding<String> {
-        Binding<String>(
-            get: {
-                // If focused, show the user's live input from our @State buffer.
-                if isFocused.wrappedValue {
-                    return text
-                } else {
-                    // If not focused, show the canonical, formatted value from the @Binding.
-                    // This prevents feedback loops from external updates (e.g., a slider).
-                    let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-                    return formatted(displayValue, forEditing: false)
-                }
-            },
-            set: { newValue in
-                // This is called by the TextField as the user types.
-                // It only updates our local @State buffer during editing.
-                self.text = newValue
-            }
-        )
-    }
 
     var body: some View {
-        TextField(placeholder, text: textBinding)
-            .focused(isFocused)
+        TextField(placeholder, text: $text)
+            .focused($isEditing)
             .onAppear {
-                // On initial view appearance, set the text state from the canonical value.
-                let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-                text = formatted(displayValue, forEditing: false)
+                updateDisplayText()
             }
-            .onChange(of: range) { _, newRange in
+            .onChange(of: isEditing) { newFocus in
+                if newFocus {
+                    prepareTextForEditing()
+                } else {
+                    validateAndCommit()
+                }
+            }
+            .onChange(of: range) { newRange in
                 let clamped = clamp(value, to: newRange)
                 if clamped != value {
                     value = clamped
-                }
-            }
-            .onChange(of: isFocused.wrappedValue) { _, focused in
-                if focused {
-                    // 1. Prepare text for editing when focus is GAINED.
-                    // We use a simpler format (without the suffix) for a better UX.
-                    let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-                    text = formatted(displayValue, forEditing: true)
-                } else {
-                    // 2. Commit changes when focus is LOST.
-                    validateAndCommit()
+                    updateDisplayText()
                 }
             }
             .onSubmit {
                 validateAndCommit()
-                isFocused.wrappedValue = false
+                isEditing = false
             }
+    }
+
+    private func prepareTextForEditing() {
+        let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
+        text = formatted(displayValue, forEditing: true)
+    }
+
+    private func updateDisplayText() {
+        let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
+        text = formatted(displayValue, forEditing: false)
     }
 
     private func validateAndCommit() {
         var inputText = text.trimmingCharacters(in: .whitespaces)
         
         if let suffix = suffix, !suffix.isEmpty, inputText.hasSuffix(suffix) {
-            let chopped = String(inputText.dropLast(suffix.count))
-            inputText = chopped.trimmingCharacters(in: .whitespaces)
+            inputText = String(inputText.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
         }
-        
+
         let filtered = filterInput(inputText)
-        
+
         if let doubleVal = Double(filtered) {
             let internalValueDouble = (doubleVal - displayOffset.doubleValue) / displayMultiplier.doubleValue
             let internalValue = T(internalValueDouble)
             let clamped = clamp(internalValue, to: range)
             value = clamped
-            
-            let displayValue = (clamped.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-            text = formatted(displayValue, forEditing: false)
+            updateDisplayText()
         } else {
-            let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-            text = formatted(displayValue, forEditing: false)
+            updateDisplayText()
         }
     }
 
@@ -136,6 +113,7 @@ struct NumericField<T: NumericType>: View {
                 }
             }
         }
+
         return result
     }
 
@@ -144,7 +122,6 @@ struct NumericField<T: NumericType>: View {
         return min(max(x, bounds.lowerBound), bounds.upperBound)
     }
 
-    // Updated 'formatted' function to optionally exclude the suffix for a better editing UX.
     private func formatted(_ value: Double, forEditing: Bool = false) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
@@ -153,12 +130,6 @@ struct NumericField<T: NumericType>: View {
         formatter.maximumFractionDigits = effectiveMaxDecimalPlaces
         
         let numberString = formatter.string(from: NSNumber(value: value)) ?? ""
-        
-        // Only add the suffix when not in editing mode.
-        if let suffix = suffix, !suffix.isEmpty, !forEditing {
-            return "\(numberString) \(suffix)"
-        } else {
-            return numberString
-        }
+        return (!forEditing && suffix != nil && !suffix!.isEmpty) ? "\(numberString) \(suffix!)" : numberString
     }
 }

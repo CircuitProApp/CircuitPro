@@ -13,7 +13,7 @@ struct PinTool: CanvasTool {
     let symbolName = CircuitProSymbols.Symbol.pin
     let label = "Pin"
 
-    private var rotation: CardinalRotation = .west
+    private var rotation: CardinalRotation = .east
 
     mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
         let number = context.existingPinCount + 1

@@ -37,7 +37,9 @@ struct PrimitiveStyleControlView<T: GraphicPrimitive>: View {
                     InspectorNumericField(
                         title: "W",
                         value: $object.strokeWidth,
-                        range: 0...100
+                        range: 0...100,
+                        displayMultiplier: 0.1,
+                        unit: "mm"
                     )
                     .disabled(isFillable && object.filled)
                     Color.clear
@@ -60,17 +62,8 @@ struct PrimitiveStyleControlView<T: GraphicPrimitive>: View {
                             range: 0...(($object.wrappedValue as! RectanglePrimitive).maximumCornerRadius),
                             maxDecimalPlaces: 1
                         )
-                      
-                          
-                        
-                    
-                    
-                    
-   
                 }
-        
             }
-            
         }
     }
 }

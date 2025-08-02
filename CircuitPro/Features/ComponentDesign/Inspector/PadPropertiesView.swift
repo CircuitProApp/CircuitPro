@@ -15,9 +15,9 @@ struct PadPropertiesView: View {
     
     var isTooLarge: Bool {
         guard pad.type == .throughHole else { return false }
-
+        
         guard let drill = pad.drillDiameter, drill > 0 else { return false }
-
+        
         return pad.isCircle
         ? drill > pad.radius
         : drill > pad.width || drill > pad.height
@@ -27,13 +27,13 @@ struct PadPropertiesView: View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Pad Properties")
                 .font(.title3.weight(.semibold))
+
             InspectorSection("Identity and Type") {
                 InspectorRow("Number") {
-             
-                        InspectorNumericField(value: $pad.number)
-                        Color.clear
-                    
+                    InspectorNumericField(value: $pad.number)
+                    Color.clear
                 }
+
                 InspectorRow("Pad Type") {
                     Picker("Pad Type", selection: $pad.type) {
                         ForEach(PadType.allCases) { padType in
@@ -43,22 +43,20 @@ struct PadPropertiesView: View {
                     .labelsHidden()
                     .controlSize(.small)
                 }
-                
+
                 InspectorRow("Drill Diameter") {
-          
-               
-                        
-                        InspectorNumericField(
-                            value: Binding(
-                                get: { pad.drillDiameter ?? 0.0 },
-                                set: { pad.drillDiameter = $0 }
-                            ),
-                            displayMultiplier: 0.1,
-                            suffix: "mm"
-                        )
-                        .environment(\.focusRingColor, isTooLarge ? .red : .clear)
-                        .disabled(pad.type != .throughHole)
-                        
+                    InspectorNumericField(
+                        title: "Ø",
+                        value: Binding(
+                            get: { pad.drillDiameter ?? 0.0 },
+                            set: { pad.drillDiameter = $0 }
+                        ),
+                        displayMultiplier: 0.1,
+                        unit: "mm"
+                    )
+                    .environment(\.focusRingColor, isTooLarge ? .red : .clear)
+                    .disabled(pad.type != .throughHole)
+                    
                     Group {
                         if isTooLarge {
                             ZStack {
@@ -74,26 +72,24 @@ struct PadPropertiesView: View {
                                     .transition(.blurReplace)
                                 
                             }
-                            
                             .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             Color.clear
                         }
                     }
                     .animation(.default, value: isTooLarge)
-                        
-                    
-                  
                 }
-                
             }
+
             Divider()
+
             InspectorSection("Transform") {
                 PointControlView(title: "Position", point: $pad.position, displayOffset: PaperSize.component.centerOffset())
-      
                 RotationControlView(object: $pad, tickStepDegrees: 90, snapsToTicks: true)
             }
+
             Divider()
+
             InspectorSection("Display") {
                 InspectorRow("Shape") {
                     Picker("Shape", selection: Binding(
@@ -108,34 +104,19 @@ struct PadPropertiesView: View {
                 }
                 if pad.isCircle {
                     InspectorRow("Radius") {
-                
-                        InspectorNumericField(value: $pad.radius, displayMultiplier: 0.1, suffix: "mm")
-                                .environment(\.focusRingColor, isTooLarge ? .red : .clear)
+                        InspectorNumericField(value: $pad.radius, displayMultiplier: 0.1, unit: "mm")
+                            .environment(\.focusRingColor, isTooLarge ? .red : .clear)
                         Color.clear
-                        
                     }
-                    
-                    
-                    
-                    
                 } else {
                     InspectorRow("Dimensions") {
-                     
-                            InspectorNumericField(title: "W", value: $pad.width, displayMultiplier: 0.1, suffix: "mm")
-                            
-                            
-                            InspectorNumericField(title: "H", value: $pad.height, displayMultiplier: 0.1, suffix: "mm")
-                       
+                        InspectorNumericField(title: "W", value: $pad.width, displayMultiplier: 0.1, unit: "mm")
+                        InspectorNumericField(title: "H", value: $pad.height, displayMultiplier: 0.1, unit: "mm")
                         
                     }
                     .environment(\.focusRingColor, isTooLarge ? .red : .clear)
-                    
-                    
                 }
             }
-
-            
-            
         }
         .padding(10)
     }

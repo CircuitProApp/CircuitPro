@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 7/30/25.
 //
 
-
 import SwiftUI
 
 /// A view that represents a single row in an inspector, with a title and a control.
@@ -32,9 +31,9 @@ struct InspectorRow<Content: View>: View {
                     Color.clear
                 }
             }
-            .frame(width: 80, alignment: .trailing)
+            .frame(width: 70, alignment: .trailing)
             .gridColumnAlignment(.trailing)
-
+            
             HStack(spacing: 6) {
                 content()
             }

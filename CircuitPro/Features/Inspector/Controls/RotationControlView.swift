@@ -42,9 +42,10 @@ struct RotationControlView<T: Transformable>: View {
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
                 InspectorNumericField(
-                    title: "°",
                     value: rotationInDegrees,
-                    maxDecimalPlaces: 1
+                    maxDecimalPlaces: 1,
+                    unit: "°",
+                    alignment: .center
                 )
             
             

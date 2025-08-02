@@ -54,8 +54,8 @@ struct RectanglePropertiesView: View {
                 
                 InspectorRow("Size") {
                   
-                        InspectorNumericField(title: "W", value: $rectangle.size.width)
-                        InspectorNumericField(title: "H", value: $rectangle.size.height)
+                    InspectorNumericField(title: "W", value: $rectangle.size.width, unit: "mm")
+                    InspectorNumericField(title: "H", value: $rectangle.size.height, unit: "mm")
                     
             
                 }
@@ -86,7 +86,7 @@ struct CirclePropertiesView: View {
                 
           
                 InspectorRow("Radius") {
-                    InspectorNumericField(value: $circle.radius)
+                    InspectorNumericField(value: $circle.radius, unit: "mm")
                     Color.clear
                 }
              
@@ -110,7 +110,7 @@ struct LinePropertiesView: View {
                 PointControlView(
                     title: "Start Point",
                     point: $line.start,
-                    displayOffset: PaperSize.component.centerOffset()
+                    displayOffset: PaperSize.component.centerOffset(),
                 )
                 PointControlView(
                     title: "End Point",

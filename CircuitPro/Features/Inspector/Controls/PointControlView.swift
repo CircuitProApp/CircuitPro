@@ -20,12 +20,14 @@ struct PointControlView: View {
                 InspectorNumericField(
                     title: "X",
                     value: $point.x,
-                    displayOffset: displayOffset.x
+                    displayOffset: displayOffset.x,
+                    unit: "mm"
                 )
                 InspectorNumericField(
                     title: "Y",
                     value: $point.y,
-                    displayOffset: displayOffset.y
+                    displayOffset: displayOffset.y,
+                    unit: "mm"
                 )
             
             
