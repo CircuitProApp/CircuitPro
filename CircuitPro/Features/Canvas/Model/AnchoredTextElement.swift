@@ -125,12 +125,52 @@ extension AnchoredTextElement: Drawable {
         let connectorPath = CGMutablePath()
         connectorPath.move(to: anchorPosition)
     
-        // Calculate the center of the text's bounding box using public properties.
+        // Determine the optimal connection point on the text's bounding box.
         let textBoundingBox = textElement.boundingBox
-        let textBottomLeading = CGPoint(x: textBoundingBox.minX, y: textBoundingBox.minY)
+        let textCenter = CGPoint(x: textBoundingBox.midX, y: textBoundingBox.midY)
         
-        connectorPath.addLine(to: textBottomLeading)
+        // Calculate the vector from the anchor to the text's center to determine relative position.
+        let dx = textCenter.x - anchorPosition.x
+        let dy = textCenter.y - anchorPosition.y
+
+        let connectionPoint: CGPoint
+
+        // Check if the connection should be primarily vertical or horizontal
+        // by comparing the aspect ratio of the vector to the aspect ratio of the bounding box.
+        if abs(dy) * textBoundingBox.width > abs(dx) * textBoundingBox.height {
+            // Primarily vertical connection (top or bottom edge).
+            let y = dy > 0 ? textBoundingBox.minY : textBoundingBox.maxY
+            let x: CGFloat
+
+            // Create a central snapping region based on the text box's width.
+            let horizontalThreshold = textBoundingBox.width / 2.0
+            if abs(dx) < horizontalThreshold {
+                // If the anchor is within the central region, snap to the middle of the edge.
+                x = textBoundingBox.midX
+            } else {
+                // Otherwise, snap to the corner that is horizontally closer to the anchor.
+                x = dx > 0 ? textBoundingBox.minX : textBoundingBox.maxX
+            }
+            connectionPoint = CGPoint(x: x, y: y)
+        } else {
+            // Primarily horizontal connection (left or right edge).
+            let x = dx > 0 ? textBoundingBox.minX : textBoundingBox.maxX
+            let y: CGFloat
+
+            // Create a central snapping region based on the text box's height.
+            let verticalThreshold = textBoundingBox.height / 2.0
+            if abs(dy) < verticalThreshold {
+                // If the anchor is within the central region, snap to the middle of the edge.
+                y = textBoundingBox.midY
+            } else {
+                // Otherwise, snap to the corner that is vertically closer to the anchor.
+                y = dy > 0 ? textBoundingBox.minY : textBoundingBox.maxY
+            }
+            connectionPoint = CGPoint(x: x, y: y)
+        }
         
+        connectorPath.addLine(to: connectionPoint)
+
         let connectorParams = DrawingParameters(
             path: connectorPath,
             lineWidth: 0.5,
