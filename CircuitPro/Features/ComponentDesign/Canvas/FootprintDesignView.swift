@@ -18,17 +18,17 @@ struct FootprintDesignView: View {
     @State private var isCollapsed: Bool = true
 
     var body: some View {
-        @Bindable var bindableComponentDesignManager = componentDesignManager
+        @Bindable var footprintEditor = componentDesignManager.footprintEditor
 
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
                 manager: canvasManager, schematicGraph: .init(),
-                elements: $bindableComponentDesignManager.footprintElements,
-                selectedIDs: $bindableComponentDesignManager.selectedFootprintElementIDs,
-                selectedTool: $bindableComponentDesignManager.selectedFootprintTool,
+                elements: $footprintEditor.elements,
+                selectedIDs: $footprintEditor.selectedElementIDs,
+                selectedTool: $footprintEditor.selectedTool,
                 layerBindings: CanvasLayerBindings(
-                    selectedLayer: $bindableComponentDesignManager.selectedFootprintLayer,
-                    layerAssignments: $bindableComponentDesignManager.layerAssignments
+                    selectedLayer: $footprintEditor.selectedLayer,
+                    layerAssignments: $footprintEditor.layerAssignments
                 )
             )
 

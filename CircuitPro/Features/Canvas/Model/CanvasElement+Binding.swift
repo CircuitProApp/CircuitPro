@@ -128,4 +128,18 @@ extension CanvasElement {
             }
         }
     }
+    
+    /// Provides safe, optional access to the underlying `Pad` if the
+    /// canvas element is of the `.pad` case.
+    var asPad: Pad? {
+        get {
+            guard case .pad(let pad) = self else { return nil }
+            return pad
+        }
+        set {
+            if let newValue {
+                self = .pad(newValue)
+            }
+        }
+    }
 }

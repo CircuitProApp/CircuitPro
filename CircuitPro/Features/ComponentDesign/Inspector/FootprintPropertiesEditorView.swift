@@ -11,14 +11,14 @@ struct FootprintPropertiesEditorView: View {
     @Environment(\.componentDesignManager) private var componentDesignManager
     
     var body: some View {
-        @Bindable var manager = componentDesignManager
+        @Bindable var manager = componentDesignManager.footprintEditor
         
         
         ScrollView {
             // 2. Section for Pads
             // Iterate over all footprint elements to find the selected pads.
-            ForEach($manager.footprintElements) { $element in
-                if case .pad(let pad) = element, manager.selectedFootprintElementIDs.contains(pad.id) {
+            ForEach($manager.elements) { $element in
+                if case .pad(let pad) = element, manager.selectedElementIDs.contains(pad.id) {
                     // Safely unwrap the binding to the pad.
                     if let padBinding = $element.pad {
                         
@@ -26,7 +26,7 @@ struct FootprintPropertiesEditorView: View {
                         PadPropertiesView(pad: padBinding)
                         
                     }
-                } else if case .primitive(let primitive) = element, manager.selectedFootprintElementIDs.contains(primitive.id) {
+                } else if case .primitive(let primitive) = element, manager.selectedElementIDs.contains(primitive.id) {
                     // Safely unwrap the binding to the primitive.
                     if let primitiveBinding = $element.primitive {
                         

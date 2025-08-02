@@ -12,27 +12,27 @@ struct SymbolPropertiesEditorView: View {
 
     var body: some View {
         
-        @Bindable var manager = componentDesignManager
+        @Bindable var manager = componentDesignManager.symbolEditor
     
         VStack {
             ScrollView {
                 // Section for Pins
-                ForEach($manager.symbolElements) { $element in
-                    if case .pin(let pin) = element, componentDesignManager.selectedSymbolElementIDs.contains(pin.id) {
+                ForEach($manager.elements) { $element in
+                    if case .pin(let pin) = element, manager.selectedElementIDs.contains(pin.id) {
                         // Safely unwrap the binding to the pin
                         if let pinBinding = $element.pin {
                      
                             PinPropertiesView(pin: pinBinding)
                             
                         }
-                    } else if case .primitive(let primitive) = element, componentDesignManager.selectedSymbolElementIDs.contains(primitive.id) {
+                    } else if case .primitive(let primitive) = element, manager.selectedElementIDs.contains(primitive.id) {
                         // Safely unwrap the binding to the primitive
                         if let primitiveBinding = $element.primitive {
                          
                             PrimitivePropertiesView(primitive: primitiveBinding)
                             
                         }
-                    } else if case .text(let text) = element, componentDesignManager.selectedSymbolElementIDs.contains(text.id) {
+                    } else if case .text(let text) = element, manager.selectedElementIDs.contains(text.id) {
                         if let textBinding = $element.text {
                             
                             TextPropertiesView(textElement: textBinding)

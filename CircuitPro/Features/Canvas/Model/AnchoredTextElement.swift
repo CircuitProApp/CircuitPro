@@ -101,14 +101,12 @@ extension AnchoredTextElement: Drawable {
         // 3. Define drawing parameters for the dashed connector line.
         let connectorPath = CGMutablePath()
         connectorPath.move(to: anchorPosition)
-        
-        // --- THIS IS THE FIX ---
+    
         // Calculate the center of the text's bounding box using public properties.
         let textBoundingBox = textElement.boundingBox
-        let textCenter = CGPoint(x: textBoundingBox.midX, y: textBoundingBox.midY)
-        // --- END OF FIX ---
+        let textBottomLeading = CGPoint(x: textBoundingBox.minX, y: textBoundingBox.minY)
         
-        connectorPath.addLine(to: textCenter)
+        connectorPath.addLine(to: textBottomLeading)
         
         let connectorParams = DrawingParameters(
             path: connectorPath,

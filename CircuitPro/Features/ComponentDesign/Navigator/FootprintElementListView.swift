@@ -32,8 +32,12 @@ struct FootprintElementListView: View {
     @State private var selection: Set<OutlineItemID> = []
     @State private var expandedLayers: Set<CanvasLayer> = []
 
+    private var footprintEditor: CanvasEditorManager {
+        componentDesignManager.footprintEditor
+    }
+
     var body: some View {
-        @Bindable var manager = componentDesignManager
+        @Bindable var manager = footprintEditor
         
         VStack(alignment: .leading, spacing: 0) {
             Text("Footprint Elements")
@@ -49,8 +53,8 @@ struct FootprintElementListView: View {
             .scrollContentBackground(.hidden)
         }
         .onChange(of: selection) { handleSelectionChange() }
-        .onChange(of: manager.selectedFootprintLayer) { syncSelectionFromManager() }
-        .onChange(of: manager.selectedFootprintElementIDs) { syncSelectionFromManager() }
+        .onChange(of: manager.selectedLayer) { syncSelectionFromManager() }
+        .onChange(of: manager.selectedElementIDs) { syncSelectionFromManager() }
         .onAppear {
             syncSelectionFromManager()
             expandedLayers = Set(outlineData.compactMap { $0.content.layerValue })
@@ -122,12 +126,12 @@ struct FootprintElementListView: View {
         let copperLayer = CanvasLayer(kind: .copper)
         
         let elementsByLayer = Dictionary(
-            grouping: componentDesignManager.footprintElements,
+            grouping: footprintEditor.elements,
             by: { element in
                 if case .pad = element {
                     return copperLayer
                 } else {
-                    return componentDesignManager.layerAssignments[element.id] ?? .layer0
+                    return footprintEditor.layerAssignments[element.id] ?? .layer0
                 }
             }
         )
@@ -160,16 +164,16 @@ struct FootprintElementListView: View {
             })
         }
         
-        componentDesignManager.selectedFootprintLayer = newSelectedLayer
-        componentDesignManager.selectedFootprintElementIDs = newSelectedElementIDs
+        footprintEditor.selectedLayer = newSelectedLayer
+        footprintEditor.selectedElementIDs = newSelectedElementIDs
     }
     
     private func syncSelectionFromManager() {
         var newSelection: Set<OutlineItemID> = []
-        if let selectedLayer = componentDesignManager.selectedFootprintLayer {
+        if let selectedLayer = footprintEditor.selectedLayer {
             newSelection.insert(.layer(selectedLayer))
         } else {
-            componentDesignManager.selectedFootprintElementIDs.forEach { newSelection.insert(.element($0)) }
+            footprintEditor.selectedElementIDs.forEach { newSelection.insert(.element($0)) }
         }
         
         if self.selection != newSelection {

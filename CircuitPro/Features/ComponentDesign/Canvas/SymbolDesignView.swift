@@ -12,14 +12,14 @@ struct SymbolDesignView: View {
 
     var body: some View {
 
-        @Bindable var bindableComponentDesignManager = componentDesignManager
+        @Bindable var symbolEditor = componentDesignManager.symbolEditor
 
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
                 manager: canvasManager, schematicGraph: .init(),
-                elements: $bindableComponentDesignManager.symbolElements,
-                selectedIDs: $bindableComponentDesignManager.selectedSymbolElementIDs,
-                selectedTool: $bindableComponentDesignManager.selectedSymbolTool
+                elements: $symbolEditor.elements,
+                selectedIDs: $symbolEditor.selectedElementIDs,
+                selectedTool: $symbolEditor.selectedTool
             )
 
             .overlay(alignment: .leading) {

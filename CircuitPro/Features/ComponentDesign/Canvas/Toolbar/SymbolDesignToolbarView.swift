@@ -11,10 +11,10 @@ struct SymbolDesignToolbarView: View {
     private var componentDesignManager
 
     var body: some View {
-        @Bindable var manager = componentDesignManager
+        @Bindable var manager = componentDesignManager.symbolEditor
         ToolbarView<AnyCanvasTool>(
             tools: CanvasToolRegistry.symbolDesignTools,
-            selectedTool: $manager.selectedSymbolTool,
+            selectedTool: $manager.selectedTool,
             dividerBefore: { tool in
                 tool.id == "ruler"
             },

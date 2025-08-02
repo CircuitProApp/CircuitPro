@@ -76,13 +76,13 @@ struct ComponentDesignStageContainerView: View {
 
         case .symbol:
             selectionBasedDetailView(
-                count: componentDesignManager.selectedSymbolElementIDs.count,
+                count: componentDesignManager.symbolEditor.selectedElementIDs.count,
                 content: SymbolPropertiesEditorView.init
             )
 
         case .footprint:
             selectionBasedDetailView(
-                count: componentDesignManager.selectedFootprintElementIDs.count,
+                count: componentDesignManager.footprintEditor.selectedElementIDs.count,
                 content: FootprintPropertiesEditorView.init
             )
         }

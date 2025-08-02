@@ -123,20 +123,18 @@ struct ComponentDesignView: View {
             return
         }
 
+        let symbolEditor = componentDesignManager.symbolEditor
         let canvasSize = symbolCanvasManager.paperSize.canvasSize(orientation: .landscape)
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
 
         var textDefinitions = [AnchoredTextDefinition]()
-        let textCanvasElements = componentDesignManager.symbolElements.compactMap { element -> TextElement? in
-            guard case .text(let textElement) = element else { return nil }
-            return textElement
-        }
+        let textCanvasElements = symbolEditor.elements.compactMap { $0.asTextElement }
 
         for textElement in textCanvasElements {
             let relativePosition = CGPoint(x: textElement.position.x - anchor.x, y: textElement.position.y - anchor.y)
             
-            if let source = componentDesignManager.textSourceMap[textElement.id] {
-                let displayOptions = componentDesignManager.textDisplayOptionsMap[textElement.id, default: .allVisible]
+            if let source = symbolEditor.textSourceMap[textElement.id] {
+                let displayOptions = symbolEditor.textDisplayOptionsMap[textElement.id, default: .allVisible]
                 
                 textDefinitions.append(AnchoredTextDefinition(
                     source: source,
@@ -151,10 +149,7 @@ struct ComponentDesignView: View {
             }
         }
         
-        let rawPrimitives: [AnyPrimitive] = componentDesignManager.symbolElements.compactMap { element in
-            if case .primitive(let primitive) = element { return primitive }
-            return nil
-        }
+        let rawPrimitives: [AnyPrimitive] = symbolEditor.elements.compactMap { $0.asPrimitive }
 
         let primitives = rawPrimitives.map { prim -> AnyPrimitive in
             var copy = prim
@@ -162,7 +157,7 @@ struct ComponentDesignView: View {
             return copy
         }
 
-        let rawPins = componentDesignManager.pins
+        let rawPins = symbolEditor.pins
         let pins = rawPins.map { pin -> Pin in
             var copy = pin
             copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
