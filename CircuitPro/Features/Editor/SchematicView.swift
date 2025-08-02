@@ -43,7 +43,7 @@ struct SchematicView: View {
         // Analyze the graph when it changes
         .onChange(of: projectManager.schematicGraph.vertices) { _, _ in updateNets() }
         .onChange(of: projectManager.schematicGraph.edges) { _, _ in updateNets() }
-        // Persist symbol moves back to the model
+        // Persist all UI changes back to the model
         .onChange(of: canvasElements) { _, newValue in
             syncCanvasToModel(newValue)
         }
@@ -67,13 +67,13 @@ struct SchematicView: View {
     ) {
         let pos = canvasManager.snap(point)
 
-        // 2. Current max referenceDesignatorIndex per component UUID
+        // This logic remains unchanged, as it correctly sets up the initial instance
+        // before any property resolution is needed.
         let instances = projectManager.selectedDesign?.componentInstances ?? []
         var nextRef: [UUID: Int] = instances.reduce(into: [:]) { dict, inst in
             dict[inst.componentUUID] = max(dict[inst.componentUUID] ?? 0, inst.referenceDesignatorIndex)
         }
 
-        // 3. Add each dropped component
         for comp in comps {
             let refNumber = (nextRef[comp.componentUUID] ?? 0) + 1
             nextRef[comp.componentUUID] = refNumber
@@ -98,7 +98,7 @@ struct SchematicView: View {
         rebuildCanvasElements()
     }
 
-    //  MARK: Build Canvas Model
+    //  MARK: Build Canvas Model (Resolver)
     private func rebuildCanvasElements() {
         let designComponents = projectManager.designComponents
         var updatedElements: [CanvasElement] = []
@@ -106,14 +106,16 @@ struct SchematicView: View {
             if case .symbol(let s) = $1 { $0[s.id] = .symbol(s) }
         }
 
-        // Iterate through the source of truth (designComponents)
         for dc in designComponents {
             let instanceID = dc.instance.id
+            
+            // This function now acts as a client to the "Resolver".
+            // It calls the centralized logic to get the display-ready properties.
+            let resolvedProperties = PropertyResolver.resolve(from: dc.definition, and: dc.instance)
             
             if var existingElement = existingElements.removeValue(forKey: instanceID),
                case .symbol(var symbol) = existingElement {
                 
-                // Element exists. Update its data if it has changed.
                 var needsTextResolution = false
                 if symbol.instance != dc.instance.symbolInstance {
                     symbol.instance = dc.instance.symbolInstance
@@ -123,8 +125,10 @@ struct SchematicView: View {
                     symbol.reference = dc.referenceDesignator
                     needsTextResolution = true
                 }
-                if symbol.properties != dc.displayedProperties {
-                    symbol.properties = dc.displayedProperties
+                
+                // The SymbolElement's properties are now compared against the newly resolved list.
+                if symbol.properties != resolvedProperties {
+                    symbol.properties = resolvedProperties
                     needsTextResolution = true
                 }
                 
@@ -135,13 +139,13 @@ struct SchematicView: View {
                 updatedElements.append(.symbol(symbol))
                 
             } else {
-                // New element. Create it.
+                // A new SymbolElement is created using the resolved properties.
                 let newSymbolElement = SymbolElement(
                     id: instanceID,
                     instance: dc.instance.symbolInstance,
                     symbol: dc.definition.symbol!,
                     reference: dc.referenceDesignator,
-                    properties: dc.displayedProperties
+                    properties: resolvedProperties
                 )
                 updatedElements.append(.symbol(newSymbolElement))
             }
@@ -150,28 +154,34 @@ struct SchematicView: View {
         canvasElements = updatedElements
     }
 
-    // MARK: Sync back to SwiftData model
+    // MARK: Sync back to Data Model (Committer)
     private func syncCanvasToModel(_ elements: [CanvasElement]) {
-
-        // Only symbol elements remain
         let symbolElements = elements.compactMap { element -> SymbolElement? in
             if case .symbol(let symbol) = element { return symbol }
             return nil
         }
 
-        // Update component-instance positions & rotations
         var insts = projectManager.componentInstances
         let keepIDs = Set(symbolElements.map(\.id))
         insts.removeAll { !keepIDs.contains($0.id) }
 
         for sym in symbolElements {
-            if let idx = insts.firstIndex(where: { $0.id == sym.id }) {
-                // **FIXED**: Assign the whole instance to persist text override changes.
-                insts[idx].symbolInstance = sym.instance
+            guard let idx = insts.firstIndex(where: { $0.id == sym.id }) else { continue }
+            
+            let instance = insts[idx]
+            
+            // Sync geometry (position & rotation)
+            instance.symbolInstance = sym.instance
+            
+            // This function now acts as a client to the "Committer".
+            // It iterates through the properties from the UI and tells the instance
+            // to commit each change, without needing to know *how* it's committed.
+            for editedProperty in sym.properties {
+                instance.commit(changeTo: editedProperty)
             }
         }
+        
         projectManager.componentInstances = insts
-
         document.updateChangeCount(.changeDone)
     }
 }

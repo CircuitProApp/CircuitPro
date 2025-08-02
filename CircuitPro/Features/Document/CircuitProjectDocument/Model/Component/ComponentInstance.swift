@@ -16,7 +16,7 @@ final class ComponentInstance: Identifiable, Codable {
     var componentUUID: UUID
     
     var propertyOverrides: [PropertyOverride]
-    var adHocProperties: [InstanceAdHocProperty]
+    var adHocProperties: [PropertyInstance]
 
     var symbolInstance: SymbolInstance
     var footprintInstance: FootprintInstance?
@@ -27,7 +27,7 @@ final class ComponentInstance: Identifiable, Codable {
         id: UUID = UUID(),
         componentUUID: UUID,
         propertyOverrides: [PropertyOverride] = [],
-        adHocProperties: [InstanceAdHocProperty] = [],
+        adHocProperties: [PropertyInstance] = [],
         symbolInstance: SymbolInstance,
         footprintInstance: FootprintInstance? = nil,
         reference: Int = 0
