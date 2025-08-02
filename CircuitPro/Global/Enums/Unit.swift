@@ -1,7 +1,6 @@
 import SwiftUI
 
 enum SIPrefix: String, CaseIterable, Codable {
-    case none  = "-"
     case pico  = "p"
     case nano  = "n"
     case micro = "μ"
@@ -14,7 +13,6 @@ enum SIPrefix: String, CaseIterable, Codable {
 
     var name: String {
         switch self {
-        case .none:  return "-"
         case .pico:  return "pico"
         case .nano:  return "nano"
         case .micro: return "micro"
@@ -70,24 +68,25 @@ enum BaseUnit: String, CaseIterable, Codable {
 }
 
 struct Unit: CustomStringConvertible, Codable, Equatable, Hashable {
-    var prefix: SIPrefix
+    var prefix: SIPrefix?
     var base: BaseUnit?
 
     var symbol: String {
-        guard let base = base else { return prefix.symbol }
-        return "\(prefix.symbol)\(base.symbol)"
+        let prefixSymbol = prefix?.symbol ?? ""
+        let baseSymbol = base?.symbol ?? ""
+        return "\(prefixSymbol)\(baseSymbol)"
     }
 
     var name: String {
-        guard let base = base else { return prefix.name }
-        let prefixString = prefix == .none ? "" : prefix.name
+        guard let base = base else { return prefix?.name ?? "" }
+        let prefixString = prefix?.name ?? ""
         return [prefixString, base.name].filter { !$0.isEmpty }.joined(separator: " ")
     }
 
     var description: String { symbol }
 
-    init(prefix: SIPrefix = .none, base: BaseUnit? = nil) {
-        if let base = base, !base.allowsPrefix && prefix != .none {
+    init(prefix: SIPrefix? = nil, base: BaseUnit? = nil) {
+        if let base = base, !base.allowsPrefix, prefix != nil {
             fatalError("Invalid prefix for base unit.")
         }
         self.prefix = prefix

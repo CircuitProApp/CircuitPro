@@ -111,10 +111,10 @@ struct PropertyColumn: View {
         // Set default unit if there's exactly 1 allowed unit
         if let firstAllowed = key.allowedBaseUnits.first, key.allowedBaseUnits.count == 1 {
             property.unit.base = firstAllowed
-            property.unit.prefix = firstAllowed.allowsPrefix ? .none : .none
+            property.unit.prefix = nil // Reset prefix
         } else {
             property.unit.base = nil
-            property.unit.prefix = .none
+            property.unit.prefix = nil // Reset prefix
         }
     }
 

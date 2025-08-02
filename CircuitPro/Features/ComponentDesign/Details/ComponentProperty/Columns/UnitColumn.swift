@@ -6,6 +6,10 @@ struct UnitColumn: View {
     var body: some View {
         HStack {
             Menu {
+                Button("None") {
+                    property.unit.prefix = nil
+                }
+                Divider()
                 ForEach(SIPrefix.allCases, id: \.rawValue) { prefix in
                     Button {
                         property.unit.prefix = prefix
@@ -14,7 +18,7 @@ struct UnitColumn: View {
                     }
                 }
             } label: {
-                Text(property.unit.prefix.symbol)
+                Text(property.unit.prefix?.symbol ?? "–")
             }
             .disabled(!(property.unit.base?.allowsPrefix ?? false)) // Disable prefix menu if not allowed
 
@@ -31,7 +35,7 @@ struct UnitColumn: View {
                         Button {
                             property.unit.base = base
                             if !base.allowsPrefix {
-                                property.unit.prefix = .none
+                                property.unit.prefix = nil
                             }
                         } label: {
                             Text(base.name)
