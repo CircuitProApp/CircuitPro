@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct NumericField<T: NumericType>: View {
+
     @Binding var value: T
     var placeholder: String = ""
     var range: ClosedRange<T>?
@@ -17,12 +18,12 @@ struct NumericField<T: NumericType>: View {
     var displayMultiplier: T = 1
     var displayOffset: T = 0
     var suffix: String?
-
+    
+    @State private var isEditing: Bool = false
     @State private var text: String = ""
-    @FocusState private var isEditing: Bool
 
     private var isInteger: Bool { T.self == Int.self }
-
+    
     private var effectiveMaxDecimalPlaces: Int {
         if let maxDecimalPlaces = maxDecimalPlaces {
             return isInteger ? 0 : maxDecimalPlaces
@@ -30,59 +31,67 @@ struct NumericField<T: NumericType>: View {
         return isInteger ? 0 : 3
     }
 
-    var body: some View {
-        TextField(placeholder, text: $text)
-            .focused($isEditing)
-            .onAppear {
-                updateDisplayText()
-            }
-            .onChange(of: isEditing) { newFocus in
-                if newFocus {
-                    prepareTextForEditing()
+    private var textBinding: Binding<String> {
+        Binding<String>(
+            get: {
+                if isEditing {
+                    return text
                 } else {
-                    validateAndCommit()
+                    let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
+                    return formatted(displayValue, forEditing: false)
                 }
+            },
+            set: { newValue in
+                self.text = newValue
             }
-            .onChange(of: range) { newRange in
-                let clamped = clamp(value, to: newRange)
-                if clamped != value {
-                    value = clamped
-                    updateDisplayText()
-                }
-            }
-            .onSubmit {
+        )
+    }
+
+    var body: some View {
+        TextField(placeholder, text: textBinding, onEditingChanged: { editing in
+            self.isEditing = editing
+            if editing {
+                let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
+                text = formatted(displayValue, forEditing: true)
+            } else {
                 validateAndCommit()
-                isEditing = false
             }
-    }
-
-    private func prepareTextForEditing() {
-        let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-        text = formatted(displayValue, forEditing: true)
-    }
-
-    private func updateDisplayText() {
-        let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
-        text = formatted(displayValue, forEditing: false)
+        }, onCommit: {
+             validateAndCommit()
+        })
+        .onAppear {
+            let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
+            text = formatted(displayValue, forEditing: false)
+        }
+        .onChange(of: range) { _, newRange in
+            let clamped = clamp(value, to: newRange)
+            if clamped != value {
+                value = clamped
+            }
+        }
     }
 
     private func validateAndCommit() {
         var inputText = text.trimmingCharacters(in: .whitespaces)
         
         if let suffix = suffix, !suffix.isEmpty, inputText.hasSuffix(suffix) {
-            inputText = String(inputText.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
+            let chopped = String(inputText.dropLast(suffix.count))
+            inputText = chopped.trimmingCharacters(in: .whitespaces)
         }
-
+        
         let filtered = filterInput(inputText)
-
+        
         if let doubleVal = Double(filtered) {
             let internalValueDouble = (doubleVal - displayOffset.doubleValue) / displayMultiplier.doubleValue
             let internalValue = T(internalValueDouble)
             let clamped = clamp(internalValue, to: range)
             value = clamped
-            updateDisplayText()
+            
+            let displayValue = (clamped.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
+            text = formatted(displayValue, forEditing: false)
         } else {
-            updateDisplayText()
+            let displayValue = (value.doubleValue * displayMultiplier.doubleValue) + displayOffset.doubleValue
+            text = formatted(displayValue, forEditing: false)
         }
     }
 
@@ -113,7 +122,6 @@ struct NumericField<T: NumericType>: View {
                 }
             }
         }
-
         return result
     }
 
@@ -130,6 +138,11 @@ struct NumericField<T: NumericType>: View {
         formatter.maximumFractionDigits = effectiveMaxDecimalPlaces
         
         let numberString = formatter.string(from: NSNumber(value: value)) ?? ""
-        return (!forEditing && suffix != nil && !suffix!.isEmpty) ? "\(numberString) \(suffix!)" : numberString
+        
+        if let suffix = suffix, !suffix.isEmpty, !forEditing {
+            return "\(numberString) \(suffix)"
+        } else {
+            return numberString
+        }
     }
 }
