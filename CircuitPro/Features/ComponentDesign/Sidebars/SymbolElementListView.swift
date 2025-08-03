@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SymbolElementListView: View {
-    @Environment(\.componentDesignManager) private var componentDesignManager
+    @Environment(ComponentDesignManager.self) private var componentDesignManager
 
     private var symbolEditor: CanvasEditorManager {
         componentDesignManager.symbolEditor

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct FootprintElementListView: View {
-    @Environment(\.componentDesignManager) private var componentDesignManager
+    @Environment(ComponentDesignManager.self) private var componentDesignManager
 
     // Unified selection ID for any item, drives the List's native selection.
     enum OutlineItemID: Hashable {

@@ -7,8 +7,7 @@
 import SwiftUI
 
 struct SymbolDesignToolbarView: View {
-    @Environment(\.componentDesignManager)
-    private var componentDesignManager
+    @Environment(ComponentDesignManager.self) private var componentDesignManager
 
     var body: some View {
         @Bindable var manager = componentDesignManager.symbolEditor

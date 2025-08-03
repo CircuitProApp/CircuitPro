@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct DynamicTextSourceListView: View {
-    @Environment(\.componentDesignManager) private var componentDesignManager
+    @Environment(ComponentDesignManager.self) private var componentDesignManager
     let editor: CanvasEditorManager
 
     private var componentData: (name: String, prefix: String, properties: [PropertyDefinition]) {

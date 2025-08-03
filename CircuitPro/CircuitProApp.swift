@@ -10,7 +10,6 @@ struct CircuitProApp: App {
     private var openWindow
 
     @State private var appManager = AppManager()
-    @State private var componentDesignManager = ComponentDesignManager()
 
     init() {
         _ = CircuitProjectDocumentController.shared
@@ -58,7 +57,6 @@ struct CircuitProApp: App {
             ComponentDesignView()
                 .frame(minWidth: 800, minHeight: 600)
                 .modelContainer(ModelContainerManager.shared.container)
-                .environment(\.componentDesignManager, componentDesignManager)
         }
     }
 }

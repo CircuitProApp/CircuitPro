@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CanvasElementRowView: View {
-    @Environment(\.componentDesignManager) private var componentDesignManager
+    @Environment(ComponentDesignManager.self) private var componentDesignManager
     let element: CanvasElement
     let editor: CanvasEditorManager
 

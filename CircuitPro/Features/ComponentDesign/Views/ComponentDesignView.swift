@@ -15,8 +15,7 @@ struct ComponentDesignView: View {
     @Environment(\.modelContext)
     private var modelContext
 
-    @Environment(\.componentDesignManager)
-    private var componentDesignManager
+    @State private var componentDesignManager = ComponentDesignManager()
 
     @State private var currentStage: ComponentDesignStage = .details
     @State private var symbolCanvasManager = CanvasManager()
@@ -48,6 +47,7 @@ struct ComponentDesignView: View {
                     footprintCanvasManager: footprintCanvasManager
                 )
                 .navigationTitle("Component Designer")
+                .environment(componentDesignManager)
                 .toolbar {
                     ToolbarItem {
                         Button {

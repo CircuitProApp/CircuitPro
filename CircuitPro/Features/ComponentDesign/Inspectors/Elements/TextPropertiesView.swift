@@ -10,7 +10,7 @@ import SwiftUI
 struct TextPropertiesView: View {
     @Binding var textElement: TextElement
     let editor: CanvasEditorManager
-    @Environment(\.componentDesignManager) private var componentDesignManager
+    @Environment(ComponentDesignManager.self) private var componentDesignManager
     
     private var componentData: (name: String, prefix: String, properties: [PropertyDefinition]) {
         (componentDesignManager.componentName, componentDesignManager.referenceDesignatorPrefix, componentDesignManager.componentProperties)

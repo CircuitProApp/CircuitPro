@@ -5,8 +5,7 @@ struct SymbolCanvasView: View {
     @Environment(CanvasManager.self)
     private var canvasManager
 
-    @Environment(\.componentDesignManager)
-    private var componentDesignManager
+    @Environment(ComponentDesignManager.self) private var componentDesignManager
     
     @State private var isCollapsed: Bool = true
 

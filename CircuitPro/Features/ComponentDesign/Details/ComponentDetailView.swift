@@ -9,8 +9,7 @@ import SwiftUI
 
 struct ComponentDetailView: View {
 
-    @Environment(\.componentDesignManager)
-    private var componentDesignManager
+    @Environment(ComponentDesignManager.self) private var componentDesignManager
 
     enum FocusField: Hashable {
         case name
