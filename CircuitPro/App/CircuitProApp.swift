@@ -9,8 +9,6 @@ struct CircuitProApp: App {
     @Environment(\.openWindow)
     private var openWindow
 
-    @State private var appManager = AppManager()
-
     init() {
         _ = CircuitProjectDocumentController.shared
     }
@@ -51,7 +49,6 @@ struct CircuitProApp: App {
                 CircuitProCommands()
             }
         }
-        .environment(\.appManager, appManager)
 
         Window("Component Design", id: "ComponentDesignWindow") {
             ComponentDesignView()

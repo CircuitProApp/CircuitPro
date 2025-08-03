@@ -15,22 +15,9 @@
 		5E5AB35A2D9C60330069B623 /* CircuitPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CircuitPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		5EDC5D372D9DE74600D7CCB3 /* Exceptions for "CircuitPro" folder in "CircuitPro" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 5E5AB3592D9C60330069B623 /* CircuitPro */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		5E5AB35C2D9C60330069B623 /* CircuitPro */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				5EDC5D372D9DE74600D7CCB3 /* Exceptions for "CircuitPro" folder in "CircuitPro" target */,
-			);
 			path = CircuitPro;
 			sourceTree = "<group>";
 		};
@@ -279,7 +266,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = CircuitPro/CircuitPro.entitlements;
+				CODE_SIGN_ENTITLEMENTS = CircuitPro/App/CircuitPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -289,7 +276,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = CircuitPro/Info.plist;
+				INFOPLIST_FILE = CircuitPro/App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Circuit Pro";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -311,7 +298,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = CircuitPro/CircuitPro.entitlements;
+				CODE_SIGN_ENTITLEMENTS = CircuitPro/App/CircuitPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -321,7 +308,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = CircuitPro/Info.plist;
+				INFOPLIST_FILE = CircuitPro/App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Circuit Pro";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
