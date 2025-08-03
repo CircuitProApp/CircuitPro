@@ -7,21 +7,26 @@
 
 import AppKit
 
+/// A view that holds the main canvas content view, centers it,
+/// and applies a background color and shadow effect.
 final class DocumentContainerView: NSView {
 
-    let documentBackgroundView = DocumentBackgroundView()
-    let workbenchView: WorkbenchView
+    /// A separate view for the "out of bounds" background color.
+    private let documentBackgroundView = DocumentBackgroundView()
 
-    init(workbench: WorkbenchView) {
-        self.workbenchView = workbench
+    /// The main content view (our `CanvasHostView`).
+    let canvasHostView: NSView
+
+    /// Initializes the container with the provided canvas content view.
+    init(canvasHost: NSView) {
+        self.canvasHostView = canvasHost
         super.init(frame: .zero)
         
-        // 1. Configure WorkbenchView
-        setupWorkbenchViewShadow()
+        setupShadow()
         
-        // 2. Add subviews
+        // Add subviews in Z-order (background first, then content).
         addSubview(documentBackgroundView)
-        addSubview(workbenchView)
+        addSubview(canvasHostView)
     }
 
     required init?(coder: NSCoder) {
@@ -29,28 +34,35 @@ final class DocumentContainerView: NSView {
     }
     
     // MARK: - Setup
-    private func setupWorkbenchViewShadow() {
-        workbenchView.wantsLayer = true
+    
+    private func setupShadow() {
+        // The canvas host view must have a layer to support a shadow.
+        canvasHostView.wantsLayer = true
         
         let shadow = NSShadow()
         shadow.shadowColor = NSColor.black.withAlphaComponent(0.3)
         shadow.shadowBlurRadius = 7.0
         
-        workbenchView.shadow = shadow
+        canvasHostView.shadow = shadow
     }
+
+    // MARK: - Layout
 
     override func layout() {
         super.layout()
+        
+        // The background always fills the entire container.
         documentBackgroundView.frame = bounds
         
-        let wbSize = workbenchView.frame.size
-        let mySize = bounds.size
+        // Center the canvas host view within this container.
+        let hostSize = canvasHostView.frame.size
+        let containerSize = bounds.size
         
         let origin = CGPoint(
-            x: (mySize.width - wbSize.width) / 2,
-            y: (mySize.height - wbSize.height) / 2
+            x: (containerSize.width - hostSize.width) / 2,
+            y: (containerSize.height - hostSize.height) / 2
         )
         
-        workbenchView.frame = CGRect(origin: origin, size: wbSize)
+        canvasHostView.frame = CGRect(origin: origin, size: hostSize)
     }
 }

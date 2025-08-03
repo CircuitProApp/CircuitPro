@@ -1,71 +1,59 @@
-//
-//  ToolActionController.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 7/16/25.
-//
-
 import AppKit
 
-/// Executes the currently selected canvas tool on mouse-down.
-/// Stateless: every call builds its own `CanvasToolContext`.
 final class ToolActionController {
 
-    unowned let workbench: WorkbenchView
-    let hitTest: WorkbenchHitTestService
+    unowned let controller: CanvasController
+    unowned let hitTestService: WorkbenchInputCoordinator
 
-    init(
-        workbench: WorkbenchView,
-        hitTest: WorkbenchHitTestService
-    ) {
-        self.workbench = workbench
-        self.hitTest = hitTest
+    init(controller: CanvasController, hitTestService: WorkbenchInputCoordinator) {
+        self.controller = controller
+        self.hitTestService = hitTestService
     }
 
-    /// Returns `true` when the event was consumed.
     func handleMouseDown(at point: CGPoint, event: NSEvent) -> Bool {
+        guard var tool = controller.selectedTool, tool.id != "cursor" else {
+            return false
+        }
+        
+        // --- THIS SECTION IS NOW FULLY CORRECTED ---
 
-        guard var tool = workbench.selectedTool,
-              tool.id != "cursor" else { return false }
-
-        let snapped = workbench.snap(point)
-
-        // Perform a hit-test to create a rich context for the tool.
-        let hitTarget = workbench.hitTestService.hitTest(
-            at: snapped,
-            elements: workbench.elements,
-            schematicGraph: workbench.schematicGraph,
-            magnification: workbench.magnification
-        )
-
-        let ctx = CanvasToolContext(
-            existingPinCount: workbench.elements.reduce(0) { $1.isPin ? $0 + 1 : $0 },
-            existingPadCount: workbench.elements.reduce(0) { $1.isPad ? $0 + 1 : $0 },
-            selectedLayer: workbench.selectedLayer,
-            magnification: workbench.magnification,
+        let snappedPoint = controller.snap(point)
+        let hitTarget = hitTestService.hitTest(point: snappedPoint)
+        
+        // Use the "compatibility shim" to create the legacy context for the tools.
+        let legacyContext = CanvasToolContext(
+            existingPinCount: controller.elements.reduce(0) { $1.isPin ? $0 + 1 : $0 },
+            existingPadCount: controller.elements.reduce(0) { $1.isPad ? $0 + 1 : $0 },
+            selectedLayer: controller.selectedLayer,
+            magnification: controller.magnification,
             hitTarget: hitTarget,
-            schematicGraph: workbench.schematicGraph,
+            schematicGraph: controller.schematicGraph,
             clickCount: event.clickCount
         )
 
-        let result = tool.handleTap(at: snapped, context: ctx)
+        // Call the tool with the correct legacy context.
+        let result = tool.handleTap(at: snappedPoint, context: legacyContext)
+
+        // --- END CORRECTION ---
 
         switch result {
         case .element(let newElement):
-            workbench.elements.append(newElement)
-            if case .primitive(let prim) = newElement {
-                workbench.onPrimitiveAdded?(prim.id, ctx.selectedLayer)
-            }
-            workbench.onUpdate?(workbench.elements)
+            controller.elements.append(newElement)
+            // Push the change back up to SwiftUI!
+            controller.onUpdateElements?(controller.elements)
 
         case .schematicModified:
-            break
+            controller.syncPinPositionsToGraph()
+
 
         case .noResult:
             break
         }
 
-        workbench.selectedTool = tool
+        controller.selectedTool = tool
+        // Push the tool state change back up to SwiftUI!
+        controller.onUpdateSelectedTool?(tool)
+        
         return true
     }
 }

@@ -1,304 +1,235 @@
-//
-//  WorkbenchInputCoordinator.swift
-//  CircuitPro
-//
-//  Fully refactored 17 Jul 25
-//
-
 import AppKit
 import UniformTypeIdentifiers
 
 final class WorkbenchInputCoordinator {
 
-    // MARK: – Dependencies
-    unowned let workbench: WorkbenchView
-    let hitTest: WorkbenchHitTestService
+    // MARK: - Dependencies
+    unowned let host: CanvasHostView
+    unowned let controller: CanvasController
 
-    // MARK: – Gesture helpers
-    private lazy var rotation = RotationGestureController(workbench: workbench)
-    private lazy var marquee = MarqueeSelectionGesture(workbench: workbench)
-    private lazy var handleDrag = HandleDragGesture(workbench: workbench)
-    private lazy var selDrag = SelectionDragGesture(workbench: workbench)
-    private lazy var toolTap = ToolActionController(workbench: workbench, hitTest: hitTest)
-    private lazy var keyCmds = WorkbenchKeyCommandController(workbench: workbench, coordinator: self)
-
-    /// The drag recogniser that currently owns the pointer, if any.
+    // MARK: - Gesture Helpers
+    private lazy var rotation = RotationGestureController(controller: controller)
+    private lazy var marquee = MarqueeSelectionGesture(controller: controller)
+    private lazy var handleDrag = HandleDragGesture(controller: controller)
+    private lazy var selDrag = SelectionDragGesture(controller: controller)
+    private lazy var toolTap = ToolActionController(controller: controller, hitTestService: self)
+    private lazy var keyCmds = WorkbenchKeyCommandController(controller: controller, coordinator: self)
+    
+    /// The gesture recogniser that currently owns the mouse drag.
     private var activeDrag: CanvasDragGesture?
 
-    // MARK: – Init
-    init(
-        workbench: WorkbenchView,
-        hitTest: WorkbenchHitTestService
-    ) {
-        self.workbench = workbench
-        self.hitTest   = hitTest
+    // MARK: - Init
+    init(host: CanvasHostView, controller: CanvasController) {
+        self.host = host
+        self.controller = controller
     }
 
-    // MARK: – Exposed state
+    // MARK: - Exposed State
     var isRotating: Bool { rotation.active }
 
-    // MARK: – Keyboard
+    // MARK: - Keyboard Input
     func keyDown(_ event: NSEvent) -> Bool { keyCmds.handle(event) }
 
-    // MARK: – Mouse-move
+    // MARK: - Mouse Movement
     func mouseMoved(_ event: NSEvent) {
-        let point = workbench.convert(event.locationInWindow, from: nil)
+        let point = host.convert(event.locationInWindow, from: nil)
 
-        // Cross-hairs & coordinate read-out
-        let snapped = workbench.snap(point)
-        workbench.crosshairsView?.location = snapped
-        workbench.onMouseMoved?(snapped)
-
-        // Live hit-testing for cursor feedback
-        updateCursor(at: point)
-
-        // Preview & live rotation
+        // Update the controller's state
+        let snappedPoint = controller.snap(point)
+        controller.mouseLocation = snappedPoint
+        
+        // Let the rotation gesture update if active
         rotation.update(to: point)
-        workbench.previewView?.updateMouseLocation(to: point)
+
+        // Let the tool preview update
+        // The preview layer will get the mouse location from the context
+        
+        // Trigger a redraw to show crosshairs, previews, etc.
+        controller.redraw()
     }
 
     func mouseExited() {
-        workbench.crosshairsView?.location = nil
+        controller.mouseLocation = nil
+        controller.redraw()
     }
 
-    // MARK: – Mouse-down
+    // MARK: - Mouse Clicks & Drags
     func mouseDown(_ event: NSEvent) {
-
         // First, check for and cancel any active rotation gesture.
         if rotation.active {
             rotation.cancel()
+            controller.redraw()
             return
         }
         
-        let point = workbench.convert(event.locationInWindow, from: nil)
+        let point = host.convert(event.locationInWindow, from: nil)
         
-        // If a tool other than the cursor is active, let it handle the tap first.
+        // If an active tool consumes the click, we're done.
         if toolTap.handleMouseDown(at: point, event: event) {
+            controller.redraw()
             return
         }
 
-        // Prioritize dragging a resize/edit handle, as it's the most specific interaction.
+        // Prioritize dragging a resize/edit handle.
         if handleDrag.begin(at: point, event: event) {
             activeDrag = handleDrag
+            controller.redraw()
             return
         }
 
-        // From here on, we assume the Cursor tool is active or no other tool consumed the event.
-        if workbench.selectedTool?.id == "cursor" {
+        // If cursor tool is active, handle selection and dragging.
+        guard controller.selectedTool?.id == "cursor" else { return }
+        
+        // Does the click hit an existing element?
+        if let hitTarget = self.hitTest(point: point) {
             
-            let hitTarget = hitTest.hitTest(
-                at: point,
-                elements: workbench.elements,
-                schematicGraph: workbench.schematicGraph,
-                magnification: workbench.magnification
-            )
-
-            // --- Logic for when an item was hit ---
-            if let hitTarget = hitTarget {
-                
-                // ---- THIS IS THE CRITICAL LOGIC THAT IS NOW FIXED ----
-                // We determine the correct, unique ID to select.
-                let idToSelect: UUID?
-                if hitTarget.kind == .text {
-                    // If text was hit, we get the `immediateOwnerID`.
-                    // Because we updated `AnchoredTextElement.hitTest`, this is now GUARANTEED
-                    // to be the unique canvas `id` of the specific `AnchoredTextElement`
-                    // that was clicked, NOT the shared data model ID.
-                    idToSelect = hitTarget.immediateOwnerID
-                } else {
-                    // For任何 else, get the top-level selectable ID.
-                    idToSelect = hitTarget.selectableID
-                }
-
-                // Now, `hitID` is guaranteed to be unique for the clicked element.
-                if let hitID = idToSelect {
-                    // Handle standard selection logic (Shift key for additive selection).
-                    if event.modifierFlags.contains(.shift) {
-                        if workbench.selectedIDs.contains(hitID) {
-                            workbench.selectedIDs.remove(hitID)
-                        } else {
-                            workbench.selectedIDs.insert(hitID)
-                        }
+            let idToSelect = hitTarget.selectableID
+            
+            // Handle selection logic (Shift key for additive selection).
+            if let hitID = idToSelect {
+                if event.modifierFlags.contains(.shift) {
+                    if controller.selectedIDs.contains(hitID) {
+                        controller.selectedIDs.remove(hitID)
                     } else {
-                        // If not holding Shift, only select the clicked item if it's not
-                        // already the sole selected item.
-                        if !workbench.selectedIDs.contains(hitID) {
-                            workbench.selectedIDs = [hitID]
-                        }
+                        controller.selectedIDs.insert(hitID)
                     }
-                    // Notify the rest of the app about the selection change.
-                    workbench.onSelectionChange?(workbench.selectedIDs)
+                } else {
+                    // Only re-select if the item isn't already the sole selection.
+                    if !(controller.selectedIDs.count == 1 && controller.selectedIDs.contains(hitID)) {
+                        controller.selectedIDs = [hitID]
+                    }
                 }
-                // ---- END OF FIXED LOGIC ----
-
-                // After updating the selection, we attempt to begin a drag.
-                // This will now work correctly because `selectedIDs` contains unique IDs.
-                if selDrag.begin(at: point, event: event) {
-                    activeDrag = selDrag
-                }
-
-            } else {
-                // --- Logic for when empty space was hit ---
-                // Clear the current selection (if not shift-clicking) and start the marquee.
-                clearSelectionAndStartMarquee(with: event)
             }
 
-            // The cursor tool has handled the event.
-            return
-        }
-    }
-
-    private func clearSelectionAndStartMarquee(with event: NSEvent) {
-        if !event.modifierFlags.contains(.shift) {
-            if !workbench.selectedIDs.isEmpty {
-                workbench.selectedIDs.removeAll()
-                workbench.onSelectionChange?(workbench.selectedIDs)
+            // After updating selection, attempt to begin a drag.
+            if selDrag.begin(at: point, with: hitTarget, event: event) {
+                activeDrag = selDrag
             }
+        // If the click hit empty space...
+        } else {
+            // Clear existing selection if not shift-clicking.
+            if !event.modifierFlags.contains(.shift) && !controller.selectedIDs.isEmpty {
+                controller.selectedIDs.removeAll()
+            }
+            // Begin marquee selection.
+            marquee.begin(at: point, event: event)
         }
-        let point = workbench.convert(event.locationInWindow, from: nil)
-        marquee.begin(at: point, event: event)
+        
+        controller.redraw()
     }
 
-    // MARK: – Mouse-dragged
     func mouseDragged(_ event: NSEvent) {
-        let point = workbench.convert(event.locationInWindow, from: nil)
+        let point = host.convert(event.locationInWindow, from: nil)
 
-        if marquee.active { marquee.drag(to: point); return }
-        activeDrag?.drag(to: point)
+        if marquee.active {
+            marquee.drag(to: point)
+        } else {
+            activeDrag?.drag(to: point)
+        }
+        
+        controller.redraw()
     }
 
-    // MARK: – Mouse-up
     func mouseUp(_ event: NSEvent) {
-        if marquee.active { marquee.end() }
+        if marquee.active {
+            marquee.end()
+        }
         activeDrag?.end()
         activeDrag = nil
+        controller.redraw()
     }
 
-    // MARK: - Right-click
+    // MARK: - Right Click for Context Menu
     func rightMouseDown(_ event: NSEvent) {
-        // Context menus should only appear when the cursor tool is active.
-        guard workbench.selectedTool?.id == "cursor" else { return }
+        guard controller.selectedTool?.id == "cursor" else { return }
 
-        let point = workbench.convert(event.locationInWindow, from: nil)
-
-        // Hit test to find the element under the cursor
-        let hitTarget = hitTest.hitTest(
-            at: point,
-            elements: workbench.elements,
-            schematicGraph: workbench.schematicGraph,
-            magnification: workbench.magnification
-        )
-
-        guard let hitTarget = hitTarget else {
-            // No specific element was hit. We could show a canvas context menu here.
+        let point = host.convert(event.locationInWindow, from: nil)
+        guard let hitTarget = self.hitTest(point: point),
+              let hitID = hitTarget.selectableID else {
             return
         }
 
-        // Determine the selectable ID from the hit target.
-        let idToSelect: UUID?
-        if hitTarget.kind == .text {
-            idToSelect = hitTarget.immediateOwnerID
-        } else {
-            idToSelect = hitTarget.selectableID
+        // If the right-clicked item is not already selected, make it the selection.
+        if !controller.selectedIDs.contains(hitID) {
+            controller.selectedIDs = [hitID]
         }
 
-        guard let hitID = idToSelect else { return }
-
-        // If the right-clicked item is not already in the current selection,
-        // clear the selection and select only the clicked item.
-        if !workbench.selectedIDs.contains(hitID) {
-            workbench.selectedIDs = [hitID]
-            workbench.onSelectionChange?(workbench.selectedIDs)
-        }
-
-        // Create and show the context menu.
         let menu = NSMenu()
-
         let deleteItem = NSMenuItem(title: "Delete", action: #selector(deleteMenuAction(_:)), keyEquivalent: "")
         deleteItem.target = self
         menu.addItem(deleteItem)
 
         if !menu.items.isEmpty {
-            menu.popUp(positioning: nil, at: point, in: workbench)
+            NSMenu.popUpContextMenu(menu, with: event, for: host)
         }
     }
 
     @objc private func deleteMenuAction(_ sender: Any) {
         deleteSelectedElements()
     }
+    
+    // MARK: - Public Actions (called by key commands)
+    func enterRotationMode(around point: CGPoint) {
+        rotation.begin(at: point)
+        controller.redraw()
+    }
+    
+    func cancelRotation() {
+        rotation.cancel()
+        controller.redraw()
+    }
 
-    // MARK: – Called by the key-command helper
-    func enterRotationMode(around point: CGPoint) { rotation.begin(at: point) }
-    func cancelRotation() { rotation.cancel() }
-
-    // MARK: – Helpers for key-commands
     func handleReturnKeyPress() {
-        guard var tool = workbench.selectedTool else { return }
+        guard var tool = controller.selectedTool else { return }
 
-        // Generic “confirm” for any tool that supports it.
+        let context = self.currentContext()
         let result = tool.handleReturn()
         switch result {
         case .element(let newElement):
-            workbench.elements.append(newElement)
-            workbench.onUpdate?(workbench.elements)
+            controller.elements.append(newElement)
+            if case .primitive(let prim) = newElement {
+                // controller.onPrimitiveAdded?(prim.id, context.selectedLayer)
+            }
         case .schematicModified:
-            break
+             controller.syncPinPositionsToGraph()
         case .noResult:
             break
         }
-        workbench.selectedTool = tool
-
+        controller.selectedTool = tool
+        controller.redraw()
     }
 
     func deleteSelectedElements() {
-        guard !workbench.selectedIDs.isEmpty else { return }
-
-        // Delete from both the schematic graph and the canvas elements.
-        workbench.schematicGraph.delete(items: workbench.selectedIDs)
-        workbench.elements.removeAll { workbench.selectedIDs.contains($0.id) }
-
-        // Clear the selection and notify listeners.
-        workbench.selectedIDs.removeAll()
-        workbench.onSelectionChange?([])
-        workbench.onUpdate?(workbench.elements)
+        guard !controller.selectedIDs.isEmpty else { return }
+        controller.schematicGraph.delete(items: controller.selectedIDs)
+        controller.elements.removeAll { controller.selectedIDs.contains($0.id) }
+        controller.selectedIDs.removeAll()
+        controller.redraw()
     }
 
-    // MARK: – Public reset
+    // MARK: - Reset & Helpers
     func reset() {
         marquee.end()
         activeDrag?.end()
         activeDrag = nil
         rotation.cancel()
+        controller.redraw()
     }
 
-    // MARK: - Private Helpers
-    private func updateCursor(at point: CGPoint) {
-        // Only change cursor when the select tool is active.
-        guard workbench.selectedTool?.id == "cursor" else {
-            NSCursor.arrow.set()
-            return
-        }
-
-        let hitTarget = hitTest.hitTest(
-            at: point,
-            elements: workbench.elements,
-            schematicGraph: workbench.schematicGraph,
-            magnification: workbench.magnification
+    func currentContext() -> RenderContext {
+        return RenderContext(
+            elements: controller.elements, schematicGraph: controller.schematicGraph,
+            selectedIDs: controller.selectedIDs, marqueeSelectedIDs: controller.marqueeSelectedIDs,
+            magnification: controller.magnification, selectedTool: controller.selectedTool,
+            mouseLocation: controller.mouseLocation, marqueeRect: controller.marqueeRect,
+            paperSize: controller.paperSize, sheetOrientation: controller.sheetOrientation,
+            sheetCellValues: controller.sheetCellValues, snapGridSize: controller.snapGridSize,
+            showGuides: controller.showGuides, crosshairsStyle: controller.crosshairsStyle,
+            hostViewBounds: host.bounds
         )
-
-        switch hitTarget?.kind {
-        case .pin, .pad:
-            NSCursor.crosshair.set()
-        case .primitive:
-            NSCursor.pointingHand.set()
-        default:
-            NSCursor.arrow.set()
-        }
     }
-}
-
-// MARK: - NSDraggingDestination
-extension WorkbenchInputCoordinator {
+    
+    // MARK: - Drag & Drop Destination
     func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         if sender.draggingPasteboard.canReadItem(withDataConformingToTypes: [UTType.transferableComponent.identifier]) {
             return .copy
@@ -314,24 +245,15 @@ extension WorkbenchInputCoordinator {
     }
 
     func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        let pasteboard = sender.draggingPasteboard
-        guard pasteboard.canReadItem(withDataConformingToTypes: [UTType.transferableComponent.identifier]) else {
-            return false
-        }
-
-        guard let data = pasteboard.data(forType: .transferableComponent) else {
-            return false
-        }
+        guard let data = sender.draggingPasteboard.data(forType: .transferableComponent) else { return false }
 
         do {
             let component = try JSONDecoder().decode(TransferableComponent.self, from: data)
-            let pointInView = workbench.convert(sender.draggingLocation, from: nil)
+            let pointInView = host.convert(sender.draggingLocation, from: nil)
 
-            workbench.onComponentDropped?(component, pointInView)
-            workbench.window?.makeFirstResponder(workbench)
-
+            // controller.onComponentDropped?(component, pointInView) // Add this callback to controller if needed
+            host.window?.makeFirstResponder(host)
             return true
-
         } catch {
             print("Failed to decode TransferableComponent:", error)
             return false
@@ -339,6 +261,16 @@ extension WorkbenchInputCoordinator {
     }
 }
 
-extension NSPasteboard.PasteboardType {
-    static let transferableComponent = NSPasteboard.PasteboardType(UTType.transferableComponent.identifier)
+// MARK: - Hit Test Service Conformance
+extension WorkbenchInputCoordinator {
+    func hitTest(point: CGPoint) -> CanvasHitTarget? {
+        let context = self.currentContext()
+        // Iterate through layers from top to bottom (visually)
+        for layer in controller.renderLayers.reversed() {
+            if let hit = layer.hitTest(point: point, context: context) {
+                return hit
+            }
+        }
+        return nil
+    }
 }
