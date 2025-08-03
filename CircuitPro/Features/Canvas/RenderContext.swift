@@ -43,18 +43,16 @@ struct RenderContext {
 /// Defines a single, composable layer of rendering for the canvas.
 /// Each rendering component conforms to this protocol.
 protocol RenderLayer {
-    /// A unique key for debugging and potential future caching.
+    /// A unique key for debugging and layer identification.
     var layerKey: String { get }
-
-    /// Generates the CALayers for this rendering pass based on the provided context.
-    /// - Parameter context: The current state of the canvas.
-    /// - Returns: An array of CALayers to be displayed for this layer.
-    func makeLayers(context: RenderContext) -> [CALayer]
     
-    /// Performs a hit-test on the contents of this layer.
-    /// - Parameter point: The point to test in world coordinates.
-    /// - Parameter context: The current state of the canvas.
-    /// - Returns: A hit-test result if the point intersects an object on this layer.
+    /// CALayer(s) and adds them as sublayers to the host's main layer.
+    func install(on hostLayer: CALayer)
+    
+    /// (path, color, isHidden, etc.) of the layers it installed previously.
+    func update(using context: RenderContext)
+
+    /// Hit-testing logic remains the same.
     func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget?
 }
 

@@ -1,23 +1,16 @@
-//
-//  ConnectionsRenderLayer.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/3/25.
-//
-
-
 import AppKit
 
 class ConnectionsRenderLayer: RenderLayer {
     var layerKey: String = "connections"
 
+    // 1. The layers are already persistent properties. This is correct.
     private let highlightLayer = CAShapeLayer()
     private let edgesLayer = CAShapeLayer()
     private let junctionsLayer = CAShapeLayer()
     private let verticesLayer = CAShapeLayer()
 
     init() {
-        // Configure constant layer styles
+        // The init method correctly sets up the constant layer styles. This is perfect.
         highlightLayer.lineWidth = 5.0
         highlightLayer.strokeColor = NSColor.systemBlue.withAlphaComponent(0.3).cgColor
         highlightLayer.fillColor = nil
@@ -31,7 +24,17 @@ class ConnectionsRenderLayer: RenderLayer {
         verticesLayer.fillColor = NSColor.systemPurple.cgColor
     }
 
-    func makeLayers(context: RenderContext) -> [CALayer] {
+    /// **NEW:** Called once to add the persistent layers to the host layer tree in the correct Z-order.
+    func install(on hostLayer: CALayer) {
+        // The order of insertion determines the drawing order (bottom to top).
+        hostLayer.addSublayer(highlightLayer)
+        hostLayer.addSublayer(edgesLayer)
+        hostLayer.addSublayer(junctionsLayer)
+        hostLayer.addSublayer(verticesLayer)
+    }
+
+    /// **NEW:** Updates the paths of the existing layers on every redraw.
+    func update(using context: RenderContext) {
         let allSelected = context.selectedIDs.union(context.marqueeSelectedIDs)
         let graph = context.schematicGraph
         
@@ -83,10 +86,9 @@ class ConnectionsRenderLayer: RenderLayer {
         }
         junctionsLayer.path = junctionsPath
         verticesLayer.path = verticesPath
-        
-        return [highlightLayer, edgesLayer, junctionsLayer, verticesLayer]
     }
     
+    /// The hit-testing logic remains unchanged.
     func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
         let tolerance = 5.0 / context.magnification
         return WorkbenchHitTestService.hitTestSchematicGraph(at: point, graph: context.schematicGraph, tolerance: tolerance)

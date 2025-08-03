@@ -52,15 +52,15 @@ final class CanvasController {
     init() {
         // The order here defines the Z-order of the drawing (bottom to top)
         self.renderLayers = [
-            GridRenderLayer(),
-            SheetRenderLayer(),
-            GuideRenderLayer(),
-            ConnectionsRenderLayer(),
-            ElementsRenderLayer(),
-            PreviewRenderLayer(),
-            HandlesRenderLayer(),
-            MarqueeRenderLayer(),
-            CrosshairsRenderLayer()
+//            GridRenderLayer(),
+//            SheetRenderLayer(),
+//            GuideRenderLayer(),
+//            ConnectionsRenderLayer(),
+//            ElementsRenderLayer(),
+//            PreviewRenderLayer(),
+//            HandlesRenderLayer(),
+//            MarqueeRenderLayer(),
+//            CrosshairsRenderLayer()
         ]
     }
     

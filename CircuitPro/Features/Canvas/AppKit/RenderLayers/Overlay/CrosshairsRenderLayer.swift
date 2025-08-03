@@ -1,24 +1,40 @@
-//
-//  CrosshairsRenderLayer.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/3/25.
-//
-
-
 import AppKit
 
 class CrosshairsRenderLayer: RenderLayer {
     var layerKey: String = "crosshairs"
 
-    func makeLayers(context: RenderContext) -> [CALayer] {
+    // 1. The layer is now a persistent property of the renderer.
+    private let shapeLayer = CAShapeLayer()
+
+    /// **NEW:** Called once to create the layer and add it to the host view's layer tree.
+    func install(on hostLayer: CALayer) {
+        // Set up constant properties that never change.
+        shapeLayer.fillColor = nil // A crosshair is never filled.
+        shapeLayer.strokeColor = NSColor.systemBlue.cgColor
+        shapeLayer.lineCap = .round
+
+        // Add the persistent layer to the host.
+        hostLayer.addSublayer(shapeLayer)
+    }
+
+    /// **NEW:** Updates the properties of the existing layer on every redraw.
+    func update(using context: RenderContext) {
+        // If the style is hidden or there's no mouse location, hide the layer.
         guard context.crosshairsStyle != .hidden, let point = context.mouseLocation else {
-            return []
+            shapeLayer.isHidden = true
+            shapeLayer.path = nil
+            return
         }
 
+        // Make sure the layer is visible.
+        shapeLayer.isHidden = false
+
+        // Calculate dynamic properties from the context.
         let path = CGMutablePath()
         let bounds = context.hostViewBounds
-        
+        let scale = 1.0 / max(context.magnification, .ulpOfOne)
+
+        // Build the path based on the current style.
         switch context.crosshairsStyle {
         case .fullScreenLines:
             path.move(to: CGPoint(x: point.x, y: bounds.minY))
@@ -35,28 +51,17 @@ class CrosshairsRenderLayer: RenderLayer {
             path.addLine(to: CGPoint(x: point.x, y: point.y + half))
 
         case .hidden:
+            // This case is handled by the guard statement above.
             break
         }
-        
-        let scale = 1.0 / max(context.magnification, .ulpOfOne)
-        let params = DrawingParameters(
-            path: path,
-            lineWidth: 1.0 * scale,
-            fillColor: nil,
-            strokeColor: NSColor.systemBlue.cgColor,
-            lineCap: .round
-        )
 
-        return [createLayer(from: params)]
+        // Update the dynamic properties of the existing layer.
+        shapeLayer.path = path
+        shapeLayer.lineWidth = 1.0 * scale
     }
-
-    private func createLayer(from parameters: DrawingParameters) -> CAShapeLayer {
-        let layer = CAShapeLayer()
-        layer.path = parameters.path
-        layer.fillColor = parameters.fillColor
-        layer.strokeColor = parameters.strokeColor
-        layer.lineWidth = parameters.lineWidth
-        layer.lineCap = parameters.lineCap
-        return layer
+    
+    /// The crosshairs are purely visual and should not be interactive.
+    func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
+        return nil
     }
 }

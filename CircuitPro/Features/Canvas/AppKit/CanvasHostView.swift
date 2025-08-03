@@ -1,11 +1,3 @@
-//
-//  CanvasHostView.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/3/25.
-//
-
-
 import AppKit
 import UniformTypeIdentifiers
 
@@ -18,15 +10,22 @@ final class CanvasHostView: NSView {
     init(controller: CanvasController) {
         self.controller = controller
         super.init(frame: .zero)
+        
         self.wantsLayer = true
         self.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+
+        // Install all render layers ONCE.
+        for renderLayer in controller.renderLayers {
+            renderLayer.install(on: self.layer!)
+        }
         
+        // The redraw callback now calls our new, efficient update method.
         self.controller.onNeedsRedraw = { [weak self] in
-            self?.needsDisplay = true
+            // Use updateLayers() instead of setNeedsDisplay for efficiency
+            self?.updateLayers()
         }
 
         self.inputCoordinator = WorkbenchInputCoordinator(host: self, controller: controller)
-        
         self.registerForDraggedTypes([.transferableComponent])
     }
     
@@ -38,48 +37,59 @@ final class CanvasHostView: NSView {
         updateTrackingAreas()
     }
     
-    // MARK: - Drawing
-    override func draw(_ dirtyRect: NSRect) {
-        let context = RenderContext(
+    private func updateLayers() {
+        // Create the context once.
+        let context = self.currentContext()
+        
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        
+        // Simply tell each layer to update itself using the new context.
+        for renderLayer in controller.renderLayers {
+            renderLayer.update(using: context)
+        }
+        
+        CATransaction.commit()
+    }
+    
+    // A private helper to create the context, keeping updateLayers clean.
+    private func currentContext() -> RenderContext {
+        return RenderContext(
+            // Data
             elements: controller.elements,
             schematicGraph: controller.schematicGraph,
+
+            // View State
             selectedIDs: controller.selectedIDs,
             marqueeSelectedIDs: controller.marqueeSelectedIDs,
             magnification: controller.magnification,
             selectedTool: controller.selectedTool,
+
+            // Interaction State
             mouseLocation: controller.mouseLocation,
             marqueeRect: controller.marqueeRect,
+
+            // Configuration
             paperSize: controller.paperSize,
             sheetOrientation: controller.sheetOrientation,
             sheetCellValues: controller.sheetCellValues,
             snapGridSize: controller.snapGridSize,
             showGuides: controller.showGuides,
             crosshairsStyle: controller.crosshairsStyle,
+            
+            // CORRECTED: Use 'self' to refer to the view's own bounds.
             hostViewBounds: self.bounds
         )
-        
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        
-        self.layer?.sublayers?.forEach { $0.removeFromSuperlayer() }
-        
-        for renderLayer in controller.renderLayers {
-            let layers = renderLayer.makeLayers(context: context)
-            for layer in layers {
-                self.layer?.addSublayer(layer)
-            }
-        }
-        
-        CATransaction.commit()
     }
 
-    // MARK: - Input & Tracking
+    // MARK: - Input & Tracking (This section is unchanged)
     override var acceptsFirstResponder: Bool { true }
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self, userInfo: nil))
+        let options: NSTrackingArea.Options = [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect]
+        addTrackingArea(NSTrackingArea(rect: bounds, options: options, owner: self, userInfo: nil))
     }
     
     override func mouseMoved(with event: NSEvent) { inputCoordinator.mouseMoved(event) }
@@ -99,6 +109,5 @@ final class CanvasHostView: NSView {
 }
 
 extension NSPasteboard.PasteboardType {
-
     static let transferableComponent = NSPasteboard.PasteboardType(UTType.transferableComponent.identifier)
 }

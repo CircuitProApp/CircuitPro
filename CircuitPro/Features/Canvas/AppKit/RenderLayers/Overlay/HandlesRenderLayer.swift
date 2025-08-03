@@ -1,34 +1,39 @@
-//
-//  HandlesRenderLayer.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/3/25.
-//
-
-
 import AppKit
 
 class HandlesRenderLayer: RenderLayer {
     var layerKey: String = "handles"
+    
+    // 1. A single, persistent layer for drawing all handles.
+    private let shapeLayer = CAShapeLayer()
 
-    func makeLayers(context: RenderContext) -> [CALayer] {
-        // Condition 1: Ensure only one element is selected.
+    /// **NEW:** Called once to create the layer and add it to the host view's layer tree.
+    func install(on hostLayer: CALayer) {
+        // Configure constant properties that never change.
+        shapeLayer.fillColor = NSColor.white.cgColor
+        shapeLayer.strokeColor = NSColor.systemBlue.cgColor
+        
+        // Add the persistent layer to the host.
+        hostLayer.addSublayer(shapeLayer)
+    }
+
+    /// **NEW:** Updates the properties of the existing layer on every redraw.
+    func update(using context: RenderContext) {
+        // First, determine if we should even draw handles.
         guard context.selectedIDs.count == 1,
-              // Condition 2: Find that selected element and ensure it's editable.
-              let element = context.elements.first(where: { context.selectedIDs.contains($0.id) && $0.isPrimitiveEditable })
+              let element = context.elements.first(where: { context.selectedIDs.contains($0.id) && $0.isPrimitiveEditable }),
+              !element.handles().isEmpty
         else {
-            return []
+            // If no valid element with handles is selected, hide the layer and clear its path.
+            shapeLayer.isHidden = true
+            shapeLayer.path = nil
+            return
         }
         
-        // Get the handles from the element.
+        // If we get here, we need to draw handles. Ensure the layer is visible.
+        shapeLayer.isHidden = false
+        
+        // Calculate the dynamic properties based on the context.
         let handles = element.handles()
-        
-        // Condition 3: Ensure the element actually has handles to draw.
-        guard !handles.isEmpty else {
-            return []
-        }
-        
-        // If all conditions pass, proceed to create the layer.
         let path = CGMutablePath()
         let handleScreenSize: CGFloat = 10.0
         let sizeInModelCoordinates = handleScreenSize / max(context.magnification, .ulpOfOne)
@@ -47,22 +52,14 @@ class HandlesRenderLayer: RenderLayer {
         // The line width must also be scaled to appear constant on screen.
         let lineWidth = 1.0 / max(context.magnification, .ulpOfOne)
         
-        let params = DrawingParameters(
-            path: path,
-            lineWidth: lineWidth,
-            fillColor: NSColor.white.cgColor,
-            strokeColor: NSColor.systemBlue.cgColor
-        )
-        
-        return [createLayer(from: params)]
+        // Update the dynamic properties of our persistent layer.
+        shapeLayer.path = path
+        shapeLayer.lineWidth = lineWidth
     }
     
-    private func createLayer(from parameters: DrawingParameters) -> CAShapeLayer {
-        let layer = CAShapeLayer()
-        layer.path = parameters.path
-        layer.fillColor = parameters.fillColor
-        layer.strokeColor = parameters.strokeColor
-        layer.lineWidth = parameters.lineWidth
-        return layer
+    /// Handles are not interactive via this layer; their interaction is managed
+    /// by the `HandleDragGesture` which does its own spatial calculation.
+    func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
+        return nil
     }
 }
