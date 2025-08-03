@@ -7,10 +7,11 @@
 
 import SwiftUI
 
-struct TextDefinition: Identifiable, Codable, Hashable {
+struct TextDefinition: Identifiable, Codable, Hashable, TextCore {
     var id: UUID = UUID()
     var source: TextSource
     var relativePosition: CGPoint
+    var cardinalRotation: CardinalRotation = .east
     var font: NSFont = .systemFont(ofSize: 12)
     var color: CGColor = NSColor.black.cgColor
     var alignment: NSTextAlignment = .center
@@ -19,10 +20,12 @@ struct TextDefinition: Identifiable, Codable, Hashable {
     init (
         source: TextSource,
         relativePosition: CGPoint,
+        cardinalRotation: CardinalRotation = .east,
         displayOptions: TextDisplayOptions = .allVisible
     ) {
         self.source = source
         self.relativePosition = relativePosition
+        self.cardinalRotation = cardinalRotation
         self.displayOptions = displayOptions
     }
 
@@ -30,7 +33,7 @@ struct TextDefinition: Identifiable, Codable, Hashable {
     // MARK: - Manual Codable Conformance
     
     enum CodingKeys: String, CodingKey {
-        case id, source, displayOptions, relativePosition, alignment
+        case id, source, displayOptions, relativePosition, alignment, cardinalRotation
         case fontName, fontSize, colorData
     }
 
@@ -40,6 +43,7 @@ struct TextDefinition: Identifiable, Codable, Hashable {
         self.source = try container.decode(TextSource.self, forKey: .source)
         self.relativePosition = try container.decode(CGPoint.self, forKey: .relativePosition)
         
+        self.cardinalRotation = try container.decodeIfPresent(CardinalRotation.self, forKey: .cardinalRotation) ?? .east
         self.displayOptions = try container.decodeIfPresent(TextDisplayOptions.self, forKey: .displayOptions) ?? .allVisible
         
         let alignmentRawValue = try container.decode(Int.self, forKey: .alignment)
@@ -65,6 +69,7 @@ struct TextDefinition: Identifiable, Codable, Hashable {
         try container.encode(source, forKey: .source)
         try container.encode(relativePosition, forKey: .relativePosition)
         try container.encode(alignment.rawValue, forKey: .alignment)
+        try container.encode(cardinalRotation, forKey: .cardinalRotation)
         try container.encode(displayOptions, forKey: .displayOptions)
 
         // Encode Font
@@ -75,6 +80,35 @@ struct TextDefinition: Identifiable, Codable, Hashable {
         let nsColor = NSColor(cgColor: color) ?? .black
         let colorData = try NSKeyedArchiver.archivedData(withRootObject: nsColor, requiringSecureCoding: false)
         try container.encode(colorData, forKey: .colorData)
+    }
+}
+
+extension TextDefinition: ResolvableText {
+    func resolve(
+        with override: TextOverride?,
+        componentName: String,
+        reference: String,
+        properties: [ResolvedProperty]
+    ) -> ResolvedText? {
+        if let override, !override.isVisible { return nil }
+
+        let resolvedString = source.resolveString(
+            with: displayOptions,
+            componentName: componentName,
+            reference: reference,
+            properties: properties
+        )
+
+        return ResolvedText(
+            origin: .definition(definitionID: id),
+            text: resolvedString,
+            font: font,
+            color: color,
+            alignment: alignment,
+            relativePosition: override?.relativePositionOverride ?? relativePosition,
+            anchorRelativePosition: relativePosition,
+            cardinalRotation: cardinalRotation
+        )
     }
 }
 

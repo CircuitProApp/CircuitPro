@@ -11,7 +11,7 @@ struct TextElement: Identifiable {
     let id: UUID
     var text: String
     var position: CGPoint
-    var rotation: CGFloat = 0.0
+    var cardinalRotation: CardinalRotation = .east
     var font: NSFont = .systemFont(ofSize: 12)
     var color: CGColor = NSColor.black.cgColor
     var alignment: NSTextAlignment = .left
@@ -24,7 +24,7 @@ extension TextElement: Equatable, Hashable {
         lhs.id == rhs.id &&
         lhs.text == rhs.text &&
         lhs.position == rhs.position &&
-        lhs.rotation == rhs.rotation &&
+        lhs.cardinalRotation == rhs.cardinalRotation &&
         lhs.font == rhs.font &&
         lhs.color == rhs.color &&
         lhs.isEditable == rhs.isEditable
@@ -37,7 +37,10 @@ extension TextElement: Equatable, Hashable {
 
 // MARK: - Transformable
 extension TextElement: Transformable {
-    // Position and rotation are already implemented as stored properties.
+    var rotation: CGFloat {
+        get { cardinalRotation.radians }
+        set { cardinalRotation = .closestWithDiagonals(to: newValue) }
+    }
 }
 
 // MARK: - Bounded

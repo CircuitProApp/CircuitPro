@@ -46,9 +46,11 @@ struct PadTool: CanvasTool {
     }
 
     mutating func handleRotate() {
-        let all = CardinalRotation.allCases
-        if let idx = all.firstIndex(of: rotation) {
-            rotation = all[(idx + 1) % all.count]
+        let cardinalDirections: [CardinalRotation] = [.east, .north, .west, .south]
+        if let idx = cardinalDirections.firstIndex(of: rotation) {
+            rotation = cardinalDirections[(idx + 1) % cardinalDirections.count]
+        } else {
+            rotation = .east // Default to east if current rotation is diagonal
         }
     }
 }

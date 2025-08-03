@@ -135,6 +135,10 @@ extension Pin: Drawable {
             let target = CGPoint(x: legStart.x, y: legStart.y - pad)
             let rotatedAnchor = anchor.applying(rotation)
             transform = rotation.concatenating(CGAffineTransform(translationX: target.x - rotatedAnchor.x, y: target.y - rotatedAnchor.y))
+        default:
+            let anchor = CGPoint(x: trueBounds.minX, y: trueBounds.midY)
+            let target = CGPoint(x: legStart.x + pad, y: legStart.y)
+            transform = CGAffineTransform(translationX: target.x - anchor.x, y: target.y - anchor.y)
         }
         
         return (textPath, transform)
@@ -152,12 +156,12 @@ extension Pin: Drawable {
         
         let targetPos: CGPoint
         switch cardinalRotation {
-        case .east, .west: // Horizontal pins
-            targetPos = CGPoint(x: mid.x - trueBounds.width / 2, y: mid.y + pad)
         case .north: // Pin points up
             targetPos = CGPoint(x: mid.x + pad + trueBounds.width, y: mid.y - trueBounds.height / 2)
         case .south: // Pin points down
             targetPos = CGPoint(x: mid.x + pad, y: mid.y - trueBounds.height / 2)
+        default: // Horizontal pins
+            targetPos = CGPoint(x: mid.x - trueBounds.width / 2, y: mid.y + pad)
         }
         
         let transform = CGAffineTransform(translationX: targetPos.x - trueBounds.minX, y: targetPos.y - trueBounds.minY)

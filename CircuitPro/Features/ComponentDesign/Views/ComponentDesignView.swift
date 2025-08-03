@@ -139,12 +139,14 @@ struct ComponentDesignView: View {
                 textDefinitions.append(TextDefinition(
                     source: source,
                     relativePosition: relativePosition,
+                    cardinalRotation: textElement.cardinalRotation,
                     displayOptions: displayOptions
                 ))
             } else {
                 textDefinitions.append(TextDefinition(
                     source: .static(textElement.text),
-                    relativePosition: relativePosition
+                    relativePosition: relativePosition,
+                    cardinalRotation: textElement.cardinalRotation
                 ))
             }
         }

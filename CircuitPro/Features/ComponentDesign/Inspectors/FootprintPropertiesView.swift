@@ -37,7 +37,7 @@ struct FootprintPropertiesView: View {
                 } else if case .text(let text) = element, manager.selectedElementIDs.contains(text.id) {
                     if let textBinding = $element.text {
                         
-                        TextPropertiesView(textElement: textBinding)
+                        TextPropertiesView(textElement: textBinding, editor: manager)
                         
                     }
                 }

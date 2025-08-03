@@ -1,10 +1,3 @@
-//
-//  SymbolInstance+TextManagement.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/2/25.
-//
-
 import Foundation
 
 extension SymbolInstance {
@@ -28,6 +21,7 @@ extension SymbolInstance {
             // The user modified an instance-specific text.
             if let index = self.textInstances.firstIndex(where: { $0.id == instanceID }) {
                 self.textInstances[index].relativePosition = editedText.relativePosition
+                self.textInstances[index].cardinalRotation = editedText.cardinalRotation
                 self.textInstances[index].text = editedText.text
             }
         }

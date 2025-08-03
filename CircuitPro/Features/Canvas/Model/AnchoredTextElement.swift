@@ -36,11 +36,12 @@ struct AnchoredTextElement: Identifiable {
             id: resolvedText.id, // The textElement can keep the source ID for its own needs.
             text: resolvedText.text,
             position: absoluteTextPosition,
-            rotation: parentTransform.rotationAngle,
+            cardinalRotation: resolvedText.cardinalRotation,
             font: resolvedText.font,
             color: resolvedText.color,
             alignment: resolvedText.alignment
         )
+        self.textElement.rotation += parentTransform.rotationAngle
     }
 }
 
@@ -53,6 +54,11 @@ extension AnchoredTextElement {
         let inverseTransform = parentTransform.inverted()
         let newRelativePosition = self.textElement.position.applying(inverseTransform)
         
+        // We also need to "un-rotate" the text's rotation to get its local rotation relative to the parent.
+        let parentRotation = parentTransform.rotationAngle
+        let textWorldRotation = self.textElement.rotation
+        let newRelativeRotation = CardinalRotation.closestWithDiagonals(to: textWorldRotation - parentRotation)
+
         return ResolvedText(
             origin: self.origin,
             text: self.textElement.text,
@@ -60,7 +66,8 @@ extension AnchoredTextElement {
             color: self.textElement.color,
             alignment: self.textElement.alignment,
             relativePosition: newRelativePosition,
-            anchorRelativePosition: self.anchorPosition.applying(inverseTransform)
+            anchorRelativePosition: self.anchorPosition.applying(inverseTransform),
+            cardinalRotation: newRelativeRotation
         )
     }
 }

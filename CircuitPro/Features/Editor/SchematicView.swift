@@ -117,8 +117,9 @@ struct SchematicView: View {
             let resolvedTexts = TextResolver.resolve(
                 from: dc.definition.symbol!,
                 and: dc.instance.symbolInstance,
-                with: resolvedProperties, // Pass properties for dynamic text like ">Resistance"
-                referenceDesignator: dc.referenceDesignator
+                componentName: dc.definition.name,
+                reference: dc.referenceDesignator,
+                properties: resolvedProperties
             )
             
             if var existingElement = existingElements.removeValue(forKey: instanceID),

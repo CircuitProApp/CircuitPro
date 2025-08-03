@@ -9,11 +9,8 @@ import SwiftUI
 
 struct TextPropertiesView: View {
     @Binding var textElement: TextElement
+    let editor: CanvasEditorManager
     @Environment(\.componentDesignManager) private var componentDesignManager
-    
-    private var symbolEditor: CanvasEditorManager {
-        componentDesignManager.symbolEditor
-    }
     
     private var componentData: (name: String, prefix: String, properties: [PropertyDefinition]) {
         (componentDesignManager.componentName, componentDesignManager.referenceDesignatorPrefix, componentDesignManager.componentProperties)
@@ -57,7 +54,7 @@ struct TextPropertiesView: View {
     /// depending on whether it is static or dynamically linked to a property.
     @ViewBuilder
     private var contentSection: some View {
-        let source = symbolEditor.textSourceMap[textElement.id]
+        let source = editor.textSourceMap[textElement.id]
 
         InspectorSection("Content") {
             // This part is the same: Show the source description.
@@ -75,11 +72,10 @@ struct TextPropertiesView: View {
                 }
             }
             
-            // THIS IS THE NEW PART:
             // If the source is a property, show the display option toggles.
             if let source, case .dynamic(.property) = source {
                 // Get a binding to the display options from the manager.
-                if let optionsBinding = symbolEditor.bindingForDisplayOptions(with: textElement.id, componentData: componentData) {
+                if let optionsBinding = editor.bindingForDisplayOptions(with: textElement.id, componentData: componentData) {
                     
                     Text("Display Options").font(.caption).foregroundColor(.secondary)
                     

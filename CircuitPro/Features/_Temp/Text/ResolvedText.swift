@@ -32,4 +32,5 @@ struct ResolvedText: Identifiable {
     // --- Positional data ---
     var relativePosition: CGPoint // The final position relative to the parent symbol.
     var anchorRelativePosition: CGPoint // The original anchor relative position.
+    var cardinalRotation: CardinalRotation
 }
