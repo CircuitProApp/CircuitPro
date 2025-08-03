@@ -12,16 +12,43 @@ struct CanvasView: NSViewRepresentable {
     var layerBindings: CanvasLayerBindings? = nil
     var onComponentDropped: ((TransferableComponent, CGPoint) -> Void)?
 
-    // Coordinator holds the controller
+    // Coordinator holds the controller and manages callbacks
     final class Coordinator {
         let canvasController: CanvasController
+        private var parent: CanvasView
 
-        init() {
+        init(_ parent: CanvasView) {
+            self.parent = parent
             self.canvasController = CanvasController()
+            setupCallbacks()
+        }
+        
+        func updateParent(_ parent: CanvasView) {
+            self.parent = parent
+        }
+
+        private func setupCallbacks() {
+            canvasController.onUpdateElements = { [weak self] newElements in
+                 DispatchQueue.main.async {
+                     self?.parent.elements = newElements
+                 }
+             }
+             canvasController.onUpdateSelectedIDs = { [weak self] newIDs in
+                 DispatchQueue.main.async {
+                     self?.parent.selectedIDs = newIDs
+                 }
+             }
+             canvasController.onUpdateSelectedTool = { [weak self] newTool in
+                 DispatchQueue.main.async {
+                     self?.parent.selectedTool = newTool
+                 }
+             }
         }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
 
     func makeNSView(context: Context) -> NSScrollView {
         let controller = context.coordinator.canvasController
@@ -45,19 +72,22 @@ struct CanvasView: NSViewRepresentable {
             forName: NSView.boundsDidChangeNotification,
             object: scrollView.contentView,
             queue: .main
-        ) { _ in
+        ) { [weak manager = self.manager] _ in
+            guard let manager = manager else { return }
             let origin = scrollView.contentView.bounds.origin
             let clip = scrollView.contentView.bounds.size
             let boardHeight = containerView.bounds.height
             let flippedY = boardHeight - origin.y - clip.height
-            self.manager.scrollOrigin = CGPoint(x: origin.x, y: flippedY)
-            self.manager.magnification = scrollView.magnification
+            manager.scrollOrigin = CGPoint(x: origin.x, y: flippedY)
+            manager.magnification = scrollView.magnification
         }
         
         return scrollView
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        context.coordinator.updateParent(self)
+        
         let controller = context.coordinator.canvasController
         let containerView = scrollView.documentView as! DocumentContainerView
         let hostView = containerView.canvasHostView
@@ -76,22 +106,7 @@ struct CanvasView: NSViewRepresentable {
         controller.crosshairsStyle = manager.crosshairsStyle
         controller.paperSize = manager.paperSize
         
-        controller.onUpdateElements = { newElements in
-             DispatchQueue.main.async {
-                 self.elements = newElements
-             }
-         }
-         controller.onUpdateSelectedIDs = { newIDs in
-             DispatchQueue.main.async {
-                 self.selectedIDs = newIDs
-             }
-         }
-         controller.onUpdateSelectedTool = { newTool in
-             DispatchQueue.main.async {
-                 self.selectedTool = newTool
-             }
-         }
-
+        // Callbacks are now managed by the Coordinator
 
         // 2. Set the frame of the container and host views
         let workbenchSize = manager.paperSize.canvasSize(orientation: .landscape) // landscape temp

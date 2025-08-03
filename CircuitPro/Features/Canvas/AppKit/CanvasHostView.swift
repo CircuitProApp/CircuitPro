@@ -12,17 +12,16 @@ final class CanvasHostView: NSView {
         super.init(frame: .zero)
         
         self.wantsLayer = true
-        self.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        self.layer?.backgroundColor = NSColor.clear.cgColor // Background is handled by layers
 
-        // Install all render layers ONCE.
+        // Install render layers ONCE.
         for renderLayer in controller.renderLayers {
             renderLayer.install(on: self.layer!)
         }
         
-        // The redraw callback now calls our new, efficient update method.
+        // The redraw callback now asynchronously invalidates the view.
         self.controller.onNeedsRedraw = { [weak self] in
-            // Use updateLayers() instead of setNeedsDisplay for efficiency
-            self?.updateLayers()
+            self?.needsDisplay = true // This is the asynchronous, non-hanging way.
         }
 
         self.inputCoordinator = WorkbenchInputCoordinator(host: self, controller: controller)
@@ -30,26 +29,32 @@ final class CanvasHostView: NSView {
     }
     
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        window?.makeFirstResponder(self)
-        updateTrackingAreas()
+
+    // This tells AppKit that our view is layer-backed and that we
+    // will be doing our drawing by updating layer properties.
+    override var wantsUpdateLayer: Bool {
+        return true
     }
     
-    private func updateLayers() {
-        // Create the context once.
+    // **NEW:** The drawing logic moves from `draw(_:)` to `updateLayer()`.
+    // This is the correct method for a high-performance, layer-backed view.
+    override func updateLayer() {
         let context = self.currentContext()
         
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         
-        // Simply tell each layer to update itself using the new context.
+        // Simply tell each layer to update its persistent CALayers.
         for renderLayer in controller.renderLayers {
             renderLayer.update(using: context)
         }
         
         CATransaction.commit()
+    }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        window?.makeFirstResponder(self)
+        updateTrackingAreas()
     }
     
     // A private helper to create the context, keeping updateLayers clean.
