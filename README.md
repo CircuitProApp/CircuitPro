@@ -10,6 +10,12 @@
   <a aria-label="Join the community on Discord" href="https://discord.gg/DS89GgqA8G" target="_blank">
     <img alt="" src="https://img.shields.io/badge/Join%20the%20community-black.svg?style=for-the-badge&logo=Discord">
   </a>
+  <a aria-label="Support on PayPal" href="https://paypal.me/circuitproapp" target="_blank">
+    <img alt="Donate via PayPal" src="https://img.shields.io/badge/Support%20on-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white">
+  </a>
+  <a aria-label="Support on Ko-fi" href="https://ko-fi.com/circuitpro" target="_blank">
+    <img alt="Support on Ko-fi" src="https://img.shields.io/badge/Support%20on-Ko--fi-29abe0?style=for-the-badge&logo=ko-fi&logoColor=white">
+  </a>
 </p>
 
 <p><b>Introducing Circuit Pro</b> <i>the Mac-native PCB design tool</i>. Built from the ground up for macOS, Circuit Pro delivers a seamless, intuitive circuit design experience — with schematic and layout editor, component builder and native performance. Beautiful, powerful, and made for hardware designers who think different.</p>
