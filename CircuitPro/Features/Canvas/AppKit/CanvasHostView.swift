@@ -12,7 +12,7 @@ final class CanvasHostView: NSView {
         super.init(frame: .zero)
         
         self.wantsLayer = true
-        self.layer?.backgroundColor = NSColor.clear.cgColor // Background is handled by layers
+        self.layer?.backgroundColor = NSColor.white.cgColor
 
         // Install render layers ONCE.
         for renderLayer in controller.renderLayers {
