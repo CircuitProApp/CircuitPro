@@ -11,10 +11,10 @@
     <img alt="" src="https://img.shields.io/badge/Join%20the%20community-black.svg?style=for-the-badge&logo=Discord">
   </a>
   <a aria-label="Support on PayPal" href="https://paypal.me/circuitproapp" target="_blank">
-    <img alt="Donate via PayPal" src="https://img.shields.io/badge/Support%20on-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white">
+    <img alt="Support on PayPal" src="https://img.shields.io/badge/Support%20on%20PayPal-black.svg?style=for-the-badge&logo=paypal">
   </a>
   <a aria-label="Support on Ko-fi" href="https://ko-fi.com/circuitpro" target="_blank">
-    <img alt="Support on Ko-fi" src="https://img.shields.io/badge/Support%20on-Ko--fi-29abe0?style=for-the-badge&logo=ko-fi&logoColor=white">
+    <img alt="Support on Ko-fi" src="https://img.shields.io/badge/Support%20on%20Ko--fi-black.svg?style=for-the-badge&logo=ko-fi">
   </a>
 </p>
 
