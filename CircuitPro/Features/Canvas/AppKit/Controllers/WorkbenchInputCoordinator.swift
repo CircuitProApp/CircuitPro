@@ -54,10 +54,12 @@ final class WorkbenchInputCoordinator {
     }
 
     // MARK: - Mouse Clicks & Drags
+    // In WorkbenchInputCoordinator.swift
+
     func mouseDown(_ event: NSEvent) {
         // First, check for and cancel any active rotation gesture.
         if rotation.active {
-            rotation.cancel()
+            rotation.commit()
             controller.redraw()
             return
         }
@@ -80,13 +82,27 @@ final class WorkbenchInputCoordinator {
         // If cursor tool is active, handle selection and dragging.
         guard controller.selectedTool?.id == "cursor" else { return }
         
-        // Does the click hit an existing element?
+        // Perform the hit-test.
         if let hitTarget = self.hitTest(point: point) {
             
-            let idToSelect = hitTarget.selectableID
+            // --- THIS IS THE CRITICAL FIX ---
+            // We now determine the correct, unique ID to select based on what was hit.
+            let idToSelect: UUID?
             
-            // Handle selection logic (Shift key for additive selection).
+            // If we hit text, we want to select the specific ANCHORED TEXT element, not its parent symbol.
+            // The AnchoredTextElement.hitTest method correctly puts its unique ID into the ownerPath.
+            // The SelectionDragGesture has logic to find and drag it.
+            if hitTarget.kind == .text {
+                idToSelect = hitTarget.ownerPath.last
+            } else {
+                // For everything else, select the top-level owner.
+                idToSelect = hitTarget.selectableID
+            }
+            // --- END OF CRITICAL FIX ---
+            
+            // Now, `idToSelect` is guaranteed to be the unique ID of the specific element we want.
             if let hitID = idToSelect {
+                // Handle standard selection logic (Shift key for additive selection).
                 if event.modifierFlags.contains(.shift) {
                     if controller.selectedIDs.contains(hitID) {
                         controller.selectedIDs.remove(hitID)
@@ -94,22 +110,28 @@ final class WorkbenchInputCoordinator {
                         controller.selectedIDs.insert(hitID)
                     }
                 } else {
-                    // Only re-select if the item isn't already the sole selection.
+                    // If not holding Shift, only select the clicked item if it's not
+                    // already the sole selected item.
                     if !(controller.selectedIDs.count == 1 && controller.selectedIDs.contains(hitID)) {
                         controller.selectedIDs = [hitID]
                     }
                 }
+                // Inform the UI of the selection change.
+                controller.onUpdateSelectedIDs?(controller.selectedIDs)
             }
 
-            // After updating selection, attempt to begin a drag.
+            // After updating section, attempt to begin a drag.
+            // The drag gesture will now receive the correct selection set.
             if selDrag.begin(at: point, with: hitTarget, event: event) {
                 activeDrag = selDrag
             }
+            
         // If the click hit empty space...
         } else {
             // Clear existing selection if not shift-clicking.
             if !event.modifierFlags.contains(.shift) && !controller.selectedIDs.isEmpty {
                 controller.selectedIDs.removeAll()
+                controller.onUpdateSelectedIDs?(controller.selectedIDs)
             }
             // Begin marquee selection.
             marquee.begin(at: point, event: event)
@@ -117,7 +139,6 @@ final class WorkbenchInputCoordinator {
         
         controller.redraw()
     }
-
     func mouseDragged(_ event: NSEvent) {
         let point = host.convert(event.locationInWindow, from: nil)
 
@@ -170,12 +191,13 @@ final class WorkbenchInputCoordinator {
     
     // MARK: - Public Actions (called by key commands)
     func enterRotationMode(around point: CGPoint) {
-        rotation.begin(at: point)
+        rotation.begin(around: point)
         controller.redraw()
     }
     
     func cancelRotation() {
-        rotation.cancel()
+        // This method is now explicitly for reverting the gesture.
+        rotation.cancelAndRevert()
         controller.redraw()
     }
 
@@ -212,7 +234,7 @@ final class WorkbenchInputCoordinator {
         marquee.end()
         activeDrag?.end()
         activeDrag = nil
-        rotation.cancel()
+        cancelRotation()
         controller.redraw()
     }
 

@@ -15,43 +15,42 @@ final class ToolActionController {
             return false
         }
         
-        // --- THIS SECTION IS NOW FULLY CORRECTED ---
+        // --- This is the final, clean implementation ---
 
         let snappedPoint = controller.snap(point)
-        let hitTarget = hitTestService.hitTest(point: snappedPoint)
         
-        // Use the "compatibility shim" to create the legacy context for the tools.
-        let legacyContext = CanvasToolContext(
-            existingPinCount: controller.elements.reduce(0) { $1.isPin ? $0 + 1 : $0 },
-            existingPadCount: controller.elements.reduce(0) { $1.isPad ? $0 + 1 : $0 },
-            selectedLayer: controller.selectedLayer,
-            magnification: controller.magnification,
+        // 1. Get the complete state of the canvas for rendering reference.
+        let renderContext = hitTestService.currentContext()
+        
+        // 2. Perform the event-specific hit-test.
+        let hitTarget = hitTestService.hitTest(point: snappedPoint)
+
+        // 3. Create the lightweight, specific context for THIS interaction.
+        let interactionContext = ToolInteractionContext(
+            clickCount: event.clickCount,
             hitTarget: hitTarget,
-            schematicGraph: controller.schematicGraph,
-            clickCount: event.clickCount
+            renderContext: renderContext
         )
 
-        // Call the tool with the correct legacy context.
-        let result = tool.handleTap(at: snappedPoint, context: legacyContext)
+        // 4. Call the tool with the correct interaction-specific context.
+        // (This requires the CanvasTool protocol to be updated).
+        let result = tool.handleTap(at: snappedPoint, context: interactionContext)
 
-        // --- END CORRECTION ---
+        // --- End of new implementation ---
 
         switch result {
         case .element(let newElement):
             controller.elements.append(newElement)
-            // Push the change back up to SwiftUI!
             controller.onUpdateElements?(controller.elements)
 
         case .schematicModified:
             controller.syncPinPositionsToGraph()
-
 
         case .noResult:
             break
         }
 
         controller.selectedTool = tool
-        // Push the tool state change back up to SwiftUI!
         controller.onUpdateSelectedTool?(tool)
         
         return true

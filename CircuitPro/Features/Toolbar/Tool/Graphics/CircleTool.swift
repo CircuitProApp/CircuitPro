@@ -8,7 +8,7 @@ struct CircleTool: CanvasTool {
 
     private var center: CGPoint?
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
+    mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         if let center {
             let radius = hypot(location.x - center.x, location.y - center.y)
             let circle = CirclePrimitive(
@@ -17,7 +17,7 @@ struct CircleTool: CanvasTool {
                 position: center,
                 rotation: 0,
                 strokeWidth: 1,
-                color: .init(color: context.selectedLayer.color),
+                color: .init(color: .red),
                 filled: false
             )
             self.center = nil
@@ -28,7 +28,7 @@ struct CircleTool: CanvasTool {
         }
     }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
+    mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
         guard let center else { return [] }
         let radius = hypot(mouse.x - center.x, mouse.y - center.y)
         let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
@@ -37,7 +37,7 @@ struct CircleTool: CanvasTool {
         return [DrawingParameters(
             path: path,
             lineWidth: 1.0,
-            strokeColor: NSColor(context.selectedLayer.color).cgColor,
+            strokeColor: NSColor(.red).cgColor,
             lineDashPattern: [4, 4]
         )]
     }

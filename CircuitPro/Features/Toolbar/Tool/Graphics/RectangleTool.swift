@@ -8,7 +8,7 @@ struct RectangleTool: CanvasTool {
 
     private var start: CGPoint?
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
+    mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         if let start {
             let rect = CGRect(origin: start, size: .zero).union(CGRect(origin: location, size: .zero))
             let center = CGPoint(x: rect.midX, y: rect.midY)
@@ -22,7 +22,7 @@ struct RectangleTool: CanvasTool {
                 rotation: 0,
                 strokeWidth: 1,
                 filled: false,
-                color: .init(color: context.selectedLayer.color)
+                color: .init(color: .red)
             )
             self.start = nil
             return .element(.primitive(.rectangle(rectangle)))
@@ -32,7 +32,7 @@ struct RectangleTool: CanvasTool {
         }
     }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
+    mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
         guard let start else { return [] }
         let rect = CGRect(origin: start, size: .zero).union(CGRect(origin: mouse, size: .zero))
         let path = CGPath(rect: rect, transform: nil)
@@ -40,7 +40,7 @@ struct RectangleTool: CanvasTool {
         return [DrawingParameters(
             path: path,
             lineWidth: 1.0,
-            strokeColor: NSColor(context.selectedLayer.color).cgColor,
+            strokeColor: NSColor(.red).cgColor,
             lineDashPattern: [4, 4]
         )]
     }

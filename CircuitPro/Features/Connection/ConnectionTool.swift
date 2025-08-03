@@ -1,10 +1,3 @@
-//
-//  ConnectionTool.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 7/18/25.
-//
-
 import SwiftUI
 import AppKit
 
@@ -33,91 +26,79 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     private var state: State = .idle
 
     // MARK: – CanvasTool Conformance
-    mutating func handleTap(at loc: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
-        guard let graph = context.schematicGraph else {
-            assertionFailure("ConnectionTool requires a schematic graph in the context.")
-            return .noResult
-        }
+    
+    // UPDATED: The method signature now accepts the unified RenderContext.
+    mutating func handleTap(at loc: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
+         // Access canvas state via the nested renderContext.
+         let graph = context.renderContext.schematicGraph
+         
+         // Access event-specific data directly from the interaction context.
+         let clickCount = context.clickCount
+         let hitTarget = context.hitTarget
 
-        if context.clickCount > 1 {
-            state = .idle
-            return .schematicModified
-        }
+         if clickCount > 1 {
+             state = .idle
+             return .schematicModified
+         }
 
-        switch state {
-        case .idle:
-            let initialDirection = determineInitialDirection(from: context.hitTarget)
-            state = .drawing(from: context.hitTarget, at: loc, direction: initialDirection)
-            return .noResult
+         switch state {
+         case .idle:
+             let initialDirection = determineInitialDirection(from: hitTarget)
+             state = .drawing(from: hitTarget, at: loc, direction: initialDirection)
+             return .noResult
 
-        case .drawing(let startTarget, let startPoint, let direction):
-            let endTarget = context.hitTarget
+         case .drawing(let startTarget, let startPoint, let direction):
+             let endTarget = hitTarget
 
-            if startTarget == nil && endTarget == nil && startPoint == loc { return .noResult }
+             if startTarget == nil && endTarget == nil && startPoint == loc { return .noResult }
 
-            let startVertexID = getOrCreateVertex(at: startPoint, from: startTarget, in: graph)
-            let endVertexID = getOrCreateVertex(at: loc, from: endTarget, in: graph)
+             let startVertexID = getOrCreateVertex(at: startPoint, from: startTarget, in: graph)
+             let endVertexID = getOrCreateVertex(at: loc, from: endTarget, in: graph)
 
-            if startVertexID == endVertexID {
-                state = .idle
-                return .schematicModified
-            }
-            
-            let isStraightLine = (startPoint.x == loc.x || startPoint.y == loc.y)
-            let strategy: SchematicGraph.ConnectionStrategy = (direction == .horizontal) ? .horizontalThenVertical : .verticalThenHorizontal
-            graph.connect(from: startVertexID, to: endVertexID, preferring: strategy)
+             if startVertexID == endVertexID {
+                 state = .idle
+                 return .schematicModified
+             }
+             
+             let isStraightLine = (startPoint.x == loc.x || startPoint.y == loc.y)
+             let strategy: SchematicGraph.ConnectionStrategy = (direction == .horizontal) ? .horizontalThenVertical : .verticalThenHorizontal
+             graph.connect(from: startVertexID, to: endVertexID, preferring: strategy)
 
-            if endTarget == nil {
-                let newDirection = isStraightLine ? direction.toggled() : direction
-                // **UPDATED**: Create the new CanvasHitTarget struct.
-                let newStartTarget = CanvasHitTarget(
-                    partID: endVertexID,
-                    ownerPath: [], // A vertex has no selectable owner.
-                    kind: .vertex(type: .corner),
-                    position: loc
-                )
-                state = .drawing(from: newStartTarget, at: loc, direction: newDirection)
-            } else {
-                state = .idle
-            }
-        }
-        
-        return .schematicModified
-    }
+             if endTarget == nil {
+                 let newDirection = isStraightLine ? direction.toggled() : direction
+                 let newStartTarget = CanvasHitTarget(partID: endVertexID, ownerPath: [], kind: .vertex(type: .corner), position: loc)
+                 state = .drawing(from: newStartTarget, at: loc, direction: newDirection)
+             } else {
+                 state = .idle
+             }
+         }
+         
+         return .schematicModified
+     }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
-        // This preview logic remains unchanged as it only depends on state, not the structure of CanvasHitTarget.
-        guard case .drawing(_, let startPoint, let direction) = state else { return [] }
+     // PREVIEW IS CORRECT: Previewing is a rendering concern, so it uses RenderContext.
+     mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
+         guard case .drawing(_, let startPoint, let direction) = state else { return [] }
 
-        let corner: CGPoint
-        switch direction {
-        case .horizontal:
-            corner = CGPoint(x: mouse.x, y: startPoint.y)
-        case .vertical:
-            corner = CGPoint(x: startPoint.x, y: mouse.y)
-        }
-        
-        let path = CGMutablePath()
-        path.move(to: startPoint)
-        path.addLine(to: corner)
-        path.addLine(to: mouse)
+         let corner: CGPoint
+         switch direction {
+         case .horizontal: corner = CGPoint(x: mouse.x, y: startPoint.y)
+         case .vertical:   corner = CGPoint(x: startPoint.x, y: mouse.y)
+         }
+         
+         let path = CGMutablePath(); path.move(to: startPoint); path.addLine(to: corner); path.addLine(to: mouse)
 
-        return [DrawingParameters(
-            path: path,
-            lineWidth: 1.0,
-            fillColor: nil,
-            strokeColor: NSColor.systemBlue.cgColor,
-            lineDashPattern: [4, 2]
-        )]
-    }
+         return [DrawingParameters(path: path, lineWidth: 1.5, strokeColor: NSColor.systemBlue.cgColor, lineDashPattern: [4, 2])]
+     }
 
-    // MARK: - Tool State Management
+    // MARK: - Tool State Management (Unchanged)
+    
     mutating func handleEscape() -> Bool {
         if case .drawing = state {
             state = .idle
-            return true // State was successfully cleared.
+            return true
         }
-        return false // Tool was already idle.
+        return false
     }
 
     mutating func handleReturn() -> CanvasToolResult {
@@ -129,44 +110,28 @@ struct ConnectionTool: CanvasTool, Equatable, Hashable {
     }
 
     mutating func handleBackspace() {
-        // This tool requires a more complex undo stack for backspace,
-        // so for now it does nothing.
+        // This tool's backspace is non-trivial and can be implemented later.
     }
     
-    // MARK: - Private Helpers
-    
-    // **UPDATED**: This helper now deconstructs the new CanvasHitTarget struct.
+    // MARK: - Private Helpers (Unchanged)
+
     private func getOrCreateVertex(at point: CGPoint, from target: CanvasHitTarget?, in graph: SchematicGraph) -> UUID {
         guard let target = target else {
             return graph.getOrCreateVertex(at: point)
         }
 
-        // Check if the hit target was a pin.
-        if case .pin = target.kind {
-            // A pin must be owned by a symbol to be connected. The owner is the last ID in the path.
-            if let symbolID = target.ownerPath.last {
-                // The pin's ID is the partID from the hit record.
-                return graph.getOrCreatePinVertex(at: point, symbolID: symbolID, pinID: target.partID)
-            }
+        if case .pin = target.kind, let symbolID = target.ownerPath.last {
+            return graph.getOrCreatePinVertex(at: point, symbolID: symbolID, pinID: target.partID)
         }
         
-        // For any other kind of hit (or a pin without an owner), create a standard vertex.
         return graph.getOrCreateVertex(at: point)
     }
     
-    // **UPDATED**: This helper now checks the `.kind` property of the new struct.
     private func determineInitialDirection(from hitTarget: CanvasHitTarget?) -> DrawingDirection {
-        guard let hitTarget = hitTarget else { return .horizontal }
-
-        // Check if the hit target was an edge and extract its orientation.
-        guard case .edge(let orientation) = hitTarget.kind else {
+        guard let hitTarget = hitTarget, case .edge(let orientation) = hitTarget.kind else {
             return .horizontal
         }
 
-        // If we hit an edge, the next drawing direction should be perpendicular to it.
-        switch orientation {
-        case .horizontal: return .vertical
-        case .vertical: return .horizontal
-        }
+        return orientation == .horizontal ? .vertical : .horizontal
     }
 }

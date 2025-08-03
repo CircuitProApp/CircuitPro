@@ -34,6 +34,10 @@ struct RenderContext {
     
     // Geometry
     let hostViewBounds: CGRect
+    
+    func count(where predicate: (CanvasElement) -> Bool) -> Int {
+        return elements.lazy.filter(predicate).count
+    }
 }
 
 /// Defines a single, composable layer of rendering for the canvas.

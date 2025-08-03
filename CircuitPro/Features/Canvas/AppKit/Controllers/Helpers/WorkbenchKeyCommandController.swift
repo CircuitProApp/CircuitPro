@@ -32,13 +32,17 @@ final class WorkbenchKeyCommandController {
                 controller.selectedTool = tool
             
             // Otherwise, if there's a selection, start a mouse-based rotation gesture.
-            }
-//            else if let id = controller.selectedIDs.first,
-//                      let center = controller.elements
-//                        .first(where: { $0.id == id })?
-//                        .boundingBox.center {
-//                coordinator.enterRotationMode(around: center)
-//            }
+            } else if let id = controller.selectedIDs.first,
+                               let element = controller.elements.first(where: { $0.id == id }) {
+                         
+                         // --- THIS IS THE FIX ---
+                         // Calculate the center point directly from public properties.
+                         let boundingBox = element.boundingBox
+                         let center = CGPoint(x: boundingBox.midX, y: boundingBox.midY)
+                         // --- END FIX ---
+                         
+                         coordinator.enterRotationMode(around: center)
+                     }
             return true
 
         // 'Enter' or 'Return' key: Confirm the current tool action.

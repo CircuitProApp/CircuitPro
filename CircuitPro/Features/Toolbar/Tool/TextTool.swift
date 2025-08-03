@@ -14,7 +14,7 @@ struct TextTool: CanvasTool {
     var symbolName: String = CircuitProSymbols.Text.textBox
     var label: String = "Text"
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
+    mutating func handleTap(at location: CGPoint, context: RenderContext) -> CanvasToolResult {
         let newTextElement = TextElement(
             id: UUID(),
             text: "text",

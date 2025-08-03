@@ -59,7 +59,6 @@ final class HandleDragGesture: CanvasDragGesture {
         let snappedPoint = controller.snap(point)
         let snappedOpposite = frozenOppositeHandlePosition.map { controller.snap($0) }
 
-        // Find the element being modified and update its handle.
         for i in updatedElements.indices where updatedElements[i].id == active.id {
             updatedElements[i].updateHandle(
                 active.kind,
@@ -67,9 +66,13 @@ final class HandleDragGesture: CanvasDragGesture {
                 opposite: snappedOpposite
             )
             
-            // Mutate the controller's state directly. This will trigger a redraw.
+            // Mutate the controller's state...
             controller.elements = updatedElements
-            return // Stop after finding and updating the element.
+            
+            // And immediately inform SwiftUI of the change.
+            controller.onUpdateElements?(updatedElements)
+            
+            return
         }
     }
 

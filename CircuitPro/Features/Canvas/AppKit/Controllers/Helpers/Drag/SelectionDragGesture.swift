@@ -8,85 +8,100 @@ final class SelectionDragGesture: CanvasDragGesture {
     private var didMove = false
     private let threshold: CGFloat = 4.0
 
-    // Caches for original positions of items being dragged.
     private var originalElementPositions: [UUID: CGPoint] = [:]
-    
-    // The anchor point for grid-snapping, based on the item clicked.
+    private var originalTextPositions: [UUID: CGPoint] = [:]
     private var dragAnchor: (position: CGPoint, size: CGSize?, snapsToCenter: Bool)?
 
     init(controller: CanvasController) {
         self.controller = controller
     }
 
-    /// Tries to begin a drag gesture for the current selection.
-    /// This should be called by the input coordinator *after* a hit has been confirmed.
-    /// - Returns: `true` if a drag gesture was successfully initiated.
     func begin(at point: CGPoint, with hitTarget: CanvasHitTarget, event: NSEvent) -> Bool {
-        // An item is draggable if any part of its ownership chain is in the selection set.
         let isDraggable = hitTarget.ownerPath.contains { controller.selectedIDs.contains($0) }
         guard isDraggable else {
             return false
         }
 
-        // Set the anchor point for the drag. This is the starting position of the
-        // item actually hit by the cursor, allowing for correct grid snapping.
-        if let hitID = hitTarget.selectableID, let element = controller.elements.first(where: { $0.id == hitID }) {
-            let position = element.transformable.position
-            let size = element.primitive?.size
-            let snapsToCenter = element.primitive?.snapsToCenter ?? true // Default to center snapping
-            dragAnchor = (position, size, snapsToCenter)
-        }
-
         origin = point
         didMove = false
         originalElementPositions.removeAll()
+        originalTextPositions.removeAll()
+        dragAnchor = nil
 
-        // Cache positions of all selected items.
-        for element in controller.elements where controller.selectedIDs.contains(element.id) {
-            originalElementPositions[element.id] = element.transformable.position
+        // Set the drag anchor if we hit a CanvasElement.
+        if let hitID = hitTarget.selectableID, let element = controller.elements.first(where: { $0.id == hitID }) {
+            dragAnchor = (element.transformable.position, element.primitive?.size, element.primitive?.snapsToCenter ?? true)
         }
 
-        // Tell the schematic graph to prepare its vertices for the drag.
+        // Cache positions of all selected CanvasElements.
+        for element in controller.elements {
+            if controller.selectedIDs.contains(element.id) {
+                originalElementPositions[element.id] = element.transformable.position
+                continue
+            }
+            if case .symbol(let symbol) = element {
+                for text in symbol.anchoredTexts where controller.selectedIDs.contains(text.id) {
+                    originalTextPositions[text.id] = text.position
+                }
+            }
+        }
+        
+        // --- THIS IS THE FIX ---
+
+        // Check if any of the selected IDs correspond to an edge in the schematic graph.
+        let hasSelectedGraphEdge = controller.selectedIDs.contains { controller.schematicGraph.edges[$0] != nil }
+
+        // The drag gesture is valid if we have cached element positions OR if we've selected an edge.
+        guard !originalElementPositions.isEmpty || !originalTextPositions.isEmpty || hasSelectedGraphEdge else {
+            // Nothing draggable was found in the selection. Abort.
+            return false
+        }
+        
+        // --- END FIX ---
+
         controller.schematicGraph.beginDrag(selectedIDs: controller.selectedIDs)
 
         return true
     }
-
-    // MARK: - Drag
     
+    // The drag() and end() methods are already correct and need no changes.
     func drag(to point: CGPoint) {
         guard let origin = origin else { return }
 
         let rawDelta = point - origin
-
-        // Don't start the drag until the mouse has moved beyond a small threshold.
         if !didMove && hypot(rawDelta.x, rawDelta.y) < threshold {
             return
         }
         didMove = true
 
-        // Calculate the correctly snapped move delta based on the drag anchor.
         let moveDelta = calculateSnappedDelta(rawDelta: rawDelta)
 
-        // Part 1: Move all selected canvas elements.
-        if !originalElementPositions.isEmpty {
+        if !originalElementPositions.isEmpty || !originalTextPositions.isEmpty {
             var updatedElements = controller.elements
             for i in updatedElements.indices {
                 if let basePosition = originalElementPositions[updatedElements[i].id] {
                     updatedElements[i].moveTo(originalPosition: basePosition, offset: moveDelta)
+                } else if case .symbol(var symbol) = updatedElements[i] {
+                    var wasModified = false
+                    for j in symbol.anchoredTexts.indices {
+                        if let textBasePosition = originalTextPositions[symbol.anchoredTexts[j].id] {
+                            symbol.anchoredTexts[j].position = textBasePosition + moveDelta
+                            wasModified = true
+                        }
+                    }
+                    if wasModified { updatedElements[i] = .symbol(symbol) }
                 }
             }
-            // Mutate the controller's state directly.
             controller.elements = updatedElements
+            controller.onUpdateElements?(updatedElements)
         }
-
-        // Part 2: Update the schematic graph drag.
+        
         controller.schematicGraph.updateDrag(by: moveDelta)
     }
 
     private func calculateSnappedDelta(rawDelta: CGPoint) -> CGPoint {
         guard let anchor = dragAnchor else {
-            // Fallback for safety, though anchor should always be set.
+            // Wires don't have a single anchor, so they move by snapped grid increments.
             let snappedX = controller.snap(CGPoint(x: rawDelta.x, y: 0)).x
             let snappedY = controller.snap(CGPoint(x: 0, y: rawDelta.y)).y
             return CGPoint(x: snappedX, y: snappedY)
@@ -95,35 +110,22 @@ final class SelectionDragGesture: CanvasDragGesture {
         let newAnchorPos = anchor.position + rawDelta
         let snappedNewAnchorPos: CGPoint
 
-        // Use corner-snapping for resizable primitives, center-snapping for others.
         if let size = anchor.size, size != .zero, !anchor.snapsToCenter {
-            let halfSize = CGPoint(x: size.width / 2, y: size.height / 2)
-            let originalCorner = anchor.position - halfSize
-            let newCorner = newAnchorPos - halfSize
-            let snappedNewCorner = controller.snap(newCorner)
-            
-            let cornerDelta = snappedNewCorner - originalCorner
-            snappedNewAnchorPos = anchor.position + cornerDelta
+            let halfSize = CGPoint(x: size.width / 2, y: size.height / 2); let originalCorner = anchor.position - halfSize
+            let newCorner = newAnchorPos - halfSize; let snappedNewCorner = controller.snap(newCorner)
+            let cornerDelta = snappedNewCorner - originalCorner; snappedNewAnchorPos = anchor.position + cornerDelta
         } else {
-            // Snap the center of the object to the grid.
             snappedNewAnchorPos = controller.snap(newAnchorPos)
         }
-
         return snappedNewAnchorPos - anchor.position
     }
 
-    // MARK: - End
-    
     func end() {
         if didMove {
-            // If a drag occurred, finalize the positions in the schematic graph.
             controller.schematicGraph.endDrag()
         }
-
-        // Reset all transient state.
-        origin = nil
-        dragAnchor = nil
+        origin = nil; dragAnchor = nil; didMove = false
         originalElementPositions.removeAll()
-        didMove = false
+        originalTextPositions.removeAll()
     }
 }

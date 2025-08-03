@@ -1,18 +1,10 @@
-//
-//  PreviewRenderLayer.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/3/25.
-//
-
-
 import AppKit
 
 class PreviewRenderLayer: RenderLayer {
     var layerKey: String = "preview"
     
-
     func makeLayers(context: RenderContext) -> [CALayer] {
+        // 1. Ensure there is an active tool and a mouse location.
         guard var tool = context.selectedTool,
               tool.id != "cursor",
               let mouse = context.mouseLocation
@@ -20,16 +12,12 @@ class PreviewRenderLayer: RenderLayer {
             return []
         }
         
-        // Create the legacy context for the tool
-        let legacyContext = CanvasToolContext(
-            magnification: context.magnification,
-            schematicGraph: context.schematicGraph
-        )
-
-        let snappedMouse = mouse // Snapping is handled by the coordinator
-        let drawingParams = tool.preview(mouse: snappedMouse, context: legacyContext)
+        // 2. The legacy context is gone! We now pass the main RenderContext directly.
+        // The tool's `preview` method signature now matches the context we have.
+        let drawingParams = tool.preview(mouse: mouse, context: context)
         
-        // The preview draws in model space, so its line widths should not be scaled down.
+        // 3. Create the CALayers from the drawing parameters.
+        // The preview draws in model space, so its line widths should not be scaled down by magnification.
         return drawingParams.map { createLayer(from: $0) }
     }
     
@@ -38,7 +26,7 @@ class PreviewRenderLayer: RenderLayer {
         layer.path = parameters.path
         layer.fillColor = parameters.fillColor
         layer.strokeColor = parameters.strokeColor
-        layer.lineWidth = parameters.lineWidth // Not scaled
+        layer.lineWidth = parameters.lineWidth // Not scaled, so it previews correctly
         layer.lineDashPattern = parameters.lineDashPattern
         layer.lineCap = parameters.lineCap
         layer.lineJoin = parameters.lineJoin

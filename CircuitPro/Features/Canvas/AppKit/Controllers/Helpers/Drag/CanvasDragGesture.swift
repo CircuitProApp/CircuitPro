@@ -8,6 +8,6 @@
 import AppKit
 
 protocol CanvasDragGesture {
-    func drag (to point: CGPoint)
+    func drag(to point: CGPoint)
     func end()
 }
