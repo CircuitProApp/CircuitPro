@@ -33,6 +33,7 @@ struct InspectorFieldStyle: ViewModifier {
                     Rectangle().fill(.ultraThinMaterial)
                 }
             }
+            .font(.callout)
             .clipAndStroke(with: .rect(cornerRadius: 5))
             .focusRing(isFocused, shape: .rect(cornerRadius: 6))
             .onTapGesture { isFocused = true }

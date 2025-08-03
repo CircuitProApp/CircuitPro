@@ -61,6 +61,17 @@ final class ComponentDesignManager {
         }
     }
 
+    /// A computed property providing a list of text sources available for dynamic placement on canvases.
+    var availableTextSources: [(displayName: String, source: TextSource)] {
+        var sources: [(String, TextSource)] = []
+        if !componentName.isEmpty { sources.append(("Name", .dynamic(.componentName))) }
+        if !referenceDesignatorPrefix.isEmpty { sources.append(("Reference", .dynamic(.reference))) }
+        for propDef in componentProperties {
+            sources.append((propDef.key.label, .dynamic(.property(definitionID: propDef.id))))
+        }
+        return sources
+    }
+
     // MARK: - Validation State
     var validationSummary = ValidationSummary()
     var showFieldErrors = false
