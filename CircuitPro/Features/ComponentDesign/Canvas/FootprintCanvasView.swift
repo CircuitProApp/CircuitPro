@@ -1,5 +1,5 @@
 //
-//  FootprintDesignView.swift
+//  FootprintCanvasView.swift
 //  Circuit Pro
 //
 //  Created by Giorgi Tchelidze on 5/7/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct FootprintDesignView: View {
+struct FootprintCanvasView: View {
 
     @Environment(CanvasManager.self)
     private var canvasManager

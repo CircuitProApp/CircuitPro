@@ -1,5 +1,5 @@
 //
-//  SymbolPropertiesEditorView.swift
+//  SymbolPropertiesView.swift
 //  CircuitPro
 //
 //  Created by Gemini on 28.07.25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct SymbolPropertiesEditorView: View {
+struct SymbolPropertiesView: View {
     @Environment(\.componentDesignManager) private var componentDesignManager
 
     var body: some View {

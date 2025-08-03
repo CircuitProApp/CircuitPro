@@ -77,13 +77,13 @@ struct ComponentDesignStageContainerView: View {
         case .symbol:
             selectionBasedDetailView(
                 count: componentDesignManager.symbolEditor.selectedElementIDs.count,
-                content: SymbolPropertiesEditorView.init
+                content: SymbolPropertiesView.init
             )
 
         case .footprint:
             selectionBasedDetailView(
                 count: componentDesignManager.footprintEditor.selectedElementIDs.count,
-                content: FootprintPropertiesEditorView.init
+                content: FootprintPropertiesView.init
             )
         }
     }
@@ -101,10 +101,10 @@ struct ComponentDesignStageContainerView: View {
             }
             .directionalPadding(vertical: 25, horizontal: 15)
         case .symbol:
-            SymbolDesignView()
+            SymbolCanvasView()
                 .environment(symbolCanvasManager)
         case .footprint:
-            FootprintDesignView()
+            FootprintCanvasView()
                 .environment(footprintCanvasManager)
         }
     }

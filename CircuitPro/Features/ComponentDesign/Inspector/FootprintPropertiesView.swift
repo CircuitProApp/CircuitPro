@@ -1,5 +1,5 @@
 //
-//  FootprintPropertiesEditorView.swift
+//  FootprintPropertiesView.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 7/28/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct FootprintPropertiesEditorView: View {
+struct FootprintPropertiesView: View {
     @Environment(\.componentDesignManager) private var componentDesignManager
     
     var body: some View {
@@ -32,6 +32,12 @@ struct FootprintPropertiesEditorView: View {
                         
                         // This view will receive the binding for the primitive.
                         PrimitivePropertiesView(primitive: primitiveBinding)
+                        
+                    }
+                } else if case .text(let text) = element, manager.selectedElementIDs.contains(text.id) {
+                    if let textBinding = $element.text {
+                        
+                        TextPropertiesView(textElement: textBinding)
                         
                     }
                 }

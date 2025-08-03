@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct SymbolDesignView: View {
+struct SymbolCanvasView: View {
 
     @Environment(CanvasManager.self)
     private var canvasManager
