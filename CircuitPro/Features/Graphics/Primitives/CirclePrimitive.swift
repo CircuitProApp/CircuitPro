@@ -50,19 +50,17 @@ struct CirclePrimitive: GraphicPrimitive {
     }
 
     func makePath() -> CGPath {
-            let path = CGMutablePath()
-            path.addArc(
-                center: position,
-                radius: radius,
-                startAngle: 0,
-                endAngle: .pi * 2,
-                clockwise: false
-            )
+        let path = CGMutablePath()
+        
+        // THE FIX: The center is now CGPoint.zero, not self.position.
+        path.addArc(
+            center: .zero,
+            radius: radius,
+            startAngle: 0,
+            endAngle: .pi * 2,
+            clockwise: false
+        )
 
-            var transform = CGAffineTransform.identity
-                .translatedBy(x: position.x, y: position.y)
-                .rotated(by: rotation)
-                .translatedBy(x: -position.x, y: -position.y)
-            return path.copy(using: &transform) ?? path
-        }
+        return path
+    }
 }

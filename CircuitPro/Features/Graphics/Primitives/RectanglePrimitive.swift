@@ -91,25 +91,18 @@ struct RectanglePrimitive: GraphicPrimitive {
         }
     }
     func makePath() -> CGPath {
+        // Create the rect centered at the origin, not at self.position.
         let frame = CGRect(
-            x: position.x - size.width * 0.5,
-            y: position.y - size.height * 0.5,
+            x: -size.width * 0.5,
+            y: -size.height * 0.5,
             width: size.width,
             height: size.height
         )
 
         let path = CGMutablePath()
-
-        // Use the corner radius (clamped to not exceed half the smallest dimension)
         let clampedCornerRadius = max(0, min(cornerRadius, min(size.width, size.height) * 0.5))
         path.addRoundedRect(in: frame, cornerWidth: clampedCornerRadius, cornerHeight: clampedCornerRadius)
 
-        // Apply rotation about the rectangle's center
-        var transform = CGAffineTransform.identity
-            .translatedBy(x: position.x, y: position.y)
-            .rotated(by: rotation)
-            .translatedBy(x: -position.x, y: -position.y)
-
-        return path.copy(using: &transform) ?? path
+        return path
     }
 }

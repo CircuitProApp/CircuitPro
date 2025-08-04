@@ -61,7 +61,7 @@ final class CanvasHostView: NSView {
     private func currentContext() -> RenderContext {
         return RenderContext(
             // Data
-            elements: controller.elements,
+            sceneRoot: controller.sceneRoot,
             schematicGraph: controller.schematicGraph,
 
             // View State

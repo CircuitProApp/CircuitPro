@@ -17,6 +17,22 @@ final class CanvasController {
     var marqueeSelectedIDs: Set<UUID> = []
     var selectedTool: AnyCanvasTool?
     var selectedLayer: CanvasLayer = .layer0
+    
+    var sceneRoot: any CanvasNode {
+        let root = BaseNode()
+
+        for element in self.elements {
+            // For now, we only care about converting primitives.
+            // We will add the other cases later.
+            if case .primitive(let primitive) = element {
+                let node = PrimitiveNode(primitive: primitive)
+                root.addChild(node)
+            }
+            // Later, you will add:
+            // else if case .symbol(let symbol) = element { ... }
+        }
+        return root
+    }
 
     // MARK: - View Configuration
     var magnification: CGFloat = 1.0
@@ -49,7 +65,7 @@ final class CanvasController {
             ConnectionsRenderLayer(),
             ElementsRenderLayer(),
             PreviewRenderLayer(),
-            HandlesRenderLayer(),
+//            HandlesRenderLayer(),
             MarqueeRenderLayer(),
             CrosshairsRenderLayer()
         ]

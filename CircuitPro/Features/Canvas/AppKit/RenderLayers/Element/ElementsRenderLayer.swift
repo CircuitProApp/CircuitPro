@@ -3,41 +3,29 @@ import AppKit
 class ElementsRenderLayer: RenderLayer {
     var layerKey: String = "elements"
 
-    // 1. A persistent container for all element-related layers.
     private let rootLayer = CALayer()
-    
-    // 2. The pool of reusable shape layers.
     private var layerPool: [CAShapeLayer] = []
 
-    /// **NEW:** Called once to install the root container layer.
     func install(on hostLayer: CALayer) {
         hostLayer.addSublayer(rootLayer)
     }
 
-    /// **NEW:** Updates the element drawing by reusing, creating, and hiding layers from a pool.
+    /// Updates the element drawing by traversing the scene graph and using a layer pool.
     func update(using context: RenderContext) {
-        var currentLayerIndex = 0
         let allSelectedIDs = context.selectedIDs.union(context.marqueeSelectedIDs)
+        
+        // 1. Recursively collect all drawing parameters from the scene graph.
+        let allParams = collectDrawingParameters(from: context.sceneRoot, selectedIDs: allSelectedIDs)
 
-        // Iterate through all elements that need to be drawn.
-        for element in context.elements {
-            
-            // Draw the selection halo first (so it's rendered behind the body).
-            if let haloParams = element.drawable.makeHaloParameters(selectedIDs: allSelectedIDs) {
-                let haloLayer = layer(at: currentLayerIndex)
-                configure(layer: haloLayer, from: haloParams)
-                currentLayerIndex += 1
-            }
-            
-            // Draw the element's body parts.
-            for bodyParams in element.drawable.makeBodyParameters() {
-                let bodyLayer = layer(at: currentLayerIndex)
-                configure(layer: bodyLayer, from: bodyParams)
-                currentLayerIndex += 1
-            }
+        // 2. Use the layer pooling system to render the parameters.
+        var currentLayerIndex = 0
+        for params in allParams {
+            let layer = layer(at: currentLayerIndex)
+            configure(layer: layer, from: params)
+            currentLayerIndex += 1
         }
         
-        // Hide any remaining, unused layers in the pool. This is very cheap.
+        // 3. Hide any remaining, unused layers in the pool.
         if currentLayerIndex < layerPool.count {
             for i in currentLayerIndex..<layerPool.count {
                 layerPool[i].isHidden = true
@@ -45,37 +33,58 @@ class ElementsRenderLayer: RenderLayer {
         }
     }
 
-    /// The hit-test logic remains the same, as it operates on the data model, not the layers.
-    func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
-        let tolerance = 5.0 / context.magnification
-        // Iterate elements in reverse to hit the top-most one first.
-        for element in context.elements.reversed() {
-            if let hit = element.hitTest(point, tolerance: tolerance) {
-                return hit
+    /// Recursively traverses the scene graph to gather all drawing and halo parameters.
+    private func collectDrawingParameters(from node: any CanvasNode, selectedIDs: Set<UUID>) -> [DrawingParameters] {
+        guard node.isVisible else { return [] }
+        
+        var allParameters: [DrawingParameters] = []
+
+        // Get the selection halo for the current node *first*, so it's drawn behind.
+        if let haloParams = node.makeHaloParameters(selectedIDs: selectedIDs) {
+            allParameters.append(haloParams)
+        }
+        
+        // Get the main body drawing parameters for the current node.
+        allParameters.append(contentsOf: node.makeBodyParameters())
+
+        // Recursively collect parameters from all children.
+        for child in node.children {
+            allParameters.append(contentsOf: collectDrawingParameters(from: child, selectedIDs: selectedIDs))
+        }
+
+        // Apply the node's world transform to all paths collected from it and its children.
+        var transform = node.worldTransform
+        if transform != .identity {
+            for i in allParameters.indices {
+                if let newPath = allParameters[i].path.copy(using: &transform) {
+                    allParameters[i].path = newPath
+                }
             }
         }
+        
+        return allParameters
+    }
+
+    // The hit-testing logic will be migrated later. For now, it does nothing.
+    func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
+        // TODO: Migrate hit-testing to traverse the scene graph.
         return nil
     }
 
-    // MARK: - Layer Pooling Helpers
-
-    /// Gets a layer from the pool, creating a new one if the pool is exhausted.
+    // MARK: - Layer Pooling Helpers (Unchanged)
+    
     private func layer(at index: Int) -> CAShapeLayer {
         if index < layerPool.count {
-            // Success: An existing layer can be reused.
             let layer = layerPool[index]
-            layer.isHidden = false // Ensure it's visible.
+            layer.isHidden = false
             return layer
         }
-        
-        // Failure: The pool is not large enough. Create a new layer.
         let newLayer = CAShapeLayer()
         layerPool.append(newLayer)
         rootLayer.addSublayer(newLayer)
         return newLayer
     }
     
-    /// A simple helper to apply all drawing parameters to a given layer.
     private func configure(layer: CAShapeLayer, from parameters: DrawingParameters) {
         layer.path = parameters.path
         layer.fillColor = parameters.fillColor

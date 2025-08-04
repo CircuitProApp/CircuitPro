@@ -11,7 +11,7 @@ import AppKit
 /// This struct bundles all the information a layer might need to render itself.
 struct RenderContext {
     // Data
-    let elements: [CanvasElement]
+    let sceneRoot: any CanvasNode
     let schematicGraph: SchematicGraph
 
     // View State
@@ -36,7 +36,7 @@ struct RenderContext {
     let hostViewBounds: CGRect
     
     func count(where predicate: (CanvasElement) -> Bool) -> Int {
-        return elements.lazy.filter(predicate).count
+        return 0 /*elements.lazy.filter(predicate).count*/
     }
 }
 

@@ -240,7 +240,7 @@ final class WorkbenchInputCoordinator {
 
     func currentContext() -> RenderContext {
         return RenderContext(
-            elements: controller.elements, schematicGraph: controller.schematicGraph,
+            sceneRoot: controller.sceneRoot, schematicGraph: controller.schematicGraph,
             selectedIDs: controller.selectedIDs, marqueeSelectedIDs: controller.marqueeSelectedIDs,
             magnification: controller.magnification, selectedTool: controller.selectedTool,
             mouseLocation: controller.mouseLocation, marqueeRect: controller.marqueeRect,

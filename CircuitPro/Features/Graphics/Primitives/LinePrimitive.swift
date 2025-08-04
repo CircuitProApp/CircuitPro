@@ -79,9 +79,18 @@ struct LinePrimitive: GraphicPrimitive {
     }
 
     func makePath() -> CGPath {
+        // Calculate the total length of the line.
+        let length = hypot(end.x - start.x, end.y - start.y)
+        
+        // THE FIX: Create a simple horizontal line of the correct length,
+        // centered at the origin (0,0).
+        let localStart = CGPoint(x: -length / 2, y: 0)
+        let localEnd = CGPoint(x: length / 2, y: 0)
+        
         let path = CGMutablePath()
-        path.move(to: start)
-        path.addLine(to: end)
+        path.move(to: localStart)
+        path.addLine(to: localEnd)
+        
         return path
     }
 }

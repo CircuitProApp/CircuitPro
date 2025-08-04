@@ -2,7 +2,7 @@ import AppKit
 
 /// Data needed for a single drawing pass.
 struct DrawingParameters {
-    let path: CGPath
+    var path: CGPath
     var lineWidth: CGFloat
     var fillColor: CGColor?
     var strokeColor: CGColor? = NSColor.systemBlue.cgColor
