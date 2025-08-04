@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 final class CanvasHostView: NSView {
 
     private let controller: CanvasController
-    private var inputCoordinator: WorkbenchInputCoordinator!
+    var inputCoordinator: WorkbenchInputCoordinator!
 
     // MARK: - Init & Setup
     init(controller: CanvasController) {
@@ -36,7 +36,7 @@ final class CanvasHostView: NSView {
         return true
     }
     
-    // **NEW:** The drawing logic moves from `draw(_:)` to `updateLayer()`.
+    // The drawing logic moves from `draw(_:)` to `updateLayer()`.
     // This is the correct method for a high-performance, layer-backed view.
     override func updateLayer() {
         let context = self.currentContext()
@@ -51,6 +51,7 @@ final class CanvasHostView: NSView {
         
         CATransaction.commit()
     }
+    
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         window?.makeFirstResponder(self)
@@ -60,13 +61,12 @@ final class CanvasHostView: NSView {
     // A private helper to create the context, keeping updateLayers clean.
     private func currentContext() -> RenderContext {
         return RenderContext(
-            // Data
+            // Data Models
             sceneRoot: controller.sceneRoot,
             schematicGraph: controller.schematicGraph,
 
-            // View State
-            selectedIDs: controller.selectedIDs,
-            marqueeSelectedIDs: controller.marqueeSelectedIDs,
+            // Visual State
+            highlightedNodeIDs: controller.highlightedNodeIDs,
             magnification: controller.magnification,
             selectedTool: controller.selectedTool,
 
@@ -82,12 +82,12 @@ final class CanvasHostView: NSView {
             showGuides: controller.showGuides,
             crosshairsStyle: controller.crosshairsStyle,
             
-            // CORRECTED: Use 'self' to refer to the view's own bounds.
+            // Geometry
             hostViewBounds: self.bounds
         )
     }
 
-    // MARK: - Input & Tracking (This section is unchanged)
+    // MARK: - Input & Tracking
     override var acceptsFirstResponder: Bool { true }
 
     override func updateTrackingAreas() {

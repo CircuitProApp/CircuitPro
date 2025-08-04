@@ -1,40 +1,26 @@
-//
-//  CanvasController.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/3/25.
-//
-
-
 import AppKit
 
 @Observable
 final class CanvasController {
-    // MARK: - Canvas Data & State
-    var elements: [CanvasElement] = []
-    var schematicGraph: SchematicGraph = .init()
-    var selectedIDs: Set<UUID> = []
-    var marqueeSelectedIDs: Set<UUID> = []
-    var selectedTool: AnyCanvasTool?
-    var selectedLayer: CanvasLayer = .layer0
-    
-    var sceneRoot: any CanvasNode {
-        let root = BaseNode()
 
-        for element in self.elements {
-            // For now, we only care about converting primitives.
-            // We will add the other cases later.
-            if case .primitive(let primitive) = element {
-                let node = PrimitiveNode(primitive: primitive)
-                root.addChild(node)
-            }
-            // Later, you will add:
-            // else if case .symbol(let symbol) = element { ... }
-        }
-        return root
+    // MARK: - Core Data Model
+    
+    let sceneRoot: any CanvasNode = BaseNode()
+    var selectedNodes: [any CanvasNode] = []
+    var marqueeHoveredNodes: [any CanvasNode] = []
+
+    var highlightedNodeIDs: Set<UUID> {
+        let selected = Set(selectedNodes.map { $0.id })
+        let hovered = Set(marqueeHoveredNodes.map { $0.id })
+        return selected.union(hovered)
     }
 
+    var selectedTool: AnyCanvasTool?
+    var selectedLayer: CanvasLayer = .layer0
+    var schematicGraph: SchematicGraph = .init()
+
     // MARK: - View Configuration
+    
     var magnification: CGFloat = 1.0
     var isSnappingEnabled: Bool = true
     var snapGridSize: CGFloat = 10.0
@@ -45,19 +31,18 @@ final class CanvasController {
     var sheetCellValues: [String: String] = [:]
     
     // MARK: - Interaction State
+    
     var mouseLocation: CGPoint?
     var marqueeRect: CGRect?
 
-    // MARK: - Rendering
+    // MARK: - Rendering & Callbacks
+    
     private(set) var renderLayers: [RenderLayer] = []
     var onNeedsRedraw: (() -> Void)?
-    
-    var onUpdateElements: (([CanvasElement]) -> Void)?
-    var onUpdateSelectedIDs: ((Set<UUID>) -> Void)?
+    var onUpdateSelectedNodes: (([any CanvasNode]) -> Void)?
     var onUpdateSelectedTool: ((AnyCanvasTool) -> Void)?
 
     init() {
-        // The order here defines the Z-order of the drawing (bottom to top)
         self.renderLayers = [
             GridRenderLayer(),
             SheetRenderLayer(),
@@ -65,55 +50,52 @@ final class CanvasController {
             ConnectionsRenderLayer(),
             ElementsRenderLayer(),
             PreviewRenderLayer(),
-//            HandlesRenderLayer(),
             MarqueeRenderLayer(),
             CrosshairsRenderLayer()
         ]
     }
     
-    /// Call this whenever a state property changes to trigger a visual update.
     func redraw() {
         onNeedsRedraw?()
     }
     
-    // MARK: - Business Logic (previously in WorkbenchView)
-    
     func snap(_ point: CGPoint) -> CGPoint {
-        let origin = showGuides ? CGPoint(x: 0, y: 0) : .zero // Simplified for now
+        let origin: CGPoint = .zero
         let service = SnapService(gridSize: snapGridSize, isEnabled: isSnappingEnabled, origin: origin)
         return service.snap(point)
     }
-
-    func syncPinPositionsToGraph() {
-        let currentSymbolIDs = Set<UUID>(elements.compactMap {
-            guard case .symbol(let symbol) = $0 else { return nil }
-            return symbol.id
-        })
-
-        let verticesToRemove = schematicGraph.vertices.values.filter { vertex in
-            if case .pin(let symbolID, _) = vertex.ownership {
-                return !currentSymbolIDs.contains(symbolID)
-            }
-            return false
-        }
-
-        if !verticesToRemove.isEmpty {
-            schematicGraph.delete(items: Set(verticesToRemove.map { $0.id }))
-        }
-
-        for element in elements {
-            guard case .symbol(let symbolElement) = element else { continue }
-            let transform = CGAffineTransform(translationX: symbolElement.position.x, y: symbolElement.position.y)
-                .rotated(by: symbolElement.rotation)
-
-            for pin in symbolElement.symbol.pins {
-                let worldPinPosition = pin.position.applying(transform)
-                if let vertexID = schematicGraph.findVertex(ownedBy: symbolElement.id, pinID: pin.id) {
-                    schematicGraph.moveVertex(id: vertexID, to: worldPinPosition)
-                } else {
-                    schematicGraph.getOrCreatePinVertex(at: worldPinPosition, symbolID: symbolElement.id, pinID: pin.id)
-                }
-            }
-        }
+    
+    func rebuildScene(from designComponents: [DesignComponent]) {
+        // Clear existing nodes.
+        self.sceneRoot.children.removeAll()
+        
+//        for dc in designComponents {
+//            let instanceID = dc.instance.id
+//            
+//            // Resolve the data needed to build the node.
+//            let resolvedProperties = PropertyResolver.resolve(from: dc.definition, and: dc.instance)
+//            
+//            let resolvedTexts = TextResolver.resolve(
+//                from: dc.definition.symbol!,
+//                and: dc.instance.symbolInstance,
+//                componentName: dc.definition.name,
+//                reference: dc.referenceDesignator,
+//                properties: resolvedProperties
+//            )
+//            
+//            // Create the new SymbolNode.
+//            // This assumes you will create a `SymbolNode` class similar to `PrimitiveNode`.
+//            let newSymbolNode = SymbolNode(
+//                id: instanceID,
+//                instance: dc.instance.symbolInstance,
+//                symbol: dc.definition.symbol!,
+//                reference: dc.referenceDesignator,
+//                properties: resolvedProperties,
+//                resolvedTexts: resolvedTexts
+//            )
+//            
+//            // Add the new node to the scene.
+//            self.sceneRoot.addChild(newSymbolNode)
+//        }
     }
 }

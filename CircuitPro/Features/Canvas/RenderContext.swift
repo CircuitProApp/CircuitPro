@@ -1,30 +1,38 @@
-//
-//  RenderContext.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/3/25.
-//
-
 import AppKit
 
 /// A snapshot of the canvas state, passed to each RenderLayer during a drawing pass.
 /// This struct bundles all the information a layer might need to render itself.
 struct RenderContext {
-    // Data
+    // MARK: - Data Models
+    
+    /// The root of the scene graph containing all canvas nodes.
     let sceneRoot: any CanvasNode
+    
+    /// The data model for schematic nets and connections.
     let schematicGraph: SchematicGraph
 
-    // View State
-    let selectedIDs: Set<UUID>
-    let marqueeSelectedIDs: Set<UUID>
+    // MARK: - Visual State
+    
+    /// The unified set of all nodes that should be visually highlighted (e.g., with a halo).
+    /// This combines the committed selection with any live marquee-hovered items.
+    let highlightedNodeIDs: Set<UUID>
+    
+    /// The current zoom level of the canvas.
     let magnification: CGFloat
+    
+    /// The currently active tool (e.g., cursor, wire tool).
     let selectedTool: AnyCanvasTool?
 
-    // Interaction State
+    // MARK: - Interaction State
+    
+    /// The current position of the mouse, in world coordinates.
     let mouseLocation: CGPoint?
+    
+    /// The rectangle for the marquee selection tool, if currently active.
     let marqueeRect: CGRect?
 
-    // Configuration
+    // MARK: - Configuration
+    
     let paperSize: PaperSize
     let sheetOrientation: PaperOrientation
     let sheetCellValues: [String: String]
@@ -32,12 +40,10 @@ struct RenderContext {
     let showGuides: Bool
     let crosshairsStyle: CrosshairsStyle
     
-    // Geometry
-    let hostViewBounds: CGRect
+    // MARK: - Geometry
     
-    func count(where predicate: (CanvasElement) -> Bool) -> Int {
-        return 0 /*elements.lazy.filter(predicate).count*/
-    }
+    /// The bounds of the host view, in its own coordinate system.
+    let hostViewBounds: CGRect
 }
 
 /// Defines a single, composable layer of rendering for the canvas.
@@ -46,13 +52,16 @@ protocol RenderLayer {
     /// A unique key for debugging and layer identification.
     var layerKey: String { get }
     
-    /// CALayer(s) and adds them as sublayers to the host's main layer.
+    /// Called once to create the permanent CALayer(s) for this renderer and add them
+    /// as sublayers to the host's main layer.
     func install(on hostLayer: CALayer)
     
-    /// (path, color, isHidden, etc.) of the layers it installed previously.
+    /// Called on every redraw to update the properties (e.g., path, color, isHidden)
+    /// of the layers this renderer installed previously.
     func update(using context: RenderContext)
 
-    /// Hit-testing logic remains the same.
+    /// Performs a hit-test to determine if a point intersects with any interactive
+    /// content managed by this layer.
     func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget?
 }
 

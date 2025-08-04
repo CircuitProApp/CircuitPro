@@ -16,7 +16,7 @@ struct PinTool: CanvasTool {
     private var rotation: CardinalRotation = .east
 
     mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
-        let number = context.renderContext.count(where: { $0.isPin }) + 1
+        let number = /*context.renderContext.count(where: { $0.isPin }) +*/ 1
         let pin = Pin(
             name: "",
             number: number,
@@ -29,7 +29,7 @@ struct PinTool: CanvasTool {
     }
 
     mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
-        let number = context.count(where: { $0.isPin }) + 1
+        let number = /*context.count(where: { $0.isPin }) +*/ 1
         let previewPin = Pin(
             name: "",
             number: number,

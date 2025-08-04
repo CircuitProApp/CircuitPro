@@ -15,7 +15,7 @@ struct PadTool: CanvasTool {
     private var rotation: CardinalRotation = .east
 
     mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
-        let number = context.renderContext.count(where: { $0.isPad }) + 1
+        let number = /*context.renderContext.count(where: { $0.isPad }) +*/ 1
         let pad = Pad(
             number: number,
             position: location,
@@ -28,7 +28,7 @@ struct PadTool: CanvasTool {
     }
 
     mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
-        let number = context.count(where: { $0.isPad }) + 1
+        let number = /*context.count(where: { $0.isPad }) +*/ 1
         let previewPad = Pad(
             number: number,
             position: mouse,

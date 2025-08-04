@@ -47,6 +47,16 @@ class BaseNode: CanvasNode {
         }
     }
     
+    static func == (lhs: BaseNode, rhs: BaseNode) -> Bool {
+        return lhs.id == rhs.id
+    }
+
+    /// Provides the `Hashable` conformance.
+    /// The hash value is based on the node's unique ID, which is consistent with the `==` operator.
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
     // MARK: - Coordinate Space Conversion
     
     // --- THIS IS THE FIX ---

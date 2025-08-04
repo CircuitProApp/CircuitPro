@@ -3,56 +3,63 @@ import AppKit
 final class ToolActionController {
 
     unowned let controller: CanvasController
-    unowned let hitTestService: WorkbenchInputCoordinator
+    // We re-introduce the coordinator dependency, but ONLY to get the RenderContext.
+    unowned let coordinator: WorkbenchInputCoordinator
 
-    init(controller: CanvasController, hitTestService: WorkbenchInputCoordinator) {
+    init(controller: CanvasController, coordinator: WorkbenchInputCoordinator) {
         self.controller = controller
-        self.hitTestService = hitTestService
+        self.coordinator = coordinator
     }
 
-    func handleMouseDown(at point: CGPoint, event: NSEvent) -> Bool {
+    /// Handles a mouse down event when a tool other than the cursor is active.
+    /// This now constructs a full `ToolInteractionContext` for the tool to use.
+    /// - Returns: `true` if the tool consumed the event, `false` otherwise.
+    func handleMouseDown(at point: CGPoint, hitTarget: CanvasHitTarget?, event: NSEvent) -> Bool {
+        // Only handle events if a tool is active (and it's not the default cursor).
         guard var tool = controller.selectedTool, tool.id != "cursor" else {
             return false
         }
         
-        // --- This is the final, clean implementation ---
-
         let snappedPoint = controller.snap(point)
         
-        // 1. Get the complete state of the canvas for rendering reference.
-        let renderContext = hitTestService.currentContext()
+        // 1. Get the complete state of the canvas from the coordinator.
+        let renderContext = coordinator.currentContext()
         
-        // 2. Perform the event-specific hit-test.
-        let hitTarget = hitTestService.hitTest(point: snappedPoint)
-
-        // 3. Create the lightweight, specific context for THIS interaction.
+        // 2. Create the lightweight, specific context for THIS interaction.
+        //    (This assumes ToolInteractionContext is updated to use CanvasHitResult?).
         let interactionContext = ToolInteractionContext(
             clickCount: event.clickCount,
             hitTarget: hitTarget,
             renderContext: renderContext
         )
 
-        // 4. Call the tool with the correct interaction-specific context.
-        // (This requires the CanvasTool protocol to be updated).
+        // 3. Call the tool with the correct interaction-specific context.
+        //    (This assumes the CanvasTool protocol is updated).
         let result = tool.handleTap(at: snappedPoint, context: interactionContext)
 
-        // --- End of new implementation ---
-
+        // 4. Handle the result from the tool based on the new architecture.
         switch result {
-        case .element(let newElement):
-            controller.elements.append(newElement)
-            controller.onUpdateElements?(controller.elements)
+//        case .node(let newNode):
+//            // Add the new node directly to the scene graph.
+//            controller.sceneRoot.addChild(newNode)
 
         case .schematicModified:
-            controller.syncPinPositionsToGraph()
+            // The sync function will be refactored later.
+            // controller.syncPinPositionsToGraph()
+            break
 
         case .noResult:
+            // The tool did something internally but produced no new content.
+            break
+        default:
             break
         }
 
+        // The tool might have mutated its own state, so write it back.
         controller.selectedTool = tool
         controller.onUpdateSelectedTool?(tool)
         
+        // If a tool was active, it always consumes the click.
         return true
     }
 }

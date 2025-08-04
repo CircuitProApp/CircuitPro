@@ -12,12 +12,11 @@ class ElementsRenderLayer: RenderLayer {
 
     /// Updates the element drawing by traversing the scene graph and using a layer pool.
     func update(using context: RenderContext) {
-        let allSelectedIDs = context.selectedIDs.union(context.marqueeSelectedIDs)
-        
-        // 1. Recursively collect all drawing parameters from the scene graph.
-        let allParams = collectDrawingParameters(from: context.sceneRoot, selectedIDs: allSelectedIDs)
+        var allParams: [DrawingParameters] = []
+        // Kick off the recursive collection process, passing the final set of IDs to highlight.
+        collectParameters(from: context.sceneRoot, highlightedIDs: context.highlightedNodeIDs, finalParams: &allParams)
 
-        // 2. Use the layer pooling system to render the parameters.
+        // Use the layer pooling system to render the collected parameters.
         var currentLayerIndex = 0
         for params in allParams {
             let layer = layer(at: currentLayerIndex)
@@ -25,7 +24,7 @@ class ElementsRenderLayer: RenderLayer {
             currentLayerIndex += 1
         }
         
-        // 3. Hide any remaining, unused layers in the pool.
+        // Hide any remaining, unused layers in the pool.
         if currentLayerIndex < layerPool.count {
             for i in currentLayerIndex..<layerPool.count {
                 layerPool[i].isHidden = true
@@ -33,44 +32,53 @@ class ElementsRenderLayer: RenderLayer {
         }
     }
 
-    /// Recursively traverses the scene graph to gather all drawing and halo parameters.
-    private func collectDrawingParameters(from node: any CanvasNode, selectedIDs: Set<UUID>) -> [DrawingParameters] {
-        guard node.isVisible else { return [] }
+    /// Performs a hit-test on the scene graph.
+    func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
+        let tolerance = 5.0 / max(context.magnification, .ulpOfOne)
+        // The layer's responsibility is to kick off the recursive hit-test on its data model.
+        return context.sceneRoot.hitTest(point, tolerance: tolerance)
+    }
+
+    /// Recursively traverses the scene graph, collecting drawing parameters for each node,
+    /// transforming them into world space, and adding them to a final flat array for rendering.
+    /// - Parameters:
+    ///   - node: The current `CanvasNode` to process.
+    ///   - highlightedIDs: A `Set` of `UUID`s for all nodes that should be drawn with a halo.
+    ///   - finalParams: An `inout` array where the final, world-transformed `DrawingParameters` are accumulated.
+    private func collectParameters(from node: any CanvasNode, highlightedIDs: Set<UUID>, finalParams: inout [DrawingParameters]) {
+        guard node.isVisible else { return }
+
+        // Step 1: Get the parameters for THIS node, defined in its own LOCAL coordinate space.
+        var localParams: [DrawingParameters] = []
         
-        var allParameters: [DrawingParameters] = []
-
-        // Get the selection halo for the current node *first*, so it's drawn behind.
-        if let haloParams = node.makeHaloParameters(selectedIDs: selectedIDs) {
-            allParameters.append(haloParams)
-        }
-        
-        // Get the main body drawing parameters for the current node.
-        allParameters.append(contentsOf: node.makeBodyParameters())
-
-        // Recursively collect parameters from all children.
-        for child in node.children {
-            allParameters.append(contentsOf: collectDrawingParameters(from: child, selectedIDs: selectedIDs))
-        }
-
-        // Apply the node's world transform to all paths collected from it and its children.
-        var transform = node.worldTransform
-        if transform != .identity {
-            for i in allParameters.indices {
-                if let newPath = allParameters[i].path.copy(using: &transform) {
-                    allParameters[i].path = newPath
-                }
+        // Generate a halo if this node's ID is in the set to be highlighted.
+        if highlightedIDs.contains(node.id) {
+            // The default `makeHaloParameters` in `Drawable` works perfectly here.
+             if let haloParams = node.makeHaloParameters(selectedIDs: highlightedIDs) {
+                localParams.append(haloParams)
             }
         }
         
-        return allParameters
-    }
+        // Get the main body shape.
+        localParams.append(contentsOf: node.makeBodyParameters())
 
-    // The hit-testing logic will be migrated later. For now, it does nothing.
-    func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
-        // TODO: Migrate hit-testing to traverse the scene graph.
-        return nil
-    }
+        // Step 2: Apply this node's final WORLD transform to its LOCAL parameters.
+        if !localParams.isEmpty {
+            var worldTransform = node.worldTransform
+            for var param in localParams {
+                if let worldPath = param.path.copy(using: &worldTransform) {
+                    param.path = worldPath
+                    finalParams.append(param)
+                }
+            }
+        }
 
+        // Step 3: Recurse for all children. THEY will be responsible for their own transforms in subsequent calls.
+        for child in node.children {
+            collectParameters(from: child, highlightedIDs: highlightedIDs, finalParams: &finalParams)
+        }
+    }
+    
     // MARK: - Layer Pooling Helpers (Unchanged)
     
     private func layer(at index: Int) -> CAShapeLayer {

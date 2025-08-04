@@ -14,18 +14,16 @@ struct SymbolCanvasView: View {
         @Bindable var symbolEditor = componentDesignManager.symbolEditor
 
         SplitPaneView(isCollapsed: $isCollapsed) {
+            // The CanvasView call is now updated to use the new properties.
             CanvasView(
-                manager: canvasManager, schematicGraph: .init(),
-                elements: $symbolEditor.elements,
+                manager: canvasManager,
                 selectedIDs: $symbolEditor.selectedElementIDs,
-                selectedTool: $symbolEditor.selectedTool
+                selectedTool: $symbolEditor.selectedTool,
+                symbolElements: symbolEditor.elements // Provide the data here.
             )
-
             .overlay(alignment: .leading) {
-     
                 SymbolDesignToolbarView()
-                
-                .padding(10)
+                    .padding(10)
             }
         } handle: {
             HStack {

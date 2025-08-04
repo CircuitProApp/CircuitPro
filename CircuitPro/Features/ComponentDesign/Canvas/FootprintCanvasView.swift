@@ -20,17 +20,17 @@ struct FootprintCanvasView: View {
         @Bindable var footprintEditor = componentDesignManager.footprintEditor
 
         SplitPaneView(isCollapsed: $isCollapsed) {
-            CanvasView(
-                manager: canvasManager, schematicGraph: .init(),
-                elements: $footprintEditor.elements,
-                selectedIDs: $footprintEditor.selectedElementIDs,
-                selectedTool: $footprintEditor.selectedTool,
-                layerBindings: CanvasLayerBindings(
-                    selectedLayer: $footprintEditor.selectedLayer,
-                    layerAssignments: $footprintEditor.layerAssignments
-                )
-            )
-
+//            CanvasView(
+//                manager: canvasManager, schematicGraph: .init(),
+//                elements: $footprintEditor.elements,
+//                selectedIDs: $footprintEditor.selectedElementIDs,
+//                selectedTool: $footprintEditor.selectedTool,
+//                layerBindings: CanvasLayerBindings(
+//                    selectedLayer: $footprintEditor.selectedLayer,
+//                    layerAssignments: $footprintEditor.layerAssignments
+//                )
+//            )
+            Text("WIP")
             .overlay(alignment: .leading) {
      
                 FootprintDesignToolbarView()
