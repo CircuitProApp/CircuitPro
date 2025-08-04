@@ -92,7 +92,7 @@ class ConnectionsRenderLayer: RenderLayer {
         let tolerance = 5.0 / max(context.magnification, .ulpOfOne)
         // Note: This still uses the old hit-testing logic for schematics.
         // We will refactor this later to be more consistent.
-        if let target = WorkbenchHitTestService.hitTestSchematicGraph(at: point, graph: context.schematicGraph, tolerance: tolerance) {
+        if let target = SchematicGraphHitTestService.hitTest(at: point, graph: context.schematicGraph, tolerance: tolerance) {
             // We need to convert the old CanvasHitTarget to the new CanvasHitResult.
             // For now, we find the node in the scene graph.
             if let node = findNode(with: target.partID, in: context.sceneRoot) {

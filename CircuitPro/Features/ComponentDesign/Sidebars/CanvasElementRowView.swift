@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CanvasElementRowView: View {
     @Environment(ComponentDesignManager.self) private var componentDesignManager
-    let element: CanvasElement
+    let element: any CanvasNode
     let editor: CanvasEditorManager
 
     private var componentProperties: [PropertyDefinition] {
@@ -17,18 +17,19 @@ struct CanvasElementRowView: View {
     }
 
     var body: some View {
-        switch element {
-        case .pin(let pin):
-            Label("Pin \(pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
-        case .pad(let pad):
-            Label("Pad \(pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
-        case .primitive(let primitive):
-            Label(primitive.displayName, systemImage: primitive.symbol)
-        case .text(let textElement):
-            textElementRow(textElement)
-        default:
-            Text("Not Implemented")
-        }
+        Text("WIP")
+//        switch element {
+//        case .pin(let pin):
+//            Label("Pin \(pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
+//        case .pad(let pad):
+//            Label("Pad \(pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
+//        case .primitive(let primitive):
+//            Label(primitive.displayName, systemImage: primitive.symbol)
+//        case .text(let textElement):
+//            textElementRow(textElement)
+//        default:
+//            Text("Not Implemented")
+//        }
     }
 
     @ViewBuilder

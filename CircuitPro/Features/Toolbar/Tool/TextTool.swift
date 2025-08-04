@@ -22,7 +22,7 @@ struct TextTool: CanvasTool {
             isEditable: false
         )
 
-        return .element(.text(newTextElement))
+        return .noResult
     }
 
     mutating func handleEscape() -> Bool {

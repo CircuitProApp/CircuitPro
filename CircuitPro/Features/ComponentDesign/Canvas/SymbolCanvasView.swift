@@ -19,7 +19,7 @@ struct SymbolCanvasView: View {
                 manager: canvasManager,
                 selectedIDs: $symbolEditor.selectedElementIDs,
                 selectedTool: $symbolEditor.selectedTool,
-                symbolElements: symbolEditor.elements // Provide the data here.
+                nodes: $symbolEditor.elements
             )
             .overlay(alignment: .leading) {
                 SymbolDesignToolbarView()

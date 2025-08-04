@@ -3,7 +3,7 @@ import AppKit
 final class ToolActionController {
 
     unowned let controller: CanvasController
-    // We re-introduce the coordinator dependency, but ONLY to get the RenderContext.
+    // The coordinator provides access to the full canvas state (RenderContext).
     unowned let coordinator: WorkbenchInputCoordinator
 
     init(controller: CanvasController, coordinator: WorkbenchInputCoordinator) {
@@ -26,7 +26,6 @@ final class ToolActionController {
         let renderContext = coordinator.currentContext()
         
         // 2. Create the lightweight, specific context for THIS interaction.
-        //    (This assumes ToolInteractionContext is updated to use CanvasHitResult?).
         let interactionContext = ToolInteractionContext(
             clickCount: event.clickCount,
             hitTarget: hitTarget,
@@ -34,14 +33,16 @@ final class ToolActionController {
         )
 
         // 3. Call the tool with the correct interaction-specific context.
-        //    (This assumes the CanvasTool protocol is updated).
         let result = tool.handleTap(at: snappedPoint, context: interactionContext)
 
         // 4. Handle the result from the tool based on the new architecture.
         switch result {
-//        case .node(let newNode):
-//            // Add the new node directly to the scene graph.
-//            controller.sceneRoot.addChild(newNode)
+        case .newNode(let newNode):
+            // Step 4a: Add the new node to the live scene graph.
+            controller.sceneRoot.addChild(newNode)
+            
+            // Step 4b: Propagate this change back to the SwiftUI source of truth.
+            controller.onNodesChanged?(controller.sceneRoot.children)
 
         case .schematicModified:
             // The sync function will be refactored later.
@@ -50,16 +51,16 @@ final class ToolActionController {
 
         case .noResult:
             // The tool did something internally but produced no new content.
-            break
-        default:
+            // This is for multi-step tools, like the first click of the rectangle tool.
             break
         }
 
-        // The tool might have mutated its own state, so write it back.
+        // The tool might have mutated its own state (e.g., storing the first click point),
+        // so we need to write that updated state back to the controller.
         controller.selectedTool = tool
         controller.onUpdateSelectedTool?(tool)
         
-        // If a tool was active, it always consumes the click.
+        // If a tool was active, it always consumes the click event.
         return true
     }
 }

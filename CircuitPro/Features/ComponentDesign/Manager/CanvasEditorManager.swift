@@ -12,7 +12,7 @@ import Observation
 final class CanvasEditorManager {
 
     // MARK: - Canvas State
-    var elements: [CanvasElement] = [] {
+    var elements: [any CanvasNode] = [] {
         didSet {
             updateElementIndexMap()
         }
@@ -31,11 +31,11 @@ final class CanvasEditorManager {
 
     // MARK: - Computed Properties
     var pins: [Pin] {
-        elements.compactMap { $0.asPin }
+        elements.compactMap { $0 as? Pin}
     }
 
     var pads: [Pad] {
-        elements.compactMap { $0.asPad }
+        elements.compactMap { $0 as? Pad}
     }
     
     var placedTextSources: Set<TextSource> {
@@ -52,7 +52,7 @@ final class CanvasEditorManager {
         )
         
         // Prune any text source mappings that no longer have a corresponding element
-        let currentTextElementIDs = Set(elements.compactMap { $0.asTextElement?.id })
+        let currentTextElementIDs = Set(elements.compactMap { $0 as? TextElement.ID })
         textSourceMap = textSourceMap.filter { currentTextElementIDs.contains($0.key) }
         textDisplayOptionsMap = textDisplayOptionsMap.filter { currentTextElementIDs.contains($0.key) }
     }
@@ -96,23 +96,23 @@ extension CanvasEditorManager {
             position: centerPoint
         )
         
-        elements.append(.text(newElement))
+//        elements.append(.text(newElement))
     }
     
     /// Iterates through all dynamic text on the canvas and ensures its displayed text is up-to-date with the latest component data.
     func updateDynamicTextElements(componentData: (name: String, prefix: String, properties: [PropertyDefinition])) {
         for (elementID, source) in textSourceMap {
-            guard let index = elementIndexMap[elementID],
-                  case .text(var textElement) = elements[index] else {
-                continue
-            }
+//            guard let index = elementIndexMap[elementID],
+//                  case .text(var textElement) = elements[index] else {
+//                continue
+//            }
             
             let newText = resolveText(for: elementID, source: source, componentData: componentData)
             
-            if textElement.text != newText {
-                textElement.text = newText
-                elements[index] = .text(textElement)
-            }
+//            if textElement.text != newText {
+//                textElement.text = newText
+//                elements[index] = .text(textElement)
+//            }
         }
     }
 

@@ -38,10 +38,11 @@ struct SymbolElementListView: View {
                 .frame(maxHeight: .infinity)
             } else {
                 List(selection: $manager.selectedElementIDs) {
-                    ForEach(manager.elements) { element in
-                        CanvasElementRowView(element: element, editor: symbolEditor)
-                            .tag(element.id)
-                    }
+//                    ForEach(manager.elements) { element in
+//                        CanvasElementRowView(element: element, editor: symbolEditor)
+//                            .tag(element.id)
+//                    }
+                    Text("WIP")
                 }
                 .listStyle(.inset)
                 .scrollContentBackground(.hidden)

@@ -25,7 +25,7 @@ struct PinTool: CanvasTool {
             type: .unknown,
             lengthType: .long
         )
-        return .element(.pin(pin))
+        return .noResult
     }
 
     mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {

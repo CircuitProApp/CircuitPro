@@ -7,11 +7,9 @@ struct CanvasView: NSViewRepresentable {
     @Bindable var manager: CanvasManager
     @Binding var selectedIDs: Set<UUID>
     @Binding var selectedTool: AnyCanvasTool
-    
-    // MARK: - Data Sources (Provide one)
-    var designComponents: [DesignComponent]? = nil
-    var symbolElements: [CanvasElement]? = nil
-    
+
+    @Binding var nodes: [any CanvasNode]
+
     // MARK: - Schematics-Only Data
     var schematicGraph: SchematicGraph? = nil
     
@@ -27,6 +25,11 @@ struct CanvasView: NSViewRepresentable {
             self.parent = parent
             self.canvasController = CanvasController()
             setupCallbacks()
+            
+            // Give the controller a way to modify the parent's node array.
+            self.canvasController.onNodesChanged = { [weak self] newNodes in
+                self?.parent.nodes = newNodes
+            }
         }
         
         func updateParent(_ parent: CanvasView) {
@@ -84,24 +87,20 @@ struct CanvasView: NSViewRepresentable {
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        context.coordinator.updateParent(self)
-        let controller = context.coordinator.canvasController
+        let coordinator = context.coordinator
+        coordinator.updateParent(self)
+        let controller = coordinator.canvasController
         
-        // --- THIS IS THE NEW DATA HANDLING LOGIC ---
+        // --- SMARTER DATA SYNCING ---
         
-        // 1. Tell the controller to build its scene from the provided data.
-        if let components = designComponents {
-            // controller.rebuildScene(from: components) // Implement this on the controller
-        } else if let elements = symbolElements {
-            // We need a way to build from primitives. For now, we can bridge it.
-           /*  controller.rebuildSceneFromElements(elements)*/ // Implement this on the controller
-        }
+        // 1. Sync the controller's scene graph to match the bound 'nodes' array.
+        // This is more efficient than clearing and re-adding everything every time.
+        syncSceneGraph(controller: controller, from: nodes)
         
         // 2. Sync selection FROM SwiftUI -> Controller
-        let currentSelectedIDs = Set(controller.selectedNodes.map { $0.id })
-        if currentSelectedIDs != selectedIDs {
+        let currentSelectedIDsInController = Set(controller.selectedNodes.map { $0.id })
+        if currentSelectedIDsInController != selectedIDs {
              controller.selectedNodes = selectedIDs.compactMap { id in
-                // This requires a helper to find nodes by ID.
                 return findNode(with: id, in: controller.sceneRoot)
              }
         }
@@ -131,6 +130,27 @@ struct CanvasView: NSViewRepresentable {
         if scrollView.magnification != manager.magnification {
             scrollView.magnification = manager.magnification
         }
+    }
+    
+    /// Diffs the nodes from the binding with the nodes in the scene graph and applies the changes.
+    private func syncSceneGraph(controller: CanvasController, from newNodes: [any CanvasNode]) {
+        let currentNodes = controller.sceneRoot.children
+        let currentNodeIDs = Set(currentNodes.map { $0.id })
+        let newNodeIDs = Set(newNodes.map { $0.id })
+
+        // Remove nodes that are no longer in the source array
+        let nodesToRemove = currentNodes.filter { !newNodeIDs.contains($0.id) }
+        for node in nodesToRemove {
+            node.removeFromParent()
+        }
+
+        // Add nodes that are new in the source array
+        let nodesToAdd = newNodes.filter { !currentNodeIDs.contains($0.id) }
+        for node in nodesToAdd {
+            controller.sceneRoot.addChild(node)
+        }
+        
+        // TODO: Could also implement updating/reordering here if necessary
     }
     
     // Helper to find a node by its ID in the scene graph.

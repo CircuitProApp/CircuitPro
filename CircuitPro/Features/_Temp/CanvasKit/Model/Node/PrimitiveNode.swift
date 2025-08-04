@@ -44,8 +44,29 @@ class PrimitiveNode: BaseNode {
     }
     
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        // Delegate hit-testing.
-        // We pass the point directly, as this top-level node's local space is world space.
-        return primitive.hitTest(point, tolerance: tolerance)
+        // --- THIS IS THE FIX ---
+
+        // The 'point' parameter is in WORLD space (i.e., the parent's space).
+        // The underlying primitive expects a point in its own LOCAL space.
+        
+        // 1. Create a transform to map points from world space to this node's local space.
+        let inverseTransform = self.localTransform.inverted()
+        
+        // 2. Apply it to the incoming point.
+        let localPoint = point.applying(inverseTransform)
+        
+        // 3. Perform the hit test using the correctly transformed point.
+        guard let hitResult = primitive.hitTest(localPoint, tolerance: tolerance) else {
+            return nil
+        }
+        
+        // 4. The hitResult's position is in local space. We must return a new
+        //    hit target that contains the original world-space position.
+        return CanvasHitTarget(
+            partID: hitResult.partID,
+            ownerPath: hitResult.ownerPath,
+            kind: hitResult.kind,
+            position: point // Use the original world-space point for the final result
+        )
     }
 }

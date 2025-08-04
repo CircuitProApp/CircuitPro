@@ -20,18 +20,19 @@ struct SchematicView: View {
         // This is the single source of truth for the selection's IDs.
         @Bindable var bindableProjectManager = projectManager
 
-        CanvasView(
-            manager: canvasManager,
-            selectedIDs: $bindableProjectManager.selectedComponentIDs,
-            selectedTool: $selectedTool,
-            designComponents: projectManager.designComponents,
-            schematicGraph: projectManager.schematicGraph
-
-        )
-        .overlay(alignment: .leading) {
-            SchematicToolbarView(selectedSchematicTool: $selectedTool)
-                .padding(16)
-        }
+        Text("WIP")
+//        CanvasView(
+//            manager: canvasManager,
+//            selectedIDs: $bindableProjectManager.selectedComponentIDs,
+//            selectedTool: $selectedTool,
+//            designComponents: projectManager.designComponents,
+//            schematicGraph: projectManager.schematicGraph
+//
+//        )
+//        .overlay(alignment: .leading) {
+//            SchematicToolbarView(selectedSchematicTool: $selectedTool)
+//                .padding(16)
+//        }
         // NOTE: The complex .onChange modifiers for rebuilding and syncing
         // the canvas are now GONE. The CanvasController handles its own updates.
     }

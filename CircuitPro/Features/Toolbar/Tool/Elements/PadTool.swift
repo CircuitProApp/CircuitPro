@@ -24,7 +24,7 @@ struct PadTool: CanvasTool {
             type: .surfaceMount,
             drillDiameter: nil
         )
-        return .element(.pad(pad))
+        return .noResult
     }
 
     mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {

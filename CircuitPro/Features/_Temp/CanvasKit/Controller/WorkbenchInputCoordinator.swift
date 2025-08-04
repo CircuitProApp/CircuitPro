@@ -12,7 +12,8 @@ final class WorkbenchInputCoordinator {
 //    private lazy var marquee = MarqueeSelectionGesture(controller: controller)
 //    private lazy var handleDrag = HandleDragGesture(controller: controller)
     private lazy var selDrag = SelectionDragGesture(controller: controller)
-    private lazy var toolTap = ToolActionController(controller: controller, coordinator: host.inputCoordinator) // No longer needs a hitTestService
+    // The ToolActionController is correctly initialized here.
+    private lazy var toolTap = ToolActionController(controller: controller, coordinator: self)
     private lazy var keyCmds = WorkbenchKeyCommandController(controller: controller, coordinator: self)
     
     private var activeDrag: CanvasDragGesture?
@@ -34,7 +35,7 @@ final class WorkbenchInputCoordinator {
         controller.redraw()
     }
 
-    // MARK: - Mouse Clicks & Drags (Fully Refactored)
+    // MARK: - Mouse Clicks & Drags (Corrected Logic)
 
     func mouseDown(_ event: NSEvent) {
         if rotation.active {
@@ -44,19 +45,25 @@ final class WorkbenchInputCoordinator {
         }
         
         let point = host.convert(event.locationInWindow, from: nil)
-        let hitTarget = self.hitTest(point: point) // This is now the entry point.
+        let hitTarget = self.hitTest(point: point)
         
-        // Tool-related logic will be updated later.
-        // if toolTap.handleMouseDown(...) { ... }
+        // --- THIS IS THE FIX ---
+        // First, see if the active tool wants to handle the mouse down event.
+        // `handleMouseDown` returns `true` if it consumed the event (e.g., RectangleTool was active).
+        // It returns `false` if the cursor was active, allowing the code below to run.
+        if toolTap.handleMouseDown(at: point, hitTarget: hitTarget, event: event) {
+            // The tool handled the event. We just need to redraw and exit.
+            controller.redraw()
+            return
+        }
+        
+        // --- If we reach here, the cursor tool is active ---
 
         // Handle-related logic will be updated later.
         // if handleDrag.begin(...) { ... }
-
-        guard controller.selectedTool?.id == "cursor" else { return }
         
         if let hit = hitTarget {
             // Find the actual node that was hit in the scene graph.
-            // This search becomes unnecessary once hitTest returns CanvasHitResult with the node directly.
             guard let hitID = hit.selectableID,
                   let nodeToSelect = findNode(with: hitID, in: controller.sceneRoot) else { return }
 
@@ -92,6 +99,7 @@ final class WorkbenchInputCoordinator {
     
     func mouseDragged(_ event: NSEvent) {
         let point = host.convert(event.locationInWindow, from: nil)
+        activeDrag?.drag(to: point)
 //        if marquee.active { marquee.drag(to: point) } else { activeDrag?.drag(to: point) }
         controller.redraw()
     }
@@ -105,6 +113,7 @@ final class WorkbenchInputCoordinator {
 
     // MARK: - Right Click for Context Menu (Refactored)
     func rightMouseDown(_ event: NSEvent) {
+        // This check is fine, as right-click menus should likely only work with the cursor.
         guard controller.selectedTool?.id == "cursor" else { return }
 
         let point = host.convert(event.locationInWindow, from: nil)
@@ -118,7 +127,6 @@ final class WorkbenchInputCoordinator {
             controller.selectedNodes = [hitNode]
         }
 
-        // Context menu logic remains the same for now.
         let menu = NSMenu()
         let deleteItem = NSMenuItem(title: "Delete", action: #selector(deleteMenuAction(_:)), keyEquivalent: "")
         deleteItem.target = self
@@ -145,21 +153,19 @@ final class WorkbenchInputCoordinator {
         controller.redraw()
     }
 
-    // This method now assumes the tool protocol returns `any CanvasNode`.
     func handleReturnKeyPress() {
         guard var tool = controller.selectedTool else { return }
-        // let context = ... will be needed later
         
-        let result = tool.handleReturn() // This needs to be updated to return a node.
+        let result = tool.handleReturn()
+        
         switch result {
-//        case .node(let newNode):
-//            controller.sceneRoot.addChild(newNode)
+        case .newNode(let newNode):
+            controller.sceneRoot.addChild(newNode)
+            controller.onNodesChanged?(controller.sceneRoot.children)
         case .schematicModified:
              // controller.syncPinPositionsToGraph() needs refactor
              break
         case .noResult:
-            break
-        default:
             break
         }
         controller.selectedTool = tool
@@ -169,11 +175,19 @@ final class WorkbenchInputCoordinator {
     func deleteSelectedElements() {
         guard !controller.selectedNodes.isEmpty else { return }
         
+        let idsToDelete = Set(controller.selectedNodes.map { $0.id })
+        
+        // Remove from the scene graph
         for node in controller.selectedNodes {
             // controller.schematicGraph.delete(node: node) // To be updated
             node.removeFromParent()
         }
+        
+        // Notify the parent view of the change
+        controller.onNodesChanged?(controller.sceneRoot.children)
+        
         controller.selectedNodes.removeAll()
+        controller.onUpdateSelectedNodes?([])
         controller.redraw()
     }
 
@@ -206,7 +220,6 @@ final class WorkbenchInputCoordinator {
         )
     }
 
-    // A helper to find a node by its ID in the scene graph.
     private func findNode(with id: UUID, in root: any CanvasNode) -> (any CanvasNode)? {
         if root.id == id {
             return root
@@ -220,15 +233,16 @@ final class WorkbenchInputCoordinator {
     }
     
     // MARK: - Drag & Drop (Unchanged for now)
-    func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { /* ... */ return [] }
-    func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { /* ... */ return [] }
-    func performDragOperation(_ sender: NSDraggingInfo) -> Bool { /* ... */ return false }
+    func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { return [] }
+    func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { return [] }
+    func performDragOperation(_ sender: NSDraggingInfo) -> Bool { return false }
 }
 
 // MARK: - Hit Test Coordinator
 extension WorkbenchInputCoordinator {
     func hitTest(point: CGPoint) -> CanvasHitTarget? {
         let context = self.currentContext()
+        // Iterate reversed so we hit the top-most layer first.
         for layer in controller.renderLayers.reversed() {
             if let hit = layer.hitTest(point: point, context: context) {
                 return hit

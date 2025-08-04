@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct CircleTool: CanvasTool {
 
@@ -9,35 +10,48 @@ struct CircleTool: CanvasTool {
     private var center: CGPoint?
 
     mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
-        if let center {
-            let radius = hypot(location.x - center.x, location.y - center.y)
-            let circle = CirclePrimitive(
+        if let centerPoint = center {
+            // Second tap: Define the radius and finalize the circle.
+            let radius = hypot(location.x - centerPoint.x, location.y - centerPoint.y)
+            
+            // 1. Create the primitive data model.
+            let circlePrimitive = CirclePrimitive(
                 id: UUID(),
                 radius: radius,
-                position: center,
+                position: centerPoint,
                 rotation: 0,
                 strokeWidth: 1,
-                color: .init(color: .red),
+                color: .init(color: .blue),
                 filled: false
             )
+
+            // 2. Wrap it in a scene graph node.
+            let node = PrimitiveNode(primitive: .circle(circlePrimitive))
+
+            // 3. Reset tool state and return the new node.
             self.center = nil
-            return .element(.primitive(.circle(circle)))
+            return .newNode(node)
+            
         } else {
+            // First tap: Just record the center point.
             self.center = location
             return .noResult
         }
     }
 
     mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
-        guard let center else { return [] }
-        let radius = hypot(mouse.x - center.x, mouse.y - center.y)
-        let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
+        guard let centerPoint = center else { return [] }
+        
+        // Create the preview path directly in world coordinates.
+        let radius = hypot(mouse.x - centerPoint.x, mouse.y - centerPoint.y)
+        let rect = CGRect(x: centerPoint.x - radius, y: centerPoint.y - radius, width: radius * 2, height: radius * 2)
         let path = CGPath(ellipseIn: rect, transform: nil)
 
         return [DrawingParameters(
             path: path,
             lineWidth: 1.0,
-            strokeColor: NSColor(.red).cgColor,
+            fillColor: nil,
+            strokeColor: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
             lineDashPattern: [4, 4]
         )]
     }
@@ -51,7 +65,6 @@ struct CircleTool: CanvasTool {
     }
 
     mutating func handleBackspace() {
-        // For a simple one-step tool, Backspace and Escape do the same thing.
         center = nil
     }
 }

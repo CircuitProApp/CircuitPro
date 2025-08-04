@@ -1,39 +1,12 @@
 import AppKit
 
 /// Performs detailed hit-testing for all interactive items on the workbench.
-struct WorkbenchHitTestService {
+struct SchematicGraphHitTestService {
 
-    /// Finds the most specific interactive element at a given point on the canvas.
-    /// This is the main entry point for the hit-test service when coordinating multiple layers.
-    func hitTest(
-        point: CGPoint,
-        elements: [CanvasElement],
-        schematicGraph: SchematicGraph,
-        magnification: CGFloat
-    ) -> CanvasHitTarget? {
-        let tolerance = 5.0 / magnification
+    // The old hitTest function that looped over nodes has been REMOVED.
 
-        // 1. Hit-test the schematic graph (vertices and edges).
-        // Note: The static version is called here for consistency.
-        if let graphHit = Self.hitTestSchematicGraph(at: point, graph: schematicGraph, tolerance: tolerance) {
-            return graphHit
-        }
-
-        // 2. If no connection was hit, check the canvas elements.
-        for element in elements.reversed() {
-            if let hit = element.hitTest(point, tolerance: tolerance) {
-                return hit
-            }
-        }
-
-        // 3. If nothing was hit, return nil.
-        return nil
-    }
-
-    /// **Static** helper function to encapsulate hit-testing on the schematic graph.
-    /// By making this `static`, it can be called directly from other parts of the app,
-    /// like `ConnectionsRenderLayer`, without needing an instance of the service.
-    static func hitTestSchematicGraph(
+    /// Encapsulates hit-testing on the schematic graph.
+    static func hitTest(
         at point: CGPoint,
         graph: SchematicGraph,
         tolerance: CGFloat

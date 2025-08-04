@@ -41,6 +41,9 @@ final class CanvasController {
     var onNeedsRedraw: (() -> Void)?
     var onUpdateSelectedNodes: (([any CanvasNode]) -> Void)?
     var onUpdateSelectedTool: ((AnyCanvasTool) -> Void)?
+    
+    // Callback to propagate changes to the node array back to SwiftUI.
+    var onNodesChanged: (([any CanvasNode]) -> Void)?
 
     init() {
         self.renderLayers = [
@@ -65,37 +68,5 @@ final class CanvasController {
         return service.snap(point)
     }
     
-    func rebuildScene(from designComponents: [DesignComponent]) {
-        // Clear existing nodes.
-        self.sceneRoot.children.removeAll()
-        
-//        for dc in designComponents {
-//            let instanceID = dc.instance.id
-//            
-//            // Resolve the data needed to build the node.
-//            let resolvedProperties = PropertyResolver.resolve(from: dc.definition, and: dc.instance)
-//            
-//            let resolvedTexts = TextResolver.resolve(
-//                from: dc.definition.symbol!,
-//                and: dc.instance.symbolInstance,
-//                componentName: dc.definition.name,
-//                reference: dc.referenceDesignator,
-//                properties: resolvedProperties
-//            )
-//            
-//            // Create the new SymbolNode.
-//            // This assumes you will create a `SymbolNode` class similar to `PrimitiveNode`.
-//            let newSymbolNode = SymbolNode(
-//                id: instanceID,
-//                instance: dc.instance.symbolInstance,
-//                symbol: dc.definition.symbol!,
-//                reference: dc.referenceDesignator,
-//                properties: resolvedProperties,
-//                resolvedTexts: resolvedTexts
-//            )
-//            
-//            // Add the new node to the scene.
-//            self.sceneRoot.addChild(newSymbolNode)
-//        }
-    }
+    // The rebuildScene function has been REMOVED.
 }

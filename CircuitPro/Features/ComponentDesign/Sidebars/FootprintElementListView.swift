@@ -24,7 +24,7 @@ struct FootprintElementListView: View {
         
         enum Content {
             case layer(CanvasLayer)
-            case element(CanvasElement)
+            case element(any CanvasNode)
         }
     }
     
@@ -81,12 +81,13 @@ struct FootprintElementListView: View {
             DisclosureGroup(
                 isExpanded: isExpandedBinding,
                 content: {
-                    ForEach(item.children ?? []) { childItem in
-                        if case .element(let element) = childItem.content {
-                            CanvasElementRowView(element: element, editor: footprintEditor)
-                                .tag(childItem.id)
-                        }
-                    }
+//                    ForEach(item.children ?? []) { childItem in
+//                        if case .element(let element) = childItem.content {
+//                            CanvasElementRowView(element: element, editor: footprintEditor)
+//                                .tag(childItem.id)
+//                        }
+//                    }
+                    Text("WIP")
                 },
                 label: {
                     layerRow(for: layer)
@@ -112,28 +113,29 @@ struct FootprintElementListView: View {
     /// Assembles the data for the hierarchical `List`.
     private var outlineData: [OutlineItem] {
         
-        let copperLayer = CanvasLayer(kind: .copper)
-        
-        let elementsByLayer = Dictionary(
-            grouping: footprintEditor.elements,
-            by: { element in
-                if case .pad = element {
-                    return copperLayer
-                } else {
-                    return footprintEditor.layerAssignments[element.id] ?? .layer0
-                }
-            }
-        )
-        
-        var orderedLayers: [CanvasLayer] = [.layer0]
-        orderedLayers.append(contentsOf: LayerKind.footprintLayers.map { CanvasLayer(kind: $0) })
-        
-        return orderedLayers.map { layer in
-            let childElements = (elementsByLayer[layer] ?? []).map { element in
-                OutlineItem(id: .element(element.id), content: .element(element), children: nil)
-            }
-            return OutlineItem(id: .layer(layer), content: .layer(layer), children: childElements)
-        }
+//        let copperLayer = CanvasLayer(kind: .copper)
+//        
+//        let elementsByLayer = Dictionary(
+//            grouping: footprintEditor.elements,
+//            by: { element in
+//                if case .pad = element {
+//                    return copperLayer
+//                } else {
+//                    return footprintEditor.layerAssignments[element.id] ?? .layer0
+//                }
+//            }
+//        )
+//        
+//        var orderedLayers: [CanvasLayer] = [.layer0]
+//        orderedLayers.append(contentsOf: LayerKind.footprintLayers.map { CanvasLayer(kind: $0) })
+//        
+//        return orderedLayers.map { layer in
+//            let childElements = (elementsByLayer[layer] ?? []).map { element in
+//                OutlineItem(id: .element(element.id), content: .element(element), children: nil)
+//            }
+//            return OutlineItem(id: .layer(layer), content: .layer(layer), children: childElements)
+//        }
+        return []
     }
     
     // MARK: - Selection Synchronization Logic

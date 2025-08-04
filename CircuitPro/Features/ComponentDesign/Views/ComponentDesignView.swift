@@ -128,7 +128,7 @@ struct ComponentDesignView: View {
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
 
         var textDefinitions = [TextDefinition]()
-        let textCanvasElements = symbolEditor.elements.compactMap { $0.asTextElement }
+        let textCanvasElements = symbolEditor.elements.compactMap { $0 as? TextElement }
 
         for textElement in textCanvasElements {
             let relativePosition = CGPoint(x: textElement.position.x - anchor.x, y: textElement.position.y - anchor.y)
@@ -151,7 +151,7 @@ struct ComponentDesignView: View {
             }
         }
         
-        let rawPrimitives: [AnyPrimitive] = symbolEditor.elements.compactMap { $0.asPrimitive }
+        let rawPrimitives: [AnyPrimitive] = symbolEditor.elements.compactMap { $0 as? AnyPrimitive }
 
         let primitives = rawPrimitives.map { prim -> AnyPrimitive in
             var copy = prim

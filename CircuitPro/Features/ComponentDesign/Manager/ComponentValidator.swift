@@ -52,14 +52,14 @@ struct ComponentValidator {
                 errors.append(.init(message: "At least one property should have a key.", requirement: ComponentDesignStage.ComponentRequirement.properties))
             }
         case .symbol:
-            if manager.symbolEditor.elements.compactMap({ $0.asPrimitive }).isEmpty {
+            if manager.symbolEditor.elements.compactMap({ $0 as? AnyPrimitive }).isEmpty {
                 errors.append(.init(message: "No symbol created.", requirement: ComponentDesignStage.SymbolRequirement.primitives))
             }
             if manager.symbolEditor.pins.isEmpty {
                 errors.append(.init(message: "No pins added to symbol.", requirement: ComponentDesignStage.SymbolRequirement.pins))
             }
         case .footprint:
-            if manager.footprintEditor.elements.compactMap({ $0.asPrimitive }).isEmpty {
+            if manager.footprintEditor.elements.compactMap({ $0 as? AnyPrimitive}).isEmpty {
                 errors.append(.init(message: "No footprint created.", requirement: ComponentDesignStage.SymbolRequirement.primitives))
             }
             if manager.footprintEditor.pads.isEmpty {

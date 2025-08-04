@@ -109,9 +109,11 @@ class BaseNode: CanvasNode {
             let localPoint = self.convert(point, to: child)
             
             if let hit = child.hitTest(localPoint, tolerance: tolerance) {
-                // If a child was hit, its owner path is relative to itself.
-                // We prepend our ID to make the path absolute from the scene root's perspective.
-                return CanvasHitTarget(partID: hit.partID, ownerPath: [self.id] + hit.ownerPath, kind: hit.kind, position: point)
+                // --- THIS IS THE FIX ---
+                // Simply return the hit result from the child directly.
+                // Do NOT re-wrap it or prepend the parent's ID. The child's
+                // hit result already contains the correct ownership path.
+                return hit
             }
         }
         return nil // Base implementation doesn't hit itself, only its children.

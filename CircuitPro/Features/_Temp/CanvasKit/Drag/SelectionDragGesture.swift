@@ -60,9 +60,6 @@ final class SelectionDragGesture: CanvasDragGesture {
 
         let moveDelta = calculateSnappedDelta(rawDelta: rawDelta)
         
-        // THIS IS NOW CORRECT.
-        // `controller.selectedNodes` is [any CanvasNode], an array of class references.
-        // `node` is a reference, not a copy, so mutating its properties works.
         controller.selectedNodes.forEach { node in
             if let originalPosition = originalNodePositions[node.id] {
                 node.position = originalPosition + moveDelta
