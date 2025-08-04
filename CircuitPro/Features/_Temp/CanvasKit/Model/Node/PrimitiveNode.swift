@@ -17,56 +17,57 @@ class PrimitiveNode: BaseNode {
     // The underlying data model for this node.
     var primitive: AnyPrimitive
 
+    override var position: CGPoint {
+        get { primitive.position }
+        set { primitive.position = newValue }
+    }
+
+    override var rotation: CGFloat {
+        get { primitive.rotation }
+        set { primitive.rotation = newValue }
+    }
+    
     init(primitive: AnyPrimitive) {
         self.primitive = primitive
-        super.init()
-
-        // Initialize the node's transform from the primitive's initial state.
-        self.position = primitive.position
-        self.rotation = primitive.rotation
+        
+        // --- THIS IS THE FIX ---
+        // We pass the primitive's ID to the superclass initializer.
+        // This guarantees the PrimitiveNode and its underlying primitive
+        // share the exact same ID.
+        super.init(id: primitive.id)
     }
 
     // MARK: - Protocol Overrides
     
     override func makeBodyParameters() -> [DrawingParameters] {
-        // Delegate drawing directly to the primitive struct.
         return primitive.makeBodyParameters()
     }
     
     override func makeHaloPath() -> CGPath? {
-        // Delegate halo path generation.
         return primitive.makeHaloPath()
     }
     
     override var boundingBox: CGRect {
-        // Delegate bounding box calculation.
         return primitive.boundingBox
     }
     
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        // --- THIS IS THE FIX ---
-
-        // The 'point' parameter is in WORLD space (i.e., the parent's space).
-        // The underlying primitive expects a point in its own LOCAL space.
-        
-        // 1. Create a transform to map points from world space to this node's local space.
-        let inverseTransform = self.localTransform.inverted()
-        
-        // 2. Apply it to the incoming point.
-        let localPoint = point.applying(inverseTransform)
-        
-        // 3. Perform the hit test using the correctly transformed point.
-        guard let hitResult = primitive.hitTest(localPoint, tolerance: tolerance) else {
+        // The point received here is already in this node's local space.
+        // We pass it directly to the underlying primitive for the geometry check.
+        guard let localHit = primitive.hitTest(point, tolerance: tolerance) else {
             return nil
         }
         
-        // 4. The hitResult's position is in local space. We must return a new
-        //    hit target that contains the original world-space position.
+        // The localHit's position is relative to the primitive's origin (0,0).
+        // We must convert this to world coordinates for the final result.
+        let worldPosition = point.applying(self.worldTransform)
+
+        // Construct the final target, replacing the local position with the world position.
         return CanvasHitTarget(
-            partID: hitResult.partID,
-            ownerPath: hitResult.ownerPath,
-            kind: hitResult.kind,
-            position: point // Use the original world-space point for the final result
+            partID: localHit.partID,
+            ownerPath: localHit.ownerPath,
+            kind: localHit.kind,
+            position: worldPosition
         )
     }
 }

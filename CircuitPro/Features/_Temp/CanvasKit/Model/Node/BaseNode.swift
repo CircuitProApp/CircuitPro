@@ -11,14 +11,24 @@ class BaseNode: CanvasNode {
 
     // MARK: - Stored Properties
     
-    let id: UUID = UUID()
+    let id: UUID
     weak var parent: (any CanvasNode)?
     var children: [any CanvasNode] = []
     
     var isVisible: Bool = true
-    var position: CGPoint = .zero
-    var rotation: CGFloat = 0.0
-    // Note: Scale could be added here later if needed: `var scale: CGFloat = 1.0`
+    
+    var position: CGPoint {
+        get { .zero }
+        set { /* do nothing */ }
+    }
+    var rotation: CGFloat {
+        get { 0.0 }
+        set { /* do nothing */ }
+    }
+    
+    init(id: UUID = UUID()) {
+        self.id = id
+    }
 
     // MARK: - Hierarchy Management
     
@@ -103,17 +113,26 @@ class BaseNode: CanvasNode {
         // Only interact with visible nodes.
         guard self.isVisible else { return nil }
 
+        // --- LOGGING ---
+        // Short ID for cleaner logs
+        let shortID = self.id.uuidString.prefix(4)
+        print("[BaseNode \(shortID)] Testing children. Received point in my local space: \(point)")
+        // ---
+
         // Iterate children from top to bottom (last child is drawn last/on top).
         for child in children.reversed() {
+            let childShortID = child.id.uuidString.prefix(4)
             // Convert the point from our coordinate space into the child's space.
             let localPoint = self.convert(point, to: child)
             
+            print("[BaseNode \(shortID)]  -> Testing child [\(childShortID)]. Converted point to child's local space: \(localPoint)")
+
             if let hit = child.hitTest(localPoint, tolerance: tolerance) {
-                // --- THIS IS THE FIX ---
+                print("[BaseNode \(shortID)]  ✅ Child [\(childShortID)] reported a hit! Propagating up.")
                 // Simply return the hit result from the child directly.
-                // Do NOT re-wrap it or prepend the parent's ID. The child's
-                // hit result already contains the correct ownership path.
                 return hit
+            } else {
+                print("[BaseNode \(shortID)]  ❌ Child [\(childShortID)] did not report a hit.")
             }
         }
         return nil // Base implementation doesn't hit itself, only its children.

@@ -4,7 +4,6 @@ final class RotationGestureController {
 
     unowned let controller: CanvasController
     private var pivotPoint: CGPoint?
-    // This now stores the original rotation for each node in the gesture.
     private var originalRotations: [UUID: CGFloat] = [:]
 
     var active: Bool {
@@ -17,7 +16,6 @@ final class RotationGestureController {
 
     /// Starts a new rotation gesture around a given pivot point for the current selection.
     func begin(around pivot: CGPoint) {
-        // Use the new node-based selection.
         guard !controller.selectedNodes.isEmpty else { return }
         
         pivotPoint = pivot
@@ -31,21 +29,21 @@ final class RotationGestureController {
 
     /// Commits the current rotation and ends the gesture.
     func commit() {
-        // The nodes in the scene graph already have their final rotation from the last `update` call.
-        // All we need to do is clean up our internal gesture state.
         pivotPoint = nil
         originalRotations.removeAll()
     }
 
     /// Cancels the gesture and reverts all rotated nodes to their original state.
     func cancelAndRevert() {
-        if active {
-            // Iterate directly over the selected nodes and restore their original rotation.
-            // Because nodes are classes, this mutation is reflected immediately.
-            for node in controller.selectedNodes {
-                if let originalRotation = originalRotations[node.id] {
-                    node.rotation = originalRotation
-                }
+        guard active else { return }
+        
+        // --- THIS IS THE FIX ---
+        // We must iterate by index to get a mutable reference to each node
+        // in the controller's array, allowing us to set its rotation.
+        for i in controller.selectedNodes.indices {
+            let node = controller.selectedNodes[i]
+            if let originalRotation = originalRotations[node.id] {
+                controller.selectedNodes[i].rotation = originalRotation
             }
         }
         
@@ -58,10 +56,8 @@ final class RotationGestureController {
     func update(to cursor: CGPoint) {
         guard let pivot = self.pivotPoint else { return }
 
-        // Calculate the new angle based on the cursor's position relative to the pivot.
         let currentAngle = atan2(cursor.y - pivot.y, cursor.x - pivot.x)
         
-        // Snap the angle to 15-degree increments unless Shift is held down.
         let snappedAngle: CGFloat
         if !NSEvent.modifierFlags.contains(.shift) {
             let step: CGFloat = .pi / 12 // 15 degrees
@@ -70,11 +66,13 @@ final class RotationGestureController {
             snappedAngle = currentAngle
         }
 
-        // Apply the new rotation directly to the nodes involved in the gesture.
-        for node in controller.selectedNodes {
+        // --- AND THIS IS THE FIX ---
+        // Same as above. We use an index-based loop to apply the new rotation.
+        for i in controller.selectedNodes.indices {
+            let node = controller.selectedNodes[i]
             // Check originalRotations to ensure we only affect nodes from the initial set.
             if originalRotations[node.id] != nil {
-                 node.rotation = snappedAngle
+                 controller.selectedNodes[i].rotation = snappedAngle
             }
         }
     }

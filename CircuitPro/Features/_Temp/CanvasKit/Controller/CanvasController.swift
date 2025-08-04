@@ -48,12 +48,8 @@ final class CanvasController {
     init() {
         self.renderLayers = [
             GridRenderLayer(),
-            SheetRenderLayer(),
-            GuideRenderLayer(),
-            ConnectionsRenderLayer(),
             ElementsRenderLayer(),
             PreviewRenderLayer(),
-            MarqueeRenderLayer(),
             CrosshairsRenderLayer()
         ]
     }
@@ -67,6 +63,4 @@ final class CanvasController {
         let service = SnapService(gridSize: snapGridSize, isEnabled: isSnappingEnabled, origin: origin)
         return service.snap(point)
     }
-    
-    // The rebuildScene function has been REMOVED.
 }

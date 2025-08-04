@@ -7,8 +7,7 @@
 
 import AppKit
 
-protocol GraphicPrimitive:
-    Transformable & Drawable & Hittable & Bounded & HandleEditable & Codable & Hashable & Identifiable {
+protocol GraphicPrimitive: CanvasElement & HandleEditable & Codable {
 
     var id: UUID { get }
     var color: SDColor { get set }
@@ -60,14 +59,17 @@ extension GraphicPrimitive {
 extension GraphicPrimitive {
 
     func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
-        // --- This geometric hit-testing logic is correct and remains unchanged ---
         let path = makePath()
         let wasHit: Bool
+        
+        // --- LOGGING ---
+        let shortID = self.id.uuidString.prefix(4)
+        print("[GraphicPrimitive \(shortID)] Testing geometry. Received point (should be 0,0-centric): \(point)")
+        
         if filled {
             wasHit = path.contains(point)
+            print("[GraphicPrimitive \(shortID)]  -> Testing fill. Path contains point? \(wasHit)")
         } else {
-            // For stroked paths, we create a new, wider path that represents the stroke
-            // and check if the point is contained within that. This correctly handles tolerance.
             let stroke = path.copy(
                 strokingWithWidth: strokeWidth + tolerance,
                 lineCap: .round,
@@ -75,26 +77,17 @@ extension GraphicPrimitive {
                 miterLimit: 10
             )
             wasHit = stroke.contains(point)
+            print("[GraphicPrimitive \(shortID)]  -> Testing stroke. Stroked path contains point? \(wasHit)")
         }
         
-        // If the geometric check failed, there's no hit.
         guard wasHit else { return nil }
         
-        // --- This part is updated to return our new, unified struct ---
-        // A primitive is the base case for our hierarchy. When it's hit directly,
-        // it reports itself as the hit part and its own owner.
+        print("[GraphicPrimitive \(shortID)]  -> ✅ GEOMETRY HIT CONFIRMED.")
+        
         return CanvasHitTarget(
-            // The specific part that was hit is this primitive itself.
             partID: self.id,
-            
-            // As the base of a potential hierarchy, its ownership path
-            // starts with and contains only its own ID.
             ownerPath: [self.id],
-            
-            // We use the more specific `.primitive` kind from our new enum.
             kind: .primitive,
-            
-            // Pass along the precise location of the hit.
             position: point
         )
     }

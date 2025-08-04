@@ -6,7 +6,7 @@ import AppKit
 /// It defines an object that has an identity, can be drawn and interacted with,
 /// occupies a bounding box, and exists within a parent-child hierarchy.
 /// It conforms to `Hashable` to allow nodes to be stored in sets and dictionaries.
-protocol CanvasNode: AnyObject, Identifiable, Hashable, Drawable, Hittable, Bounded, Transformable {
+protocol CanvasNode: AnyObject, CanvasElement {
 
     // MARK: - Scene Graph API
 
@@ -18,9 +18,6 @@ protocol CanvasNode: AnyObject, Identifiable, Hashable, Drawable, Hittable, Boun
     
 
     var isVisible: Bool { get set }
-
-    var position: CGPoint { get set }
-    var rotation: CGFloat { get set }
     
     var localTransform: CGAffineTransform { get }
     var worldTransform: CGAffineTransform { get }

@@ -60,9 +60,12 @@ final class SelectionDragGesture: CanvasDragGesture {
 
         let moveDelta = calculateSnappedDelta(rawDelta: rawDelta)
         
-        controller.selectedNodes.forEach { node in
+        for i in controller.selectedNodes.indices {
+            let node = controller.selectedNodes[i]
             if let originalPosition = originalNodePositions[node.id] {
-                node.position = originalPosition + moveDelta
+                // We now access the node via the array's subscript, which gives us
+                // a mutable reference to modify its properties.
+                controller.selectedNodes[i].position = originalPosition + moveDelta
             }
         }
         

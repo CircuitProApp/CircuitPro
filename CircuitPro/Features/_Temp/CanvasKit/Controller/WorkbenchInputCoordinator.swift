@@ -43,31 +43,31 @@ final class WorkbenchInputCoordinator {
             controller.redraw()
             return
         }
-        
+
         let point = host.convert(event.locationInWindow, from: nil)
+        print("--- MOUSE DOWN at world point: \(point) ---") // <-- LOG
+        
         let hitTarget = self.hitTest(point: point)
         
-        // --- THIS IS THE FIX ---
-        // First, see if the active tool wants to handle the mouse down event.
-        // `handleMouseDown` returns `true` if it consumed the event (e.g., RectangleTool was active).
-        // It returns `false` if the cursor was active, allowing the code below to run.
+        // LOG the final result
+        if let hitTarget = hitTarget {
+            print("[Coordinator] ✅ Final Hit Target Received: \(hitTarget.debugDescription)")
+        } else {
+            print("[Coordinator] ❌ No hit target returned from self.hitTest.")
+        }
+
         if toolTap.handleMouseDown(at: point, hitTarget: hitTarget, event: event) {
-            // The tool handled the event. We just need to redraw and exit.
             controller.redraw()
             return
         }
-        
-        // --- If we reach here, the cursor tool is active ---
 
-        // Handle-related logic will be updated later.
-        // if handleDrag.begin(...) { ... }
-        
         if let hit = hitTarget {
-            // Find the actual node that was hit in the scene graph.
             guard let hitID = hit.selectableID,
-                  let nodeToSelect = findNode(with: hitID, in: controller.sceneRoot) else { return }
+                  let nodeToSelect = findNode(with: hitID, in: controller.sceneRoot) else {
+                print("[Coordinator] ❌ Hit target found, but couldn't find corresponding node in scene graph.")
+                return
+            }
 
-            // Handle selection logic with direct node references.
             if event.modifierFlags.contains(.shift) {
                 if let index = controller.selectedNodes.firstIndex(where: { $0.id == nodeToSelect.id }) {
                     controller.selectedNodes.remove(at: index)
@@ -81,17 +81,15 @@ final class WorkbenchInputCoordinator {
             }
             controller.onUpdateSelectedNodes?(controller.selectedNodes)
 
-            // Begin dragging the now-updated selection.
             if selDrag.begin(at: point, with: hit, event: event) {
                 activeDrag = selDrag
             }
             
-        } else { // Clicked on empty space
+        } else {
             if !event.modifierFlags.contains(.shift) && !controller.selectedNodes.isEmpty {
                 controller.selectedNodes.removeAll()
                 controller.onUpdateSelectedNodes?(controller.selectedNodes)
             }
-//            marquee.begin(at: point, event: event)
         }
         
         controller.redraw()
