@@ -8,6 +8,8 @@ struct SymbolCanvasView: View {
     @Environment(ComponentDesignManager.self) private var componentDesignManager
     
     @State private var isCollapsed: Bool = true
+    
+    @State private var tool: AnyCanvasTool? = AnyCanvasTool(CursorTool())
 
     var body: some View {
 
@@ -23,7 +25,7 @@ struct SymbolCanvasView: View {
                 magnification: $canvasManager.magnification,
                 nodes: $symbolEditor.elements,
                 selection: $symbolEditor.selectedElementIDs,
-                tool: .constant(defaultTool),
+//                tool: $tool,
                 
                 // You can now define application-specific data to pass to your layers
                 userInfo: [
@@ -34,11 +36,11 @@ struct SymbolCanvasView: View {
                 renderLayers: [
 //                    GridRenderLayer(), // These layers can now access userInfo!
 //                    ElementsRenderLayer(),
-                    PreviewRenderLayer()
+//                    PreviewRenderLayer()
                 ],
                 interactions: [
-                    ToolInteraction(),
-                    SelectionInteraction(),
+//                    ToolInteraction(),
+//                    SelectionInteraction(),
 //                    DragInteraction() // Add your other interactions here
                 ]
             )
