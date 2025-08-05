@@ -24,19 +24,24 @@ final class CanvasHostView: NSView {
         super.init(frame: .zero)
         
         self.wantsLayer = true
-        self.layer?.backgroundColor = NSColor.white.cgColor // A default background
+        self.layer?.backgroundColor = NSColor.white.cgColor
 
-        // The redraw callback from the controller simply marks this view as needing an update.
-        // AppKit will then schedule a call to `updateLayer()` at the appropriate time.
         self.controller.onNeedsRedraw = { [weak self] in
-            self?.needsDisplay = true
+            DispatchQueue.main.async {
+                self?.needsDisplay = true
+            }
         }
 
-        // The input coordinator is now a lean router for the configured interactions.
         self.inputCoordinator = WorkbenchInputCoordinator(host: self, controller: controller)
-        
-        // Drag-and-drop registration is generic enough to live here.
         self.registerForDraggedTypes([.transferableComponent])
+
+        // --- THIS IS THE FIX ---
+        // This is the crucial step that was missing. It calls the one-time
+        // install method on each render layer, giving them a chance
+        // to add their persistent CALayers to the host.
+        for renderLayer in controller.renderLayers {
+            renderLayer.install(on: self.layer!)
+        }
     }
     
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -74,6 +79,7 @@ final class CanvasHostView: NSView {
         super.viewDidMoveToWindow()
         window?.makeFirstResponder(self)
         updateTrackingAreas()
+        
     }
     
     override var acceptsFirstResponder: Bool { true }

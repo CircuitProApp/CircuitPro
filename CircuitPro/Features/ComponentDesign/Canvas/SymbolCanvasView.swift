@@ -25,7 +25,7 @@ struct SymbolCanvasView: View {
                 magnification: $canvasManager.magnification,
                 nodes: $symbolEditor.elements,
                 selection: $symbolEditor.selectedElementIDs,
-//                tool: $tool,
+                tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
                 
                 // You can now define application-specific data to pass to your layers
                 userInfo: [
@@ -34,13 +34,13 @@ struct SymbolCanvasView: View {
                 ],
                 
                 renderLayers: [
-//                    GridRenderLayer(), // These layers can now access userInfo!
-//                    ElementsRenderLayer(),
-//                    PreviewRenderLayer()
+                    GridRenderLayer(), // These layers can now access userInfo!
+                    ElementsRenderLayer(),
+                    PreviewRenderLayer()
                 ],
                 interactions: [
-//                    ToolInteraction(),
-//                    SelectionInteraction(),
+                    ToolInteraction(),
+                    SelectionInteraction(),
 //                    DragInteraction() // Add your other interactions here
                 ]
             )

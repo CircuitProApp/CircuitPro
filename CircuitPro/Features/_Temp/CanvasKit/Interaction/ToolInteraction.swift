@@ -44,10 +44,6 @@ struct ToolInteraction: CanvasInteraction {
         case .schematicModified, .noResult:
             break
         }
-        print("[ToolInteraction] mouseDown: Finished tap. The 'tool' variable is now mutated.")
-        print("   -> Writing tool back to controller. Controller tool will become: \(tool.id)")
-
-        print("[ToolInteraction] mouseDown: Finished interaction.")
         return true
     }
 }

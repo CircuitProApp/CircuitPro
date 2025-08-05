@@ -147,7 +147,7 @@ struct CanvasView: NSViewRepresentable {
             hostView.frame.size = size
         }
         
-        controller.redraw()
+        hostView.display()
 
         // This approximate check is still crucial. It prevents `updateNSView` from
         // programmatically setting the scroll view's magnification if the value
