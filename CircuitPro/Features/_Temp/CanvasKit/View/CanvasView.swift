@@ -3,84 +3,89 @@ import AppKit
 
 struct CanvasView: NSViewRepresentable {
 
+    // MARK: - SwiftUI State Bindings
     @Binding var size: CGSize
     @Binding var magnification: CGFloat
     @Binding var nodes: [any CanvasNode]
     @Binding var selection: Set<UUID>
     @Binding var tool: AnyCanvasTool?
 
-    private let renderLayers: [RenderLayer]
-    private let interactions: [any CanvasInteraction]
-    private let userInfo: [String: Any]
+    // MARK: - Static Configuration
+    let renderLayers: [RenderLayer]
+    let interactions: [any CanvasInteraction]
+    let userInfo: [String: Any]
 
-    init(
-        size: Binding<CGSize>,
-        magnification: Binding<CGFloat>,
-        nodes: Binding<[any CanvasNode]>,
-        selection: Binding<Set<UUID>>,
-        tool: Binding<AnyCanvasTool?> = .constant(nil),
-        userInfo: [String: Any] = [:],
-        renderLayers: [RenderLayer],
-        interactions: [any CanvasInteraction]
-    ) {
-        self._size = size
-        self._magnification = magnification
-        self._nodes = nodes
-        self._selection = selection
-        self._tool = tool
-        self.userInfo = userInfo
-        self.renderLayers = renderLayers
-        self.interactions = interactions
-    }
-
+    // MARK: - Coordinator
+    
+    /// The Coordinator is the bridge. It owns the `CanvasController` and connects SwiftUI bindings
+    /// to the controller's callbacks.
     final class Coordinator: NSObject {
         let canvasController: CanvasController
         
-        // This token manages the lifetime of the KVO observation.
-        private var magnificationObservation: NSKeyValueObservation?
-        
+        // Store bindings to update SwiftUI state from controller callbacks.
         private var magnificationBinding: Binding<CGFloat>
-        private var nodesBinding: Binding<[any CanvasNode]>
         private var selectionBinding: Binding<Set<UUID>>
+        private var nodesBinding: Binding<[any CanvasNode]>
+
+        // KVO token for observing the scroll view's magnification.
+        private var magnificationObservation: NSKeyValueObservation?
 
         init(
             magnification: Binding<CGFloat>,
             nodes: Binding<[any CanvasNode]>,
-            selection: Binding<Set<UUID>>
+            selection: Binding<Set<UUID>>,
+            renderLayers: [RenderLayer],
+            interactions: [any CanvasInteraction]
         ) {
             self.magnificationBinding = magnification
             self.nodesBinding = nodes
             self.selectionBinding = selection
-            self.canvasController = CanvasController()
+            
+            self.canvasController = CanvasController(renderLayers: renderLayers, interactions: interactions)
             super.init()
-            setupCallbacks()
+
+            // Set up the callbacks to propagate changes from the controller *out* to SwiftUI.
+            setupControllerCallbacks()
         }
 
-        private func setupCallbacks() {
-            canvasController.onUpdateSelectedNodes = { [weak self] newNodes in
+        private func setupControllerCallbacks() {
+            // When an interaction changes the selection in the controller...
+            canvasController.onSelectionChanged = { [weak self] newSelectionIDs in
+                // ...update the SwiftUI binding on the main thread.
                 DispatchQueue.main.async {
-                    self?.selectionBinding.wrappedValue = Set(newNodes.map { $0.id })
+                    self?.selectionBinding.wrappedValue = newSelectionIDs
                 }
             }
+
+            // When nodes are added or removed...
             canvasController.onNodesChanged = { [weak self] newNodes in
                 DispatchQueue.main.async {
                     self?.nodesBinding.wrappedValue = newNodes
                 }
             }
-        }
-        
-        // This function sets up the KVO observation.
-        func observeScrollView(_ scrollView: NSScrollView) {
-            magnificationObservation = scrollView.observe(\.magnification, options: [.new]) { [weak self] _, change in
-                guard let self = self, let newValue = change.newValue else { return }
-                
-                // When the scroll view's magnification changes (e.g., from a user gesture),
-                // update the SwiftUI binding.
-                self.magnificationBinding.wrappedValue = newValue
+            
+            // When the controller's magnification changes (e.g., from KVO)...
+            canvasController.onMagnificationChanged = { [weak self] newMagnification in
+                DispatchQueue.main.async {
+                     if let bindingValue = self?.magnificationBinding.wrappedValue,
+                        !bindingValue.isApproximatelyEqual(to: newMagnification) {
+                         self?.magnificationBinding.wrappedValue = newMagnification
+                     }
+                }
             }
         }
         
-        // The coordinator must deinit the observation to prevent memory leaks.
+        /// Sets up KVO to watch for magnification changes from user gestures (e.g., pinch-to-zoom).
+        func observeScrollView(_ scrollView: NSScrollView) {
+            magnificationObservation = scrollView.observe(\.magnification, options: .new) { [weak self] _, change in
+                guard let self = self, let newValue = change.newValue else { return }
+                
+                // When the scroll view's magnification changes, update the controller's state.
+                // The controller will then trigger the `onMagnificationChanged` callback.
+                self.canvasController.magnification = newValue
+            }
+        }
+        
         deinit {
             magnificationObservation?.invalidate()
         }
@@ -90,30 +95,29 @@ struct CanvasView: NSViewRepresentable {
         Coordinator(
             magnification: $magnification,
             nodes: $nodes,
-            selection: $selection
+            selection: $selection,
+            renderLayers: self.renderLayers,
+            interactions: self.interactions
         )
     }
+
+    // MARK: - NSViewRepresentable Lifecycle
 
     func makeNSView(context: Context) -> NSScrollView {
         let coordinator = context.coordinator
         let controller = coordinator.canvasController
 
-        controller.renderLayers = self.renderLayers
-        controller.interactions = self.interactions
-
         let canvasHostView = CanvasHostView(controller: controller)
+        
         let scrollView = NSScrollView()
         scrollView.documentView = canvasHostView
-        
         scrollView.hasHorizontalScroller = true
         scrollView.hasVerticalScroller = true
         scrollView.allowsMagnification = true
         scrollView.minMagnification = 0.1
         scrollView.maxMagnification = 10.0
-        scrollView.drawsBackground = false
         
-        // Instead of using NotificationCenter, we now ask the Coordinator to
-        // directly observe the scroll view's magnification property.
+        // Have the coordinator start listening for magnification gestures.
         coordinator.observeScrollView(scrollView)
         
         return scrollView
@@ -122,71 +126,32 @@ struct CanvasView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
         
-        guard let hostView = scrollView.documentView as? CanvasHostView else { return }
-        
-        if controller.selectedTool?.id != tool?.id {
-            controller.selectedTool = tool
-        }
-        
-        syncSceneGraph(controller: controller, from: nodes)
-        syncSelection(controller: controller, from: selection)
-        controller.magnification = magnification
-
-        let renderContext = RenderContext(
-            sceneRoot: controller.sceneRoot,
-            magnification: magnification,
-            mouseLocation: controller.mouseLocation,
-            selectedTool: controller.selectedTool,
-            highlightedNodeIDs: selection,
-            hostViewBounds: hostView.bounds,
+        // Push all state changes from SwiftUI *into* the controller.
+        controller.sync(
+            nodes: self.nodes,
+            selection: self.selection,
+            tool: self.tool,
+            magnification: self.magnification,
             userInfo: self.userInfo
         )
-        hostView.currentContext = renderContext
         
-        if hostView.frame.size != size {
-            hostView.frame.size = size
+        // Ensure the AppKit views are correctly sized.
+        if let hostView = scrollView.documentView, hostView.frame.size != self.size {
+            hostView.frame.size = self.size
         }
         
-        hostView.display()
-
-        // This approximate check is still crucial. It prevents `updateNSView` from
-        // programmatically setting the scroll view's magnification if the value
-        // is already effectively the same, which prevents the KVO handler
-        // from re-triggering this update cycle.
-        if !scrollView.magnification.isApproximatelyEqual(to: magnification) {
-            scrollView.magnification = magnification
+        // Programmatically set the scroll view's magnification if the binding changes.
+        // This check prevents an infinite loop with the KVO observer.
+        if !scrollView.magnification.isApproximatelyEqual(to: self.magnification) {
+            scrollView.magnification = self.magnification
         }
-    }
-    
-    // MARK: - Private Helpers
-    private func syncSceneGraph(controller: CanvasController, from newNodes: [any CanvasNode]) {
-        let currentIDs = controller.sceneRoot.children.map { $0.id }
-        let newIDs = newNodes.map { $0.id }
-
-        if currentIDs != newIDs {
-            controller.sceneRoot.children.forEach { $0.removeFromParent() }
-            newNodes.forEach { controller.sceneRoot.addChild($0) }
-        }
-    }
-    
-    private func syncSelection(controller: CanvasController, from selectedIDs: Set<UUID>) {
-        let currentSelectedIDsInController = Set(controller.selectedNodes.map { $0.id })
-        if currentSelectedIDsInController != selectedIDs {
-            controller.selectedNodes = selectedIDs.compactMap { id in
-                return findNode(with: id, in: controller.sceneRoot)
-            }
-        }
-    }
-    
-    private func findNode(with id: UUID, in root: any CanvasNode) -> (any CanvasNode)? {
-        if root.id == id { return root }
-        for child in root.children {
-            if let found = findNode(with: id, in: child) { return found }
-        }
-        return nil
+        
+        // Trigger a redraw. The host view will ask the controller for a fresh RenderContext.
+        scrollView.documentView?.needsDisplay = true
     }
 }
 
+// Helper remains the same
 extension CGFloat {
     func isApproximatelyEqual(to other: CGFloat, tolerance: CGFloat = 1e-9) -> Bool {
         return abs(self - other) <= tolerance

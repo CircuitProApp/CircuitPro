@@ -1,60 +1,62 @@
-//
-//  SelectionInteraction.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/5/25.
-//
-
-
 import AppKit
 
 /// Handles node selection logic when the cursor is active.
 struct SelectionInteraction: CanvasInteraction {
+    
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
-        // Only interested if the cursor tool is active.
-        guard controller.selectedTool?.id == "cursor" else { return false }
+        // This interaction is only interested if the cursor tool is active.
+        guard controller.selectedTool?.id == "cursor" else {
+            return false
+        }
         
+        let currentSelection = controller.selectedNodes
         let tolerance = 5.0 / context.magnification
         let hitTarget = context.sceneRoot.hitTest(point, tolerance: tolerance)
         let modifierFlags = NSApp.currentEvent?.modifierFlags ?? []
         
+        // This variable will hold the potential new selection state.
+        var newSelection = currentSelection
+        
         if let hit = hitTarget, let hitID = hit.selectableID {
-            // Clicked on an object
+            // Case 1: Clicked on an object.
+            
             if modifierFlags.contains(.shift) {
-                // Shift-click to add/remove from selection
-                if let index = controller.selectedNodes.firstIndex(where: { $0.id == hitID }) {
-                    controller.selectedNodes.remove(at: index)
-                } else if let node = findNode(with: hitID, in: controller.sceneRoot) {
-                    controller.selectedNodes.append(node)
+                // Shift-click: toggle the item's selection state.
+                if let index = newSelection.firstIndex(where: { $0.id == hitID }) {
+                    newSelection.remove(at: index)
+                } else if let node = controller.findNode(with: hitID, in: controller.sceneRoot) {
+                    newSelection.append(node)
                 }
             } else {
-                // Normal click to select a single node
-                if !controller.selectedNodes.contains(where: { $0.id == hitID }) {
-                     if let node = findNode(with: hitID, in: controller.sceneRoot) {
-                        controller.selectedNodes = [node]
+                // Normal click: select only this item if it's not already selected.
+                if !currentSelection.contains(where: { $0.id == hitID }) {
+                    if let node = controller.findNode(with: hitID, in: controller.sceneRoot) {
+                         newSelection = [node]
                     }
                 }
             }
+            
         } else {
-            // Clicked on empty space
-            if !modifierFlags.contains(.shift) && !controller.selectedNodes.isEmpty {
-                controller.selectedNodes.removeAll()
+            // Case 2: Clicked on empty space.
+            // If the shift key is not down, clear the selection.
+            if !modifierFlags.contains(.shift) && !currentSelection.isEmpty {
+                newSelection = []
             }
         }
         
-        // Propagate selection changes back to SwiftUI
-        controller.onUpdateSelectedNodes?(controller.selectedNodes)
-        
-        // IMPORTANT: Return false. We want other interactions (like Drag) to be
-        // able to act on this same click event.
-        return false
-    }
-    
-    private func findNode(with id: UUID, in root: any CanvasNode) -> (any CanvasNode)? {
-        if root.id == id { return root }
-        for child in root.children {
-            if let found = findNode(with: id, in: child) { return found }
+        // --- THIS IS THE FIX ---
+        // We cannot compare `[any CanvasNode]` directly. Instead, we compare a Set of their unique IDs.
+        // This is efficient and correctly handles the Equatable requirement.
+        let currentSelectionIDs = Set(currentSelection.map { $0.id })
+        let newSelectionIDs = Set(newSelection.map { $0.id })
+
+        if newSelectionIDs != currentSelectionIDs {
+            // If the selection has changed, update the controller.
+            controller.setSelection(to: newSelection)
         }
-        return nil
+        
+        // IMPORTANT: Always return false.
+        // This allows other interactions (like Drag) to act on the same click.
+        return false
     }
 }

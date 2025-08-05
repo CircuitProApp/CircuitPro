@@ -28,10 +28,7 @@ struct SymbolCanvasView: View {
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
                 
                 // You can now define application-specific data to pass to your layers
-                userInfo: [
-                    "snapGridSize": canvasManager.gridSpacing.rawValue * 10,
-                    "isSnappingEnabled": canvasManager.enableSnapping
-                ],
+  
                 
                 renderLayers: [
                     GridRenderLayer(), // These layers can now access userInfo!
@@ -42,7 +39,11 @@ struct SymbolCanvasView: View {
                     ToolInteraction(),
                     SelectionInteraction(),
 //                    DragInteraction() // Add your other interactions here
-                ]
+                ],
+                userInfo: [
+                    "snapGridSize": canvasManager.gridSpacing.rawValue * 10,
+                    "isSnappingEnabled": canvasManager.enableSnapping
+                ],
             )
             .overlay(alignment: .leading) {
                 SymbolDesignToolbarView()
