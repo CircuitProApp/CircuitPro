@@ -84,8 +84,6 @@ class BaseNode: CanvasNode {
         return worldPoint.applying(destinationTransform.inverted())
     }
 
-    // --- THIS IS THE FIX ---
-    // Added the '-> CGPoint' return type to match the protocol.
     func convert(_ point: CGPoint, to destinationNode: (any CanvasNode)?) -> CGPoint {
         let sourceTransform = self.worldTransform
         let destinationTransform = destinationNode?.worldTransform ?? .identity
@@ -115,15 +113,6 @@ class BaseNode: CanvasNode {
     /// to define their interactive shape. The default implementation only hits children.
     func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
         guard self.isVisible else { return nil }
-
-        // --- THIS IS THE FIX ---
-        // The previous implementation used `self.convert(point, to: child)`, which
-        // caused a complex and incorrect transform calculation that could lead to
-        // infinite recursion when calculating world transforms.
-        //
-        // The correct approach is to directly convert the point from the parent's
-        // coordinate space (self) into the child's local coordinate space. This is
-        // done by applying the inverse of the child's *local* transform.
 
         for child in children.reversed() {
             // We transform the incoming point into the child's coordinate system.

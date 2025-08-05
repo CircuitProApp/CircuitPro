@@ -15,7 +15,6 @@ protocol CanvasNode: AnyObject, CanvasElement {
 
     /// An array of child nodes.
     var children: [any CanvasNode] { get set }
-    
 
     var isVisible: Bool { get set }
     
@@ -23,6 +22,7 @@ protocol CanvasNode: AnyObject, CanvasElement {
     
     var localTransform: CGAffineTransform { get }
     var worldTransform: CGAffineTransform { get }
+
     func addChild(_ node: any CanvasNode)
     func removeFromParent()
     func convert(_ point: CGPoint, from sourceNode: (any CanvasNode)?) -> CGPoint

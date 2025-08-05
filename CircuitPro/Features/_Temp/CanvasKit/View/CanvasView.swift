@@ -14,13 +14,8 @@ struct CanvasView: NSViewRepresentable {
     let renderLayers: [RenderLayer]
     let interactions: [any CanvasInteraction]
     
-    // --- THIS IS THE FIX (1/3) ---
-    // The old `userInfo` dictionary is replaced by our new type-safe struct.
     let environment: CanvasEnvironmentValues
     
-    // --- THIS IS THE FIX (2/3) ---
-    // A new init is provided to reflect the change from `userInfo` to `environment`.
-    // The parent view will now pass the constructed environment values here.
     init(
         size: Binding<CGSize>,
         magnification: Binding<CGFloat>,
@@ -78,8 +73,6 @@ struct CanvasView: NSViewRepresentable {
              magnificationObservation = scrollView.observe(\.magnification, options: .new) { [weak self] _, change in
                  guard let self = self, let newValue = change.newValue else { return }
                  
-                 // Instead of updating the controller, we now update the SwiftUI binding directly.
-                 // We add a check to prevent redundant updates and re-render loops.
                  DispatchQueue.main.async {
                      if !self.magnificationBinding.wrappedValue.isApproximatelyEqual(to: newValue) {
                          self.magnificationBinding.wrappedValue = newValue
@@ -122,9 +115,6 @@ struct CanvasView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
         
-        // --- THIS IS THE FIX (3/3) ---
-        // Push all state changes from SwiftUI *into* the controller.
-        // The `environment` struct is now passed instead of `userInfo`.
         controller.sync(
             nodes: self.nodes,
             selection: self.selection,

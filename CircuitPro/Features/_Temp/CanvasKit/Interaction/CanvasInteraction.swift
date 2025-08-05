@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 8/5/25.
 //
 
-
 import AppKit
 
 /// Defines a modular, self-contained interaction behavior for the canvas.

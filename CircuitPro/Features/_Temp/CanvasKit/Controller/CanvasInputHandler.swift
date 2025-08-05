@@ -2,7 +2,7 @@ import AppKit
 
 /// A lean input router that passes events to a pluggable list of interactions.
 /// This class has no application-specific logic. It is a simple event forwarder.
-final class WorkbenchInputCoordinator {
+final class CanvasInputHandler {
 
     // It only needs a reference to the controller, the source of truth.
     unowned let controller: CanvasController

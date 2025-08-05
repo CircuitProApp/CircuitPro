@@ -6,15 +6,12 @@ import UniformTypeIdentifiers
 final class CanvasHostView: NSView {
 
     private let controller: CanvasController
-    private let inputCoordinator: WorkbenchInputCoordinator
-
-    // --- THIS IS THE FIX ---
-    // The `currentContext` property has been REMOVED. The host view no longer stores this state.
+    private let inputHandler: CanvasInputHandler
 
     // MARK: - Init & Setup
     init(controller: CanvasController) {
         self.controller = controller
-        self.inputCoordinator = WorkbenchInputCoordinator(controller: controller)
+        self.inputHandler = CanvasInputHandler(controller: controller)
         super.init(frame: .zero)
         
         self.wantsLayer = true
@@ -27,8 +24,7 @@ final class CanvasHostView: NSView {
         }
 
         self.registerForDraggedTypes([.transferableComponent])
-        
-        // Install persistent CALayers for each render layer.
+
         for renderLayer in controller.renderLayers {
             renderLayer.install(on: self.layer!)
         }
@@ -43,10 +39,7 @@ final class CanvasHostView: NSView {
     }
     
     override func updateLayer() {
-        // --- THIS IS THE FIX ---
-        // Instead of reading a stored property, we request a fresh, non-optional
-        // context directly from the controller for this specific render pass.
-        // This guarantees a valid context is always available.
+
         let context = controller.currentContext(for: self.bounds)
         
         CATransaction.begin()
@@ -59,7 +52,8 @@ final class CanvasHostView: NSView {
         CATransaction.commit()
     }
     
-    // MARK: - Input & Tracking Area (Unchanged)
+    // MARK: - Input & Tracking Area
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         window?.makeFirstResponder(self)
@@ -76,10 +70,10 @@ final class CanvasHostView: NSView {
     }
     
     // MARK: - Event Forwarding
-    // Events now pass `self` to the coordinator, as it no longer holds a reference to the host.
-    override func mouseMoved(with event: NSEvent) { inputCoordinator.mouseMoved(event, in: self) }
-    override func mouseExited(with event: NSEvent) { inputCoordinator.mouseExited() }
-    override func mouseDown(with event: NSEvent) { inputCoordinator.mouseDown(event, in: self) }
-    override func mouseDragged(with event: NSEvent) { inputCoordinator.mouseDragged(event, in: self) }
-    override func mouseUp(with event: NSEvent) { inputCoordinator.mouseUp(event, in: self) }
+
+    override func mouseMoved(with event: NSEvent) { inputHandler.mouseMoved(event, in: self) }
+    override func mouseExited(with event: NSEvent) { inputHandler.mouseExited() }
+    override func mouseDown(with event: NSEvent) { inputHandler.mouseDown(event, in: self) }
+    override func mouseDragged(with event: NSEvent) { inputHandler.mouseDragged(event, in: self) }
+    override func mouseUp(with event: NSEvent) { inputHandler.mouseUp(event, in: self) }
 }

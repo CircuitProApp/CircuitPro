@@ -1,13 +1,13 @@
 import AppKit
 
-/// A lean, generic controller that manages the universal state and pipelines of a canvas instance.
-/// This is a plain class, fully decoupled from SwiftUI's state management.
 final class CanvasController {
     // MARK: - Core Data Model
+
     let sceneRoot: any CanvasNode = BaseNode()
     var selectedNodes: [any CanvasNode] = []
 
     // MARK: - Universal View State
+
     var magnification: CGFloat = 1.0
     var mouseLocation: CGPoint?
     var selectedTool: CanvasTool?
@@ -15,15 +15,18 @@ final class CanvasController {
     private(set) var environment: CanvasEnvironmentValues = .init()
 
     // MARK: - Pluggable Pipelines
+
     let renderLayers: [RenderLayer]
     let interactions: [any CanvasInteraction]
 
     // MARK: - Callbacks to Owner (The Coordinator)
+
     var onNeedsRedraw: (() -> Void)?
     var onSelectionChanged: ((Set<UUID>) -> Void)?
     var onNodesChanged: (([any CanvasNode]) -> Void)?
 
     // MARK: - Init
+
     init(renderLayers: [RenderLayer], interactions: [any CanvasInteraction]) {
         self.renderLayers = renderLayers
         self.interactions = interactions
