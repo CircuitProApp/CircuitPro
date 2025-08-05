@@ -24,11 +24,11 @@ class GuideRenderLayer: RenderLayer {
     /// **NEW:** Updates the properties of the existing layers on every redraw.
     func update(using context: RenderContext) {
         // If guides are turned off, simply hide the layers. This is very cheap.
-        guard context.showGuides else {
-            xAxisLayer.isHidden = true
-            yAxisLayer.isHidden = true
-            return
-        }
+//        guard context.showGuides else {
+//            xAxisLayer.isHidden = true
+//            yAxisLayer.isHidden = true
+//            return
+//        }
 
         // If guides are shown, make sure the layers are visible.
         xAxisLayer.isHidden = false

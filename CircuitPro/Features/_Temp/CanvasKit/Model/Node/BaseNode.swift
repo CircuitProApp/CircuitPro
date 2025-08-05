@@ -110,32 +110,30 @@ class BaseNode: CanvasNode {
     /// Default implementation for `Hittable`. Subclasses should override this
     /// to define their interactive shape. The default implementation only hits children.
     func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        // Only interact with visible nodes.
         guard self.isVisible else { return nil }
 
-        // --- LOGGING ---
-        // Short ID for cleaner logs
-        let shortID = self.id.uuidString.prefix(4)
-        print("[BaseNode \(shortID)] Testing children. Received point in my local space: \(point)")
-        // ---
+        // --- THIS IS THE FIX ---
+        // The previous implementation used `self.convert(point, to: child)`, which
+        // caused a complex and incorrect transform calculation that could lead to
+        // infinite recursion when calculating world transforms.
+        //
+        // The correct approach is to directly convert the point from the parent's
+        // coordinate space (self) into the child's local coordinate space. This is
+        // done by applying the inverse of the child's *local* transform.
 
-        // Iterate children from top to bottom (last child is drawn last/on top).
         for child in children.reversed() {
-            let childShortID = child.id.uuidString.prefix(4)
-            // Convert the point from our coordinate space into the child's space.
-            let localPoint = self.convert(point, to: child)
-            
-            print("[BaseNode \(shortID)]  -> Testing child [\(childShortID)]. Converted point to child's local space: \(localPoint)")
+            // We transform the incoming point into the child's coordinate system.
+            let localPoint = point.applying(child.localTransform.inverted())
 
             if let hit = child.hitTest(localPoint, tolerance: tolerance) {
-                print("[BaseNode \(shortID)]  ✅ Child [\(childShortID)] reported a hit! Propagating up.")
-                // Simply return the hit result from the child directly.
+                // If the child is hit, we return its result directly. The child is
+                // responsible for converting the hit location to world space.
                 return hit
-            } else {
-                print("[BaseNode \(shortID)]  ❌ Child [\(childShortID)] did not report a hit.")
             }
         }
-        return nil // Base implementation doesn't hit itself, only its children.
+        
+        // Base implementation doesn't hit itself, only its children.
+        return nil
     }
 
     /// Default implementation for `Bounded`. Subclasses should override this to

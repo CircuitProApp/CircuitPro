@@ -1,10 +1,22 @@
 import AppKit
 import UniformTypeIdentifiers
 
+/// The AppKit view that directly hosts the canvas's rendering layers and receives raw input events.
+///
+/// This view is intentionally "dumb". It does not contain any application-specific logic.
+/// It is configured by the parent `CanvasView`, which injects a `RenderContext` on every
+/// update cycle. Its sole responsibilities are to forward input events to the pluggable
+/// interaction pipeline and to trigger the rendering pipeline.
 final class CanvasHostView: NSView {
 
     private let controller: CanvasController
     var inputCoordinator: WorkbenchInputCoordinator!
+
+    /// The definitive snapshot of the canvas state for the current frame.
+     /// - NOTE: This is now a standard optional (?) instead of an implicitly
+     ///   unwrapped one (!). This makes our code safer by forcing us to
+     ///   handle the case where input events arrive before the first render pass.
+     var currentContext: RenderContext?
 
     // MARK: - Init & Setup
     init(controller: CanvasController) {
@@ -12,39 +24,43 @@ final class CanvasHostView: NSView {
         super.init(frame: .zero)
         
         self.wantsLayer = true
-        self.layer?.backgroundColor = NSColor.white.cgColor
+        self.layer?.backgroundColor = NSColor.white.cgColor // A default background
 
-        // Install render layers ONCE.
-        for renderLayer in controller.renderLayers {
-            renderLayer.install(on: self.layer!)
-        }
-        
-        // The redraw callback now asynchronously invalidates the view.
+        // The redraw callback from the controller simply marks this view as needing an update.
+        // AppKit will then schedule a call to `updateLayer()` at the appropriate time.
         self.controller.onNeedsRedraw = { [weak self] in
-            self?.needsDisplay = true // This is the asynchronous, non-hanging way.
+            self?.needsDisplay = true
         }
 
+        // The input coordinator is now a lean router for the configured interactions.
         self.inputCoordinator = WorkbenchInputCoordinator(host: self, controller: controller)
+        
+        // Drag-and-drop registration is generic enough to live here.
         self.registerForDraggedTypes([.transferableComponent])
     }
     
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    // This tells AppKit that our view is layer-backed and that we
-    // will be doing our drawing by updating layer properties.
+    // MARK: - Core Rendering Logic
+
+    /// This property tells AppKit that we are a layer-backed view and will be performing
+    /// our drawing by directly manipulating the properties of our `CALayer`.
     override var wantsUpdateLayer: Bool {
         return true
     }
     
-    // The drawing logic moves from `draw(_:)` to `updateLayer()`.
-    // This is the correct method for a high-performance, layer-backed view.
+    /// This method is called by AppKit whenever the view needs to be redrawn.
+    /// This is the heart of our high-performance rendering loop.
     override func updateLayer() {
-        let context = self.currentContext()
+        // Guard against the first frame before the context has been injected.
+        guard let context = self.currentContext else { return }
         
+        // By wrapping the updates in a transaction with actions disabled, we ensure
+        // all layer changes happen simultaneously without any unwanted animations.
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         
-        // Simply tell each layer to update its persistent CALayers.
+        // Pass the definitive context to each configured render layer to perform its drawing.
         for renderLayer in controller.renderLayers {
             renderLayer.update(using: context)
         }
@@ -52,42 +68,14 @@ final class CanvasHostView: NSView {
         CATransaction.commit()
     }
     
+    // MARK: - Input & Tracking Area
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         window?.makeFirstResponder(self)
         updateTrackingAreas()
     }
     
-    // A private helper to create the context, keeping updateLayers clean.
-    private func currentContext() -> RenderContext {
-        return RenderContext(
-            // Data Models
-            sceneRoot: controller.sceneRoot,
-            schematicGraph: controller.schematicGraph,
-
-            // Visual State
-            highlightedNodeIDs: controller.highlightedNodeIDs,
-            magnification: controller.magnification,
-            selectedTool: controller.selectedTool,
-
-            // Interaction State
-            mouseLocation: controller.mouseLocation,
-            marqueeRect: controller.marqueeRect,
-
-            // Configuration
-            paperSize: controller.paperSize,
-            sheetOrientation: controller.sheetOrientation,
-            sheetCellValues: controller.sheetCellValues,
-            snapGridSize: controller.snapGridSize,
-            showGuides: controller.showGuides,
-            crosshairsStyle: controller.crosshairsStyle,
-            
-            // Geometry
-            hostViewBounds: self.bounds
-        )
-    }
-
-    // MARK: - Input & Tracking
     override var acceptsFirstResponder: Bool { true }
 
     override func updateTrackingAreas() {
@@ -97,22 +85,26 @@ final class CanvasHostView: NSView {
         addTrackingArea(NSTrackingArea(rect: bounds, options: options, owner: self, userInfo: nil))
     }
     
+    // MARK: - Event Forwarding
+    // All raw AppKit events are unconditionally forwarded to the input coordinator.
+    
     override func mouseMoved(with event: NSEvent) { inputCoordinator.mouseMoved(event) }
     override func mouseEntered(with event: NSEvent) { inputCoordinator.mouseMoved(event) }
     override func mouseExited(with event: NSEvent) { inputCoordinator.mouseExited() }
     override func mouseDown(with event: NSEvent) { inputCoordinator.mouseDown(event) }
     override func mouseDragged(with event: NSEvent) { inputCoordinator.mouseDragged(event) }
     override func mouseUp(with event: NSEvent) { inputCoordinator.mouseUp(event) }
-    override func rightMouseDown(with event: NSEvent) { inputCoordinator.rightMouseDown(event) }
-    override func keyDown(with event: NSEvent) {
-        if !inputCoordinator.keyDown(event) { super.keyDown(with: event) }
-    }
+    override func rightMouseDown(with event: NSEvent) { /* Forward to coordinator if needed */ }
+    override func keyDown(with event: NSEvent) { /* Forward to coordinator if needed */ }
     
-    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { inputCoordinator.draggingEntered(sender) }
-    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { inputCoordinator.draggingUpdated(sender) }
-    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool { inputCoordinator.performDragOperation(sender) }
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { /* Forward to coordinator if needed */ return [] }
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { /* Forward to coordinator if needed */ return [] }
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool { /* Forward to coordinator if needed */ return false }
 }
 
+
+// MARK: - Pasteboard Type
+// This is a static extension, so it's fine to keep it co-located with the NSView.
 extension NSPasteboard.PasteboardType {
     static let transferableComponent = NSPasteboard.PasteboardType(UTType.transferableComponent.identifier)
 }

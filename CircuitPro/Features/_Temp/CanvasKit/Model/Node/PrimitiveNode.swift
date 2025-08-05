@@ -30,7 +30,6 @@ class PrimitiveNode: BaseNode {
     init(primitive: AnyPrimitive) {
         self.primitive = primitive
         
-        // --- THIS IS THE FIX ---
         // We pass the primitive's ID to the superclass initializer.
         // This guarantees the PrimitiveNode and its underlying primitive
         // share the exact same ID.

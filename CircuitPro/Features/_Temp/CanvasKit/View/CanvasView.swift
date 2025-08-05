@@ -1,35 +1,56 @@
 import SwiftUI
 import AppKit
 
+/// A generic, configurable, and extensible canvas component for SwiftUI on macOS.
+///
+/// This view manages a scene graph of `CanvasNode` objects and uses pluggable pipelines
+/// for both rendering (`RenderLayer`) and user input (`CanvasInteraction`).
+/// It is agnostic to the application's specific data model, which is passed in
+/// via a `userInfo` dictionary in the `RenderContext`.
 struct CanvasView: NSViewRepresentable {
     
-    // MARK: - Universal Bindings
-    @Bindable var manager: CanvasManager
-    @Binding var selectedIDs: Set<UUID>
-    @Binding var selectedTool: AnyCanvasTool
-
+    // MARK: - Framework Bindings
+    @Binding var size: CGSize
+    @Binding var magnification: CGFloat
     @Binding var nodes: [any CanvasNode]
-
-    // MARK: - Schematics-Only Data
-    var schematicGraph: SchematicGraph? = nil
+    @Binding var selection: Set<UUID>
+    @Binding var tool: AnyCanvasTool?
     
-    // MARK: - Callbacks
-    var onComponentDropped: ((TransferableComponent, CGPoint) -> Void)?
+    // MARK: - Configuration Properties
+    private let renderLayers: [RenderLayer]
+    private let interactions: [any CanvasInteraction]
+    private let userInfo: [String: Any]
 
-    // The Coordinator now handles the node-based selection callback.
+    // MARK: - Initializer
+    init(
+        size: Binding<CGSize>,
+        magnification: Binding<CGFloat>,
+        nodes: Binding<[any CanvasNode]>,
+        selection: Binding<Set<UUID>>,
+        tool: Binding<AnyCanvasTool?> = .constant(nil),
+        userInfo: [String: Any] = [:],
+        renderLayers: [RenderLayer],
+        interactions: [any CanvasInteraction]
+    ) {
+        self._size = size
+        self._magnification = magnification
+        self._nodes = nodes
+        self._selection = selection
+        self._tool = tool
+        self.userInfo = userInfo
+        self.renderLayers = renderLayers
+        self.interactions = interactions
+    }
+
+    // MARK: - Coordinator
     final class Coordinator {
         let canvasController: CanvasController
-        private var parent: CanvasView
+        var parent: CanvasView
 
         init(_ parent: CanvasView) {
             self.parent = parent
             self.canvasController = CanvasController()
             setupCallbacks()
-            
-            // Give the controller a way to modify the parent's node array.
-            self.canvasController.onNodesChanged = { [weak self] newNodes in
-                self?.parent.nodes = newNodes
-            }
         }
         
         func updateParent(_ parent: CanvasView) {
@@ -37,52 +58,61 @@ struct CanvasView: NSViewRepresentable {
         }
 
         private func setupCallbacks() {
-            // Callback from Controller -> SwiftUI
             canvasController.onUpdateSelectedNodes = { [weak self] newNodes in
-                 DispatchQueue.main.async {
-                     self?.parent.selectedIDs = Set(newNodes.map { $0.id })
-                 }
-             }
-             canvasController.onUpdateSelectedTool = { [weak self] newTool in
-                 DispatchQueue.main.async {
-                     self?.parent.selectedTool = newTool
-                 }
-             }
+                DispatchQueue.main.async {
+                    self?.parent.selection = Set(newNodes.map { $0.id })
+                }
+            }
+            canvasController.onNodesChanged = { [weak self] newNodes in
+                self?.parent.nodes = newNodes
+            }
         }
     }
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
 
+    // MARK: - NSViewRepresentable Lifecycle
     func makeNSView(context: Context) -> NSScrollView {
-        // This logic remains the same.
         let controller = context.coordinator.canvasController
+        
+        controller.renderLayers = self.renderLayers
+        controller.interactions = self.interactions
+        
         let canvasHostView = CanvasHostView(controller: controller)
-        let containerView = DocumentContainerView(canvasHost: canvasHostView)
-        let scrollView = CenteringNSScrollView()
-        scrollView.documentView = containerView
+        
+        for layer in controller.renderLayers {
+            layer.install(on: canvasHostView.layer!)
+        }
+        
+        let scrollView = NSScrollView()
+        scrollView.documentView = canvasHostView
+        
         scrollView.hasHorizontalScroller = true
         scrollView.hasVerticalScroller = true
         scrollView.allowsMagnification = true
-        scrollView.minMagnification = ZoomStep.minZoom
-        scrollView.maxMagnification = ZoomStep.maxZoom
+        scrollView.minMagnification = 0.1
+        scrollView.maxMagnification = 10.0
         scrollView.drawsBackground = false
         
+        // --- THIS IS THE FIX ---
         scrollView.postsBoundsChangedNotifications = true
         NotificationCenter.default.addObserver(
             forName: NSView.boundsDidChangeNotification,
             object: scrollView.contentView,
             queue: .main
-        ) { [weak manager = self.manager] _ in
-            guard let manager = manager else { return }
-            let origin = scrollView.contentView.bounds.origin
-            let clip = scrollView.contentView.bounds.size
-            let boardHeight = containerView.bounds.height
-            let flippedY = boardHeight - origin.y - clip.height
-            manager.scrollOrigin = CGPoint(x: origin.x, y: flippedY)
-            manager.magnification = scrollView.magnification
+        ) { [weak coordinator = context.coordinator] _ in // We capture the coordinator from the context.
+            // Safely unwrap the weak reference.
+            guard let coordinator = coordinator else { return }
+            
+            let currentMagnification = scrollView.magnification
+            if coordinator.parent.magnification != currentMagnification {
+                DispatchQueue.main.async {
+                    // Update the binding on the parent view stored in the coordinator.
+                    coordinator.parent.magnification = currentMagnification
+                }
+            }
         }
+        
         return scrollView
     }
 
@@ -91,69 +121,67 @@ struct CanvasView: NSViewRepresentable {
         coordinator.updateParent(self)
         let controller = coordinator.canvasController
         
-        // --- SMARTER DATA SYNCING ---
+        guard let hostView = scrollView.documentView as? CanvasHostView else {
+            return
+        }
         
-        // 1. Sync the controller's scene graph to match the bound 'nodes' array.
-        // This is more efficient than clearing and re-adding everything every time.
+        if controller.selectedTool?.id != tool?.id {
+            controller.selectedTool = tool
+        }
+
+        
+        // 1. Sync data FROM SwiftUI bindings INTO the controller
         syncSceneGraph(controller: controller, from: nodes)
+        syncSelection(controller: controller, from: selection)
+        controller.magnification = magnification
+
+        // 2. Assemble the definitive RenderContext for this frame.
+        let renderContext = RenderContext(
+            sceneRoot: controller.sceneRoot,
+            magnification: controller.magnification,
+            mouseLocation: controller.mouseLocation,
+            selectedTool: controller.selectedTool,
+            highlightedNodeIDs: Set(controller.selectedNodes.map { $0.id }),
+            hostViewBounds: hostView.bounds,
+            userInfo: self.userInfo
+        )
+        // Inject the final context into the host view.
+        hostView.currentContext = renderContext
         
-        // 2. Sync selection FROM SwiftUI -> Controller
+        // 3. Update the host view's frame size directly.
+        if hostView.frame.size != size {
+            hostView.frame.size = size
+        }
+        
+        // 4. Trigger redraw and sync magnification.
+        controller.redraw()
+        if scrollView.magnification != magnification {
+            scrollView.magnification = magnification
+        }
+    }
+    
+    // MARK: - Private Helpers
+    private func syncSceneGraph(controller: CanvasController, from newNodes: [any CanvasNode]) {
+        let currentNodes = controller.sceneRoot.children
+        let currentNodeIDs = Set(currentNodes.map { $0.id })
+        let newNodeIDs = Set(newNodes.map { $0.id })
+
+        let nodesToRemove = currentNodes.filter { !newNodeIDs.contains($0.id) }
+        for node in nodesToRemove { node.removeFromParent() }
+
+        let nodesToAdd = newNodes.filter { !newNodeIDs.contains($0.id) }
+        for node in nodesToAdd { controller.sceneRoot.addChild(node) }
+    }
+    
+    private func syncSelection(controller: CanvasController, from selectedIDs: Set<UUID>) {
         let currentSelectedIDsInController = Set(controller.selectedNodes.map { $0.id })
         if currentSelectedIDsInController != selectedIDs {
              controller.selectedNodes = selectedIDs.compactMap { id in
                 return findNode(with: id, in: controller.sceneRoot)
              }
         }
-        
-        // 3. Sync other state properties into the controller.
-        controller.selectedTool = selectedTool
-        if let graph = schematicGraph { controller.schematicGraph = graph }
-        
-        controller.magnification = manager.magnification
-        controller.isSnappingEnabled = manager.enableSnapping
-        controller.snapGridSize = manager.gridSpacing.rawValue * 10.0
-        controller.showGuides = manager.showGuides
-        controller.crosshairsStyle = manager.crosshairsStyle
-        controller.paperSize = manager.paperSize
-        
-        // 4. Update view frames (Unchanged).
-        let containerView = scrollView.documentView as! DocumentContainerView
-        let hostView = containerView.canvasHostView
-        let workbenchSize = manager.paperSize.canvasSize(orientation: .landscape)
-        let scaleFactor: CGFloat = 1.4
-        let containerSize = CGSize(width: workbenchSize.width * scaleFactor, height: workbenchSize.height * scaleFactor)
-        if containerView.frame.size != containerSize { containerView.frame.size = containerSize }
-        if hostView.frame.size != workbenchSize { hostView.frame.size = workbenchSize }
-        
-        // 5. Trigger redraw and sync zoom.
-        controller.redraw()
-        if scrollView.magnification != manager.magnification {
-            scrollView.magnification = manager.magnification
-        }
     }
     
-    /// Diffs the nodes from the binding with the nodes in the scene graph and applies the changes.
-    private func syncSceneGraph(controller: CanvasController, from newNodes: [any CanvasNode]) {
-        let currentNodes = controller.sceneRoot.children
-        let currentNodeIDs = Set(currentNodes.map { $0.id })
-        let newNodeIDs = Set(newNodes.map { $0.id })
-
-        // Remove nodes that are no longer in the source array
-        let nodesToRemove = currentNodes.filter { !newNodeIDs.contains($0.id) }
-        for node in nodesToRemove {
-            node.removeFromParent()
-        }
-
-        // Add nodes that are new in the source array
-        let nodesToAdd = newNodes.filter { !currentNodeIDs.contains($0.id) }
-        for node in nodesToAdd {
-            controller.sceneRoot.addChild(node)
-        }
-        
-        // TODO: Could also implement updating/reordering here if necessary
-    }
-    
-    // Helper to find a node by its ID in the scene graph.
     private func findNode(with id: UUID, in root: any CanvasNode) -> (any CanvasNode)? {
         if root.id == id { return root }
         for child in root.children {

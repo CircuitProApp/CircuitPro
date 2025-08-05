@@ -1,251 +1,86 @@
 import AppKit
-import UniformTypeIdentifiers
 
+/// A lean input router that passes events to a pluggable list of interactions.
+/// This class has no application-specific logic. It is a simple event forwarder.
 final class WorkbenchInputCoordinator {
 
-    // MARK: - Dependencies
     unowned let host: CanvasHostView
     unowned let controller: CanvasController
 
-    // MARK: - Gesture Helpers
-    private lazy var rotation = RotationGestureController(controller: controller)
-//    private lazy var marquee = MarqueeSelectionGesture(controller: controller)
-//    private lazy var handleDrag = HandleDragGesture(controller: controller)
-    private lazy var selDrag = SelectionDragGesture(controller: controller)
-    // The ToolActionController is correctly initialized here.
-    private lazy var toolTap = ToolActionController(controller: controller, coordinator: self)
-    private lazy var keyCmds = WorkbenchKeyCommandController(controller: controller, coordinator: self)
-    
-    private var activeDrag: CanvasDragGesture?
+    // A convenience accessor for the context provided by the host view.
+    private var currentContext: RenderContext? { host.currentContext }
 
-    // MARK: - Init
     init(host: CanvasHostView, controller: CanvasController) {
         self.host = host
         self.controller = controller
     }
-
-    // MARK: - State & Input (Largely Unchanged)
-    var isRotating: Bool { rotation.active }
-    func keyDown(_ event: NSEvent) -> Bool { keyCmds.handle(event) }
-    func mouseExited() { controller.mouseLocation = nil; controller.redraw() }
-    func mouseMoved(_ event: NSEvent) {
-        let point = host.convert(event.locationInWindow, from: nil)
-        controller.mouseLocation = controller.snap(point)
-        rotation.update(to: point)
-        controller.redraw()
-    }
-
-    // MARK: - Mouse Clicks & Drags (Corrected Logic)
-
-    func mouseDown(_ event: NSEvent) {
-        if rotation.active {
-            rotation.commit()
-            controller.redraw()
-            return
-        }
-
-        let point = host.convert(event.locationInWindow, from: nil)
-        print("--- MOUSE DOWN at world point: \(point) ---") // <-- LOG
-        
-        let hitTarget = self.hitTest(point: point)
-        
-        // LOG the final result
-        if let hitTarget = hitTarget {
-            print("[Coordinator] ✅ Final Hit Target Received: \(hitTarget.debugDescription)")
-        } else {
-            print("[Coordinator] ❌ No hit target returned from self.hitTest.")
-        }
-
-        if toolTap.handleMouseDown(at: point, hitTarget: hitTarget, event: event) {
-            controller.redraw()
-            return
-        }
-
-        if let hit = hitTarget {
-            guard let hitID = hit.selectableID,
-                  let nodeToSelect = findNode(with: hitID, in: controller.sceneRoot) else {
-                print("[Coordinator] ❌ Hit target found, but couldn't find corresponding node in scene graph.")
-                return
-            }
-
-            if event.modifierFlags.contains(.shift) {
-                if let index = controller.selectedNodes.firstIndex(where: { $0.id == nodeToSelect.id }) {
-                    controller.selectedNodes.remove(at: index)
-                } else {
-                    controller.selectedNodes.append(nodeToSelect)
-                }
-            } else {
-                if !(controller.selectedNodes.count == 1 && controller.selectedNodes.first?.id == nodeToSelect.id) {
-                    controller.selectedNodes = [nodeToSelect]
-                }
-            }
-            controller.onUpdateSelectedNodes?(controller.selectedNodes)
-
-            if selDrag.begin(at: point, with: hit, event: event) {
-                activeDrag = selDrag
-            }
-            
-        } else {
-            if !event.modifierFlags.contains(.shift) && !controller.selectedNodes.isEmpty {
-                controller.selectedNodes.removeAll()
-                controller.onUpdateSelectedNodes?(controller.selectedNodes)
-            }
-        }
-        
-        controller.redraw()
-    }
     
-    func mouseDragged(_ event: NSEvent) {
+    // MARK: - Event Routing
+    
+    func mouseDown(_ event: NSEvent) {
+        
+        guard let context = currentContext else {
+            print("⚠️ Input event ignored: Canvas context not yet available.")
+            return
+        }
+        
+        
         let point = host.convert(event.locationInWindow, from: nil)
-        activeDrag?.drag(to: point)
-//        if marquee.active { marquee.drag(to: point) } else { activeDrag?.drag(to: point) }
+        
+        // Offer the event to each interaction in order.
+        // Stop as soon as one of them returns `true`, indicating it handled the event.
+        for interaction in controller.interactions {
+            if interaction.mouseDown(at: point, context: context, controller: controller) {
+                controller.redraw()
+                return // Event consumed.
+            }
+        }
+        controller.redraw()
+    }
+
+    func mouseDragged(_ event: NSEvent) {
+        
+        guard let context = currentContext else {
+            print("⚠️ Input event ignored: Canvas context not yet available.")
+            return
+        }
+        let point = host.convert(event.locationInWindow, from: nil)
+        // Drag events are sent to all interactions that might be in a dragged state.
+        for interaction in controller.interactions {
+            interaction.mouseDragged(to: point, context: context, controller: controller)
+        }
         controller.redraw()
     }
 
     func mouseUp(_ event: NSEvent) {
-//        if marquee.active { marquee.end() }
-        activeDrag?.end()
-        activeDrag = nil
-        controller.redraw()
-    }
-
-    // MARK: - Right Click for Context Menu (Refactored)
-    func rightMouseDown(_ event: NSEvent) {
-        // This check is fine, as right-click menus should likely only work with the cursor.
-        guard controller.selectedTool?.id == "cursor" else { return }
-
-        let point = host.convert(event.locationInWindow, from: nil)
-        guard let hitTarget = self.hitTest(point: point),
-              let hitID = hitTarget.selectableID,
-              let hitNode = findNode(with: hitID, in: controller.sceneRoot) else {
+        
+        guard let context = currentContext else {
+            print("⚠️ Input event ignored: Canvas context not yet available.")
             return
         }
-
-        if !controller.selectedNodes.contains(where: { $0.id == hitNode.id }) {
-            controller.selectedNodes = [hitNode]
+        
+        let point = host.convert(event.locationInWindow, from: nil)
+        // Up events are also sent to all interactions to let them reset their state.
+        for interaction in controller.interactions {
+            interaction.mouseUp(at: point, context: context, controller: controller)
         }
-
-        let menu = NSMenu()
-        let deleteItem = NSMenuItem(title: "Delete", action: #selector(deleteMenuAction(_:)), keyEquivalent: "")
-        deleteItem.target = self
-        menu.addItem(deleteItem)
-
-        if !menu.items.isEmpty {
-            NSMenu.popUpContextMenu(menu, with: event, for: host)
-        }
-    }
-
-    @objc private func deleteMenuAction(_ sender: Any) {
-        deleteSelectedElements()
-    }
-    
-    // MARK: - Public Actions (Refactored)
-    
-    func enterRotationMode(around point: CGPoint) {
-        rotation.begin(around: point)
         controller.redraw()
     }
     
-    func cancelRotation() {
-        rotation.cancelAndRevert()
+    // MARK: - Passthrough Events
+    
+    func mouseMoved(_ event: NSEvent) {
+        // The master mouse location is still useful for things like the crosshairs layer.
+        let point = host.convert(event.locationInWindow, from: nil)
+        controller.mouseLocation = point
+        // A `mouseMoved` method could be added to the CanvasInteraction protocol if needed.
         controller.redraw()
     }
 
-    func handleReturnKeyPress() {
-        guard var tool = controller.selectedTool else { return }
-        
-        let result = tool.handleReturn()
-        
-        switch result {
-        case .newNode(let newNode):
-            controller.sceneRoot.addChild(newNode)
-            controller.onNodesChanged?(controller.sceneRoot.children)
-        case .schematicModified:
-             // controller.syncPinPositionsToGraph() needs refactor
-             break
-        case .noResult:
-            break
-        }
-        controller.selectedTool = tool
+    func mouseExited() {
+        controller.mouseLocation = nil
         controller.redraw()
-    }
-
-    func deleteSelectedElements() {
-        guard !controller.selectedNodes.isEmpty else { return }
-        
-        let idsToDelete = Set(controller.selectedNodes.map { $0.id })
-        
-        // Remove from the scene graph
-        for node in controller.selectedNodes {
-            // controller.schematicGraph.delete(node: node) // To be updated
-            node.removeFromParent()
-        }
-        
-        // Notify the parent view of the change
-        controller.onNodesChanged?(controller.sceneRoot.children)
-        
-        controller.selectedNodes.removeAll()
-        controller.onUpdateSelectedNodes?([])
-        controller.redraw()
-    }
-
-    // MARK: - Reset & Helpers
-
-    func reset() {
-//        marquee.end()
-        activeDrag?.end()
-        activeDrag = nil
-        cancelRotation()
-        controller.redraw()
-    }
-
-    func currentContext() -> RenderContext {
-        return RenderContext(
-            sceneRoot: controller.sceneRoot,
-            schematicGraph: controller.schematicGraph,
-            highlightedNodeIDs: controller.highlightedNodeIDs,
-            magnification: controller.magnification,
-            selectedTool: controller.selectedTool,
-            mouseLocation: controller.mouseLocation,
-            marqueeRect: controller.marqueeRect,
-            paperSize: controller.paperSize,
-            sheetOrientation: controller.sheetOrientation,
-            sheetCellValues: controller.sheetCellValues,
-            snapGridSize: controller.snapGridSize,
-            showGuides: controller.showGuides,
-            crosshairsStyle: controller.crosshairsStyle,
-            hostViewBounds: host.bounds
-        )
-    }
-
-    private func findNode(with id: UUID, in root: any CanvasNode) -> (any CanvasNode)? {
-        if root.id == id {
-            return root
-        }
-        for child in root.children {
-            if let found = findNode(with: id, in: child) {
-                return found
-            }
-        }
-        return nil
     }
     
-    // MARK: - Drag & Drop (Unchanged for now)
-    func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { return [] }
-    func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { return [] }
-    func performDragOperation(_ sender: NSDraggingInfo) -> Bool { return false }
-}
-
-// MARK: - Hit Test Coordinator
-extension WorkbenchInputCoordinator {
-    func hitTest(point: CGPoint) -> CanvasHitTarget? {
-        let context = self.currentContext()
-        // Iterate reversed so we hit the top-most layer first.
-        for layer in controller.renderLayers.reversed() {
-            if let hit = layer.hitTest(point: point, context: context) {
-                return hit
-            }
-        }
-        return nil
-    }
+    // KeyDown, RightMouseDown etc. would be added here and in the protocol if needed.
 }

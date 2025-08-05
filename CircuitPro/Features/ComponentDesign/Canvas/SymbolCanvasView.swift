@@ -12,14 +12,35 @@ struct SymbolCanvasView: View {
     var body: some View {
 
         @Bindable var symbolEditor = componentDesignManager.symbolEditor
+        @Bindable var canvasManager = canvasManager
+
+        // The default tool when the framework wants to set the tool to 'nil'.
+        let defaultTool = AnyCanvasTool(CursorTool())
 
         SplitPaneView(isCollapsed: $isCollapsed) {
-            // The CanvasView call is now updated to use the new properties.
             CanvasView(
-                manager: canvasManager,
-                selectedIDs: $symbolEditor.selectedElementIDs,
-                selectedTool: $symbolEditor.selectedTool,
-                nodes: $symbolEditor.elements
+                size: .constant(PaperSize.component.canvasSize()),
+                magnification: $canvasManager.magnification,
+                nodes: $symbolEditor.elements,
+                selection: $symbolEditor.selectedElementIDs,
+                tool: .constant(defaultTool),
+                
+                // You can now define application-specific data to pass to your layers
+                userInfo: [
+                    "snapGridSize": canvasManager.gridSpacing.rawValue * 10,
+                    "isSnappingEnabled": canvasManager.enableSnapping
+                ],
+                
+                renderLayers: [
+//                    GridRenderLayer(), // These layers can now access userInfo!
+//                    ElementsRenderLayer(),
+                    PreviewRenderLayer()
+                ],
+                interactions: [
+                    ToolInteraction(),
+                    SelectionInteraction(),
+//                    DragInteraction() // Add your other interactions here
+                ]
             )
             .overlay(alignment: .leading) {
                 SymbolDesignToolbarView()
