@@ -11,7 +11,7 @@ struct SchematicView: View {
     private var projectManager
 
     // Canvas state - we only need to manage the selected tool here.
-    @State private var selectedTool: AnyCanvasTool = .init(CursorTool())
+    @State private var selectedTool: CanvasTool = CursorTool()
     
     // We no longer need @State for canvasElements or nets for this view's core logic.
 

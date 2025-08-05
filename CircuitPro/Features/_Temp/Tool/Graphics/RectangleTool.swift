@@ -1,20 +1,27 @@
 import SwiftUI
 import AppKit
 
-struct RectangleTool: CanvasTool {
+/// A stateful tool for drawing rectangles by defining two opposite corners.
+final class RectangleTool: CanvasTool {
 
-    let id = "rectangle"
-    let symbolName = CircuitProSymbols.Graphic.rectangle // Assuming  resolves in your project
-    let label = "Rectangle"
+    // MARK: - State
 
+    /// Stores the first corner of the rectangle after the first tap.
     private var start: CGPoint?
+
+    // MARK: - Overridden Properties
+
+    override var symbolName: String { CircuitProSymbols.Graphic.rectangle }
+    override var label: String { "Rectangle" }
+
+    // MARK: - Overridden Methods
     
-    mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
+    override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         if let startPoint = start {
-            // This is the second click, which finalizes the rectangle.
+            // Second tap: Finalize the rectangle's dimensions.
             let rect = CGRect(origin: startPoint, size: .zero).union(CGRect(origin: location, size: .zero))
             
-            // 1. Create the data model for the primitive.
+            // 1. Create the data model for the primitive, preserving the original signature.
             let primitive = RectanglePrimitive(
                 id: UUID(),
                 size: rect.size,
@@ -36,32 +43,30 @@ struct RectangleTool: CanvasTool {
             return .newNode(node)
             
         } else {
-            // This is the first click; just record the starting point.
+            // First tap: Record the starting point.
             self.start = location
             return .noResult
         }
     }
 
-    mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
+    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
         guard let startPoint = start else { return [] }
         
-        // 1. Calculate the rectangle's frame directly in world coordinates.
+        // Calculate the rectangle's frame for the rubber-band preview.
         let worldRect = CGRect(origin: startPoint, size: .zero).union(CGRect(origin: mouse, size: .zero))
-        
-        // 2. Create a simple path from this world-coordinate rectangle.
         let path = CGPath(rect: worldRect, transform: nil)
 
-        // 3. Return the drawing parameters. The PreviewRenderLayer will draw this path as-is.
+        // Return the drawing parameters for the preview layer.
         return [DrawingParameters(
             path: path,
             lineWidth: 1.0,
             fillColor: nil,
             strokeColor: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
-            lineDashPattern: [4, 4] // Dashed line for a preview look
+            lineDashPattern: [4, 4]
         )]
     }
 
-    mutating func handleEscape() -> Bool {
+    override func handleEscape() -> Bool {
         if start != nil {
             start = nil
             return true // State was cleared.
@@ -69,7 +74,7 @@ struct RectangleTool: CanvasTool {
         return false // No state to clear.
     }
 
-    mutating func handleBackspace() {
+    override func handleBackspace() {
         // For a simple two-click tool, backspace does the same as escape.
         start = nil
     }

@@ -18,7 +18,7 @@ final class CanvasEditorManager {
         }
     }
     var selectedElementIDs: Set<UUID> = []
-    var selectedTool: AnyCanvasTool = AnyCanvasTool(CursorTool())
+    var selectedTool: CanvasTool = CursorTool()
     private var elementIndexMap: [UUID: Int] = [:]
 
     // MARK: - Layer State (Primarily for Footprint)
@@ -60,7 +60,7 @@ final class CanvasEditorManager {
     func reset() {
         elements = []
         selectedElementIDs = []
-        selectedTool = AnyCanvasTool(CursorTool())
+        selectedTool = CursorTool()
         elementIndexMap = [:]
         selectedLayer = .layer0
         layerAssignments = [:]

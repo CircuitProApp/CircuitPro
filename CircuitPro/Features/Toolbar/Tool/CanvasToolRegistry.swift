@@ -5,33 +5,39 @@
 //  Created by Giorgi Tchelidze on 5/19/25.
 //
 
+// The registry is now just a namespace for creating tool collections.
 enum CanvasToolRegistry {
 
-    static let cursor: [AnyCanvasTool] = [
-        AnyCanvasTool(CursorTool())
+    // --- THIS IS THE FIX ---
+    // The type of all arrays is now simply `[CanvasTool]`, the base class.
+    // We instantiate the concrete classes directly without any wrappers.
+
+    static let cursor: [CanvasTool] = [
+        CursorTool()
     ]
 
-    static let ruler: [AnyCanvasTool] = [
-        AnyCanvasTool(RulerTool())
+    static let ruler: [CanvasTool] = [
+//        RulerTool()
     ]
 
-    static let text: [AnyCanvasTool] = [
-        AnyCanvasTool(TextTool())
+    static let text: [CanvasTool] = [
+//        TextTool()
     ]
     
-    static let graphicsTools: [AnyCanvasTool] = [
-        AnyCanvasTool(LineTool()),
-        AnyCanvasTool(RectangleTool()),
-        AnyCanvasTool(CircleTool())
+    static let graphicsTools: [CanvasTool] = [
+        LineTool(),
+        RectangleTool(),
+        CircleTool()
     ]
 
-    static let symbolDesignTools: [AnyCanvasTool] =
-    cursor + graphicsTools + [AnyCanvasTool(PinTool())] + ruler
+    // The logic for combining toolsets remains the same, as they are all `[CanvasTool]`.
+    static let symbolDesignTools: [CanvasTool] =
+        cursor + graphicsTools /*+ [PinTool()]*/ + ruler
 
-    static let footprintDesignTools: [AnyCanvasTool] =
-    cursor + graphicsTools + [AnyCanvasTool(PadTool())] + ruler
+    static let footprintDesignTools: [CanvasTool] =
+        cursor + graphicsTools /*+ [PadTool()]*/ + ruler
 
-    static let schematicTools: [AnyCanvasTool] =
-    cursor + /*[AnyCanvasTool(ConnectionTool())] +*/ ruler
+    static let schematicTools: [CanvasTool] =
+        cursor + /*[ConnectionTool()] +*/ ruler
 
 }

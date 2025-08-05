@@ -8,19 +8,12 @@
 import SwiftUI
 
 struct SchematicToolbarView: View {
-    @Binding var selectedSchematicTool: AnyCanvasTool
+    @Binding var selectedSchematicTool: CanvasTool
 
     var body: some View {
-        ToolbarView<AnyCanvasTool>(
+        ToolbarView(
             tools: CanvasToolRegistry.schematicTools,
-            selectedTool: $selectedSchematicTool,
-            dividerBefore: { tool in
-                tool.id == "ruler"
-            },
-            dividerAfter: { tool in
-                tool.id == "cursor"
-            },
-            imageName: { $0.symbolName }
+            selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool())
         )
     }
 }

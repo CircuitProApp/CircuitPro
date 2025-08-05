@@ -9,14 +9,14 @@ struct SymbolCanvasView: View {
     
     @State private var isCollapsed: Bool = true
     
-    @State private var tool: AnyCanvasTool? = AnyCanvasTool(CursorTool())
+    @State private var tool: CanvasTool? = CursorTool()
 
     var body: some View {
 
         @Bindable var symbolEditor = componentDesignManager.symbolEditor
         @Bindable var canvasManager = canvasManager
 
-        let defaultTool = AnyCanvasTool(CursorTool())
+        let defaultTool = CursorTool()
 
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(

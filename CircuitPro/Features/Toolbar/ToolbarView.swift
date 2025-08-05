@@ -1,81 +1,92 @@
-//
-//  requiring.swift
-//  Circuit Pro
-//
-//  Created by Giorgi Tchelidze on 4/5/25.
-//
-
 import SwiftUI
 
-/// A generic toolbar driven by any CanvasTool.
-struct ToolbarView<Tool: CanvasTool>: View {
-    let tools: [Tool]
-    @Binding var selectedTool: Tool
-    let dividerBefore: ((Tool) -> Bool)?
-    let dividerAfter: ((Tool) -> Bool)?
-    let imageName: (Tool) -> String
+/// A generic toolbar driven by an array of `CanvasTool` instances.
+struct ToolbarView: View {
 
-    @State private var hoveredTool: Tool?
+    // MARK: - Properties
+    
+    let tools: [CanvasTool]
+    @Binding var selectedTool: CanvasTool? // Use the base class and make it optional
 
+    // Closures for conditionally adding dividers. They now accept the base class.
+    let dividerBefore: ((CanvasTool) -> Bool)?
+    let dividerAfter: ((CanvasTool) -> Bool)?
+
+    // MARK: - Init
+    
     init(
-        tools: [Tool],
-        selectedTool: Binding<Tool>,
-        dividerBefore: ((Tool) -> Bool)? = nil,
-        dividerAfter: ((Tool) -> Bool)? = nil,
-        imageName: @escaping (Tool) -> String
+        tools: [CanvasTool],
+        selectedTool: Binding<CanvasTool?>, // The binding is now to an optional base class
+        dividerBefore: ((CanvasTool) -> Bool)? = nil,
+        dividerAfter: ((CanvasTool) -> Bool)? = nil
     ) {
         self.tools = tools
         self._selectedTool = selectedTool
         self.dividerBefore = dividerBefore
         self.dividerAfter = dividerAfter
-        self.imageName = imageName
     }
+
+    // MARK: - Body
 
     var body: some View {
         ViewThatFits {
             toolbarContent
-            ScrollView {
+            ScrollView(.vertical) { // Ensure vertical scrolling if it overflows
                 toolbarContent
             }
             .scrollIndicators(.never)
         }
         .background(.ultraThinMaterial)
-        .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3), lineWidth: 1)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(.gray.opacity(0.3), lineWidth: 1)
+        )
         .buttonStyle(.borderless)
     }
 
     private var toolbarContent: some View {
         VStack(spacing: 8) {
             ForEach(tools, id: \.self) { tool in
-                if let dividerBefore = dividerBefore, dividerBefore(tool) {
+                if let dividerBefore, dividerBefore(tool) {
                     Divider().frame(width: 22)
                 }
-                toolbarButton(tool)
-                if let dividerAfter = dividerAfter, dividerAfter(tool) {
+                toolbarButton(for: tool)
+                if let dividerAfter, dividerAfter(tool) {
                     Divider().frame(width: 22)
                 }
             }
         }
         .padding(8)
-        .frame(width: 38)
+        .frame(minWidth: 38)
     }
 
-    private func toolbarButton(_ tool: Tool) -> some View {
+    // MARK: - Subviews
+
+    private func toolbarButton(for tool: CanvasTool) -> some View {
         let index = tools.firstIndex(of: tool) ?? 0
+        // Safely check if the current tool is the selected one.
+        let isSelected = (tool.id == selectedTool?.id)
 
         return Button {
             selectedTool = tool
         } label: {
             Group {
-                if tool.id == "connection" {
-                    Image(imageName(tool))
-                } else {
-                    Image(systemName: imageName(tool))
-                }
+                // --- THIS IS THE FIX (1/2) ---
+                // We use a type-safe `is` check to handle special cases.
+                // This assumes `ConnectionTool` is a class inheriting from `CanvasTool`.
+//                if tool is ConnectionTool {
+//                    // Use the tool's own `symbolName` property directly.
+//                    Image(tool.symbolName)
+//                } else {
+                    // --- THIS IS THE FIX (2/2) ---
+                    // For all other tools, directly use their `symbolName` property.
+                    Image(systemName: tool.symbolName)
+//                }
             }
             .font(.system(size: 16))
             .frame(width: 22, height: 22)
-            .foregroundStyle(selectedTool == tool ? .blue : .secondary)
+            .foregroundStyle(isSelected ? .blue : .secondary)
         }
         .if(index < 9) { view in
             view.keyboardShortcut(
@@ -83,6 +94,7 @@ struct ToolbarView<Tool: CanvasTool>: View {
                 modifiers: []
             )
         }
+        // The tool's `label` property is used directly.
         .help("\(tool.label) Tool\nShortcut: \(index + 1)")
     }
 }

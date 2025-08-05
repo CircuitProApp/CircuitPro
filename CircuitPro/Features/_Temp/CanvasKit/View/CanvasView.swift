@@ -8,7 +8,7 @@ struct CanvasView: NSViewRepresentable {
     @Binding var magnification: CGFloat
     @Binding var nodes: [any CanvasNode]
     @Binding var selection: Set<UUID>
-    @Binding var tool: AnyCanvasTool?
+    @Binding var tool: CanvasTool?
 
     // MARK: - Static Configuration
     let renderLayers: [RenderLayer]
@@ -26,7 +26,7 @@ struct CanvasView: NSViewRepresentable {
         magnification: Binding<CGFloat>,
         nodes: Binding<[any CanvasNode]>,
         selection: Binding<Set<UUID>>,
-        tool: Binding<AnyCanvasTool?> = .constant(nil),
+        tool: Binding<CanvasTool?> = .constant(nil),
         environment: CanvasEnvironmentValues = .init(), // Default allows for easy adoption
         renderLayers: [RenderLayer],
         interactions: [any CanvasInteraction]

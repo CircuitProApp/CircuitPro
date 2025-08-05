@@ -11,16 +11,9 @@ struct SymbolDesignToolbarView: View {
 
     var body: some View {
         @Bindable var manager = componentDesignManager.symbolEditor
-        ToolbarView<AnyCanvasTool>(
+        ToolbarView(
             tools: CanvasToolRegistry.symbolDesignTools,
-            selectedTool: $manager.selectedTool,
-            dividerBefore: { tool in
-                tool.id == "ruler"
-            },
-            dividerAfter: { tool in
-                tool.id == "cursor" || tool.id == "circle"
-            },
-            imageName: { $0.symbolName }
+            selectedTool: $manager.selectedTool.unwrapping(withDefault: CursorTool())
         )
     }
 }

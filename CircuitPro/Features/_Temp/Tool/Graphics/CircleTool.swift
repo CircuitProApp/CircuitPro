@@ -1,20 +1,30 @@
 import SwiftUI
 import AppKit
 
-struct CircleTool: CanvasTool {
+/// A stateful tool for drawing circles by defining a center and a radius.
+///
+/// This class holds its own state (`center`) across multiple user interactions,
+/// making it a perfect example of the class-based tool architecture.
+final class CircleTool: CanvasTool {
 
-    let id = "circle"
-    let symbolName = CircuitProSymbols.Graphic.circle
-    let label = "Circle"
+    // MARK: - State
 
+    /// Stores the center of the circle after the first tap.
     private var center: CGPoint?
 
-    mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
+    // MARK: - Overridden Properties
+
+    override var symbolName: String { CircuitProSymbols.Graphic.circle }
+    override var label: String { "Circle" }
+
+    // MARK: - Overridden Methods
+
+    override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         if let centerPoint = center {
             // Second tap: Define the radius and finalize the circle.
             let radius = hypot(location.x - centerPoint.x, location.y - centerPoint.y)
             
-            // 1. Create the primitive data model.
+            // 1. Create the primitive data model, preserving the original signature.
             let circlePrimitive = CirclePrimitive(
                 id: UUID(),
                 radius: radius,
@@ -26,23 +36,24 @@ struct CircleTool: CanvasTool {
             )
 
             // 2. Wrap it in a scene graph node.
+            // This assumes your AnyPrimitive enum has a case like `.circle(CirclePrimitive)`.
             let node = PrimitiveNode(primitive: .circle(circlePrimitive))
 
-            // 3. Reset tool state and return the new node.
+            // 3. Reset the tool's state and return the new node.
             self.center = nil
             return .newNode(node)
             
         } else {
-            // First tap: Just record the center point.
+            // First tap: Record the center point and wait for the second tap.
             self.center = location
             return .noResult
         }
     }
 
-    mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
+    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
         guard let centerPoint = center else { return [] }
         
-        // Create the preview path directly in world coordinates.
+        // Create the preview path for the rubber-band effect.
         let radius = hypot(mouse.x - centerPoint.x, mouse.y - centerPoint.y)
         let rect = CGRect(x: centerPoint.x - radius, y: centerPoint.y - radius, width: radius * 2, height: radius * 2)
         let path = CGPath(ellipseIn: rect, transform: nil)
@@ -56,7 +67,7 @@ struct CircleTool: CanvasTool {
         )]
     }
 
-    mutating func handleEscape() -> Bool {
+    override func handleEscape() -> Bool {
         if center != nil {
             center = nil
             return true // State was cleared.
@@ -64,7 +75,8 @@ struct CircleTool: CanvasTool {
         return false // No state to clear.
     }
 
-    mutating func handleBackspace() {
+    override func handleBackspace() {
+        // For a simple two-step tool, backspace does the same as escape.
         center = nil
     }
 }

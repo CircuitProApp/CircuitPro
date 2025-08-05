@@ -1,19 +1,26 @@
 import SwiftUI
 import AppKit
 
-struct LineTool: CanvasTool {
+/// A stateful tool for drawing lines by defining a start and end point.
+final class LineTool: CanvasTool {
 
-    let id = "line"
-    let symbolName = CircuitProSymbols.Graphic.line
-    let label = "Line"
+    // MARK: - State
 
+    /// Stores the starting point of the line after the first tap.
     private var start: CGPoint?
 
-    mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
+    // MARK: - Overridden Properties
+
+    override var symbolName: String { CircuitProSymbols.Graphic.line }
+    override var label: String { "Line" }
+
+    // MARK: - Overridden Methods
+
+    override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         if let startPoint = self.start {
             // Second tap: Finalize the line.
             
-            // 1. Create the primitive data model.
+            // 1. Create the primitive data model, preserving the original signature.
             let linePrimitive = LinePrimitive(
                 id: UUID(),
                 start: startPoint,
@@ -30,15 +37,16 @@ struct LineTool: CanvasTool {
             return .newNode(node)
             
         } else {
-            // First tap: Just record the start point.
+            // First tap: Record the start point.
             self.start = location
             return .noResult
         }
     }
 
-    mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
+    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
         guard let startPoint = start else { return [] }
 
+        // Create the rubber-band path for the preview.
         let path = CGMutablePath()
         path.move(to: startPoint)
         path.addLine(to: mouse)
@@ -52,15 +60,16 @@ struct LineTool: CanvasTool {
         )]
     }
 
-    mutating func handleEscape() -> Bool {
+    override func handleEscape() -> Bool {
         if start != nil {
             start = nil
-            return true
+            return true // State was cleared.
         }
-        return false
+        return false // No state to clear.
     }
 
-    mutating func handleBackspace() {
+    override func handleBackspace() {
+        // For a simple two-click tool, backspace does the same as escape.
         start = nil
     }
 }

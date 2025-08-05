@@ -9,7 +9,7 @@
 import AppKit
 
 /// Contains all information related to a specific user interaction event for a tool.
-struct ToolInteractionContext {
+public struct ToolInteractionContext {
     /// The number of consecutive clicks for this event (e.g., for double-click detection).
     let clickCount: Int
     
