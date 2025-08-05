@@ -11,36 +11,61 @@ struct SymbolPropertiesView: View {
     @Environment(ComponentDesignManager.self) private var componentDesignManager
 
     var body: some View {
-        
         @Bindable var manager = componentDesignManager.symbolEditor
     
         VStack {
+            // Using a ScrollView is a good idea for when properties get long.
             ScrollView {
-                // Section for Pins
-                Text("WIP")
-//                ForEach($manager.elements) { $element in
-//                    if case .pin(let pin) = element, manager.selectedElementIDs.contains(pin.id) {
-//                        // Safely unwrap the binding to the pin
-//                        if let pinBinding = $element.pin {
-//                     
-//                            PinPropertiesView(pin: pinBinding)
-//                            
-//                        }
-//                    } else if case .primitive(let primitive) = element, manager.selectedElementIDs.contains(primitive.id) {
-//                        // Safely unwrap the binding to the primitive
-//                        if let primitiveBinding = $element.primitive {
-//                         
-//                            PrimitivePropertiesView(primitive: primitiveBinding)
-//                            
-//                        }
-//                    } else if case .text(let text) = element, manager.selectedElementIDs.contains(text.id) {
-//                        if let textBinding = $element.text {
-//                            
-//                            TextPropertiesView(textElement: textBinding, editor: manager)
-//                            
-//                        }
-//                    }
-//                }
+                // Use the new computed property to check the selection state.
+                if let element = manager.singleSelectedElement {
+                    // We have exactly one selected element. Now, find out what it is.
+                    
+                    // --- Case 1: The selected element is a PinNode ---
+                    if let pinNode = element as? PinNode {
+                        // Create a custom binding directly to the pin data inside the node.
+                        let pinBinding = Binding<Pin>(
+                            get: {
+                                // The `if let` above guarantees this cast will succeed.
+                                pinNode.pin
+                            },
+                            set: { newPinValue in
+                                // When the UI changes the value, update the model in the array.
+                                pinNode.pin = newPinValue
+                                // Tell the canvas that this node needs to be redrawn.
+                                pinNode.onNeedsRedraw?()
+                            }
+                        )
+                        // Pass the fresh binding to the properties view.
+                        PinPropertiesView(pin: pinBinding)
+                        
+                    // --- Case 2: The selected element is a PrimitiveNode ---
+                    } else if let primitiveNode = element as? PrimitiveNode {
+                        // Create a custom binding directly to the primitive data inside the node.
+                        let primitiveBinding = Binding<AnyPrimitive>(
+                            get: {
+                                primitiveNode.primitive
+                            },
+                            set: { newPrimitiveValue in
+                                primitiveNode.primitive = newPrimitiveValue
+                  
+                                primitiveNode.onNeedsRedraw?()
+                            }
+                        )
+                        PrimitivePropertiesView(primitive: primitiveBinding)
+
+                    // --- Case 3 (Future): The selected element is a TextNode ---
+                    } else {
+                        // Add other `else if let ... as? ...` blocks here for other node types.
+                        Text("Properties for this element type are not yet implemented.")
+                            .padding()
+                    }
+
+                } else {
+                    // This is shown for no selection or multi-selection.
+                    Text(manager.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
+                        .foregroundColor(.secondary)
+                        .padding()
+                }
             }
         }
     }

@@ -83,9 +83,9 @@ private extension SymbolThumbnail {
         // 1. collect bounds of everything
         let boxes = symbol.primitives
             .map { $0.makePath().boundingBoxOfPath }
-          + symbol.pins
-            .flatMap { $0.primitives }
-            .map { $0.makePath().boundingBoxOfPath }
+//          + symbol.pins
+//            .flatMap { $0.primitives }
+//            .map { $0.makePath().boundingBoxOfPath }
 
         guard let first = boxes.first else { return nil }
 

@@ -8,7 +8,7 @@ struct CanvasHitTarget: Hashable {
 
     /// The `CanvasNode` that was successfully hit.
     /// This provides direct access to the hit element, its properties, and its position in the scene hierarchy.
-    let node: any CanvasNode
+    let node: BaseNode
 
     /// An optional, application-defined value that identifies a specific sub-component within the `node`.
     /// For example, a complex symbol node might return a string like `"pin_1"`, while a simple

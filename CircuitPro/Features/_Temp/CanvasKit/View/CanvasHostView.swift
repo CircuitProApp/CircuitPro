@@ -19,7 +19,7 @@ final class CanvasHostView: NSView {
 
         self.controller.onNeedsRedraw = { [weak self] in
             DispatchQueue.main.async {
-                self?.needsDisplay = true
+                self?.performLayerUpdate()
             }
         }
 
@@ -39,16 +39,19 @@ final class CanvasHostView: NSView {
     }
     
     override func updateLayer() {
-
+        performLayerUpdate()
+    }
+    
+    private func performLayerUpdate() {
         let context = controller.currentContext(for: self.bounds)
-        
+
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        
+
         for renderLayer in controller.renderLayers {
             renderLayer.update(using: context)
         }
-        
+
         CATransaction.commit()
     }
     

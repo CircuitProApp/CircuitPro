@@ -12,14 +12,25 @@ import Observation
 final class CanvasEditorManager {
 
     // MARK: - Canvas State
-    var elements: [any CanvasNode] = [] {
+    var elements: [BaseNode] = [] {
         didSet {
             updateElementIndexMap()
         }
     }
     var selectedElementIDs: Set<UUID> = []
+    
+    var singleSelectedElement: BaseNode? {
+        guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else {
+            return nil
+        }
+        guard let index = elementIndexMap[id] else {
+            return nil
+        }
+        return elements[index]
+    }
+    
     var selectedTool: CanvasTool = CursorTool()
-    private var elementIndexMap: [UUID: Int] = [:]
+    var elementIndexMap: [UUID: Int] = [:]
 
     // MARK: - Layer State (Primarily for Footprint)
     var selectedLayer: CanvasLayer? = .layer0
@@ -31,7 +42,7 @@ final class CanvasEditorManager {
 
     // MARK: - Computed Properties
     var pins: [Pin] {
-        elements.compactMap { $0 as? Pin}
+        elements.compactMap { ($0 as? PinNode)?.pin }
     }
 
     var pads: [Pad] {

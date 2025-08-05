@@ -19,7 +19,7 @@ struct SymbolElement: Identifiable {
     var anchoredTexts: [AnchoredTextElement]
 
     var primitives: [AnyPrimitive] {
-        symbol.primitives + symbol.pins.flatMap(\.primitives)
+        symbol.primitives /*+ symbol.pins.flatMap(\.primitives)*/
     }
 
     // The initializer is now much simpler. It accepts fully resolved text data.
@@ -156,138 +156,138 @@ extension SymbolElement {
 // to change, as it correctly consumes the `primitives` and `anchoredTexts` arrays
 // that are resolved by the logic above.
 
-extension SymbolElement: Drawable {
-    func makeBodyParameters() -> [DrawingParameters] {
-        var allParameters: [DrawingParameters] = []
-        var symbolTransform = self.transform
-
-        // 1. Process primitives and pins (defined in local space).
-        let childDrawables = (symbol.primitives as [any Drawable]) + (symbol.pins as [any Drawable])
-        for drawable in childDrawables {
-            for params in drawable.makeBodyParameters() {
-                if let transformedPath = params.path.copy(using: &symbolTransform) {
-                    allParameters.append(DrawingParameters(
-                        path: transformedPath,
-                        lineWidth: params.lineWidth,
-                        fillColor: params.fillColor,
-                        strokeColor: params.strokeColor,
-                        lineDashPattern: params.lineDashPattern,
-                        lineCap: params.lineCap,
-                        lineJoin: params.lineJoin,
-                        fillRule: params.fillRule
-                    ))
-                }
-            }
-        }
-        
-        // 2. Process anchored texts (already in world space).
-        for textElement in anchoredTexts {
-            allParameters.append(contentsOf: textElement.makeBodyParameters())
-        }
-        
-        return allParameters
-    }
-    
-    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
-        let finalPath = CGMutablePath()
-        
-        if selectedIDs.contains(self.id) {
-            let localHaloPath = CGMutablePath()
-            let localDrawables = (symbol.primitives as [any Drawable]) + (symbol.pins as [any Drawable])
-            for child in localDrawables {
-                if let path = child.makeHaloPath() {
-                    localHaloPath.addPath(path)
-                }
-            }
-            var symbolTransform = self.transform
-            if let transformedHalo = localHaloPath.copy(using: &symbolTransform) {
-                finalPath.addPath(transformedHalo)
-            }
-            
-            for textElement in anchoredTexts {
-                if let path = textElement.textElement.makeHaloPath() {
-                    finalPath.addPath(path)
-                }
-            }
-            
-        } else {
-            for textElement in anchoredTexts {
-                if let textHaloParams = textElement.makeHaloParameters(selectedIDs: selectedIDs) {
-                    finalPath.addPath(textHaloParams.path)
-                }
-            }
-        }
-        
-        guard !finalPath.isEmpty else { return nil }
-        
-        return DrawingParameters(
-            path: finalPath, lineWidth: 4.0, fillColor: nil,
-            strokeColor: NSColor.systemBlue.withAlphaComponent(0.3).cgColor
-        )
-    }
-}
-
-extension SymbolElement: Hittable {
-    func hitTest(_ worldPoint: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
-        let localPoint = worldPoint.applying(self.transform.inverted())
-//        
-//        for textElement in anchoredTexts {
-//            if let textHitResult = textElement.hitTest(worldPoint, tolerance: tolerance) {
-//                let newOwnerPath = [self.id] + textHitResult.ownerPath
-//                return CanvasHitTarget(
-//                    partID: textHitResult.partID, ownerPath: newOwnerPath,
-//                    kind: textHitResult.kind, position: worldPoint
-//                )
-//            }
-//        }
-//        
-//        for pin in symbol.pins {
-//            if let pinHitResult = pin.hitTest(localPoint, tolerance: tolerance) {
-//                let newOwnerPath = [self.id] + pinHitResult.ownerPath
-//                return CanvasHitTarget(
-//                    partID: pinHitResult.partID, ownerPath: newOwnerPath,
-//                    kind: pinHitResult.kind, position: worldPoint
-//                )
-//            }
-//        }
+//extension SymbolElement: Drawable {
+//    func makeBodyParameters() -> [DrawingParameters] {
+//        var allParameters: [DrawingParameters] = []
+//        var symbolTransform = self.transform
 //
-//        for primitive in symbol.primitives {
-//            if let primitiveHitResult = primitive.hitTest(localPoint, tolerance: tolerance) {
-//                let newOwnerPath = [self.id] + primitiveHitResult.ownerPath
-//                return CanvasHitTarget(
-//                    partID: primitiveHitResult.partID, ownerPath: newOwnerPath,
-//                    kind: primitiveHitResult.kind, position: worldPoint
-//                )
+//        // 1. Process primitives and pins (defined in local space).
+//        let childDrawables = (symbol.primitives as [any Drawable]) + (symbol.pins as [any Drawable])
+//        for drawable in childDrawables {
+//            for params in drawable.makeBodyParameters() {
+//                if let transformedPath = params.path.copy(using: &symbolTransform) {
+//                    allParameters.append(DrawingParameters(
+//                        path: transformedPath,
+//                        lineWidth: params.lineWidth,
+//                        fillColor: params.fillColor,
+//                        strokeColor: params.strokeColor,
+//                        lineDashPattern: params.lineDashPattern,
+//                        lineCap: params.lineCap,
+//                        lineJoin: params.lineJoin,
+//                        fillRule: params.fillRule
+//                    ))
+//                }
 //            }
 //        }
-        return nil
-    }
-}
-
-extension SymbolElement: Bounded {
-    var boundingBox: CGRect {
-        let transform = self.transform
-        let localBoxes = symbol.primitives.map(\.boundingBox) + symbol.pins.map(\.boundingBox)
-        let transformedBoxes = localBoxes.map { $0.transformed(by: transform) }
-        let textBoxes = anchoredTexts.map(\.boundingBox)
-        
-        return (transformedBoxes + textBoxes).reduce(CGRect.null) { $0.union($1) }
-    }
-}
-
-private extension CGRect {
-    func transformed(by transform: CGAffineTransform) -> CGRect {
-        let corners = [
-            origin,
-            CGPoint(x: maxX, y: minY),
-            CGPoint(x: maxX, y: maxY),
-            CGPoint(x: minX, y: maxY)
-        ]
-
-        var out = CGRect.null
-        for point in corners.map({ $0.applying(transform) }) {
-            out = out.union(CGRect(origin: point, size: .zero))
-        }
-        return out
-    }
-}
+//        
+//        // 2. Process anchored texts (already in world space).
+//        for textElement in anchoredTexts {
+//            allParameters.append(contentsOf: textElement.makeBodyParameters())
+//        }
+//        
+//        return allParameters
+//    }
+//    
+//    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
+//        let finalPath = CGMutablePath()
+//        
+//        if selectedIDs.contains(self.id) {
+//            let localHaloPath = CGMutablePath()
+//            let localDrawables = (symbol.primitives as [any Drawable]) + (symbol.pins as [any Drawable])
+//            for child in localDrawables {
+//                if let path = child.makeHaloPath() {
+//                    localHaloPath.addPath(path)
+//                }
+//            }
+//            var symbolTransform = self.transform
+//            if let transformedHalo = localHaloPath.copy(using: &symbolTransform) {
+//                finalPath.addPath(transformedHalo)
+//            }
+//            
+//            for textElement in anchoredTexts {
+//                if let path = textElement.textElement.makeHaloPath() {
+//                    finalPath.addPath(path)
+//                }
+//            }
+//            
+//        } else {
+//            for textElement in anchoredTexts {
+//                if let textHaloParams = textElement.makeHaloParameters(selectedIDs: selectedIDs) {
+//                    finalPath.addPath(textHaloParams.path)
+//                }
+//            }
+//        }
+//        
+//        guard !finalPath.isEmpty else { return nil }
+//        
+//        return DrawingParameters(
+//            path: finalPath, lineWidth: 4.0, fillColor: nil,
+//            strokeColor: NSColor.systemBlue.withAlphaComponent(0.3).cgColor
+//        )
+//    }
+//}
+//
+//extension SymbolElement: Hittable {
+//    func hitTest(_ worldPoint: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
+//        let localPoint = worldPoint.applying(self.transform.inverted())
+////        
+////        for textElement in anchoredTexts {
+////            if let textHitResult = textElement.hitTest(worldPoint, tolerance: tolerance) {
+////                let newOwnerPath = [self.id] + textHitResult.ownerPath
+////                return CanvasHitTarget(
+////                    partID: textHitResult.partID, ownerPath: newOwnerPath,
+////                    kind: textHitResult.kind, position: worldPoint
+////                )
+////            }
+////        }
+////        
+////        for pin in symbol.pins {
+////            if let pinHitResult = pin.hitTest(localPoint, tolerance: tolerance) {
+////                let newOwnerPath = [self.id] + pinHitResult.ownerPath
+////                return CanvasHitTarget(
+////                    partID: pinHitResult.partID, ownerPath: newOwnerPath,
+////                    kind: pinHitResult.kind, position: worldPoint
+////                )
+////            }
+////        }
+////
+////        for primitive in symbol.primitives {
+////            if let primitiveHitResult = primitive.hitTest(localPoint, tolerance: tolerance) {
+////                let newOwnerPath = [self.id] + primitiveHitResult.ownerPath
+////                return CanvasHitTarget(
+////                    partID: primitiveHitResult.partID, ownerPath: newOwnerPath,
+////                    kind: primitiveHitResult.kind, position: worldPoint
+////                )
+////            }
+////        }
+//        return nil
+//    }
+//}
+//
+//extension SymbolElement: Bounded {
+//    var boundingBox: CGRect {
+//        let transform = self.transform
+//        let localBoxes = symbol.primitives.map(\.boundingBox) + symbol.pins.map(\.boundingBox)
+//        let transformedBoxes = localBoxes.map { $0.transformed(by: transform) }
+//        let textBoxes = anchoredTexts.map(\.boundingBox)
+//        
+//        return (transformedBoxes + textBoxes).reduce(CGRect.null) { $0.union($1) }
+//    }
+//}
+//
+//private extension CGRect {
+//    func transformed(by transform: CGAffineTransform) -> CGRect {
+//        let corners = [
+//            origin,
+//            CGPoint(x: maxX, y: minY),
+//            CGPoint(x: maxX, y: maxY),
+//            CGPoint(x: minX, y: maxY)
+//        ]
+//
+//        var out = CGRect.null
+//        for point in corners.map({ $0.applying(transform) }) {
+//            out = out.union(CGRect(origin: point, size: .zero))
+//        }
+//        return out
+//    }
+//}

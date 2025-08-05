@@ -17,19 +17,21 @@ struct CanvasElementRowView: View {
     }
 
     var body: some View {
-        Text("WIP")
-//        switch element {
-//        case .pin(let pin):
-//            Label("Pin \(pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
-//        case .pad(let pad):
-//            Label("Pad \(pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
-//        case .primitive(let primitive):
-//            Label(primitive.displayName, systemImage: primitive.symbol)
-//        case .text(let textElement):
-//            textElementRow(textElement)
-//        default:
-//            Text("Not Implemented")
-//        }
+  
+        if let pinNode = element as? PinNode {
+            // If it's a PinNode, we access its `pin` data model for details.
+            Label("Pin \(pinNode.pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
+
+        } else if let primitiveNode = element as? PrimitiveNode {
+            // If it's a PrimitiveNode, we use the new computed properties
+            // we added to get its display name and symbol.
+            Label(primitiveNode.displayName, systemImage: primitiveNode.symbol)
+
+        } else {
+            // A fallback for any other node types we haven't implemented a view for yet.
+            Label("Unknown Element", systemImage: "questionmark.diamond")
+        }
+    
     }
 
     @ViewBuilder

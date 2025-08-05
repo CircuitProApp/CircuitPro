@@ -7,7 +7,12 @@
 
 import SwiftUI
 
-struct Pin: Identifiable, Codable, Hashable {
+/// A pure data model representing a schematic pin.
+///
+/// This struct holds all the essential data for a pin but has no knowledge of how
+/// to draw itself or how to be hit-tested. It serves as the data source for a `PinNode`,
+/// which is the actual `CanvasElement` responsible for rendering and interaction.
+struct Pin: Identifiable, Codable, Hashable, Transformable {
     var id: UUID = UUID()
     var name: String
     var number: Int
@@ -19,58 +24,17 @@ struct Pin: Identifiable, Codable, Hashable {
     var showNumber: Bool = true
 }
 
-extension Pin: Transformable {
-    var rotation: CGFloat {
-        get { cardinalRotation.radians }
-        set { cardinalRotation = .closest(to: newValue) }
+extension Pin {
+    /// Provides a user-facing label for the pin.
+    var label: String {
+        name.isEmpty ? "Pin \(number)" : name
     }
 }
 
 extension Pin {
-    var length: CGFloat {
-        switch lengthType {
-        case .short: return 40
-        case .long:  return 60
-        }
-    }
-
-    var label: String {
-        name == "" ? "Pin \(number)" : name
-    }
-
-    /// World-space start of the pin’s "leg".
-    ///
-    /// Using `cardinalRotation.direction` ensures the leg follows
-    /// the expected cardinal orientation. Prior logic relied on
-    /// `rotation` which treated 0° as pointing west, leading to
-    /// inverted left/right behaviour when rotating pins.
-    var legStart: CGPoint {
-        let dir = cardinalRotation.direction
-        return CGPoint(
-            x: position.x + dir.x * length,
-            y: position.y + dir.y * length
-        )
-    }
-
-    var primitives: [AnyPrimitive] {
-        let line = LinePrimitive(
-            id: .init(),
-            start: legStart,
-            end: position,
-            strokeWidth: 1,
-            color: .init(color: .blue)
-        )
-
-        let circle = CirclePrimitive(
-            id: .init(),
-            radius: 4,
-            position: position,
-            rotation: 0,
-            strokeWidth: 1,
-            color: .init(color: .blue),
-            filled: false
-        )
-
-        return [.circle(circle), .line(line)]
+    /// The rotation in radians. Conforms to `Transformable`.
+    var rotation: CGFloat {
+        get { cardinalRotation.radians }
+        set { cardinalRotation = .closest(to: newValue) }
     }
 }

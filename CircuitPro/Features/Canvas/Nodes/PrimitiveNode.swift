@@ -56,6 +56,15 @@ class PrimitiveNode: BaseNode {
         return primitive.boundingBox
     }
     
+    
+    var displayName: String {
+        primitive.displayName
+    }
+
+    var symbol: String {
+        primitive.symbol
+    }
+    
     // --- THIS IS THE UPDATED HIT-TEST METHOD ---
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
         // The 'point' is already in this node's local coordinate space.

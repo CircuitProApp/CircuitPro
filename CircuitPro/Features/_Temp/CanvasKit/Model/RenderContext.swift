@@ -4,7 +4,7 @@ import AppKit
 /// This struct bundles all the information a layer might need to render itself.
 struct RenderContext {
     // MARK: - Core Framework Data
-    let sceneRoot: any CanvasNode
+    let sceneRoot: BaseNode
     let magnification: CGFloat
     let mouseLocation: CGPoint?
     let selectedTool: CanvasTool?

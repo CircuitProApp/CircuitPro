@@ -6,25 +6,29 @@ struct CanvasView: NSViewRepresentable {
     // MARK: - SwiftUI State Bindings
     @Binding var size: CGSize
     @Binding var magnification: CGFloat
-    @Binding var nodes: [any CanvasNode]
+    // The nodes binding now correctly and consistently uses the concrete `BaseNode` class.
+    @Binding var nodes: [BaseNode]
     @Binding var selection: Set<UUID>
     @Binding var tool: CanvasTool?
 
-    // MARK: - Static Configuration
-    let renderLayers: [RenderLayer]
-    let interactions: [any CanvasInteraction]
-    
+    // MARK: - Callbacks & Configuration
     let environment: CanvasEnvironmentValues
+    let renderLayers: [any RenderLayer]
+    let interactions: [any CanvasInteraction]
+    // An optional callback to report the mouse's position to the parent view.
+    var onMouseMoved: ((CGPoint?) -> Void)?
     
+    // --- The init is now complete ---
     init(
         size: Binding<CGSize>,
         magnification: Binding<CGFloat>,
-        nodes: Binding<[any CanvasNode]>,
+        nodes: Binding<[BaseNode]>,
         selection: Binding<Set<UUID>>,
         tool: Binding<CanvasTool?> = .constant(nil),
-        environment: CanvasEnvironmentValues = .init(), // Default allows for easy adoption
-        renderLayers: [RenderLayer],
-        interactions: [any CanvasInteraction]
+        environment: CanvasEnvironmentValues = .init(),
+        renderLayers: [any RenderLayer],
+        interactions: [any CanvasInteraction],
+        onMouseMoved: ((CGPoint?) -> Void)? = nil
     ) {
         self._size = size
         self._magnification = magnification
@@ -34,6 +38,7 @@ struct CanvasView: NSViewRepresentable {
         self.environment = environment
         self.renderLayers = renderLayers
         self.interactions = interactions
+        self.onMouseMoved = onMouseMoved
     }
 
     // MARK: - Coordinator
@@ -42,14 +47,14 @@ struct CanvasView: NSViewRepresentable {
         let canvasController: CanvasController
         private var magnificationBinding: Binding<CGFloat>
         private var selectionBinding: Binding<Set<UUID>>
-        private var nodesBinding: Binding<[any CanvasNode]>
+        private var nodesBinding: Binding<[BaseNode]>
         private var magnificationObservation: NSKeyValueObservation?
 
         init(
             magnification: Binding<CGFloat>,
-            nodes: Binding<[any CanvasNode]>,
+            nodes: Binding<[BaseNode]>,
             selection: Binding<Set<UUID>>,
-            renderLayers: [RenderLayer],
+            renderLayers: [any RenderLayer],
             interactions: [any CanvasInteraction]
         ) {
             self.magnificationBinding = magnification
@@ -57,13 +62,16 @@ struct CanvasView: NSViewRepresentable {
             self.selectionBinding = selection
             self.canvasController = CanvasController(renderLayers: renderLayers, interactions: interactions)
             super.init()
+            // Callbacks are configured when the coordinator is created.
             setupControllerCallbacks()
         }
 
         private func setupControllerCallbacks() {
+            // Data flow: Controller -> Coordinator -> SwiftUI State
             canvasController.onSelectionChanged = { [weak self] newSelectionIDs in
                 DispatchQueue.main.async { self?.selectionBinding.wrappedValue = newSelectionIDs }
             }
+            // `newNodes` is now correctly typed as `[BaseNode]`, so no casting is needed.
             canvasController.onNodesChanged = { [weak self] newNodes in
                 DispatchQueue.main.async { self?.nodesBinding.wrappedValue = newNodes }
             }
@@ -72,7 +80,6 @@ struct CanvasView: NSViewRepresentable {
         func observeScrollView(_ scrollView: NSScrollView) {
              magnificationObservation = scrollView.observe(\.magnification, options: .new) { [weak self] _, change in
                  guard let self = self, let newValue = change.newValue else { return }
-                 
                  DispatchQueue.main.async {
                      if !self.magnificationBinding.wrappedValue.isApproximatelyEqual(to: newValue) {
                          self.magnificationBinding.wrappedValue = newValue
@@ -87,13 +94,16 @@ struct CanvasView: NSViewRepresentable {
     }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(
+        let coordinator = Coordinator(
             magnification: $magnification,
             nodes: $nodes,
             selection: $selection,
             renderLayers: self.renderLayers,
             interactions: self.interactions
         )
+        // Pass the `onMouseMoved` callback from the view struct to the controller.
+        coordinator.canvasController.onMouseMoved = self.onMouseMoved
+        return coordinator
     }
 
     // MARK: - NSViewRepresentable Lifecycle
@@ -102,6 +112,15 @@ struct CanvasView: NSViewRepresentable {
         let coordinator = context.coordinator
         let canvasHostView = CanvasHostView(controller: coordinator.canvasController)
         let scrollView = NSScrollView()
+        
+        // --- FIX 1: Wire up the redraw callback ---
+        // This is the crucial connection that allows inspector edits to trigger an
+        // immediate canvas update without lag. We do this once when the view is created.
+        coordinator.canvasController.onNeedsRedraw = { [weak canvasHostView] in
+            // When the controller says it needs a redraw, we tell the host view.
+            canvasHostView?.needsDisplay = true
+        }
+
         scrollView.documentView = canvasHostView
         scrollView.hasHorizontalScroller = true
         scrollView.hasVerticalScroller = true
@@ -115,6 +134,9 @@ struct CanvasView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
         
+        // --- FIX 2: Correct Data Sync ---
+        // This call is now much more efficient, passing a consistent concrete type
+        // and allowing the controller to perform its logic cleanly.
         controller.sync(
             nodes: self.nodes,
             selection: self.selection,
@@ -131,6 +153,7 @@ struct CanvasView: NSViewRepresentable {
             scrollView.magnification = self.magnification
         }
         
+        // A final redraw is triggered after syncing to ensure UI is up-to-date.
         scrollView.documentView?.needsDisplay = true
     }
 }

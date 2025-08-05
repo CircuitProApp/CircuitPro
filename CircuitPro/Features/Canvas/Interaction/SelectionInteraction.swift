@@ -9,24 +9,25 @@ struct SelectionInteraction: CanvasInteraction {
             return false
         }
         
-        let currentSelection = controller.selectedNodes
+        // --- All types are now concrete `BaseNode`
+        
+        let currentSelection: [BaseNode] = controller.selectedNodes
         let tolerance = 5.0 / context.magnification
         let modifierFlags = NSApp.currentEvent?.modifierFlags ?? []
         
-        var newSelection = currentSelection
+        var newSelection: [BaseNode] = currentSelection
         
-        // --- THIS IS THE NEW LOGIC ---
-        
-        // 1. Perform a standard hit-test to see if we clicked on *anything*.
+        // 1. Perform a standard hit-test. `hit.node` is now a `BaseNode`.
         if let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) {
+            
             // 2. We hit a node. Now, find the actual object we should select by
-            //    traversing up the hierarchy from the hit node.
-            var nodeToSelect: (any CanvasNode)? = hit.node
+            //    traversing up the hierarchy. `nodeToSelect` is now `BaseNode?`.
+            var nodeToSelect: BaseNode? = hit.node
             while let currentNode = nodeToSelect {
                 if currentNode.isSelectable {
-                    break // We found our target, exit the loop.
+                    break // We found our target.
                 }
-                // Move up to the parent and try again.
+                // Move up to the parent. This is clean because `currentNode.parent` is also `BaseNode?`.
                 nodeToSelect = currentNode.parent
             }
 
@@ -35,7 +36,7 @@ struct SelectionInteraction: CanvasInteraction {
                 let isAlreadySelected = currentSelection.contains(where: { $0.id == selectableNode.id })
                 
                 if modifierFlags.contains(.shift) {
-                    // Shift-click: Toggle the selection state of this node.
+                    // Shift-click: Toggle the selection state.
                     if let index = newSelection.firstIndex(where: { $0.id == selectableNode.id }) {
                         newSelection.remove(at: index)
                     } else {
@@ -46,12 +47,11 @@ struct SelectionInteraction: CanvasInteraction {
                     if !isAlreadySelected {
                         newSelection = [selectableNode]
                     }
-                    // If it *is* already selected, we do nothing, allowing a subsequent drag operation.
+                    // If it *is* already selected, do nothing, allowing a subsequent drag operation.
                 }
 
             } else {
-                // We hit something, but neither it nor any of its ancestors were selectable.
-                // Treat this the same as clicking on empty space.
+                // We hit an unselectable part of the scene graph.
                 if !modifierFlags.contains(.shift) {
                     newSelection = []
                 }
@@ -66,11 +66,11 @@ struct SelectionInteraction: CanvasInteraction {
         
         // Update the controller only if the selection has actually changed.
         if Set(newSelection.map { $0.id }) != Set(currentSelection.map { $0.id }) {
+            // `setSelection` now expects `[BaseNode]`, so this works perfectly.
             controller.setSelection(to: newSelection)
         }
         
-        // IMPORTANT: Always return false to allow other interactions (like DragInteraction)
-        // to process this same mouse event.
+        // Always return false to allow other interactions (like Drag) to act on this same click.
         return false
     }
 }
