@@ -40,7 +40,7 @@ struct ToolInteraction: CanvasInteraction {
             controller.sceneRoot.addChild(newNode)
             controller.onNodesChanged?(controller.sceneRoot.children)
             
-        case .schematicModified, .noResult:
+        case .noResult:
             break
         }
         return true

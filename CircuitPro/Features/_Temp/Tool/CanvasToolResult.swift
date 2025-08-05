@@ -10,6 +10,4 @@ import Foundation
 enum CanvasToolResult {
     case noResult
     case newNode(any CanvasNode)
-    case schematicModified
-
 }
