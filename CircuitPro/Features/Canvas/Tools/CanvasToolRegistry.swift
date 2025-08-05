@@ -35,7 +35,7 @@ enum CanvasToolRegistry {
         cursor + graphicsTools + [PinTool()] + ruler
 
     static let footprintDesignTools: [CanvasTool] =
-        cursor + graphicsTools /*+ [PadTool()]*/ + ruler
+        cursor + graphicsTools + [PadTool()] + ruler
 
     static let schematicTools: [CanvasTool] =
         cursor + /*[ConnectionTool()] +*/ ruler

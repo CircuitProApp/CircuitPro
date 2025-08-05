@@ -16,15 +16,12 @@ struct Pad: Identifiable, Codable, Hashable {
     var id: UUID = UUID()
     var number: Int
     var position: CGPoint
-    var cardinalRotation: CardinalRotation = .east          // stored
+    var cardinalRotation: CardinalRotation = .east    
     var shape: PadShape = .rect(width: 5, height: 10)
     var type: PadType = .surfaceMount
     var drillDiameter: Double?
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// MARK: - Transformable
-// ═══════════════════════════════════════════════════════════════════════
 extension Pad: Transformable {
 
     // bridge enum ⇄ radians so the rest of the canvas can treat the pad
@@ -33,60 +30,6 @@ extension Pad: Transformable {
         get { cardinalRotation.radians }
         set { cardinalRotation = .closest(to: newValue) }
     }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// MARK: - Private helpers
-// ═══════════════════════════════════════════════════════════════════════
-extension Pad {
-
-    // geometry rendered on the copper layer
-    var shapePrimitives: [AnyPrimitive] {
-        switch shape {
-
-        case let .rect(width, height):
-            let rect = RectanglePrimitive(
-                id: UUID(),
-                size: CGSize(width: width, height: height),
-                cornerRadius: 0,
-                position: position,
-                rotation: rotation,                // already in radians
-                strokeWidth: 1,
-                filled: true,
-                color: .init(color: .red)
-            )
-            return [.rectangle(rect)]
-
-        case let .circle(radius):
-            let circle = CirclePrimitive(
-                id: UUID(),
-                radius: radius,
-                position: position,
-                rotation: rotation,
-                strokeWidth: 0.2,
-                color: .init(color: .red),
-                filled: true
-            )
-            return [.circle(circle)]
-        }
-    }
-
-    // mask for through-hole drills
-    var maskPrimitives: [AnyPrimitive] {
-        guard type == .throughHole, let drill = drillDiameter else { return [] }
-        let mask = CirclePrimitive(
-            id: UUID(),
-            radius: drill / 2,
-            position: position,
-            rotation: rotation,
-            strokeWidth: 0,
-            color: .init(color: .black),
-            filled: true
-        )
-        return [.circle(mask)]
-    }
-
-    var allPrimitives: [AnyPrimitive] { shapePrimitives + maskPrimitives }
 }
 
 // MARK: - Convenience computed properties (width / height / radius)

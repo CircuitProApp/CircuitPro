@@ -8,34 +8,41 @@
 import SwiftUI
 
 struct FootprintCanvasView: View {
-
+    
     @Environment(CanvasManager.self)
     private var canvasManager
-
+    
     @Environment(ComponentDesignManager.self) private var componentDesignManager
     
     @State private var isCollapsed: Bool = true
-
+    
     var body: some View {
         @Bindable var footprintEditor = componentDesignManager.footprintEditor
-
+        @Bindable var manager = canvasManager
+        
         SplitPaneView(isCollapsed: $isCollapsed) {
-//            CanvasView(
-//                manager: canvasManager, schematicGraph: .init(),
-//                elements: $footprintEditor.elements,
-//                selectedIDs: $footprintEditor.selectedElementIDs,
-//                selectedTool: $footprintEditor.selectedTool,
-//                layerBindings: CanvasLayerBindings(
-//                    selectedLayer: $footprintEditor.selectedLayer,
-//                    layerAssignments: $footprintEditor.layerAssignments
-//                )
-//            )
-            Text("WIP")
+            CanvasView(
+                size: .constant(PaperSize.component.canvasSize()),
+                magnification: $manager.magnification,
+                nodes: $footprintEditor.elements,
+                selection: $footprintEditor.selectedElementIDs,
+                tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
+                renderLayers: [
+                    GridRenderLayer(),
+                    ElementsRenderLayer(),
+                    PreviewRenderLayer(),
+                    CrosshairsRenderLayer()
+                ],
+                interactions: [
+                    ToolInteraction(),
+                    SelectionInteraction()
+                ]
+            )
             .overlay(alignment: .leading) {
-     
+                
                 FootprintDesignToolbarView()
                 
-                .padding(10)
+                    .padding(10)
             }
         } handle: {
             HStack {

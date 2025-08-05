@@ -14,7 +14,10 @@ struct FootprintDesignToolbarView: View {
         @Bindable var manager = componentDesignManager.footprintEditor
         ToolbarView(
             tools: CanvasToolRegistry.footprintDesignTools,
-            selectedTool: $manager.selectedTool.unwrapping(withDefault: CursorTool())
+            selectedTool: $manager.selectedTool.unwrapping(withDefault: CursorTool()),
+            dividerBefore: { $0 is PadTool },
+            dividerAfter: { $0 is CursorTool }
+      
         )
     }
 }
