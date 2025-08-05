@@ -33,9 +33,18 @@ private struct ConfigurationKey: CanvasEnvironmentKey {
     static let defaultValue = CanvasConfiguration()
 }
 
+private struct MarqueeRectKey: CanvasEnvironmentKey {
+    static let defaultValue: CGRect? = nil
+}
+
 extension CanvasEnvironmentValues {
     var configuration: CanvasConfiguration {
         get { self[ConfigurationKey.self] }
         set { self[ConfigurationKey.self] = newValue }
+    }
+
+    var marqueeRect: CGRect? {
+        get { self[MarqueeRectKey.self] }
+        set { self[MarqueeRectKey.self] = newValue }
     }
 }

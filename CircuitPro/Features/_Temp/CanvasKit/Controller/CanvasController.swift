@@ -6,6 +6,7 @@ final class CanvasController {
     // The scene graph is now built on the concrete BaseNode class.
     let sceneRoot: BaseNode = BaseNode()
     var selectedNodes: [BaseNode] = []
+    var interactionHighlightedNodeIDs: Set<UUID> = []
 
     // MARK: - Universal View State
 
@@ -14,7 +15,7 @@ final class CanvasController {
     var selectedTool: CanvasTool?
     
     // The environment model remains the same.
-    private(set) var environment: CanvasEnvironmentValues = .init()
+    var environment: CanvasEnvironmentValues = .init()
 
     // MARK: - Pluggable Pipelines
 
@@ -81,17 +82,20 @@ final class CanvasController {
             self.selectedTool = tool
         }
         self.magnification = magnification
-        self.environment = environment
+        self.environment.configuration = environment.configuration
     }
     
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
     func currentContext(for hostViewBounds: CGRect) -> RenderContext {
+        let selectedIDs = Set(self.selectedNodes.map { $0.id })
+        let allHighlightedIDs = selectedIDs.union(interactionHighlightedNodeIDs)
+
         return RenderContext(
             sceneRoot: self.sceneRoot,
             magnification: self.magnification,
             mouseLocation: self.mouseLocation,
             selectedTool: self.selectedTool,
-            highlightedNodeIDs: Set(self.selectedNodes.map { $0.id }),
+            highlightedNodeIDs: allHighlightedIDs,
             hostViewBounds: hostViewBounds,
             environment: self.environment
         )
@@ -106,6 +110,18 @@ final class CanvasController {
     func setSelection(to nodes: [BaseNode]) {
         self.selectedNodes = nodes
         self.onSelectionChanged?(Set(nodes.map { $0.id }))
+    }
+
+    /// Allows interactions to update the temporary highlight state.
+    func setInteractionHighlight(nodeIDs: Set<UUID>) {
+        self.interactionHighlightedNodeIDs = nodeIDs
+        redraw()
+    }
+
+    /// Allows interactions to modify the environment and trigger a redraw.
+    func updateEnvironment(_ block: (inout CanvasEnvironmentValues) -> Void) {
+        block(&environment)
+        redraw()
     }
 
     /// Recursively finds a node in the scene graph.

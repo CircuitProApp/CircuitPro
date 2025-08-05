@@ -26,15 +26,18 @@ struct SymbolCanvasView: View {
                 selection: $symbolEditor.selectedElementIDs,
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
                 renderLayers: [
-                    GridRenderLayer(), // These layers can now access userInfo!
+                    GridRenderLayer(), 
                     ElementsRenderLayer(),
                     PreviewRenderLayer(),
+                    MarqueeRenderLayer(),
                     CrosshairsRenderLayer()
+          
                 ],
                 interactions: [
                     ToolInteraction(),
                     SelectionInteraction(),
-//                    DragInteraction() // Add your other interactions here
+                    DragInteraction(),
+                    MarqueeInteraction()
                 ]
             )
             .overlay(alignment: .leading) {
