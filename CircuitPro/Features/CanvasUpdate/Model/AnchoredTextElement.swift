@@ -203,20 +203,20 @@ private extension CGAffineTransform {
     }
 }
 
-extension AnchoredTextElement: Hittable {
-    func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        guard let textHitResult = textElement.hitTest(point, tolerance: tolerance) else {
-            return nil
-        }
-        
-        // THIS IS THE FIX: The ownerPath now starts with THIS element's unique canvas ID.
-        let newOwnerPath = [self.id]
-        
-        return CanvasHitTarget(
-            partID: textHitResult.partID,
-            ownerPath: newOwnerPath,
-            kind: textHitResult.kind,
-            position: point
-        )
-    }
-}
+//extension AnchoredTextElement: Hittable {
+//    func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
+//        guard let textHitResult = textElement.hitTest(point, tolerance: tolerance) else {
+//            return nil
+//        }
+//        
+//        // THIS IS THE FIX: The ownerPath now starts with THIS element's unique canvas ID.
+//        let newOwnerPath = [self.id]
+//        
+//        return CanvasHitTarget(
+//            partID: textHitResult.partID,
+//            ownerPath: newOwnerPath,
+//            kind: textHitResult.kind,
+//            position: point
+//        )
+//    }
+//}

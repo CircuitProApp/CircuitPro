@@ -17,6 +17,10 @@ class BaseNode: CanvasNode {
     
     var isVisible: Bool = true
     
+    var isSelectable: Bool {
+        return true
+    }
+    
     var position: CGPoint {
         get { .zero }
         set { /* do nothing */ }

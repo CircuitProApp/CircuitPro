@@ -7,7 +7,7 @@
 
 import AppKit
 
-protocol GraphicPrimitive: CanvasElement & HandleEditable & Codable {
+protocol GraphicPrimitive: Transformable, Drawable, Bounded, HandleEditable, Identifiable, Codable, Equatable, Hashable {
 
     var id: UUID { get }
     var color: SDColor { get set }
@@ -58,38 +58,36 @@ extension GraphicPrimitive {
 // MARK: - Other Shared Implementations
 extension GraphicPrimitive {
 
-    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
+    func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> AnyHashable? {
         let path = makePath()
         let wasHit: Bool
-        
-        // --- LOGGING ---
+
+        // --- LOGGING --- (This part remains the same)
         let shortID = self.id.uuidString.prefix(4)
-        print("[GraphicPrimitive \(shortID)] Testing geometry. Received point (should be 0,0-centric): \(point)")
+        // The point is still local to the primitive's own geometry (position = 0,0).
         
         if filled {
             wasHit = path.contains(point)
-            print("[GraphicPrimitive \(shortID)]  -> Testing fill. Path contains point? \(wasHit)")
         } else {
+            // Use the stroke width of the primitive plus the interaction tolerance for a more generous hit area.
+            let hitTestWidth = (strokeWidth / 2) + tolerance
             let stroke = path.copy(
-                strokingWithWidth: strokeWidth + tolerance,
+                strokingWithWidth: hitTestWidth,
                 lineCap: .round,
                 lineJoin: .round,
                 miterLimit: 10
             )
             wasHit = stroke.contains(point)
-            print("[GraphicPrimitive \(shortID)]  -> Testing stroke. Stroked path contains point? \(wasHit)")
         }
         
+        // If the geometry wasn't hit, we return nil as before.
         guard wasHit else { return nil }
         
-        print("[GraphicPrimitive \(shortID)]  -> ✅ GEOMETRY HIT CONFIRMED.")
-        
-        return CanvasHitTarget(
-            partID: self.id,
-            ownerPath: [self.id],
-            kind: .primitive,
-            position: point
-        )
+        // --- THIS IS THE FIX ---
+        // Instead of constructing a graphics-specific CanvasHitTarget, we now return
+        // the primitive's own unique ID. This serves as the `partIdentifier` for the
+        // consuming PrimitiveNode, which will then build the final, generic hit target.
+        return self.id
     }
 
     var boundingBox: CGRect {

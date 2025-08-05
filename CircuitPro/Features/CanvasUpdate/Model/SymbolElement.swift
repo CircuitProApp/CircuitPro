@@ -230,36 +230,36 @@ extension SymbolElement: Drawable {
 extension SymbolElement: Hittable {
     func hitTest(_ worldPoint: CGPoint, tolerance: CGFloat = 5) -> CanvasHitTarget? {
         let localPoint = worldPoint.applying(self.transform.inverted())
-        
-        for textElement in anchoredTexts {
-            if let textHitResult = textElement.hitTest(worldPoint, tolerance: tolerance) {
-                let newOwnerPath = [self.id] + textHitResult.ownerPath
-                return CanvasHitTarget(
-                    partID: textHitResult.partID, ownerPath: newOwnerPath,
-                    kind: textHitResult.kind, position: worldPoint
-                )
-            }
-        }
-        
-        for pin in symbol.pins {
-            if let pinHitResult = pin.hitTest(localPoint, tolerance: tolerance) {
-                let newOwnerPath = [self.id] + pinHitResult.ownerPath
-                return CanvasHitTarget(
-                    partID: pinHitResult.partID, ownerPath: newOwnerPath,
-                    kind: pinHitResult.kind, position: worldPoint
-                )
-            }
-        }
-
-        for primitive in symbol.primitives {
-            if let primitiveHitResult = primitive.hitTest(localPoint, tolerance: tolerance) {
-                let newOwnerPath = [self.id] + primitiveHitResult.ownerPath
-                return CanvasHitTarget(
-                    partID: primitiveHitResult.partID, ownerPath: newOwnerPath,
-                    kind: primitiveHitResult.kind, position: worldPoint
-                )
-            }
-        }
+//        
+//        for textElement in anchoredTexts {
+//            if let textHitResult = textElement.hitTest(worldPoint, tolerance: tolerance) {
+//                let newOwnerPath = [self.id] + textHitResult.ownerPath
+//                return CanvasHitTarget(
+//                    partID: textHitResult.partID, ownerPath: newOwnerPath,
+//                    kind: textHitResult.kind, position: worldPoint
+//                )
+//            }
+//        }
+//        
+//        for pin in symbol.pins {
+//            if let pinHitResult = pin.hitTest(localPoint, tolerance: tolerance) {
+//                let newOwnerPath = [self.id] + pinHitResult.ownerPath
+//                return CanvasHitTarget(
+//                    partID: pinHitResult.partID, ownerPath: newOwnerPath,
+//                    kind: pinHitResult.kind, position: worldPoint
+//                )
+//            }
+//        }
+//
+//        for primitive in symbol.primitives {
+//            if let primitiveHitResult = primitive.hitTest(localPoint, tolerance: tolerance) {
+//                let newOwnerPath = [self.id] + primitiveHitResult.ownerPath
+//                return CanvasHitTarget(
+//                    partID: primitiveHitResult.partID, ownerPath: newOwnerPath,
+//                    kind: primitiveHitResult.kind, position: worldPoint
+//                )
+//            }
+//        }
         return nil
     }
 }

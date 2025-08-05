@@ -19,6 +19,8 @@ protocol CanvasNode: AnyObject, CanvasElement {
 
     var isVisible: Bool { get set }
     
+    var isSelectable: Bool { get }
+    
     var localTransform: CGAffineTransform { get }
     var worldTransform: CGAffineTransform { get }
     func addChild(_ node: any CanvasNode)

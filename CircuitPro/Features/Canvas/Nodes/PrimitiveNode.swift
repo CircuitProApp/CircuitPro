@@ -27,6 +27,12 @@ class PrimitiveNode: BaseNode {
         set { primitive.rotation = newValue }
     }
     
+    // --- THIS IS A NEW PROPERTY FROM OUR PREVIOUS DISCUSSION ---
+    /// A `PrimitiveNode` is always considered selectable.
+    override var isSelectable: Bool {
+        return true
+    }
+
     init(primitive: AnyPrimitive) {
         self.primitive = primitive
         
@@ -50,23 +56,25 @@ class PrimitiveNode: BaseNode {
         return primitive.boundingBox
     }
     
+    // --- THIS IS THE UPDATED HIT-TEST METHOD ---
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        // The point received here is already in this node's local space.
-        // We pass it directly to the underlying primitive for the geometry check.
-        guard let localHit = primitive.hitTest(point, tolerance: tolerance) else {
+        // The 'point' is already in this node's local coordinate space.
+
+        // 1. Delegate the geometry check to the underlying primitive.
+        //    We expect an `AnyHashable?` back, not a full CanvasHitTarget.
+        guard let partId = primitive.hitTest(point, tolerance: tolerance) else {
+            // The primitive's geometry wasn't hit.
             return nil
         }
         
-        // The localHit's position is relative to the primitive's origin (0,0).
-        // We must convert this to world coordinates for the final result.
-        let worldPosition = point.applying(self.worldTransform)
-
-        // Construct the final target, replacing the local position with the world position.
+        // 2. The primitive was hit. This node now builds the generic CanvasHitTarget.
         return CanvasHitTarget(
-            partID: localHit.partID,
-            ownerPath: localHit.ownerPath,
-            kind: localHit.kind,
-            position: worldPosition
+            // The node that was hit is this instance of PrimitiveNode.
+            node: self,
+            // The specific part that was hit is whatever the primitive returned.
+            partIdentifier: partId,
+            // Convert the local hit point to world coordinates for the final result.
+            position: point.applying(self.worldTransform)
         )
     }
 }
