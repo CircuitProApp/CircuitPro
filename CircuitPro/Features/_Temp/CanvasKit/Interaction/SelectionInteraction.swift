@@ -4,17 +4,20 @@ import AppKit
 struct SelectionInteraction: CanvasInteraction {
     
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
-        // This interaction is only interested if the cursor tool is active.
-        guard controller.selectedTool?.id == "cursor" else {
+        
+        // --- THIS IS THE FIX ---
+        // We now check if the active tool is an instance of the CursorTool class.
+        // This interaction is only interested in running when the selection tool is active.
+        guard controller.selectedTool is CursorTool else {
             return false
         }
         
+        // The rest of the logic remains the same, as it was already correct.
         let currentSelection = controller.selectedNodes
         let tolerance = 5.0 / context.magnification
         let hitTarget = context.sceneRoot.hitTest(point, tolerance: tolerance)
         let modifierFlags = NSApp.currentEvent?.modifierFlags ?? []
         
-        // This variable will hold the potential new selection state.
         var newSelection = currentSelection
         
         if let hit = hitTarget, let hitID = hit.selectableID {
@@ -38,15 +41,11 @@ struct SelectionInteraction: CanvasInteraction {
             
         } else {
             // Case 2: Clicked on empty space.
-            // If the shift key is not down, clear the selection.
             if !modifierFlags.contains(.shift) && !currentSelection.isEmpty {
                 newSelection = []
             }
         }
         
-        // --- THIS IS THE FIX ---
-        // We cannot compare `[any CanvasNode]` directly. Instead, we compare a Set of their unique IDs.
-        // This is efficient and correctly handles the Equatable requirement.
         let currentSelectionIDs = Set(currentSelection.map { $0.id })
         let newSelectionIDs = Set(newSelection.map { $0.id })
 
@@ -56,7 +55,7 @@ struct SelectionInteraction: CanvasInteraction {
         }
         
         // IMPORTANT: Always return false.
-        // This allows other interactions (like Drag) to act on the same click.
+        // This allows other interactions (like Drag) to act on this same click.
         return false
     }
 }

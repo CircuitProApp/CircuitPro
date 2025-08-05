@@ -32,7 +32,7 @@ class GridRenderLayer: RenderLayer {
         // 1. Explicitly define the type for safety.
         // 2. The grid origin should be fixed at (0,0) in world coordinates
         //    so it doesn't move when the user pans the canvas.
-        let spacing: CGFloat = context.value(for: "snapGridSize") ?? 10.0
+        let spacing: CGFloat = context.environment.grid.spacing
         let gridOrigin = CGPoint.zero
         
         let dotRadius = 1.0 / context.magnification

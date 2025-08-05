@@ -5,7 +5,11 @@ struct ToolInteraction: CanvasInteraction {
     
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         // This interaction is only interested if a drawing tool is active.
-        guard var tool = controller.selectedTool, tool.id != "cursor" else {
+        if controller.selectedTool is CursorTool {
+            return false
+        }
+        
+        guard let tool = controller.selectedTool else {
             return false
         }
         
@@ -16,14 +20,9 @@ struct ToolInteraction: CanvasInteraction {
         let tolerance = 5.0 / context.magnification
         let hitTarget = context.sceneRoot.hitTest(point, tolerance: tolerance)
 
-        // --- THIS IS THE FIX ---
-        // We call the `value(for:)` method and let Swift infer the type.
-        // The `SnapService` initializer expects a `CGFloat` and a `Bool`, and the
-        // nil-coalescing operator `??` provides a default value of the same type.
-        // This gives the compiler enough context to infer that `T` is `CGFloat` and `Bool` respectively.
         let snapService = SnapService(
-            gridSize: context.value(for: "snapGridSize") ?? 10.0,
-            isEnabled: context.value(for: "isSnappingEnabled") ?? true
+            gridSize: context.environment.grid.spacing,
+            isEnabled: context.environment.grid.snappingEnabled
         )
         let snappedPoint = snapService.snap(point)
         

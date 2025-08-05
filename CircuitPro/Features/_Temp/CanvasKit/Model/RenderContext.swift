@@ -7,17 +7,12 @@ struct RenderContext {
     let sceneRoot: any CanvasNode
     let magnification: CGFloat
     let mouseLocation: CGPoint?
-    let selectedTool: AnyCanvasTool?
+    let selectedTool: CanvasTool?
     let highlightedNodeIDs: Set<UUID>
     let hostViewBounds: CGRect
 
     // MARK: - Extensible Application-Specific Data
     /// An extensible dictionary for passing application-specific data to the
     /// render layers without the core framework needing to know about them.
-    let userInfo: [String: Any]
-
-    // Convenience accessor for type-safe data retrieval
-    func value<T>(for key: String) -> T? {
-        return userInfo[key] as? T
-    }
+    public let environment: CanvasEnvironmentValues
 }

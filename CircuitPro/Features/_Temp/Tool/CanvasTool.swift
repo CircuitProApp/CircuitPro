@@ -7,49 +7,71 @@
 
 import SwiftUI
 
-protocol CanvasTool: Hashable {
-    var id: String { get }
-    var symbolName: String { get }
-    var label: String { get }
+/// An abstract base class for all canvas tools.
+///
+/// Using a class hierarchy allows for type-safe checking (e.g., `if tool is CursorTool`)
+/// and provides a natural way for stateful tools (like a multi-point line tool) to manage
+/// their own state without needing `mutating` methods.
+open class CanvasTool: Hashable {
+    
+    // MARK: - Identity and Conformance
+    
+    /// The tool's identity, derived from its specific type. This ensures that
+    /// all instances of `CursorTool` are equal, but different from `LineTool`.
+    public var id: ObjectIdentifier {
+        return ObjectIdentifier(type(of: self))
+    }
 
-    // MARK: - Connection Tool Properties
+    public static func == (lhs: CanvasTool, rhs: CanvasTool) -> Bool {
+        return lhs.id == rhs.id
+    }
 
-    mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    // MARK: - UI Representation (for Toolbars)
+    
+    /// The SF Symbol name to represent this tool in the UI. Subclasses should override this.
+    open var symbolName: String { "questionmark.circle" }
+    
+    /// The user-facing name for this tool. Subclasses should override this.
+    open var label: String { "Unnamed Tool" }
+    
+    
+    // MARK: - Primary Actions (Override in Subclasses)
 
-    mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters]
-
-    // NEW: keyboard actions -------------------------------------------------
-    /// Called when the user presses the Escape key while this tool is active.
-    /// Tools can reset any in-progress state here.
-    /// Returns bool if any progress was cleared.
-    mutating func handleEscape() -> Bool
-
-    /// Called when the Backspace key is pressed. Tools should undo the most
-    /// recent step of the operation if possible.
-    mutating func handleBackspace()
-
-    /// Called when the R key is pressed. Tools can use this to cycle through
-    /// discrete rotation states or otherwise adjust orientation.
-    mutating func handleRotate()
-
-    /// Called when the Return key is pressed. Tools should commit the
-    /// existing steps if possible.
-    mutating func handleReturn() -> CanvasToolResult
-}
-
-extension CanvasTool {
-    mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
-        // Default implementation that returns .noResult.
+    /// Called when the user taps on the canvas. Subclasses override this to provide their main behavior.
+    /// This method is NOT `mutating` because classes are reference types.
+    open func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         return .noResult
     }
 
-    mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] { [] }
+    /// Provides drawing parameters for a temporary preview (e.g., rubber-banding a line).
+    open func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
+        return []
+    }
+    
+    // MARK: - Keyboard Actions (Override in Subclasses)
 
-    mutating func handleEscape() {}
+    /// Called when the Escape key is pressed. Resets the tool's internal state.
+    /// - Returns: `true` if the tool had in-progress state that was cleared.
+    open func handleEscape() -> Bool {
+        return false
+    }
 
-    mutating func handleBackspace() {}
+    /// Called when the Backspace key is pressed. Undoes the most recent step.
+    open func handleBackspace() {
+        // Default implementation does nothing.
+    }
 
-    mutating func handleRotate() {}
+    /// Called when the 'R' key is pressed, typically for rotation.
+    open func handleRotate() {
+        // Default implementation does nothing.
+    }
 
-    mutating func handleReturn() -> CanvasToolResult { .noResult }
+    /// Called when the Return key is pressed. Commits the current operation.
+    open func handleReturn() -> CanvasToolResult {
+        return .noResult
+    }
 }

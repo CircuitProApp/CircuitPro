@@ -8,15 +8,11 @@ final class CanvasController {
     var selectedNodes: [any CanvasNode] = []
 
     // MARK: - Universal View State
-    var magnification: CGFloat = 1.0 {
-        didSet {
-            // Use the callback to notify the owner of the change.
-            onMagnificationChanged?(magnification)
-        }
-    }
+    var magnification: CGFloat = 1.0
     var mouseLocation: CGPoint?
-    var selectedTool: AnyCanvasTool?
-    private(set) var userInfo: [String: Any] = [:]
+    var selectedTool: CanvasTool?
+    
+    private(set) var environment: CanvasEnvironmentValues = .init()
 
     // MARK: - Pluggable Pipelines
     let renderLayers: [RenderLayer]
@@ -26,7 +22,6 @@ final class CanvasController {
     var onNeedsRedraw: (() -> Void)?
     var onSelectionChanged: ((Set<UUID>) -> Void)?
     var onNodesChanged: (([any CanvasNode]) -> Void)?
-    var onMagnificationChanged: ((CGFloat) -> Void)?
 
     // MARK: - Init
     init(renderLayers: [RenderLayer], interactions: [any CanvasInteraction]) {
@@ -41,9 +36,9 @@ final class CanvasController {
     func sync(
         nodes: [any CanvasNode],
         selection: Set<UUID>,
-        tool: AnyCanvasTool?,
+        tool: CanvasTool?,
         magnification: CGFloat,
-        userInfo: [String: Any]
+        environment: CanvasEnvironmentValues
     ) {
         // Sync the scene graph if the nodes have changed.
         let currentNodeIDs = self.sceneRoot.children.map { $0.id }
@@ -58,7 +53,6 @@ final class CanvasController {
         let currentSelectedIDsInController = Set(self.selectedNodes.map { $0.id })
         if currentSelectedIDsInController != selection {
             self.selectedNodes = selection.compactMap { id in
-                // This is a placeholder for your node-finding logic
                 findNode(with: id, in: sceneRoot)
             }
         }
@@ -68,7 +62,7 @@ final class CanvasController {
             self.selectedTool = tool
         }
         self.magnification = magnification
-        self.userInfo = userInfo
+        self.environment = environment
     }
     
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
@@ -81,7 +75,7 @@ final class CanvasController {
             selectedTool: self.selectedTool,
             highlightedNodeIDs: Set(self.selectedNodes.map { $0.id }),
             hostViewBounds: hostViewBounds,
-            userInfo: self.userInfo
+            environment: self.environment
         )
     }
     
@@ -90,12 +84,13 @@ final class CanvasController {
         onNeedsRedraw?()
     }
 
+    /// Allows interactions to update the current selection.
     func setSelection(to nodes: [any CanvasNode]) {
         self.selectedNodes = nodes
         self.onSelectionChanged?(Set(nodes.map { $0.id }))
     }
 
-    /// Recursively finds a node in the scene graph. Make this public.
+    /// Recursively finds a node in the scene graph.
     func findNode(with id: UUID, in root: any CanvasNode) -> (any CanvasNode)? {
         if root.id == id { return root }
         for child in root.children {
