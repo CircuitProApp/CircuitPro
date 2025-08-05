@@ -12,7 +12,5 @@ struct RenderContext {
     let hostViewBounds: CGRect
 
     // MARK: - Extensible Application-Specific Data
-    /// An extensible dictionary for passing application-specific data to the
-    /// render layers without the core framework needing to know about them.
     public let environment: CanvasEnvironmentValues
 }

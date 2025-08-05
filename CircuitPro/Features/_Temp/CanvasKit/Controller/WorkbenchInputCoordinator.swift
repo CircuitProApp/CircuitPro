@@ -15,8 +15,6 @@ final class WorkbenchInputCoordinator {
     
     // The host view is now passed into each method.
     func mouseDown(_ event: NSEvent, in host: CanvasHostView) {
-        // --- THIS IS THE FIX ---
-        // Request a fresh context directly from the controller. No more optionality.
         let context = controller.currentContext(for: host.bounds)
         let point = host.convert(event.locationInWindow, from: nil)
 
