@@ -1,7 +1,6 @@
 import AppKit
 
 class ElementsRenderLayer: RenderLayer {
-    var layerKey: String = "elements"
 
     private let rootLayer = CALayer()
     private var layerPool: [CAShapeLayer] = []

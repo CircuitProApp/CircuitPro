@@ -8,21 +8,34 @@
 
 import CoreGraphics
 
-// 1. Define the data structure you want to use.
+struct CanvasConfiguration {
+    var grid = CanvasGrid()
+    var snapping = Snapping()
+    var crosshairsStyle = CrosshairsStyle.centeredCross
+    // Future settings go here, e.g.:
+    // var theme = Theme()
+    // var guides = Guides()
+}
+
 struct CanvasGrid {
-    var spacing: CGFloat
-    var snappingEnabled: Bool
+    var spacing: CGFloat = 10
+    var majorLineInterval: Int = 10
+    var isVisible: Bool = true
 }
 
-// 2. Create a key for your Grid data.
-private struct GridKey: CanvasEnvironmentKey {
-    static let defaultValue: CanvasGrid = .init(spacing: 10, snappingEnabled: true)
+struct Snapping {
+    var isEnabled: Bool = true
+    // var snapToGrid: Bool = true
+    // var snapToObjects: Bool = false
 }
 
-// 3. (The Magic) Extend the framework's storage to add a convenient property.
+private struct ConfigurationKey: CanvasEnvironmentKey {
+    static let defaultValue = CanvasConfiguration()
+}
+
 extension CanvasEnvironmentValues {
-    var grid: CanvasGrid {
-        get { self[GridKey.self] }
-        set { self[GridKey.self] = newValue }
+    var configuration: CanvasConfiguration {
+        get { self[ConfigurationKey.self] }
+        set { self[ConfigurationKey.self] = newValue }
     }
 }

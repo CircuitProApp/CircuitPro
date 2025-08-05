@@ -21,8 +21,8 @@ struct ToolInteraction: CanvasInteraction {
         let hitTarget = context.sceneRoot.hitTest(point, tolerance: tolerance)
 
         let snapService = SnapService(
-            gridSize: context.environment.grid.spacing,
-            isEnabled: context.environment.grid.snappingEnabled
+            gridSize: context.environment.configuration.grid.spacing,
+            isEnabled: context.environment.configuration.snapping.isEnabled
         )
         let snappedPoint = snapService.snap(point)
         

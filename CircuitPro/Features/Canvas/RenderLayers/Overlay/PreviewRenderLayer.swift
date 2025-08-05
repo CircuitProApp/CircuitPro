@@ -1,7 +1,6 @@
 import AppKit
 
 class PreviewRenderLayer: RenderLayer {
-    var layerKey: String = "preview"
     
     // A persistent container layer for all preview shapes.
     private let rootLayer = CALayer()
@@ -14,20 +13,26 @@ class PreviewRenderLayer: RenderLayer {
     }
 
     func update(using context: RenderContext) {
-        // --- THIS IS THE FIX ---
-        // The check for `tool.id != "cursor"` is replaced with a type-safe check.
-        // We also change `var tool` to `let tool` as class methods are not mutating.
         guard let tool = context.selectedTool,
-              !(tool is CursorTool), // Only proceed if the tool is NOT the cursor.
-              let mouse = context.mouseLocation
+              !(tool is CursorTool),
+              let mouseLocation = context.mouseLocation
         else {
             // If no tool is active, or it's the cursor, or the mouse is not
             // on the canvas, hide all preview layers and exit.
             hideAllLayers()
             return
         }
+
+        let snapService = SnapService(
+            gridSize: context.environment.configuration.grid.spacing,
+            isEnabled: context.environment.configuration.snapping.isEnabled
+        )
+        // Snap the real-time mouse location to the grid.
+        let snappedMouseLocation = snapService.snap(mouseLocation)
         
-        let drawingParams = tool.preview(mouse: mouse, context: context)
+        // Pass the *snapped* location to the tool's preview method.
+        let drawingParams = tool.preview(mouse: snappedMouseLocation, context: context)
+
         
         // If the tool returns no preview shapes, hide all layers.
         guard !drawingParams.isEmpty else {
@@ -47,11 +52,6 @@ class PreviewRenderLayer: RenderLayer {
                 shapeLayerPool[i].isHidden = true
             }
         }
-    }
-    
-    /// Previews are purely visual and should not be interactive.
-    func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
-        return nil
     }
 
     // MARK: - Layer Pooling Helpers

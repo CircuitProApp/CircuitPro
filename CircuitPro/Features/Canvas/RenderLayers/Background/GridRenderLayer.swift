@@ -1,7 +1,6 @@
 import AppKit
 
 class GridRenderLayer: RenderLayer {
-    var layerKey: String = "grid"
 
     private let majorGridLayer = CAShapeLayer()
     private let minorGridLayer = CAShapeLayer()
@@ -27,12 +26,8 @@ class GridRenderLayer: RenderLayer {
         minorGridLayer.isHidden = false
 
         let drawingRect = context.hostViewBounds
-       
-        // --- THIS IS THE FIX ---
-        // 1. Explicitly define the type for safety.
-        // 2. The grid origin should be fixed at (0,0) in world coordinates
-        //    so it doesn't move when the user pans the canvas.
-        let spacing: CGFloat = context.environment.grid.spacing
+
+        let spacing: CGFloat = context.environment.configuration.grid.spacing
         let gridOrigin = CGPoint.zero
         
         let dotRadius = 1.0 / context.magnification

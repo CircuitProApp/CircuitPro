@@ -28,7 +28,8 @@ struct SymbolCanvasView: View {
                 renderLayers: [
                     GridRenderLayer(), // These layers can now access userInfo!
                     ElementsRenderLayer(),
-                    PreviewRenderLayer()
+                    PreviewRenderLayer(),
+                    CrosshairsRenderLayer()
                 ],
                 interactions: [
                     ToolInteraction(),
