@@ -13,12 +13,12 @@ import AppKit
 /// all drawing and hit-testing logic by using the geometry calculations defined
 /// in the `Pin+Geometry` extension.
 class PinNode: BaseNode {
-
+    
     // MARK: - Properties
-
+    
     /// The underlying data model for this node.
     var pin: Pin
-
+    
     /// Defines the distinct, hittable parts of a PinNode for rich interaction.
     enum Part: Hashable {
         case endpoint
@@ -26,94 +26,93 @@ class PinNode: BaseNode {
         case nameLabel
         case numberLabel
     }
-
+    
     // MARK: - Overridden Scene Graph Properties
-
+    
     override var position: CGPoint {
         get { pin.position }
         set { pin.position = newValue }
     }
-
+    
     override var rotation: CGFloat {
-        get { pin.rotation }
-        set { pin.rotation = newValue }
+        get { 0 } // Always return 0 to prevent the scene graph from rotating our content.
+        set {
+            // The pin's rotation is part of its data model, so we set it here.
+            // The drawing code will read this value directly.
+            pin.rotation = newValue
+        }
     }
     
-    // MARK: - Initialization
-
     init(pin: Pin) {
         self.pin = pin
-        // Pass the pin's ID to the superclass to ensure the node and the model share an identity.
         super.init(id: pin.id)
     }
-
-    // MARK: - Drawable Conformance
-
+    
+    // --- FIX 2: Update drawing to use the pin's world-coordinate parameters ---
+    // This is now almost identical to the logic in the old Pin+Drawable.
     override func makeBodyParameters() -> [DrawingParameters] {
-          var params: [DrawingParameters] = []
-          let pinColor = NSColor.systemBlue.cgColor
+        return pin.makeAllBodyParameters() // Delegate all drawing logic to the pin.
+    }
+    
+    override func makeHaloPath() -> CGPath? {
+        return pin.calculateCompositePath()
+    }
+    
+    // MARK: - Hittable Conformance (Now Using Local Geometry)
+    
+    override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
+        let inflatedTolerance = tolerance * 2.0 // Use a larger tolerance for easier interaction
 
-          // 1. Draw the pin leg (now a local path)
-          let legPath = CGMutablePath()
-          legPath.move(to: pin.localLegStart)
-          legPath.addLine(to: .zero) // End at the local origin
-          params.append(DrawingParameters(path: legPath, lineWidth: 1, strokeColor: pinColor))
-          
-          // 2. Draw the pin endpoint (now a local path)
-          let endpointRect = CGRect(x: -pin.endpointRadius, y: -pin.endpointRadius, width: pin.endpointRadius * 2, height: pin.endpointRadius * 2)
-          params.append(DrawingParameters(path: CGPath(ellipseIn: endpointRect, transform: nil), lineWidth: 1, strokeColor: pinColor))
-          
-          // 3 & 4. Text layout functions are already local-space aware. No changes needed here.
-          if pin.showNumber {
-              var (path, transform) = pin.numberLayout()
-              if let finalPath = path.copy(using: &transform) {
-                  params.append(DrawingParameters(path: finalPath, lineWidth: 0, fillColor: pinColor))
-              }
-          }
-          
-          if pin.showLabel && !pin.name.isEmpty {
-              var (path, transform) = pin.labelLayout()
-              if let finalPath = path.copy(using: &transform) {
-                  params.append(DrawingParameters(path: finalPath, lineWidth: 0, fillColor: pinColor))
-              }
-          }
-          
-          return params
-      }
+        // --- Priority 1: Test for the most specific parts first ---
 
-      override func makeHaloPath() -> CGPath? {
-          return pin.calculateCompositePath()
-      }
-
-      // MARK: - Hittable Conformance (Now Using Local Geometry)
-
-      override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-          // The `point` received here is a local coordinate, which is what we need.
-          
-          // 1. Test Endpoint in local space.
-          let endpointRect = CGRect(x: -pin.endpointRadius, y: -pin.endpointRadius, width: pin.endpointRadius*2, height: pin.endpointRadius*2)
-          if endpointRect.insetBy(dx: -tolerance, dy: -tolerance).contains(point) {
-              return CanvasHitTarget(
-                  node: self,
-                  partIdentifier: Part.endpoint,
-                  // The CANONICAL position is this node's world location.
-                  position: self.convert(.zero, to: nil)
-              )
-          }
-          
-          // 2. Test Full Body in local space.
-          let bodyPath = pin.calculateCompositePath()
-          let hitArea = bodyPath.copy(strokingWithWidth: tolerance * 2, lineCap: .round, lineJoin: .round, miterLimit: 1)
-          
-          if hitArea.contains(point) {
-              return CanvasHitTarget(
-                  node: self,
-                  partIdentifier: Part.body,
-                  // The HIT position is the clicked point, converted to world space.
-                  position: self.convert(point, to: nil)
-              )
-          }
-          
-          return nil
-      }
+        // Did the user click the connection point?
+        // We correctly access the radius from the model: `self.pin.endpointRadius`.
+        let endpointRect = CGRect(x: -self.pin.endpointRadius, y: -self.pin.endpointRadius, width: self.pin.endpointRadius * 2, height: self.pin.endpointRadius * 2)
+        if endpointRect.insetBy(dx: -tolerance, dy: -tolerance).contains(point) {
+            return CanvasHitTarget(
+                node: self,
+                partIdentifier: Part.endpoint,
+                position: self.convert(.zero, to: nil)
+            )
+        }
+        
+        // Did the user click the number?
+        if self.pin.showNumber {
+            var (path, transform) = self.pin.numberLayout()
+            if let finalPath = path.copy(using: &transform) {
+                if finalPath.copy(strokingWithWidth: inflatedTolerance, lineCap: .round, lineJoin: .round, miterLimit: 1).contains(point) {
+                    return CanvasHitTarget(node: self, partIdentifier: Part.numberLabel, position: self.convert(point, to: nil))
+                }
+            }
+        }
+        
+        // Did the user click the name label?
+        if self.pin.showLabel && !self.pin.name.isEmpty {
+            var (path, transform) = self.pin.labelLayout()
+            if let finalPath = path.copy(using: &transform) {
+                if finalPath.copy(strokingWithWidth: inflatedTolerance, lineCap: .round, lineJoin: .round, miterLimit: 1).contains(point) {
+                    return CanvasHitTarget(node: self, partIdentifier: Part.nameLabel, position: self.convert(point, to: nil))
+                }
+            }
+        }
+        
+        // --- Priority 2: Fallback to the physical body (leg only) ---
+        
+        // If no specific part was hit, we check just the pin's leg.
+        // We construct this path manually to avoid re-testing the endpoint or text.
+        let legPath = CGMutablePath()
+        legPath.move(to: self.pin.localLegStart)
+        legPath.addLine(to: .zero)
+        
+        if legPath.copy(strokingWithWidth: inflatedTolerance, lineCap: .round, lineJoin: .round, miterLimit: 1).contains(point) {
+            return CanvasHitTarget(
+                node: self,
+                partIdentifier: Part.body,
+                position: self.convert(point, to: nil)
+            )
+        }
+        
+        // If nothing was hit, return nil.
+        return nil
+    }
 }
