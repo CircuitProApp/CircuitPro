@@ -11,7 +11,7 @@ import SwiftData
 @Observable
 final class ProjectManager {
 
-    private let modelContext: ModelContext
+    let modelContext: ModelContext
     var project: CircuitProject
     var selectedDesign: CircuitDesign? 
     var selectedComponentIDs: Set<UUID> = []

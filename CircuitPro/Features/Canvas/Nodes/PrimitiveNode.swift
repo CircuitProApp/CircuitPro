@@ -27,10 +27,9 @@ class PrimitiveNode: BaseNode {
         set { primitive.rotation = newValue }
     }
     
-    // --- THIS IS A NEW PROPERTY FROM OUR PREVIOUS DISCUSSION ---
-    /// A `PrimitiveNode` is always considered selectable.
     override var isSelectable: Bool {
-        return true
+        // A primitive is not selectable if its parent is a SymbolNode.
+        return !(parent is SymbolNode)
     }
 
     init(primitive: AnyPrimitive) {

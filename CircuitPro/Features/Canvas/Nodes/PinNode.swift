@@ -27,6 +27,11 @@ class PinNode: BaseNode {
         case numberLabel
     }
     
+    override var isSelectable: Bool {
+        // A pin is not selectable if its parent is a SymbolNode.
+        return !(parent is SymbolNode)
+    }
+    
     // MARK: - Overridden Scene Graph Properties
     
     override var position: CGPoint {

@@ -19,6 +19,11 @@ struct CanvasView: NSViewRepresentable {
     let snapProvider: any SnapProvider
     // An optional callback to report the mouse's position to the parent view.
     var onMouseMoved: ((CGPoint?) -> Void)?
+    
+    let registeredDraggedTypes: [NSPasteboard.PasteboardType]
+    // A callback executed when a valid item is dropped onto the canvas. It receives
+    // the pasteboard and the drop location, and returns 'true' on success.
+    let onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
 
     init(
         size: Binding<CGSize>,
@@ -31,7 +36,9 @@ struct CanvasView: NSViewRepresentable {
         interactions: [any CanvasInteraction],
         inputProcessors: [any InputProcessor] = [],
         snapProvider: any SnapProvider = NoOpSnapProvider(),
-        onMouseMoved: ((CGPoint?) -> Void)? = nil
+        onMouseMoved: ((CGPoint?) -> Void)? = nil,
+        registeredDraggedTypes: [NSPasteboard.PasteboardType] = [],
+        onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil
     ) {
         self._size = size
         self._magnification = magnification
@@ -44,6 +51,8 @@ struct CanvasView: NSViewRepresentable {
         self.inputProcessors = inputProcessors
         self.snapProvider = snapProvider
         self.onMouseMoved = onMouseMoved
+        self.registeredDraggedTypes = registeredDraggedTypes
+        self.onPasteboardDropped = onPasteboardDropped
     }
 
     // MARK: - Coordinator
@@ -126,9 +135,13 @@ struct CanvasView: NSViewRepresentable {
             selection: $selection,
             renderLayers: self.renderLayers,
             interactions: self.interactions,
-            inputProcessors: self.inputProcessors, snapProvider: self.snapProvider
+            inputProcessors: self.inputProcessors,
+            snapProvider: self.snapProvider
         )
         coordinator.canvasController.onMouseMoved = self.onMouseMoved
+        coordinator.canvasController.onMouseMoved = self.onMouseMoved
+               // Connect the on-drop callback to the controller instance.
+               coordinator.canvasController.onPasteboardDropped = self.onPasteboardDropped
         return coordinator
     }
 
@@ -136,7 +149,7 @@ struct CanvasView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSScrollView {
         let coordinator = context.coordinator
-        let canvasHostView = CanvasHostView(controller: coordinator.canvasController)
+        let canvasHostView = CanvasHostView(controller: coordinator.canvasController, registeredDraggedTypes: self.registeredDraggedTypes)
         let scrollView = NSScrollView()
         
         coordinator.canvasController.onNeedsRedraw = { [weak canvasHostView] in

@@ -31,6 +31,8 @@ final class CanvasController {
     var onSelectionChanged: ((Set<UUID>) -> Void)?
     var onNodesChanged: (([BaseNode]) -> Void)?
     var onMouseMoved: ((CGPoint?) -> Void)? // Added for consistency with our previous design.
+    
+    var onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
 
     // MARK: - Init
 
@@ -91,22 +93,44 @@ final class CanvasController {
     
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
     func currentContext(for hostViewBounds: CGRect, visibleRect: CGRect) -> RenderContext {
-           let selectedIDs = Set(self.selectedNodes.map { $0.id })
-           let allHighlightedIDs = selectedIDs.union(interactionHighlightedNodeIDs)
+        let selectedIDs = Set(self.selectedNodes.map { $0.id })
+        
+        // --- MODIFIED: Expand the highlight set to include children of selected nodes ---
+        var descendantIDs: Set<UUID> = []
 
-           return RenderContext(
-               sceneRoot: self.sceneRoot,
-               magnification: self.magnification,
-               mouseLocation: self.mouseLocation,
-               selectedTool: self.selectedTool,
-               highlightedNodeIDs: allHighlightedIDs,
-               hostViewBounds: hostViewBounds,
-               visibleRect: visibleRect,
-               snapProvider: snapProvider,
-               environment: self.environment,
-               inputProcessors: self.inputProcessors
-           )
-       }
+        // Helper function to recursively gather all descendant IDs from a node.
+        func gatherDescendantIDs(from node: BaseNode, into set: inout Set<UUID>) {
+            for child in node.children {
+                guard let childNode = child as? BaseNode else { continue }
+                set.insert(childNode.id)
+                gatherDescendantIDs(from: childNode, into: &set)
+            }
+        }
+
+        for node in self.selectedNodes {
+            // For each selected node, find all its children, grandchildren, etc.
+            gatherDescendantIDs(from: node, into: &descendantIDs)
+        }
+        
+        // The final highlight set includes the original selection, all their descendants,
+        // and any nodes being highlighted by an active interaction (e.g., a marquee).
+        let allHighlightedIDs = selectedIDs
+            .union(descendantIDs)
+            .union(interactionHighlightedNodeIDs)
+
+        return RenderContext(
+            sceneRoot: self.sceneRoot,
+            magnification: self.magnification,
+            mouseLocation: self.mouseLocation,
+            selectedTool: self.selectedTool,
+            highlightedNodeIDs: allHighlightedIDs, // Use the new, expanded set
+            hostViewBounds: hostViewBounds,
+            visibleRect: visibleRect,
+            snapProvider: snapProvider,
+            environment: self.environment,
+            inputProcessors: self.inputProcessors
+        )
+    }
     
     /// Notifies the owner that the view needs to be redrawn.
     func redraw() {

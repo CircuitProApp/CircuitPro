@@ -1,17 +1,19 @@
+// Features/_Temp/CanvasKit/View/CanvasHostView.swift
 import AppKit
 import UniformTypeIdentifiers
 
-/// The AppKit view that directly hosts the canvas's rendering layers and receives raw input events.
-/// This view is now stateless regarding the render context.
 final class CanvasHostView: NSView {
 
     private let controller: CanvasController
     private let inputHandler: CanvasInputHandler
+    private let dragDropHandler: CanvasDragDropHandler
 
     // MARK: - Init & Setup
-    init(controller: CanvasController) {
+    init(controller: CanvasController, registeredDraggedTypes: [NSPasteboard.PasteboardType]) {
         self.controller = controller
         self.inputHandler = CanvasInputHandler(controller: controller)
+        self.dragDropHandler = CanvasDragDropHandler(controller: controller)
+
         super.init(frame: .zero)
         
         self.wantsLayer = true
@@ -22,8 +24,10 @@ final class CanvasHostView: NSView {
                 self?.performLayerUpdate()
             }
         }
-
-        self.registerForDraggedTypes([.transferableComponent])
+        
+        // This is the correct way to register types. The NSView superclass
+        // handles storing and exposing this list via its own `registeredDraggedTypes` property.
+        self.registerForDraggedTypes(registeredDraggedTypes)
 
         for renderLayer in controller.renderLayers {
             renderLayer.install(on: self.layer!)
@@ -72,11 +76,29 @@ final class CanvasHostView: NSView {
         addTrackingArea(NSTrackingArea(rect: bounds, options: options, owner: self, userInfo: nil))
     }
     
-    // MARK: - Event Forwarding
+    // MARK: - Event Forwarding (Mouse)
 
     override func mouseMoved(with event: NSEvent) { inputHandler.mouseMoved(event, in: self) }
     override func mouseExited(with event: NSEvent) { inputHandler.mouseExited() }
     override func mouseDown(with event: NSEvent) { inputHandler.mouseDown(event, in: self) }
     override func mouseDragged(with event: NSEvent) { inputHandler.mouseDragged(event, in: self) }
     override func mouseUp(with event: NSEvent) { inputHandler.mouseUp(event, in: self) }
+    
+    // MARK: - Event Forwarding (Drag and Drop)
+    
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        return dragDropHandler.draggingEntered(sender, in: self)
+    }
+    
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        return dragDropHandler.draggingUpdated(sender, in: self)
+    }
+    
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        dragDropHandler.draggingExited(sender, in: self)
+    }
+    
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        return dragDropHandler.performDragOperation(sender, in: self)
+    }
 }
