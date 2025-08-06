@@ -128,7 +128,7 @@ struct ComponentDesignView: View {
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
 
         var textDefinitions = [TextDefinition]()
-        let textCanvasElements = symbolEditor.elements.compactMap { $0 as? TextElement }
+        let textCanvasElements = symbolEditor.elements.compactMap { $0 as? TextNode }
 
         for textElement in textCanvasElements {
             let relativePosition = CGPoint(x: textElement.position.x - anchor.x, y: textElement.position.y - anchor.y)
@@ -136,18 +136,18 @@ struct ComponentDesignView: View {
             if let source = symbolEditor.textSourceMap[textElement.id] {
                 let displayOptions = symbolEditor.textDisplayOptionsMap[textElement.id, default: .allVisible]
                 
-                textDefinitions.append(TextDefinition(
-                    source: source,
-                    relativePosition: relativePosition,
-                    cardinalRotation: textElement.cardinalRotation,
-                    displayOptions: displayOptions
-                ))
+//                textDefinitions.append(TextDefinition(
+//                    source: source,
+//                    relativePosition: relativePosition,
+//                    cardinalRotation: textElement.cardinalRotation,
+//                    displayOptions: displayOptions
+//                ))
             } else {
-                textDefinitions.append(TextDefinition(
-                    source: .static(textElement.text),
-                    relativePosition: relativePosition,
-                    cardinalRotation: textElement.cardinalRotation
-                ))
+//                textDefinitions.append(TextDefinition(
+//                    source: .static(textElement.text),
+//                    relativePosition: relativePosition,
+//                    cardinalRotation: textElement.cardinalRotation
+//                ))
             }
         }
         

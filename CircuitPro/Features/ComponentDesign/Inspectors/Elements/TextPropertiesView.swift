@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct TextPropertiesView: View {
-    @Binding var textElement: TextElement
+    @Binding var textElement: TextModel
     let editor: CanvasEditorManager
     @Environment(ComponentDesignManager.self) private var componentDesignManager
     

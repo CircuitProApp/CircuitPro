@@ -63,7 +63,7 @@ final class CanvasEditorManager {
         )
         
         // Prune any text source mappings that no longer have a corresponding element
-        let currentTextElementIDs = Set(elements.compactMap { $0 as? TextElement.ID })
+        let currentTextElementIDs = Set(elements.compactMap { $0 as? TextNode.ID })
         textSourceMap = textSourceMap.filter { currentTextElementIDs.contains($0.key) }
         textDisplayOptionsMap = textDisplayOptionsMap.filter { currentTextElementIDs.contains($0.key) }
     }
@@ -101,11 +101,11 @@ extension CanvasEditorManager {
         
         let resolvedText = resolveText(for: newElementID, source: source, componentData: componentData)
 
-        let newElement = TextElement(
-            id: newElementID,
-            text: resolvedText.isEmpty ? displayName : resolvedText,
-            position: centerPoint
-        )
+//        let newElement = TextElement(
+//            id: newElementID,
+//            text: resolvedText.isEmpty ? displayName : resolvedText,
+//            position: centerPoint
+//        )
         
 //        elements.append(.text(newElement))
     }

@@ -34,22 +34,22 @@ struct CanvasElementRowView: View {
     
     }
 
-    @ViewBuilder
-    private func textElementRow(_ textElement: TextElement) -> some View {
-        if let source = editor.textSourceMap[textElement.id] {
-            switch source {
-            case .dynamic(.componentName):
-                Label("Component Name", systemImage: "c.square.fill")
-            case .dynamic(.reference):
-                Label("Reference Designator", systemImage: "textformat.alt")
-            case .dynamic(.property(let definitionID)):
-                let displayName = componentProperties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
-                Label(displayName, systemImage: "tag.fill")
-            case .static:
-                Label("\"\(textElement.text)\"", systemImage: "text.bubble.fill")
-            }
-        } else {
-            Label("\"\(textElement.text)\"", systemImage: "text.bubble.fill")
-        }
-    }
+//    @ViewBuilder
+//    private func textElementRow(_ textElement: TextElement) -> some View {
+//        if let source = editor.textSourceMap[textElement.id] {
+//            switch source {
+//            case .dynamic(.componentName):
+//                Label("Component Name", systemImage: "c.square.fill")
+//            case .dynamic(.reference):
+//                Label("Reference Designator", systemImage: "textformat.alt")
+//            case .dynamic(.property(let definitionID)):
+//                let displayName = componentProperties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
+//                Label(displayName, systemImage: "tag.fill")
+//            case .static:
+//                Label("\"\(textElement.text)\"", systemImage: "text.bubble.fill")
+//            }
+//        } else {
+//            Label("\"\(textElement.text)\"", systemImage: "text.bubble.fill")
+//        }
+//    }
 }

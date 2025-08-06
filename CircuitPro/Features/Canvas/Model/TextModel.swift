@@ -22,6 +22,13 @@ struct TextModel: Identifiable {
     var cardinalRotation: CardinalRotation = .east
 }
 
+extension TextModel: Transformable {
+    var rotation: CGFloat {
+        get { cardinalRotation.radians }
+        set { cardinalRotation = .closestWithDiagonals(to: newValue) }
+    }
+}
+
 extension TextModel {
     /// Generates the raw, un-transformed path for the text glyphs.
     /// The path's origin is the text's baseline start point.
