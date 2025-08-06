@@ -18,7 +18,7 @@ struct CanvasConfiguration {
 }
 
 struct CanvasGrid {
-    var spacing: CGFloat = 10
+    var spacing: GridSpacing = .mm1
     var majorLineInterval: Int = 10
     var isVisible: Bool = true
 }

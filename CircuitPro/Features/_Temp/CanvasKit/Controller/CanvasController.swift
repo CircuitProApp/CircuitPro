@@ -83,6 +83,7 @@ final class CanvasController {
         }
         self.magnification = magnification
         self.environment.configuration = environment.configuration
+        print("[3] Controller SYNC: Internal environment updated to: \(self.environment.configuration.grid.spacing.rawValue)")
     }
     
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.

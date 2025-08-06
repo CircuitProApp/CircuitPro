@@ -85,7 +85,7 @@ final class DragInteraction: CanvasInteraction {
     private func calculateSnappedDelta(rawMouseDelta: CGPoint, context: RenderContext) -> CGPoint {
         let config = context.environment.configuration
         let snapService = SnapService(
-            gridSize: config.grid.spacing,
+            gridSize: config.grid.spacing.rawValue,
             isEnabled: config.snapping.isEnabled
         )
         

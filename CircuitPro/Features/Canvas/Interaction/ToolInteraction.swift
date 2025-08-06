@@ -3,6 +3,8 @@ import AppKit
 /// Handles mouse clicks when a drawing tool (e.g., Line, Circle) is active.
 struct ToolInteraction: CanvasInteraction {
     
+    private let snapService = SnapService()
+    
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         // This interaction is only interested if a drawing tool is active.
         if controller.selectedTool is CursorTool {
@@ -20,10 +22,6 @@ struct ToolInteraction: CanvasInteraction {
         let tolerance = 5.0 / context.magnification
         let hitTarget = context.sceneRoot.hitTest(point, tolerance: tolerance)
 
-        let snapService = SnapService(
-            gridSize: context.environment.configuration.grid.spacing,
-            isEnabled: context.environment.configuration.snapping.isEnabled
-        )
         let snappedPoint = snapService.snap(point)
         
         let interactionContext = ToolInteractionContext(

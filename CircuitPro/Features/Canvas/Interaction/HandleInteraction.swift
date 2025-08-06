@@ -51,12 +51,12 @@ final class HandleInteraction: CanvasInteraction {
 
         // Initialize the snap service from the environment.
         let snapService = SnapService(
-            gridSize: context.environment.configuration.grid.spacing,
+            gridSize: context.environment.configuration.grid.spacing.rawValue,
             isEnabled: context.environment.configuration.snapping.isEnabled
         )
         
         // Snap the incoming world-space mouse position to the grid.
-        let snappedWorldPoint = snapService.snap(point)
+        let snappedWorldPoint = point
 
         // The primitive's updateHandle method expects points in the node's local coordinate space.
         // We must convert the snapped world-space point into that local space.

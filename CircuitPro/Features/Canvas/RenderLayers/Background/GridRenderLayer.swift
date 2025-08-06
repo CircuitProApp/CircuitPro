@@ -27,8 +27,14 @@ class GridRenderLayer: RenderLayer {
 
         let drawingRect = context.hostViewBounds
 
-        let spacing: CGFloat = context.environment.configuration.grid.spacing
+        let spacing: CGFloat = context.environment.configuration.grid.spacing.rawValue
         let gridOrigin = CGPoint.zero
+        
+        guard spacing > 0 else {
+            majorGridLayer.isHidden = true
+            minorGridLayer.isHidden = true
+            return
+        }
         
         let dotRadius = 1.0 / context.magnification
 

@@ -25,8 +25,9 @@ struct SymbolCanvasView: View {
                 nodes: $symbolEditor.elements,
                 selection: $symbolEditor.selectedElementIDs,
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
+                environment: canvasManager.environment,
                 renderLayers: [
-                    GridRenderLayer(),
+//                    GridRenderLayer(),
                     ElementsRenderLayer(),
                     PreviewRenderLayer(),
                     HandlesRenderLayer(),

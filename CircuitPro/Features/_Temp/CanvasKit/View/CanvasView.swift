@@ -134,6 +134,8 @@ struct CanvasView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
         
+        print("[2] CanvasView UPDATE: Receiving environment with grid spacing: \(self.environment.configuration.grid.spacing.rawValue)")
+
         // --- FIX 2: Correct Data Sync ---
         // This call is now much more efficient, passing a consistent concrete type
         // and allowing the controller to perform its logic cleanly.

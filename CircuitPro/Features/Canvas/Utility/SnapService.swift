@@ -10,24 +10,22 @@ import CoreGraphics
 /// Stateless helper that turns free-hand values into grid-aligned ones.
 struct SnapService {
 
-    var gridSize: CGFloat
-    var isEnabled: Bool
+    var gridSize: CGFloat = 10
+    var isEnabled: Bool = true
     var origin: CGPoint = .zero
 
     // snap an absolute point
-    func snap(_ point: CGPoint) -> CGPoint {
-        guard isEnabled, gridSize > 0 else { return point }
+    func snap(_ value: CGPoint) -> CGPoint {
+        // Now it uses the environment it's given for this specific call.
+        guard isEnabled, gridSize > 0 else { return value }
 
-        // To avoid floating point inaccuracies, we work with grid units.
-        func roundToGrid(_ value: CGFloat, offset: CGFloat) -> CGFloat {
-            let scaledValue = (value - offset) / gridSize
-            // Round to the nearest integer grid line, then scale back.
-            return round(scaledValue) * gridSize + offset
+        func snapToGrid(_ value: CGFloat) -> CGFloat {
+            round(value / gridSize) * gridSize
         }
 
         return CGPoint(
-            x: roundToGrid(point.x, offset: origin.x),
-            y: roundToGrid(point.y, offset: origin.y)
+            x: snapToGrid(value.x),
+            y: snapToGrid(value.y)
         )
     }
 

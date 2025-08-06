@@ -18,4 +18,8 @@ enum GridSpacing: CGFloat, Displayable {
         case .mm0_1:  return "0.1 mm"
         }
     }
+    
+    var canvasPoints: CGFloat {
+        return self.rawValue * CircuitPro.Constants.pointsPerMillimeter
+    }
 }

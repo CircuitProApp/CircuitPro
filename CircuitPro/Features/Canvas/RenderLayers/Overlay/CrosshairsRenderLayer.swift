@@ -23,7 +23,7 @@ class CrosshairsRenderLayer: RenderLayer {
         }
 
         let snapService = SnapService(
-            gridSize: config.grid.spacing,
+            gridSize: config.grid.spacing.canvasPoints,
             isEnabled: config.snapping.isEnabled
         )
         

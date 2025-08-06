@@ -5,6 +5,8 @@ class PreviewRenderLayer: RenderLayer {
     // A persistent container layer for all preview shapes.
     private let rootLayer = CALayer()
     
+    private let snapService = SnapService()
+    
     // The pool of reusable shape layers.
     private var shapeLayerPool: [CAShapeLayer] = []
 
@@ -23,12 +25,9 @@ class PreviewRenderLayer: RenderLayer {
             return
         }
 
-        let snapService = SnapService(
-            gridSize: context.environment.configuration.grid.spacing,
-            isEnabled: context.environment.configuration.snapping.isEnabled
-        )
         // Snap the real-time mouse location to the grid.
         let snappedMouseLocation = snapService.snap(mouseLocation)
+        print("[6] PreviewRenderLayer.update: snappedMouseLocation: \(snappedMouseLocation) []")
         
         // Pass the *snapped* location to the tool's preview method.
         let drawingParams = tool.preview(mouse: snappedMouseLocation, context: context)
