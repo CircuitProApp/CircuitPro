@@ -13,7 +13,8 @@ final class DragInteraction: CanvasInteraction {
     private let dragThreshold: CGFloat = 4.0
     
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
-        // ... (This function remains mostly the same, but we simplify the state) ...
+        // This method receives the already-processed point from the pipeline,
+        // which is perfect for hit-testing and setting the drag origin.
         guard controller.selectedTool is CursorTool,
               !controller.selectedNodes.isEmpty else {
             return false
@@ -32,16 +33,13 @@ final class DragInteraction: CanvasInteraction {
             nodeToDrag = currentNode.parent
         }
         
-        guard nodeToDrag != nil else {
-            return false
-        }
+        guard nodeToDrag != nil else { return false }
         
         var originalPositions: [UUID: CGPoint] = [:]
         for node in controller.selectedNodes {
             originalPositions[node.id] = node.position
         }
         
-        // We no longer need to store the anchor's original position in the state.
         self.state = .dragging(origin: point, originalNodePositions: originalPositions)
         self.didMove = false
         
@@ -53,54 +51,35 @@ final class DragInteraction: CanvasInteraction {
             return
         }
         
-        let rawMouseDelta = point - origin
+        // The `point` and `origin` are already processed by the pipeline.
+        let rawDelta = CGVector(dx: point.x - origin.x, dy: point.y - origin.y)
         
         if !didMove {
-            if hypot(rawMouseDelta.x, rawMouseDelta.y) < dragThreshold / context.magnification {
+            if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification {
                 return
             }
             didMove = true
         }
         
-        // Calculate the final, snapped delta for movement. The signature is now simpler.
-        let finalDelta = calculateSnappedDelta(rawMouseDelta: rawMouseDelta, context: context)
+        // --- THIS IS THE FIX ---
+        // Ask the context's provider to perform the delta snap.
+        // The interaction doesn't know 'how' snapping works, only that it needs it.
+        let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
         
         for node in controller.selectedNodes {
             if let originalPosition = originalNodePositions[node.id] {
-                node.position = originalPosition + finalDelta
+                node.position = originalPosition + CGPoint(x: finalDelta.dx, y: finalDelta.dy)
             }
         }
     }
     
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         if didMove {
-            // Commit changes...
+            // Future: Commit transaction for undo/redo
         }
         self.state = .ready
         self.didMove = false
     }
     
-    // MARK: - Snapping Logic
-    
-    private func calculateSnappedDelta(rawMouseDelta: CGPoint, context: RenderContext) -> CGPoint {
-        let config = context.environment.configuration
-        let snapService = SnapService(
-            gridSize: config.grid.spacing.rawValue,
-            isEnabled: config.snapping.isEnabled
-        )
-        
-        // If snapping is disabled, or grid size is invalid, return the raw movement delta.
-        guard snapService.isEnabled, snapService.gridSize > 0 else {
-            return rawMouseDelta
-        }
-
-        // --- THE FIX ---
-        // Instead of snapping the absolute final position, we now snap the
-        // x and y components of the movement vector itself. This preserves
-        // the original offset from the grid.
-        let snappedDeltaX = snapService.snapDelta(rawMouseDelta.x)
-        let snappedDeltaY = snapService.snapDelta(rawMouseDelta.y)
-        
-        return CGPoint(x: snappedDeltaX, y: snappedDeltaY)
-    }
+    // The old, private `calculateSnappedDelta` method is now completely gone.
 }

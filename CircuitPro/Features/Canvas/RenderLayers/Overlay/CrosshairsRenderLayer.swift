@@ -8,36 +8,29 @@ class CrosshairsRenderLayer: RenderLayer {
         shapeLayer.fillColor = nil
         shapeLayer.strokeColor = NSColor.systemBlue.cgColor
         shapeLayer.lineCap = .round
-
         hostLayer.addSublayer(shapeLayer)
     }
 
     func update(using context: RenderContext) {
         let config = context.environment.configuration
         
-        // If the style is hidden or there's no mouse location, hide the layer.
-        guard config.crosshairsStyle != .hidden, let mouseLocation = context.mouseLocation else {
+        // Use the new `processedMouseLocation` property from the context.
+        // It will be nil if the raw location is nil, so this guard is sufficient.
+        guard config.crosshairsStyle != .hidden, let point = context.processedMouseLocation else {
             shapeLayer.isHidden = true
             shapeLayer.path = nil
             return
         }
+        
+        // The manual snap service logic is now completely gone.
 
-        let snapService = SnapService(
-            gridSize: config.grid.spacing.canvasPoints,
-            isEnabled: config.snapping.isEnabled
-        )
-        
-        let point = snapService.snap(mouseLocation)
-        
-        // Make sure the layer is visible.
         shapeLayer.isHidden = false
 
-        // Calculate dynamic properties from the context.
         let path = CGMutablePath()
         let bounds = context.hostViewBounds
         let scale = 1.0 / max(context.magnification, .ulpOfOne)
 
-        // Build the path based on the current style, using the (now snapped) point.
+        // The rest of your drawing logic uses the final `point` and remains unchanged.
         switch config.crosshairsStyle {
         case .fullScreenLines:
             path.move(to: CGPoint(x: point.x, y: bounds.minY))
@@ -54,14 +47,10 @@ class CrosshairsRenderLayer: RenderLayer {
             path.addLine(to: CGPoint(x: point.x, y: point.y + half))
 
         case .hidden:
-            // This case is handled by the guard statement above.
             break
         }
 
-        // Update the dynamic properties of the existing layer.
         shapeLayer.path = path
         shapeLayer.lineWidth = 1.0 * scale
     }
-    
-    // The hitTest method remains the same, returning nil.
 }

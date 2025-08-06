@@ -42,8 +42,8 @@ final class CanvasHostView: NSView {
         performLayerUpdate()
     }
     
-    private func performLayerUpdate() {
-        let context = controller.currentContext(for: self.bounds)
+    func performLayerUpdate() {
+        let context = controller.currentContext(for: self.bounds, visibleRect: self.visibleRect)
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)

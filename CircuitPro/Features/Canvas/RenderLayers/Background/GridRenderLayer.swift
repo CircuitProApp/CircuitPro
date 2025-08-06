@@ -25,9 +25,18 @@ class GridRenderLayer: RenderLayer {
         majorGridLayer.isHidden = false
         minorGridLayer.isHidden = false
 
-        let drawingRect = context.hostViewBounds
+        let drawingRect = context.visibleRect
+        
 
-        let spacing: CGFloat = context.environment.configuration.grid.spacing.rawValue
+        guard !drawingRect.isEmpty else {
+            majorGridLayer.path = nil
+            minorGridLayer.path = nil
+            return
+        }
+
+        let unitSpacing = context.environment.configuration.grid.spacing.canvasPoints
+        let spacing = adjustedSpacing(unitSpacing: unitSpacing, magnification: context.magnification)
+        
         let gridOrigin = CGPoint.zero
         
         guard spacing > 0 else {
@@ -36,11 +45,12 @@ class GridRenderLayer: RenderLayer {
             return
         }
         
-        let dotRadius = 1.0 / context.magnification
+        let dotRadius = 1.0 / max(context.magnification, 1.0)
 
         let majorPath = CGMutablePath()
         let minorPath = CGMutablePath()
         
+        // These calculations now correctly use the smaller `drawingRect`.
         let startX = previousMultiple(of: spacing, beforeOrEqualTo: drawingRect.minX, offset: gridOrigin.x)
         let endX = drawingRect.maxX
         let startY = previousMultiple(of: spacing, beforeOrEqualTo: drawingRect.minY, offset: gridOrigin.y)
@@ -48,8 +58,6 @@ class GridRenderLayer: RenderLayer {
         
         var currentY = startY
         while currentY <= endY {
-            // Use a simple integer division check for major lines.
-            // Using fmod() with floating point numbers can lead to precision errors.
             let isYMajor = Int(round((currentY - gridOrigin.y) / spacing)) % 10 == 0
 
             var currentX = startX
@@ -68,8 +76,11 @@ class GridRenderLayer: RenderLayer {
             currentY += spacing
         }
         
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         majorGridLayer.path = majorPath
         minorGridLayer.path = minorPath
+        CATransaction.commit()
     }
     
     func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
@@ -79,5 +90,23 @@ class GridRenderLayer: RenderLayer {
     private func previousMultiple(of step: CGFloat, beforeOrEqualTo value: CGFloat, offset: CGFloat) -> CGFloat {
         guard step > 0 else { return value }
         return floor((value - offset) / step) * step + offset
+    }
+
+    private func adjustedSpacing(unitSpacing: CGFloat, magnification: CGFloat) -> CGFloat {
+        switch unitSpacing {
+        case 5:
+            return magnification < 2.0 ? 10 : 5
+        case 2.5:
+            if magnification < 2.0 { return 10 }
+            else if magnification < 3.0 { return 5 }
+            else { return 2.5 }
+        case 1:
+            if magnification < 2.5 { return 8 }
+            else if magnification < 5.0 { return 4 }
+            else if magnification < 10 { return 2 }
+            else { return 1 }
+        default:
+            return unitSpacing
+        }
     }
 }

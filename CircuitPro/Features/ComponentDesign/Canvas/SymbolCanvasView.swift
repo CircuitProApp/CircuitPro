@@ -27,7 +27,7 @@ struct SymbolCanvasView: View {
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
                 environment: canvasManager.environment,
                 renderLayers: [
-//                    GridRenderLayer(),
+                    GridRenderLayer(),
                     ElementsRenderLayer(),
                     PreviewRenderLayer(),
                     HandlesRenderLayer(),
@@ -40,7 +40,11 @@ struct SymbolCanvasView: View {
                     SelectionInteraction(),
                     DragInteraction(),
                     MarqueeInteraction()
-                ]
+                ],
+                inputProcessors: [
+                    GridSnapProcessor()
+                ],
+                snapProvider: CircuitProSnapProvider()
             )
             .overlay(alignment: .leading) {
                 SymbolDesignToolbarView()

@@ -49,20 +49,9 @@ final class HandleInteraction: CanvasInteraction {
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard case .dragging(let node, let handleKind, let oppositeWorldPosition) = state else { return }
 
-        // Initialize the snap service from the environment.
-        let snapService = SnapService(
-            gridSize: context.environment.configuration.grid.spacing.rawValue,
-            isEnabled: context.environment.configuration.snapping.isEnabled
-        )
-        
-        // Snap the incoming world-space mouse position to the grid.
-        let snappedWorldPoint = point
-
-        // The primitive's updateHandle method expects points in the node's local coordinate space.
-        // We must convert the snapped world-space point into that local space.
-        // This requires the inverse of the node's world transform.
         let worldToLocalTransform = node.worldTransform.inverted()
-        let dragLocalPoint = snappedWorldPoint.applying(worldToLocalTransform)
+        // Use the `point` parameter directly.
+        let dragLocalPoint = point.applying(worldToLocalTransform)
         let oppositeLocalPoint = oppositeWorldPosition?.applying(worldToLocalTransform)
         
         // Pass the correctly-transformed local-space points to the node.

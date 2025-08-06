@@ -5,8 +5,6 @@ class PreviewRenderLayer: RenderLayer {
     // A persistent container layer for all preview shapes.
     private let rootLayer = CALayer()
     
-    private let snapService = SnapService()
-    
     // The pool of reusable shape layers.
     private var shapeLayerPool: [CAShapeLayer] = []
 
@@ -17,7 +15,7 @@ class PreviewRenderLayer: RenderLayer {
     func update(using context: RenderContext) {
         guard let tool = context.selectedTool,
               !(tool is CursorTool),
-              let mouseLocation = context.mouseLocation
+              let mouseLocation = context.processedMouseLocation
         else {
             // If no tool is active, or it's the cursor, or the mouse is not
             // on the canvas, hide all preview layers and exit.
@@ -25,12 +23,9 @@ class PreviewRenderLayer: RenderLayer {
             return
         }
 
-        // Snap the real-time mouse location to the grid.
-        let snappedMouseLocation = snapService.snap(mouseLocation)
-        print("[6] PreviewRenderLayer.update: snappedMouseLocation: \(snappedMouseLocation) []")
         
         // Pass the *snapped* location to the tool's preview method.
-        let drawingParams = tool.preview(mouse: snappedMouseLocation, context: context)
+        let drawingParams = tool.preview(mouse: mouseLocation, context: context)
 
         
         // If the tool returns no preview shapes, hide all layers.

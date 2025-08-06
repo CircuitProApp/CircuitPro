@@ -17,7 +17,6 @@ struct GridSpacingControlView: View {
             ForEach(GridSpacing.allCases, id: \.self) { spacing in
                 Button {
                     canvasManager.environment.configuration.grid.spacing = spacing
-                    print("[1] CONTROL VIEW: Grid spacing changed to: \(canvasManager.environment.configuration.grid.spacing )")
                 } label: {
                     Text(spacing.label)
                 }

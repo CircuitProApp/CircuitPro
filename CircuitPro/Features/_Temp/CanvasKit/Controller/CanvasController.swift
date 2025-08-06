@@ -21,6 +21,8 @@ final class CanvasController {
 
     let renderLayers: [any RenderLayer]
     let interactions: [any CanvasInteraction]
+    let inputProcessors: [any InputProcessor]
+    let snapProvider: any SnapProvider
 
     // MARK: - Callbacks to Owner
     
@@ -32,9 +34,11 @@ final class CanvasController {
 
     // MARK: - Init
 
-    init(renderLayers: [any RenderLayer], interactions: [any CanvasInteraction]) {
+    init(renderLayers: [any RenderLayer], interactions: [any CanvasInteraction], inputProcessors: [any InputProcessor], snapProvider: any SnapProvider) {
         self.renderLayers = renderLayers
         self.interactions = interactions
+        self.inputProcessors = inputProcessors
+        self.snapProvider = snapProvider
     }
 
     // MARK: - Public API
@@ -83,24 +87,26 @@ final class CanvasController {
         }
         self.magnification = magnification
         self.environment.configuration = environment.configuration
-        print("[3] Controller SYNC: Internal environment updated to: \(self.environment.configuration.grid.spacing.rawValue)")
     }
     
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
-    func currentContext(for hostViewBounds: CGRect) -> RenderContext {
-        let selectedIDs = Set(self.selectedNodes.map { $0.id })
-        let allHighlightedIDs = selectedIDs.union(interactionHighlightedNodeIDs)
+    func currentContext(for hostViewBounds: CGRect, visibleRect: CGRect) -> RenderContext {
+           let selectedIDs = Set(self.selectedNodes.map { $0.id })
+           let allHighlightedIDs = selectedIDs.union(interactionHighlightedNodeIDs)
 
-        return RenderContext(
-            sceneRoot: self.sceneRoot,
-            magnification: self.magnification,
-            mouseLocation: self.mouseLocation,
-            selectedTool: self.selectedTool,
-            highlightedNodeIDs: allHighlightedIDs,
-            hostViewBounds: hostViewBounds,
-            environment: self.environment
-        )
-    }
+           return RenderContext(
+               sceneRoot: self.sceneRoot,
+               magnification: self.magnification,
+               mouseLocation: self.mouseLocation,
+               selectedTool: self.selectedTool,
+               highlightedNodeIDs: allHighlightedIDs,
+               hostViewBounds: hostViewBounds,
+               visibleRect: visibleRect,
+               snapProvider: snapProvider,
+               environment: self.environment,
+               inputProcessors: self.inputProcessors
+           )
+       }
     
     /// Notifies the owner that the view needs to be redrawn.
     func redraw() {

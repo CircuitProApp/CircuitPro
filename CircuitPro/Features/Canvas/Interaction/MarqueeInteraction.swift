@@ -17,6 +17,8 @@ final class MarqueeInteraction: CanvasInteraction {
     }
 
     private var state: State = .ready
+    
+    var wantsRawInput: Bool { true }
 
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         guard controller.selectedTool is CursorTool else { return false }
