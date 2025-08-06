@@ -54,25 +54,39 @@ struct LinePrimitive: GraphicPrimitive {
     }
 
     func handles() -> [Handle] {
-        [
-            Handle(kind: .lineStart, position: start),
-            Handle(kind: .lineEnd, position: end)
+        let length = hypot(end.y - start.y, end.x - start.x)
+        // The handles are defined in local space, as if the line were
+        // horizontal and centered at (0,0).
+        return [
+            Handle(kind: .lineStart, position: CGPoint(x: -length / 2, y: 0)),
+            Handle(kind: .lineEnd,   position: CGPoint(x:  length / 2, y: 0))
         ]
     }
 
     mutating func updateHandle(
         _ kind: Handle.Kind,
-        to dragWorld: CGPoint,
+        to dragLocal: CGPoint,
         opposite oppWorld: CGPoint?
     ) {
-        // The drag gesture provides the new snapped position for the handle
-        // being dragged. We just need to update the corresponding point.
-        // The other point of the line remains fixed at its current position.
+        // The interaction provides the new handle position in the primitive's
+        // local space. To update our model (which is based on world-space
+        // points), we must convert this local point back to world space.
+        
+        // 1. Get the current world transform of the line.
+        let currentPosition = self.position
+        let currentRotation = self.rotation
+        let transform = CGAffineTransform(translationX: currentPosition.x, y: currentPosition.y)
+            .rotated(by: currentRotation)
+
+        // 2. Convert the local drag point to a world point.
+        let newWorldPoint = dragLocal.applying(transform)
+
+        // 3. Update the appropriate endpoint.
         switch kind {
         case .lineStart:
-            self.start = dragWorld
+            self.start = newWorldPoint
         case .lineEnd:
-            self.end = dragWorld
+            self.end = newWorldPoint
         default:
             break
         }

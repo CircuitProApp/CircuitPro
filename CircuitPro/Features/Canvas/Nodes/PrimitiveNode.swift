@@ -87,3 +87,21 @@ class PrimitiveNode: BaseNode {
         )
     }
 }
+
+// MARK: - Handle Editing Conformance
+extension PrimitiveNode: HandleEditable {
+    
+    func handles() -> [Handle] {
+        // Delegate directly to the wrapped AnyPrimitive.
+        return primitive.handles()
+    }
+
+    func updateHandle(_ kind: Handle.Kind, to position: CGPoint, opposite frozenOpposite: CGPoint?) {
+        // AnyPrimitive is a value type (enum), so calling a mutating method
+        // on the 'primitive' property modifies it in place.
+        primitive.updateHandle(kind, to: position, opposite: frozenOpposite)
+        
+        // Trigger a redraw to reflect the change.
+        self.onNeedsRedraw?()
+    }
+}

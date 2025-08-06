@@ -26,69 +26,52 @@ struct RectanglePrimitive: GraphicPrimitive {
         let halfW = size.width / 2
         let halfH = size.height / 2
 
-        let topLeft = CGPoint(x: position.x - halfW, y: position.y + halfH)
-        let topRight = CGPoint(x: position.x + halfW, y: position.y + halfH)
-        let bottomRight = CGPoint(x: position.x + halfW, y: position.y - halfH)
-        let bottomLeft = CGPoint(x: position.x - halfW, y: position.y - halfH)
-
+        // Handles are defined in the primitive's local coordinate space,
+        // assuming a center at (0,0) and no rotation. The render layer
+        // is responsible for applying the node's world transform.
         return [
-            Handle(
-                kind: .rectTopLeft,
-                position: topLeft.rotated(around: position, by: rotation)
-            ),
-            Handle(
-                kind: .rectTopRight,
-                position: topRight.rotated(around: position, by: rotation)
-            ),
-            Handle(
-                kind: .rectBottomRight,
-                position: bottomRight.rotated(around: position, by: rotation)
-            ),
-            Handle(
-                kind: .rectBottomLeft,
-                position: bottomLeft.rotated(around: position, by: rotation)
-            )
+            Handle(kind: .rectTopLeft,    position: CGPoint(x: -halfW, y:  halfH)),
+            Handle(kind: .rectTopRight,   position: CGPoint(x:  halfW, y:  halfH)),
+            Handle(kind: .rectBottomRight,position: CGPoint(x:  halfW, y: -halfH)),
+            Handle(kind: .rectBottomLeft, position: CGPoint(x: -halfW, y: -halfH))
         ]
     }
     mutating func updateHandle(
         _ kind: Handle.Kind,
-        to dragPosition: CGPoint,
-        opposite oppositeCorner: CGPoint?
+        to dragLocal: CGPoint,
+        opposite oppLocal: CGPoint?
     ) {
-        guard let oppositeCorner = oppositeCorner else { return }
+        guard let oppLocal = oppLocal else { return }
 
-        // Accept only corner kinds
-        switch kind {
-        case .rectTopLeft, .rectTopRight,
-             .rectBottomRight, .rectBottomLeft:
+        // dragLocal and oppLocal are in the node's local coordinate space.
+        // In this space, the rectangle is centered at (0,0) before this update.
 
-            // Unit vectors along the rectangle’s local X and Y axes
-            let unitX = CGVector(dx: cos(rotation), dy: sin(rotation))
-            let unitY = CGVector(dx: -sin(rotation), dy: cos(rotation))
+        // The new size is the absolute difference between the two local points.
+        size = CGSize(
+            width: max(abs(dragLocal.x - oppLocal.x), 1),
+            height: max(abs(dragLocal.y - oppLocal.y), 1)
+        )
 
-            // Vector from opposite corner to dragged corner (world space)
-            let dragVector = CGVector(
-                dx: dragPosition.x - oppositeCorner.x,
-                dy: dragPosition.y - oppositeCorner.y
-            )
+        // The new center of the rectangle is the midpoint of the diagonal.
+        // This point is also in the node's local coordinate space.
+        let newCenterLocal = CGPoint(
+            x: (dragLocal.x + oppLocal.x) * 0.5,
+            y: (dragLocal.y + oppLocal.y) * 0.5
+        )
 
-            // Width and height are projections of dragVector onto local axes
-            let projectedWidth = abs(dragVector.dx * unitX.dx + dragVector.dy * unitX.dy)
-            let projectedHeight = abs(dragVector.dx * unitY.dx + dragVector.dy * unitY.dy)
+        // The primitive's `position` is its origin's location in the parent's coordinate space.
+        // The `newCenterLocal` represents the offset we need to move our origin by,
+        // from the perspective of our local coordinate system.
+        // To apply this offset to our `position`, we must first transform
+        // the offset vector from our local space to the parent's space.
+        // The transform from local to parent space is just the rotation component.
+        let positionOffset = newCenterLocal.applying(CGAffineTransform(rotationAngle: rotation))
 
-            size = CGSize(
-                width: max(projectedWidth, 1),
-                height: max(projectedHeight, 1)
-            )
-
-            position = CGPoint(
-                x: (dragPosition.x + oppositeCorner.x) * 0.5,
-                y: (dragPosition.y + oppositeCorner.y) * 0.5
-            )
-
-        default:
-            break
-        }
+        // Add the transformed offset to the current position.
+        position = CGPoint(
+            x: position.x + positionOffset.x,
+            y: position.y + positionOffset.y
+        )
     }
     func makePath() -> CGPath {
         // Create the rect centered at the origin, not at self.position.

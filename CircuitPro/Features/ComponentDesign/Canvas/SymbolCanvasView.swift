@@ -26,14 +26,15 @@ struct SymbolCanvasView: View {
                 selection: $symbolEditor.selectedElementIDs,
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
                 renderLayers: [
-                    GridRenderLayer(), 
+                    GridRenderLayer(),
                     ElementsRenderLayer(),
                     PreviewRenderLayer(),
+                    HandlesRenderLayer(),
                     MarqueeRenderLayer(),
                     CrosshairsRenderLayer()
-          
                 ],
                 interactions: [
+                    HandleInteraction(),
                     ToolInteraction(),
                     SelectionInteraction(),
                     DragInteraction(),

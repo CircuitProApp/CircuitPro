@@ -18,9 +18,9 @@ struct CirclePrimitive: GraphicPrimitive {
     var filled: Bool
 
     func handles() -> [Handle] {
-        let rawPoint = CGPoint(x: position.x + radius, y: position.y)
-        let rotated = rawPoint.rotated(around: position, by: rotation)
-        return [Handle(kind: .circleRadius, position: rotated)]
+        // The handle is defined in local space, assuming a center at (0,0)
+        // and no rotation. The render layer will apply the world transform.
+        return [Handle(kind: .circleRadius, position: CGPoint(x: radius, y: 0))]
     }
 
     mutating func updateHandle(
@@ -29,15 +29,17 @@ struct CirclePrimitive: GraphicPrimitive {
     ) {
         guard kind == .circleRadius else { return }
 
-        // Calculate vector from center to new handle position
-        let deltaX = newPos.x - position.x
-        let deltaY = newPos.y - position.y
+        // `newPos` is the mouse position in the circle's local coordinate space,
+        // which has been rotated by `self.rotation`. To break the feedback loop,
+        // we need to counteract this. We can rotate `newPos` forward by the current
+        // rotation to get the drag vector in the parent's coordinate space.
+        let dragVectorInParentSpace = newPos.applying(CGAffineTransform(rotationAngle: self.rotation))
 
-        // New radius is the distance
-        radius = max(hypot(deltaX, deltaY), 1)
+        // The new radius is the length of this stable vector.
+        radius = max(hypot(dragVectorInParentSpace.x, dragVectorInParentSpace.y), 1)
 
-        // Rotation is the angle between center and handle
-        rotation = atan2(deltaY, deltaX)
+        // The new rotation is the angle of this stable vector.
+        rotation = atan2(dragVectorInParentSpace.y, dragVectorInParentSpace.x)
     }
 
     mutating func updateHandle(
@@ -45,10 +47,9 @@ struct CirclePrimitive: GraphicPrimitive {
         to newPos: CGPoint,
         opposite _: CGPoint?
     ) {
-        // just forward to the existing implementation
+        // Forward to the corrected implementation.
         updateHandle(kind, to: newPos)
     }
-
     func makePath() -> CGPath {
         let path = CGMutablePath()
         

@@ -1,100 +1,70 @@
 import AppKit
 
 /// Handles dragging selected nodes on the canvas.
-/// This interaction should be placed after `SelectionInteraction` in the interaction stack,
-/// as it relies on the selection state being up-to-date.
 final class DragInteraction: CanvasInteraction {
-    
-    // MARK: - State
     
     private enum State {
         case ready
-        /// - Parameters:
-        ///   - origin: The initial mouse down point.
-        ///   - anchorOriginalPosition: The starting position of the primary node being dragged.
-        ///   - originalNodePositions: The starting positions of all selected nodes.
-        case dragging(origin: CGPoint, anchorOriginalPosition: CGPoint, originalNodePositions: [UUID: CGPoint])
+        case dragging(origin: CGPoint, originalNodePositions: [UUID: CGPoint])
     }
     
     private var state: State = .ready
     private var didMove: Bool = false
     private let dragThreshold: CGFloat = 4.0
-
-    // MARK: - CanvasInteraction
     
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
-        // This interaction only runs when the selection tool is active.
-        guard controller.selectedTool is CursorTool else {
+        // ... (This function remains mostly the same, but we simplify the state) ...
+        guard controller.selectedTool is CursorTool,
+              !controller.selectedNodes.isEmpty else {
             return false
         }
         
-        // Ensure there are selected nodes to drag.
-        guard !controller.selectedNodes.isEmpty else {
-            return false
-        }
-        
-        // Check if the hit node is part of the current selection.
         let tolerance = 5.0 / context.magnification
         guard let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) else {
             return false
         }
         
-        // Traverse up to find a selectable node that is actually in the selection.
         var nodeToDrag: BaseNode? = hit.node
         while let currentNode = nodeToDrag {
             if controller.selectedNodes.contains(where: { $0.id == currentNode.id }) {
-                break // Found a selected node.
+                break
             }
             nodeToDrag = currentNode.parent
         }
         
-        // If we didn't find a selected node under the cursor, do nothing.
-        guard let anchorNode = nodeToDrag else {
+        guard nodeToDrag != nil else {
             return false
         }
         
-        // Prepare for dragging.
         var originalPositions: [UUID: CGPoint] = [:]
         for node in controller.selectedNodes {
             originalPositions[node.id] = node.position
         }
         
-        self.state = .dragging(
-            origin: point,
-            anchorOriginalPosition: anchorNode.position,
-            originalNodePositions: originalPositions
-        )
+        // We no longer need to store the anchor's original position in the state.
+        self.state = .dragging(origin: point, originalNodePositions: originalPositions)
         self.didMove = false
         
-        // We've handled the event and are initiating a drag.
         return true
     }
     
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
-        guard case .dragging(let origin, let anchorOriginalPosition, let originalNodePositions) = self.state else {
+        guard case .dragging(let origin, let originalNodePositions) = self.state else {
             return
         }
         
         let rawMouseDelta = point - origin
         
-        // Check if movement has exceeded the threshold to be considered a drag.
         if !didMove {
-            let distance = hypot(rawMouseDelta.x, rawMouseDelta.y)
-            if distance < dragThreshold / context.magnification {
+            if hypot(rawMouseDelta.x, rawMouseDelta.y) < dragThreshold / context.magnification {
                 return
             }
             didMove = true
-            // Here you could call a "begin drag" method on a model if needed.
         }
         
-        // Calculate the final, snapped delta for movement.
-        let finalDelta = calculateSnappedDelta(
-            rawMouseDelta: rawMouseDelta,
-            anchorOriginalPosition: anchorOriginalPosition,
-            context: context
-        )
+        // Calculate the final, snapped delta for movement. The signature is now simpler.
+        let finalDelta = calculateSnappedDelta(rawMouseDelta: rawMouseDelta, context: context)
         
-        // Update positions of all selected nodes using the original positions and the final delta.
         for node in controller.selectedNodes {
             if let originalPosition = originalNodePositions[node.id] {
                 node.position = originalPosition + finalDelta
@@ -104,30 +74,33 @@ final class DragInteraction: CanvasInteraction {
     
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         if didMove {
-            // Here you could call an "end drag" method on a model to commit changes.
+            // Commit changes...
         }
-        
-        // Reset state regardless of movement.
         self.state = .ready
         self.didMove = false
     }
     
     // MARK: - Snapping Logic
     
-    private func calculateSnappedDelta(rawMouseDelta: CGPoint, anchorOriginalPosition: CGPoint, context: RenderContext) -> CGPoint {
+    private func calculateSnappedDelta(rawMouseDelta: CGPoint, context: RenderContext) -> CGPoint {
         let config = context.environment.configuration
         let snapService = SnapService(
             gridSize: config.grid.spacing,
             isEnabled: config.snapping.isEnabled
         )
         
-        // 1. Calculate the anchor's new theoretical position.
-        let newAnchorPosition = anchorOriginalPosition + rawMouseDelta
+        // If snapping is disabled, or grid size is invalid, return the raw movement delta.
+        guard snapService.isEnabled, snapService.gridSize > 0 else {
+            return rawMouseDelta
+        }
+
+        // --- THE FIX ---
+        // Instead of snapping the absolute final position, we now snap the
+        // x and y components of the movement vector itself. This preserves
+        // the original offset from the grid.
+        let snappedDeltaX = snapService.snapDelta(rawMouseDelta.x)
+        let snappedDeltaY = snapService.snapDelta(rawMouseDelta.y)
         
-        // 2. Snap that theoretical position to the grid.
-        let snappedNewAnchorPosition = snapService.snap(newAnchorPosition)
-        
-        // 3. The final delta is the difference between the new snapped position and the original anchor position.
-        return snappedNewAnchorPosition - anchorOriginalPosition
+        return CGPoint(x: snappedDeltaX, y: snappedDeltaY)
     }
 }
