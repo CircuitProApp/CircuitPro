@@ -34,7 +34,7 @@ struct FootprintCanvasView: View {
                     CrosshairsRenderLayer()
                 ],
                 interactions: [
-                    ToolInteraction(),
+//                    ToolInteraction(),
                     SelectionInteraction()
                 ]
             )

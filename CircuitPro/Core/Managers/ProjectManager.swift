@@ -34,11 +34,6 @@ final class ProjectManager {
         set { selectedDesign?.componentInstances = newValue }
     }
 
-    var wires: [Wire] {
-        get { selectedDesign?.wires ?? [] }
-        set { selectedDesign?.wires = newValue }
-    }
-
     // 2. Centralised lookup
     var designComponents: [DesignComponent] {
         // 2.1 gather the UUIDs the design references
