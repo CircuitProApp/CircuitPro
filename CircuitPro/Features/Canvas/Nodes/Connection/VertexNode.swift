@@ -4,7 +4,7 @@ import Observation
 final class VertexNode: BaseNode {
     let vertexID: ConnectionVertex.ID
     let graph: SchematicGraph
-    var isInDebugMode: Bool = false
+    var isInDebugMode: Bool = true
 
     // A vertex is not selectable by the main cursor, but it must be hittable by tools.
     override var isSelectable: Bool { false }

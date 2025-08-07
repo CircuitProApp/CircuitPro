@@ -79,7 +79,7 @@ final class WireNode: BaseNode {
         
         // The halo is a thicker, stroked version of the path.
         // The .copy(strokingWithWidth:) method is perfect for this.
-        return path.copy(strokingWithWidth: 8.0, lineCap: .round, lineJoin: .round, miterLimit: 0)
+        return path.copy(strokingWithWidth: 1.0, lineCap: .round, lineJoin: .round, miterLimit: 0)
     }
     
     private func isPoint(_ p: CGPoint, onSegmentBetween p1: CGPoint, p2: CGPoint, tolerance: CGFloat) -> Bool {
