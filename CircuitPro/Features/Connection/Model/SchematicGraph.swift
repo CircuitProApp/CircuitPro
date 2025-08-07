@@ -166,7 +166,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     // MARK: - Drag Lifecycle
     /// Call this when a drag gesture begins.
     /// It caches the initial state of the graph needed for calculations.
-    public func beginDrag(selectedIDs: Set<UUID>) {
+    public func beginDrag(selectedIDs: Set<UUID>) -> Bool {
         // A drag can affect selected edges OR vertices attached to selected symbols.
 
         // 1. Find vertices that are part of selected symbols
@@ -183,13 +183,17 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         let edgeVertexIDs = Set(selectedEdges.flatMap { [$0.start, $0.end] })
 
         let allMovableVertexIDs = pinVertexIDs.union(edgeVertexIDs)
-        guard !allMovableVertexIDs.isEmpty else { return }
+        guard !allMovableVertexIDs.isEmpty else {
+            self.dragState = nil
+            return false
+        }
 
         self.dragState = DragState(
             originalVertexPositions: self.vertices.mapValues { $0.point },
             selectedEdges: selectedEdges,
             verticesToMove: allMovableVertexIDs
         )
+        return true
     }
 
     /// Call this repeatedly as the user drags.

@@ -98,35 +98,20 @@ final class CanvasController {
     func currentContext(for hostViewBounds: CGRect, visibleRect: CGRect) -> RenderContext {
         let selectedIDs = Set(self.selectedNodes.map { $0.id })
         
-        // --- MODIFIED: Expand the highlight set to include children of selected nodes ---
-        var descendantIDs: Set<UUID> = []
-
-        // Helper function to recursively gather all descendant IDs from a node.
-        func gatherDescendantIDs(from node: BaseNode, into set: inout Set<UUID>) {
-            for child in node.children {
-                guard let childNode = child as? BaseNode else { continue }
-                set.insert(childNode.id)
-                gatherDescendantIDs(from: childNode, into: &set)
-            }
-        }
-
-        for node in self.selectedNodes {
-            // For each selected node, find all its children, grandchildren, etc.
-            gatherDescendantIDs(from: node, into: &descendantIDs)
-        }
-        
-        // The final highlight set includes the original selection, all their descendants,
-        // and any nodes being highlighted by an active interaction (e.g., a marquee).
-        let allHighlightedIDs = selectedIDs
-            .union(descendantIDs)
-            .union(interactionHighlightedNodeIDs)
+        // The final highlight set is a simple union of the persistent selection
+        // and any temporary highlights from an interaction (like a marquee).
+        // The responsibility for highlighting children of a selected node lies
+        // with the node itself (e.g., SymbolNode's `makeHaloPath`), not the controller.
+        // This prevents highlighting children of non-selected nodes that happen
+        // to share child IDs (like two instances of the same symbol).
+        let allHighlightedIDs = selectedIDs.union(interactionHighlightedNodeIDs)
 
         return RenderContext(
             sceneRoot: self.sceneRoot,
             magnification: self.magnification,
             mouseLocation: self.mouseLocation,
             selectedTool: self.selectedTool,
-            highlightedNodeIDs: allHighlightedIDs, // Use the new, expanded set
+            highlightedNodeIDs: allHighlightedIDs, // Use the new, simplified set
             hostViewBounds: hostViewBounds,
             visibleRect: visibleRect,
             snapProvider: snapProvider,

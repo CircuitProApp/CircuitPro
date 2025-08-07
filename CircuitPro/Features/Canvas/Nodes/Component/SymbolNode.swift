@@ -72,7 +72,7 @@ final class SymbolNode: BaseNode {
         // 3. Create and add child nodes for each resolved text element.
         for resolvedText in resolvedTexts {
             let textModel = TextModel(
-                id: resolvedText.id,
+                id: UUID(),
                 text: resolvedText.text,
                 position: resolvedText.relativePosition, // Position is relative to the symbol
                 font: resolvedText.font,

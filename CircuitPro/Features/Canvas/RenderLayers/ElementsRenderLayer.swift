@@ -37,10 +37,19 @@ class ElementsRenderLayer: RenderLayer {
 
         var localParams: [DrawingParameters] = []
         
-        // --- THIS IS THE FIX ---
-
         // Generate a halo if this node's ID is in the set to be highlighted...
-        if highlightedIDs.contains(node.id) {
+        let shouldHighlight: Bool
+        if let symbolNode = node as? SymbolNode {
+            // For SymbolNodes, be explicit: only highlight if the specific INSTANCE ID is in the set.
+            // This prevents highlighting all instances on the canvas if a broader, symbol-level
+            // ID were present in the highlight set.
+            shouldHighlight = highlightedIDs.contains(symbolNode.instance.id)
+        } else {
+            // For all other node types, use the default ID check.
+            shouldHighlight = highlightedIDs.contains(node.id)
+        }
+
+        if shouldHighlight {
             
             // ...BUT: Do not generate a halo if our parent is ALSO highlighted.
             // This lets the parent draw a single composite halo for all its children.
