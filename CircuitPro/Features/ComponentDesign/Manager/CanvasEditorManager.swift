@@ -46,7 +46,7 @@ final class CanvasEditorManager {
     }
 
     var pads: [Pad] {
-        elements.compactMap { $0 as? Pad}
+        elements.compactMap { ($0 as? PadNode)?.pad }
     }
     
     var placedTextSources: Set<TextSource> {

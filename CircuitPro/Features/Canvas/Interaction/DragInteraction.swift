@@ -61,9 +61,6 @@ final class DragInteraction: CanvasInteraction {
             didMove = true
         }
         
-        // --- THIS IS THE FIX ---
-        // Ask the context's provider to perform the delta snap.
-        // The interaction doesn't know 'how' snapping works, only that it needs it.
         let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
         
         for node in controller.selectedNodes {
@@ -80,6 +77,4 @@ final class DragInteraction: CanvasInteraction {
         self.state = .ready
         self.didMove = false
     }
-    
-    // The old, private `calculateSnappedDelta` method is now completely gone.
 }

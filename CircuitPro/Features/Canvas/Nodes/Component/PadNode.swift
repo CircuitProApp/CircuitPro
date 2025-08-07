@@ -17,7 +17,11 @@ class PadNode: BaseNode {
     // MARK: - Properties
 
     /// The underlying data model for this node.
-    var pad: Pad
+    var pad: Pad {
+        didSet {
+            onNeedsRedraw?()
+        }
+    }
 
     /// Defines the distinct, hittable parts of a PadNode. For a pad, this
     /// is simply its entire body.

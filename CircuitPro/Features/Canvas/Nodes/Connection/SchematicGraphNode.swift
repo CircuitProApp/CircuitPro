@@ -6,13 +6,14 @@
 //
 
 import AppKit
-
+import Observation
 /// A special container node that manages the scene graph representation of a `SchematicGraph`.
 ///
 /// This node doesn't draw anything itself. Its purpose is to hold a reference to the
 /// `SchematicGraph` model and create, manage, and destroy `VertexNode` and `WireNode`
 /// children to reflect the current state of the graph's topology. It serves as the root
 /// for all schematic wiring visuals on the canvas.
+@Observable
 final class SchematicGraphNode: BaseNode {
 
     /// The single source of truth for the schematic's connectivity and geometry data.

@@ -32,6 +32,9 @@ final class CanvasController {
     var onNodesChanged: (([BaseNode]) -> Void)?
     var onMouseMoved: ((CGPoint?) -> Void)? // Added for consistency with our previous design.
     
+    /// A generic callback to notify the owner that a persistent model was mutated.
+    var onModelDidChange: (() -> Void)?
+    
     var onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
 
     // MARK: - Init

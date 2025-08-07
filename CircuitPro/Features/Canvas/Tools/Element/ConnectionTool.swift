@@ -6,7 +6,7 @@ import AppKit
 final class ConnectionTool: CanvasTool {
 
     // MARK: - UI Representation
-    override var symbolName: String { "waveform.path" }
+    override var symbolName: String { CircuitProSymbols.Schematic.connectionWire }
     override var label: String { "Connection" }
 
     // MARK: - Internal State
@@ -61,7 +61,7 @@ final class ConnectionTool: CanvasTool {
         guard case .drawing(let startPoint, let direction) = state else { return [] }
         let corner = (direction == .horizontal) ? CGPoint(x: mouse.x, y: startPoint.y) : CGPoint(x: startPoint.x, y: mouse.y)
         let path = CGMutablePath(); path.move(to: startPoint); path.addLine(to: corner); path.addLine(to: mouse)
-        return [DrawingParameters(path: path, lineWidth: 1.5, strokeColor: NSColor.systemBlue.cgColor, lineDashPattern: [4, 2])]
+        return [DrawingParameters(path: path, strokeColor: NSColor.systemBlue.cgColor, lineDashPattern: [4, 2])]
     }
     
     // MARK: - Keyboard Actions
@@ -83,9 +83,18 @@ final class ConnectionTool: CanvasTool {
     
     // MARK: - Private Helpers
     private func determineInitialDirection(from hitTarget: CanvasHitTarget?) -> DrawingDirection {
-        // This helper no longer has access to the graph, so it can't check wire orientation.
-        // A more advanced version could inspect node *tags* or properties if you add them,
-        // but for now, defaulting is the simplest decoupled approach.
+        guard let hitTarget = hitTarget else {
+            // Clicked in empty space, default to horizontal.
+            return .horizontal
+        }
+
+        // Check if the partIdentifier contains a LineOrientation.
+        if let orientation = hitTarget.partIdentifier as? LineOrientation {
+            // We hit a wire! Start drawing perpendicular to it.
+            return orientation == .horizontal ? .vertical : .horizontal
+        }
+        
+        // We hit something else (a vertex, a pin, etc.). Default to horizontal.
         return .horizontal
     }
 }

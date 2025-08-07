@@ -6,18 +6,24 @@
 //
 
 import AppKit
+import Observation
 
 /// A scene graph node that represents a `Pin` data model on the canvas.
 ///
 /// This class is the `CanvasElement`. It wraps a `Pin` struct and is responsible for
 /// all drawing and hit-testing logic by using the geometry calculations defined
 /// in the `Pin+Geometry` extension.
+@Observable
 class PinNode: BaseNode {
     
     // MARK: - Properties
     
     /// The underlying data model for this node.
-    var pin: Pin
+    var pin: Pin {
+        didSet {
+            onNeedsRedraw?()
+        }
+    }
     
     /// Defines the distinct, hittable parts of a PinNode for rich interaction.
     enum Part: Hashable {
@@ -67,9 +73,9 @@ class PinNode: BaseNode {
     
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
         let inflatedTolerance = tolerance * 2.0 // Use a larger tolerance for easier interaction
-
+        
         // --- Priority 1: Test for the most specific parts first ---
-
+        
         // Did the user click the connection point?
         // We correctly access the radius from the model: `self.pin.endpointRadius`.
         let endpointRect = CGRect(x: -self.pin.endpointRadius, y: -self.pin.endpointRadius, width: self.pin.endpointRadius * 2, height: self.pin.endpointRadius * 2)

@@ -3,7 +3,7 @@ import AppKit
 /// Data needed for a single drawing pass.
 struct DrawingParameters {
     var path: CGPath
-    var lineWidth: CGFloat
+    var lineWidth: CGFloat = 1.0
     var fillColor: CGColor?
     var strokeColor: CGColor? = NSColor.systemBlue.cgColor
     var lineDashPattern: [NSNumber]?

@@ -22,36 +22,16 @@ struct SymbolPropertiesView: View {
                     
                     // --- Case 1: The selected element is a PinNode ---
                     if let pinNode = element as? PinNode {
-                        // Create a custom binding directly to the pin data inside the node.
-                        let pinBinding = Binding<Pin>(
-                            get: {
-                                // The `if let` above guarantees this cast will succeed.
-                                pinNode.pin
-                            },
-                            set: { newPinValue in
-                                // When the UI changes the value, update the model in the array.
-                                pinNode.pin = newPinValue
-                                // Tell the canvas that this node needs to be redrawn.
-                                pinNode.onNeedsRedraw?()
-                            }
-                        )
+                        @Bindable var pinNode = pinNode
                         // Pass the fresh binding to the properties view.
-                        PinPropertiesView(pin: pinBinding)
+                        PinPropertiesView(pin: $pinNode.pin)
                         
                     // --- Case 2: The selected element is a PrimitiveNode ---
                     } else if let primitiveNode = element as? PrimitiveNode {
                         // Create a custom binding directly to the primitive data inside the node.
-                        let primitiveBinding = Binding<AnyPrimitive>(
-                            get: {
-                                primitiveNode.primitive
-                            },
-                            set: { newPrimitiveValue in
-                                primitiveNode.primitive = newPrimitiveValue
-                  
-                                primitiveNode.onNeedsRedraw?()
-                            }
-                        )
-                        PrimitivePropertiesView(primitive: primitiveBinding)
+                        @Bindable var primitiveNode = primitiveNode
+                        
+                        PrimitivePropertiesView(primitive: $primitiveNode.primitive)
 
                     // --- Case 3 (Future): The selected element is a TextNode ---
                     } else {

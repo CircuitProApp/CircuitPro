@@ -6,25 +6,46 @@
 //
 
 import AppKit
+import Observation
 
-/// A scene graph node that represents a single, straight wire segment (an edge)
-/// from the schematic graph.
+@Observable
 final class WireNode: BaseNode {
-
-    // Store the ID of the edge and a reference to the graph, not the edge struct itself.
     let edgeID: ConnectionEdge.ID
     let graph: SchematicGraph
 
     override var isSelectable: Bool { true }
 
+    // --- NEW: Add a computed property for the wire's orientation ---
+    var orientation: LineOrientation {
+        guard let edge = graph.edges[edgeID],
+              let startV = graph.vertices[edge.start],
+              let endV = graph.vertices[edge.end] else {
+            return .horizontal // Default for safety
+        }
+        
+        // A perfectly vertical line has a negligible difference in x-coordinates.
+        return abs(startV.point.x - endV.point.x) < 1e-6 ? .vertical : .horizontal
+    }
+
     init(edgeID: ConnectionEdge.ID, graph: SchematicGraph) {
         self.edgeID = edgeID
         self.graph = graph
-        // The node's ID is the same as the edge's ID for easy mapping and selection.
         super.init(id: edgeID)
     }
 
-    /// Creates the drawing parameters for the wire's body.
+    // --- MODIFIED: Update hitTest to return enriched information ---
+    override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
+        guard let edge = graph.edges[edgeID],
+              let startV = graph.vertices[edge.start],
+              let endV = graph.vertices[edge.end],
+              isPoint(point, onSegmentBetween: startV.point, p2: endV.point, tolerance: tolerance) else {
+            return nil
+        }
+        
+        // When hit, package its orientation into the partIdentifier.
+        return CanvasHitTarget(node: self, partIdentifier: self.orientation, position: point)
+    }
+    
     override func makeBodyParameters() -> [DrawingParameters] {
         guard let edge = graph.edges[edgeID],
               let startVertex = graph.vertices[edge.start],
@@ -60,24 +81,7 @@ final class WireNode: BaseNode {
         // The .copy(strokingWithWidth:) method is perfect for this.
         return path.copy(strokingWithWidth: 8.0, lineCap: .round, lineJoin: .round, miterLimit: 0)
     }
-
-    /// Performs hit-testing specifically for this line segment.
-    override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        // A WireNode has no children, so we can go straight to its own hit-test logic.
-        guard let edge = graph.edges[edgeID],
-              let startV = graph.vertices[edge.start],
-              let endV = graph.vertices[edge.end],
-              isPoint(point, onSegmentBetween: startV.point, p2: endV.point, tolerance: tolerance) else {
-            return nil
-        }
-        
-        // If the point is on the line, this node is the hit target.
-        // We use the correct initializer for CanvasHitTarget. For a simple wire,
-        // there's no specific "part," so we can pass nil.
-        return CanvasHitTarget(node: self, partIdentifier: nil, position: point)
-    }
     
-    /// Helper function to check if a point lies on this line segment within a given tolerance.
     private func isPoint(_ p: CGPoint, onSegmentBetween p1: CGPoint, p2: CGPoint, tolerance: CGFloat) -> Bool {
         let minX = min(p1.x, p2.x) - tolerance, maxX = max(p1.x, p2.x) + tolerance
         let minY = min(p1.y, p2.y) - tolerance, maxY = max(p1.y, p2.y) + tolerance

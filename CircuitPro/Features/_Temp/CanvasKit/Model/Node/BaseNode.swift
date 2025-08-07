@@ -7,9 +7,11 @@
 
 import CoreGraphics
 import AppKit
+import Observation
 
 /// A concrete implementation of the `CanvasNode` protocol that provides the fundamental
 /// behaviors required for a scene graph, including hierarchy management and transform calculation.
+
 class BaseNode: CanvasNode {
 
     // MARK: - Stored Properties

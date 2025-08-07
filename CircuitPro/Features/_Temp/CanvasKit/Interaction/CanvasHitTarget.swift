@@ -18,17 +18,4 @@ struct CanvasHitTarget: Hashable {
     /// The precise location of the hit in world coordinates.
     let position: CGPoint
     
-    // The protocol conformance for `Hashable` can be implemented like this:
-    static func == (lhs: CanvasHitTarget, rhs: CanvasHitTarget) -> Bool {
-        return lhs.node.id == rhs.node.id &&
-               lhs.partIdentifier == rhs.partIdentifier &&
-               lhs.position == rhs.position
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(node.id)
-        hasher.combine(partIdentifier)
-        hasher.combine(position.x)
-        hasher.combine(position.y)
-    }
 }

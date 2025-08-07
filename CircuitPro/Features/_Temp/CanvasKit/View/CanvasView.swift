@@ -24,6 +24,8 @@ struct CanvasView: NSViewRepresentable {
     // A callback executed when a valid item is dropped onto the canvas. It receives
     // the pasteboard and the drop location, and returns 'true' on success.
     let onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
+    
+    var onModelDidChange: (() -> Void)?
 
     init(
         size: Binding<CGSize>,
@@ -38,7 +40,8 @@ struct CanvasView: NSViewRepresentable {
         snapProvider: any SnapProvider = NoOpSnapProvider(),
         onMouseMoved: ((CGPoint?) -> Void)? = nil,
         registeredDraggedTypes: [NSPasteboard.PasteboardType] = [],
-        onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil
+        onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil,
+        onModelDidChange: (() -> Void)? = {}
     ) {
         self._size = size
         self._magnification = magnification
@@ -53,6 +56,7 @@ struct CanvasView: NSViewRepresentable {
         self.onMouseMoved = onMouseMoved
         self.registeredDraggedTypes = registeredDraggedTypes
         self.onPasteboardDropped = onPasteboardDropped
+        self.onModelDidChange = onModelDidChange
     }
 
     // MARK: - Coordinator
@@ -136,12 +140,13 @@ struct CanvasView: NSViewRepresentable {
             renderLayers: self.renderLayers,
             interactions: self.interactions,
             inputProcessors: self.inputProcessors,
-            snapProvider: self.snapProvider
+            snapProvider: self.snapProvider,
         )
         coordinator.canvasController.onMouseMoved = self.onMouseMoved
         coordinator.canvasController.onMouseMoved = self.onMouseMoved
                // Connect the on-drop callback to the controller instance.
-               coordinator.canvasController.onPasteboardDropped = self.onPasteboardDropped
+        coordinator.canvasController.onPasteboardDropped = self.onPasteboardDropped
+        coordinator.canvasController.onModelDidChange = self.onModelDidChange
         return coordinator
     }
 

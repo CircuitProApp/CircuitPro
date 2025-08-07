@@ -36,7 +36,7 @@ struct SymbolCanvasView: View {
                 ],
                 interactions: [
                     HandleInteraction(),
-//                    ToolInteraction(),
+                    ToolInteraction(),
                     SelectionInteraction(),
                     DragInteraction(),
                     MarqueeInteraction()

@@ -6,22 +6,27 @@
 //
 
 import CoreGraphics
-
+import Observation
 /// A scene graph node that represents a single, editable graphic primitive on the canvas.
 ///
 /// This class acts as a wrapper around an `AnyPrimitive` struct, giving it an identity
 /// and a place within the scene graph hierarchy. It delegates drawing, hit-testing,
 /// and bounding box calculations to its underlying primitive model.
+@Observable
 class PrimitiveNode: BaseNode {
-
+    
     // The underlying data model for this node.
-    var primitive: AnyPrimitive
-
+    var primitive: AnyPrimitive {
+        didSet {
+            onNeedsRedraw?()
+        }
+    }
+    
     override var position: CGPoint {
         get { primitive.position }
         set { primitive.position = newValue }
     }
-
+    
     override var rotation: CGFloat {
         get { primitive.rotation }
         set { primitive.rotation = newValue }
@@ -31,7 +36,7 @@ class PrimitiveNode: BaseNode {
         // A primitive is not selectable if its parent is a SymbolNode.
         return !(parent is SymbolNode)
     }
-
+    
     init(primitive: AnyPrimitive) {
         self.primitive = primitive
         
@@ -40,7 +45,7 @@ class PrimitiveNode: BaseNode {
         // share the exact same ID.
         super.init(id: primitive.id)
     }
-
+    
     // MARK: - Protocol Overrides
     
     override func makeBodyParameters() -> [DrawingParameters] {
@@ -59,7 +64,7 @@ class PrimitiveNode: BaseNode {
     var displayName: String {
         primitive.displayName
     }
-
+    
     var symbol: String {
         primitive.symbol
     }
@@ -67,7 +72,7 @@ class PrimitiveNode: BaseNode {
     // --- THIS IS THE UPDATED HIT-TEST METHOD ---
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
         // The 'point' is already in this node's local coordinate space.
-
+        
         // 1. Delegate the geometry check to the underlying primitive.
         //    We expect an `AnyHashable?` back, not a full CanvasHitTarget.
         guard let partId = primitive.hitTest(point, tolerance: tolerance) else {
@@ -94,7 +99,7 @@ extension PrimitiveNode: HandleEditable {
         // Delegate directly to the wrapped AnyPrimitive.
         return primitive.handles()
     }
-
+    
     func updateHandle(_ kind: Handle.Kind, to position: CGPoint, opposite frozenOpposite: CGPoint?) {
         // AnyPrimitive is a value type (enum), so calling a mutating method
         // on the 'primitive' property modifies it in place.

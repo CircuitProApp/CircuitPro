@@ -72,17 +72,11 @@ struct ToolbarView: View {
             selectedTool = tool
         } label: {
             Group {
-                // --- THIS IS THE FIX (1/2) ---
-                // We use a type-safe `is` check to handle special cases.
-                // This assumes `ConnectionTool` is a class inheriting from `CanvasTool`.
-//                if tool is ConnectionTool {
-//                    // Use the tool's own `symbolName` property directly.
-//                    Image(tool.symbolName)
-//                } else {
-                    // --- THIS IS THE FIX (2/2) ---
-                    // For all other tools, directly use their `symbolName` property.
+                if tool is ConnectionTool {
+                    Image(tool.symbolName)
+                } else {
                     Image(systemName: tool.symbolName)
-//                }
+                }
             }
             .font(.system(size: 16))
             .frame(width: 22, height: 22)
