@@ -12,6 +12,11 @@ struct RenderContext {
     let hostViewBounds: CGRect
     let visibleRect: CGRect
     
+    let layers: [CanvasLayer]
+    
+    /// The ID of the currently active layer, if any.
+    let activeLayerId: UUID?
+    
     let snapProvider: any SnapProvider
 
     // MARK: - Extensible Application-Specific Data
@@ -29,7 +34,7 @@ struct RenderContext {
         }
     }
     
-    init(sceneRoot: BaseNode, magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedNodeIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, snapProvider: any SnapProvider, environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
+    init(sceneRoot: BaseNode, magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedNodeIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
         self.sceneRoot = sceneRoot
         self.magnification = magnification
         self.mouseLocation = mouseLocation
@@ -37,6 +42,8 @@ struct RenderContext {
         self.highlightedNodeIDs = highlightedNodeIDs
         self.hostViewBounds = hostViewBounds
         self.visibleRect = visibleRect
+        self.layers = layers
+        self.activeLayerId = activeLayerId
         self.snapProvider = snapProvider
         self.environment = environment
         self.inputProcessors = inputProcessors

@@ -23,6 +23,23 @@ enum AnyPrimitive: GraphicPrimitive, Identifiable, Hashable {
         case .circle(let circle): return circle.id
         }
     }
+    
+    var layerId: UUID? {
+        get {
+            switch self {
+            case .line(let primitive): return primitive.layerId
+            case .rectangle(let primitive): return primitive.layerId
+            case .circle(let primitive): return primitive.layerId
+            }
+        }
+        set {
+            switch self {
+            case .line(var primitive): primitive.layerId = newValue; self = .line(primitive)
+            case .rectangle(var primitive): primitive.layerId = newValue; self = .rectangle(primitive)
+            case .circle(var primitive): primitive.layerId = newValue; self = .circle(primitive)
+            }
+        }
+    }
 
     // MARK: - Mutating accessors that need to write back into enum
     var position: CGPoint {

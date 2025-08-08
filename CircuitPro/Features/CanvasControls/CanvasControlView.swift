@@ -18,7 +18,7 @@ struct CanvasControlView: View {
             Menu {
                 ForEach(CrosshairsStyle.allCases) { style in
                     Button {
-                        canvasManager.crosshairsStyle = style
+                        canvasManager.environment.configuration.crosshairsStyle = style
                     } label: {
                         Text(style.label)
                     }
@@ -26,15 +26,15 @@ struct CanvasControlView: View {
             } label: {
                 Image(systemName: CircuitProSymbols.Canvas.crosshairs)
                     .frame(width: 13, height: 13)
-                    .foregroundStyle(canvasManager.crosshairsStyle != .hidden ? .blue : .secondary)
+                    .foregroundStyle(canvasManager.environment.configuration.crosshairsStyle != .hidden ? .blue : .secondary)
             }
             if editorType != .schematic {
                 Button {
-                    canvasManager.enableSnapping.toggle()
+                    canvasManager.environment.configuration.snapping.isEnabled.toggle()
                 } label: {
                     Image(systemName: CircuitProSymbols.Canvas.snapping)
                         .frame(width: 13, height: 13)
-                        .foregroundStyle(canvasManager.enableSnapping ? .blue : .secondary)
+                        .foregroundStyle(canvasManager.environment.configuration.snapping.isEnabled ? .blue : .secondary)
                 }
             }
 //            Button {

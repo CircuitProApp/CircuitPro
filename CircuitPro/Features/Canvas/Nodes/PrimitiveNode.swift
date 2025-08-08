@@ -7,13 +7,14 @@
 
 import CoreGraphics
 import Observation
+import SwiftUI
 /// A scene graph node that represents a single, editable graphic primitive on the canvas.
 ///
 /// This class acts as a wrapper around an `AnyPrimitive` struct, giving it an identity
 /// and a place within the scene graph hierarchy. It delegates drawing, hit-testing,
 /// and bounding box calculations to its underlying primitive model.
 @Observable
-class PrimitiveNode: BaseNode {
+class PrimitiveNode: BaseNode, Layerable {
     
     // The underlying data model for this node.
     var primitive: AnyPrimitive {
@@ -31,6 +32,11 @@ class PrimitiveNode: BaseNode {
         get { primitive.rotation }
         set { primitive.rotation = newValue }
     }
+    
+    var layerId: UUID? {
+         get { primitive.layerId }
+         set { primitive.layerId = newValue }
+     }
     
     override var isSelectable: Bool {
         // A primitive is not selectable if its parent is a SymbolNode.

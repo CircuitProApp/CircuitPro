@@ -15,6 +15,8 @@ struct LinePrimitive: GraphicPrimitive {
     var strokeWidth: CGFloat
     var filled: Bool = false // A line can't be filled, but protocol might require it.
     var color: SDColor
+    
+    var layerId: UUID?
 
     /// The position is the center point of the line.
     var position: CGPoint {

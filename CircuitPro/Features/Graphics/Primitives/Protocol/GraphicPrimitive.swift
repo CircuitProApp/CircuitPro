@@ -7,7 +7,7 @@
 
 import AppKit
 
-protocol GraphicPrimitive: Transformable, Drawable, Bounded, HandleEditable, Identifiable, Codable, Equatable, Hashable {
+protocol GraphicPrimitive: Transformable, Drawable, Bounded, HandleEditable, Identifiable, Codable, Equatable, Hashable, Layerable {
 
     var id: UUID { get }
     var color: SDColor { get set }

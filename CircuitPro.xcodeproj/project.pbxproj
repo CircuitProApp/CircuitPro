@@ -15,9 +15,22 @@
 		5E5AB35A2D9C60330069B623 /* CircuitPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CircuitPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C75D1E942E4669E0006F83BB /* Exceptions for "CircuitPro" folder in "CircuitPro" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				App/Info.plist,
+			);
+			target = 5E5AB3592D9C60330069B623 /* CircuitPro */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		5E5AB35C2D9C60330069B623 /* CircuitPro */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C75D1E942E4669E0006F83BB /* Exceptions for "CircuitPro" folder in "CircuitPro" target */,
+			);
 			path = CircuitPro;
 			sourceTree = "<group>";
 		};
@@ -87,7 +100,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 1630;
+				LastUpgradeCheck = 1640;
 				TargetAttributes = {
 					5E5AB3592D9C60330069B623 = {
 						CreatedOnToolsVersion = 16.2;

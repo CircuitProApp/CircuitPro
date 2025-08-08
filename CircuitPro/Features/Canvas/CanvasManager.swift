@@ -14,9 +14,6 @@ final class CanvasManager {
     var environment = CanvasEnvironmentValues()
 
     var magnification: CGFloat = 1
-
-
-
     var paperSize: PaperSize = .iso(.a4)
 
     var mouseLocation: CGPoint = .zero
@@ -24,11 +21,4 @@ final class CanvasManager {
     var mouseLocationInMM: CGPoint {
         mouseLocation / 10
     }
-
-    var enableSnapping: Bool = true
-    var showGuides: Bool = false
-
-    var crosshairsStyle: CrosshairsStyle = .centeredCross
-    var backgroundStyle: CanvasBackgroundStyle = .dotted
-
 }

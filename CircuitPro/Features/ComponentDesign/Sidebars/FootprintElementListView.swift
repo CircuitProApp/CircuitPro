@@ -81,12 +81,12 @@ struct FootprintElementListView: View {
             DisclosureGroup(
                 isExpanded: isExpandedBinding,
                 content: {
-//                    ForEach(item.children ?? []) { childItem in
-//                        if case .element(let element) = childItem.content {
-//                            CanvasElementRowView(element: element, editor: footprintEditor)
-//                                .tag(childItem.id)
-//                        }
-//                    }
+                    ForEach(item.children ?? []) { childItem in
+                        if case .element(let element) = childItem.content {
+                            CanvasElementRowView(element: element, editor: footprintEditor)
+                                .tag(childItem.id)
+                        }
+                    }
                     Text("WIP")
                 },
                 label: {
@@ -101,10 +101,10 @@ struct FootprintElementListView: View {
     private func layerRow(for layer: CanvasLayer) -> some View {
         HStack {
             Image(systemName: "circle.fill")
-                .foregroundStyle(layer.kind?.defaultColor ?? .gray)
-            Text(layer.kind?.label ?? "No Layer")
-                .fontWeight(.semibold)
-            Spacer()
+//                .foregroundStyle(layer.kind?.defaultColor ?? .gray)
+//            Text(layer.kind?.label ?? "No Layer")
+//                .fontWeight(.semibold)
+//            Spacer()
         }
     }
     

@@ -16,6 +16,8 @@ struct CirclePrimitive: GraphicPrimitive {
     var strokeWidth: CGFloat
     var color: SDColor
     var filled: Bool
+    
+    var layerId: UUID?
 
     func handles() -> [Handle] {
         // The handle is defined in local space, assuming a center at (0,0)

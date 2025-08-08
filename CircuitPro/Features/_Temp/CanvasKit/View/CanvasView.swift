@@ -10,6 +10,9 @@ struct CanvasView: NSViewRepresentable {
     @Binding var nodes: [BaseNode]
     @Binding var selection: Set<UUID>
     @Binding var tool: CanvasTool?
+    
+    @Binding var layers: [CanvasLayer]
+    @Binding var activeLayerId: UUID?
 
     // MARK: - Callbacks & Configuration
     let environment: CanvasEnvironmentValues
@@ -33,6 +36,8 @@ struct CanvasView: NSViewRepresentable {
         nodes: Binding<[BaseNode]>,
         selection: Binding<Set<UUID>>,
         tool: Binding<CanvasTool?> = .constant(nil),
+        layers: Binding<[CanvasLayer]> = .constant([]),
+        activeLayerId: Binding<UUID?> = .constant(nil),
         environment: CanvasEnvironmentValues = .init(),
         renderLayers: [any RenderLayer],
         interactions: [any CanvasInteraction],
@@ -48,6 +53,8 @@ struct CanvasView: NSViewRepresentable {
         self._nodes = nodes
         self._selection = selection
         self._tool = tool
+        self._layers = layers
+         self._activeLayerId = activeLayerId
         self.environment = environment
         self.renderLayers = renderLayers
         self.interactions = interactions
@@ -155,7 +162,7 @@ struct CanvasView: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
         let coordinator = context.coordinator
         let canvasHostView = CanvasHostView(controller: coordinator.canvasController, registeredDraggedTypes: self.registeredDraggedTypes)
-        let scrollView = NSScrollView()
+        let scrollView = CenteringNSScrollView()
         
         coordinator.canvasController.onNeedsRedraw = { [weak canvasHostView] in
             canvasHostView?.performLayerUpdate()
@@ -182,7 +189,9 @@ struct CanvasView: NSViewRepresentable {
             selection: self.selection,
             tool: self.tool,
             magnification: self.magnification,
-            environment: self.environment
+            environment: self.environment,
+            layers: self.layers,
+                   activeLayerId: self.activeLayerId
         )
         
         if let hostView = scrollView.documentView, hostView.frame.size != self.size {

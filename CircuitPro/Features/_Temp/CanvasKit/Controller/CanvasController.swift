@@ -16,6 +16,11 @@ final class CanvasController {
     
     // The environment model remains the same.
     var environment: CanvasEnvironmentValues = .init()
+    
+    var layers: [CanvasLayer] = []
+    
+    /// The ID of the currently active layer, if any.
+    var activeLayerId: UUID?
 
     // MARK: - Pluggable Pipelines
 
@@ -30,7 +35,9 @@ final class CanvasController {
     var onNeedsRedraw: (() -> Void)?
     var onSelectionChanged: ((Set<UUID>) -> Void)?
     var onNodesChanged: (([BaseNode]) -> Void)?
-    var onMouseMoved: ((CGPoint?) -> Void)? // Added for consistency with our previous design.
+    var onMouseMoved: (
+        (CGPoint?) -> Void
+    )? // Added for consistency with our previous design.
     
     /// A generic callback to notify the owner that a persistent model was mutated.
     var onModelDidChange: (() -> Void)?
@@ -39,7 +46,12 @@ final class CanvasController {
 
     // MARK: - Init
 
-    init(renderLayers: [any RenderLayer], interactions: [any CanvasInteraction], inputProcessors: [any InputProcessor], snapProvider: any SnapProvider) {
+    init(
+        renderLayers: [any RenderLayer],
+        interactions: [any CanvasInteraction],
+        inputProcessors: [any InputProcessor],
+        snapProvider: any SnapProvider
+    ) {
         self.renderLayers = renderLayers
         self.interactions = interactions
         self.inputProcessors = inputProcessors
@@ -54,7 +66,9 @@ final class CanvasController {
         selection: Set<UUID>,
         tool: CanvasTool?,
         magnification: CGFloat,
-        environment: CanvasEnvironmentValues
+        environment: CanvasEnvironmentValues,
+        layers: [CanvasLayer],
+        activeLayerId: UUID?
     ) {
         // --- FIX: Always ensure the redraw callback is hooked up ---
         // This is the most critical change. We iterate over the source-of-truth nodes
@@ -75,12 +89,16 @@ final class CanvasController {
             nodes.forEach { node in
                 sceneRoot.addChild(node)
             }
-            let baseNodeChildren = sceneRoot.children.compactMap { $0 as? BaseNode }
+            let baseNodeChildren = sceneRoot.children.compactMap {
+                $0 as? BaseNode
+            }
             onNodesChanged?(baseNodeChildren)
         }
         
         // The selection and tool syncing remains the same.
-        let currentSelectedIDsInController = Set(self.selectedNodes.map { $0.id })
+        let currentSelectedIDsInController = Set(
+            self.selectedNodes.map { $0.id
+            })
         if currentSelectedIDsInController != selection {
             self.selectedNodes = selection.compactMap { id in
                 findNode(with: id, in: sceneRoot)
@@ -92,6 +110,8 @@ final class CanvasController {
         }
         self.magnification = magnification
         self.environment.configuration = environment.configuration
+        self.layers = layers
+        self.activeLayerId = activeLayerId
     }
     
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
@@ -114,9 +134,12 @@ final class CanvasController {
             highlightedNodeIDs: allHighlightedIDs, // Use the new, simplified set
             hostViewBounds: hostViewBounds,
             visibleRect: visibleRect,
+            layers: self.layers,
+                      activeLayerId: self.activeLayerId,
             snapProvider: snapProvider,
             environment: self.environment,
             inputProcessors: self.inputProcessors
+    
         )
     }
     

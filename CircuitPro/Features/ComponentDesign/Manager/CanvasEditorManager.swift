@@ -33,7 +33,7 @@ final class CanvasEditorManager {
     var elementIndexMap: [UUID: Int] = [:]
 
     // MARK: - Layer State (Primarily for Footprint)
-    var selectedLayer: CanvasLayer? = .layer0
+    var selectedLayer: CanvasLayer? = nil
     var layerAssignments: [UUID: CanvasLayer] = [:]
 
     // MARK: - Text State
@@ -73,7 +73,7 @@ final class CanvasEditorManager {
         selectedElementIDs = []
         selectedTool = CursorTool()
         elementIndexMap = [:]
-        selectedLayer = .layer0
+        selectedLayer = nil
         layerAssignments = [:]
         textSourceMap = [:]
         textDisplayOptionsMap = [:]

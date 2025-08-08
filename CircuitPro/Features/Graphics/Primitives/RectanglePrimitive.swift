@@ -18,6 +18,8 @@ struct RectanglePrimitive: GraphicPrimitive {
     var filled: Bool
     var color: SDColor
     
+    var layerId: UUID?
+    
     var maximumCornerRadius: CGFloat {
         return min(size.width, size.height) / 2
     }
