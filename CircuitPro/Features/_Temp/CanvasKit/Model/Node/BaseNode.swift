@@ -128,22 +128,22 @@ class BaseNode: CanvasNode {
     
     func nodes(intersecting rect: CGRect) -> [BaseNode] {
         var foundNodes: [BaseNode] = []
-        
-        // 1. Check if this node itself is selectable and intersects
+
+        // 1. Recursively check all children and add their findings.
+        //    This creates a flat list of all descendants that intersect.
+        for child in children where child.isVisible {
+            foundNodes.append(contentsOf: child.nodes(intersecting: rect))
+        }
+
+        // 2. After checking children, check if this node itself intersects.
+        //    This ensures we always check the container, even if children are also found.
         if self.isSelectable {
-            // Get the node's interaction bounds in world coordinates
             let worldBounds = self.interactionBounds.applying(self.worldTransform)
             if !worldBounds.isNull && rect.intersects(worldBounds) {
                 foundNodes.append(self)
             }
         }
-        
-        // 2. Recursively check all children
-        // This is the default container behavior.
-        for child in children where child.isVisible {
-            foundNodes.append(contentsOf: child.nodes(intersecting: rect))
-        }
-        
+
         return foundNodes
     }
 

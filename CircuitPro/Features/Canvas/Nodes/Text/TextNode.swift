@@ -42,16 +42,14 @@ class TextNode: BaseNode {
 
     // MARK: - Drawable Conformance
 
-    func makeBodyParameters() -> [DrawingParameters] {
-        // The path is created in local space. The node's transform will be applied by the renderer.
+    override func makeDrawingPrimitives() -> [DrawingPrimitive] {
+
         let localPath = textModel.makeTextPath()
-        return [
-            DrawingParameters(
+      
+        return [.fill(
                 path: localPath,
-                lineWidth: 0,
-                fillColor: textModel.color
-            )
-        ]
+                color: textModel.color
+            )]
     }
 
     override func makeHaloPath() -> CGPath? {

@@ -15,32 +15,23 @@ class ElementsRenderLayer: RenderLayer {
     // MARK: - Update Cycle
 
     func update(using context: RenderContext) {
-        // --- 1. Collect all HALO primitives with special grouping logic ---
-        var haloPrimitives: [DrawingPrimitive] = []
-        collectHaloPrimitives(from: context.sceneRoot, highlightedIDs: context.highlightedNodeIDs, finalPrimitives: &haloPrimitives)
+        var allPrimitives: [DrawingPrimitive] = []
+        // We use a single, smarter recursive function to collect everything.
+        collectPrimitives(from: context.sceneRoot, highlightedIDs: context.highlightedNodeIDs, finalPrimitives: &allPrimitives)
 
-        // --- 2. Collect all BODY primitives ---
-        var bodyPrimitives: [DrawingPrimitive] = []
-        collectBodyPrimitives(from: context.sceneRoot, finalPrimitives: &bodyPrimitives)
-
-        // Combine the lists. Halos are drawn first, so they appear behind the bodies.
-        let allPrimitives = haloPrimitives + bodyPrimitives
-
-        // --- 3. Render all primitives using the layer pool ---
+        // The rendering loop itself remains the same.
         var currentLayerIndex = 0
         for primitive in allPrimitives {
             let shapeLayer = layer(at: currentLayerIndex)
             switch primitive {
             case let .fill(path, color, rule):
                 configure(layer: shapeLayer, forFill: path, color: color, rule: rule)
-
             case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash):
                 configure(layer: shapeLayer, forStroke: path, color: color, lineWidth: lineWidth, lineCap: lineCap, lineJoin: lineJoin, miterLimit: miterLimit, lineDash: lineDash)
             }
             currentLayerIndex += 1
         }
         
-        // Hide any unused layers remaining in the pool.
         if currentLayerIndex < shapeLayerPool.count {
             for i in currentLayerIndex..<shapeLayerPool.count {
                 shapeLayerPool[i].isHidden = true
@@ -48,12 +39,46 @@ class ElementsRenderLayer: RenderLayer {
         }
     }
 
-    // MARK: - Recursive Data Collection
+    // MARK: - Recursive Data Collection (Corrected Logic)
 
-    /// Recursively collects only the main "body" drawing primitives from the scene graph.
-    private func collectBodyPrimitives(from node: BaseNode, finalPrimitives: inout [DrawingPrimitive]) {
+    private func collectPrimitives(from node: BaseNode, highlightedIDs: Set<UUID>, finalPrimitives: inout [DrawingPrimitive]) {
         guard node.isVisible else { return }
+
+        // --- 1. HALO GENERATION (with special grouping logic) ---
+        var didHandleHaloForChildren = false
+
+        // SPECIAL CASE: Unified halo for SchematicGraphNode
+        if let graphNode = node as? SchematicGraphNode {
+            let selectedChildren = graphNode.children.filter { highlightedIDs.contains($0.id) }
+            if !selectedChildren.isEmpty {
+                let compositePath = CGMutablePath()
+                for child in selectedChildren {
+                    if let childHaloPath = child.makeHaloPath() {
+                        compositePath.addPath(childHaloPath)
+                    }
+                }
+                if !compositePath.isEmpty {
+                    finalPrimitives.append(haloPrimitive(for: compositePath))
+                }
+                // Mark that we've handled the halos for this group.
+                didHandleHaloForChildren = true
+            }
+        }
         
+        // DEFAULT CASE: For any other node that is itself highlighted
+        if !didHandleHaloForChildren && highlightedIDs.contains(node.id) {
+            let isParentGroupHandled = (node.parent as? SchematicGraphNode) != nil && didHandleHaloForChildren
+            
+            if !isParentGroupHandled, let haloPath = node.makeHaloPath() {
+                var worldTransform = node.worldTransform
+                if let worldPath = haloPath.copy(using: &worldTransform) {
+                    finalPrimitives.append(haloPrimitive(for: worldPath))
+                }
+            }
+        }
+
+        // --- 2. BODY GENERATION ---
+        // This is always done for every node.
         let localPrimitives = node.makeDrawingPrimitives()
         if !localPrimitives.isEmpty {
             var worldTransform = node.worldTransform
@@ -61,12 +86,15 @@ class ElementsRenderLayer: RenderLayer {
                 finalPrimitives.append(primitive.applying(transform: &worldTransform))
             }
         }
-        
-        // Recurse to children.
+
+        // --- 3. RECURSION ---
+        // Always recurse into children. The logic within this function will handle
+        // each child appropriately on the next call.
         for child in node.children {
-            collectBodyPrimitives(from: child, finalPrimitives: &finalPrimitives)
+            collectPrimitives(from: child, highlightedIDs: highlightedIDs, finalPrimitives: &finalPrimitives)
         }
     }
+
 
     /// Recursively collects halo primitives, with special grouping logic for certain container nodes.
     private func collectHaloPrimitives(from node: BaseNode, highlightedIDs: Set<UUID>, finalPrimitives: inout [DrawingPrimitive]) {

@@ -1,12 +1,5 @@
-//
-//  AnchoredTextNode.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/6/25.
-//
-
-
 import AppKit
+import Observation
 
 /// A scene graph node that represents a text element visually anchored to a parent object.
 ///
@@ -39,16 +32,16 @@ final class AnchoredTextNode: TextNode {
         self.anchorOwnerID = anchorOwnerID
         self.origin = origin
 
-        // Initialize the parent TextNode with the core text model.
         super.init(textModel: textModel)
     }
 
     // MARK: - Overridden Drawable Conformance
 
-    override func makeBodyParameters() -> [DrawingParameters] {
-        var params = super.makeBodyParameters()
+    override func makeDrawingPrimitives() -> [DrawingPrimitive] {
+        // 1. Get the drawing primitives for the text itself from the superclass.
+        var primitives = super.makeDrawingPrimitives()
 
-        // Convert anchor to our local space
+        // 2. Convert the anchor point from the parent's space to our local space.
         let localAnchorPosition: CGPoint
         if let parent = self.parent {
             localAnchorPosition = self.convert(anchorPosition, from: parent)
@@ -56,7 +49,9 @@ final class AnchoredTextNode: TextNode {
             localAnchorPosition = anchorPosition
         }
 
-        // Anchor crosshair
+        let adornmentColor = NSColor.systemGray.withAlphaComponent(0.8).cgColor
+
+        // 3. Create the drawing primitive for the anchor crosshair.
         let crossSize: CGFloat = 8.0
         let crossPath = CGMutablePath()
         crossPath.move(to: CGPoint(x: localAnchorPosition.x - crossSize / 2, y: localAnchorPosition.y))
@@ -64,65 +59,28 @@ final class AnchoredTextNode: TextNode {
         crossPath.move(to: CGPoint(x: localAnchorPosition.x, y: localAnchorPosition.y - crossSize / 2))
         crossPath.addLine(to: CGPoint(x: localAnchorPosition.x, y: localAnchorPosition.y + crossSize / 2))
 
-        params.append(DrawingParameters(
-            path: crossPath,
-            lineWidth: 0.5,
-            strokeColor: NSColor.systemGray.withAlphaComponent(0.8).cgColor
-        ))
+        primitives.append(.stroke(path: crossPath, color: adornmentColor, lineWidth: 0.5))
 
-        // Very simple connector: to mid-x, min-y of bounding box
+        // 4. Create the drawing primitive for the connector line.
         let textBounds = super.boundingBox
         if !textBounds.isNull && !textBounds.isEmpty {
-            let connectionPoint = CGPoint(
-                x: textBounds.midX,
-                y: textBounds.minY
-            )
+            let connectionPoint: CGPoint
+            if textBounds.midY > localAnchorPosition.y {
+                // Text is above the anchor, connect to the bottom-middle of the text.
+                connectionPoint = CGPoint(x: textBounds.midX, y: textBounds.minY)
+            } else {
+                // Text is below or level with the anchor, connect to the top-middle of the text.
+                connectionPoint = CGPoint(x: textBounds.midX, y: textBounds.maxY)
+            }
 
             let connectorPath = CGMutablePath()
             connectorPath.move(to: localAnchorPosition)
             connectorPath.addLine(to: connectionPoint)
 
-            params.append(DrawingParameters(
-                path: connectorPath,
-                lineWidth: 0.5,
-                strokeColor: NSColor.systemGray.withAlphaComponent(0.8).cgColor
-            ))
+            primitives.append(.stroke(path: connectorPath, color: adornmentColor, lineWidth: 0.5, lineDash: [2, 2]))
         }
 
-        return params
-    }
-    
-    /// Finds the best connection point on a rectangle's edge for a line from an external point.
-    private func findConnectionPoint(from point: CGPoint, to rect: CGRect) -> CGPoint {
-        guard !rect.isNull && !rect.isEmpty && rect.width.isFinite && rect.height.isFinite else {
-            return point // or some safe fallback
-        }
-
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        let dx = center.x - point.x
-        let dy = center.y - point.y
-
-        // Avoid any division by zero
-        if dx == 0 && dy == 0 {
-            return center
-        }
-
-        // Safe intersection math
-        var x_intersect = point.x
-        var y_intersect = point.y
-        
-        if dy != 0 {
-            x_intersect += (dx / max(abs(dy), .ulpOfOne)) * (rect.height / 2.0)
-        }
-        if dx != 0 {
-            y_intersect += (dy / max(abs(dx), .ulpOfOne)) * (rect.width / 2.0)
-        }
-
-        if rect.minX...rect.maxX ~= x_intersect {
-            return CGPoint(x: x_intersect, y: dy > 0 ? rect.minY : rect.maxY)
-        } else {
-            return CGPoint(x: dx > 0 ? rect.minX : rect.maxX, y: y_intersect)
-        }
+        return primitives
     }
 }
 
@@ -131,26 +89,18 @@ final class AnchoredTextNode: TextNode {
 
 extension AnchoredTextNode {
     /// Converts the node's current state back into a `ResolvedText` data model.
-    /// This logic would typically be called by a higher-level controller before saving.
     func toResolvedText() -> ResolvedText {
-        // The node's position and rotation are already relative to its parent.
-        let relativePosition = self.position
-        
-        // Convert the absolute world anchor position back to a relative one.
-        // It's simpler to just store the relative anchor and update it if the node moves.
-        // For now, assuming anchorPosition is kept relative to the parent.
-        let inverseParentTransform = self.parent?.worldTransform.inverted() ?? .identity
-        let worldAnchorPosition = self.anchorPosition.applying(self.parent?.worldTransform ?? .identity)
-        let relativeAnchorPosition = worldAnchorPosition.applying(inverseParentTransform)
-
+        // The node's `position` is already relative to its parent (the SymbolNode),
+        // and its `anchorPosition` is also stored relative to the parent.
+        // The implementation is now simple and correct.
         return ResolvedText(
             origin: self.origin,
             text: self.textModel.text,
             font: self.textModel.font,
             color: self.textModel.color,
             alignment: self.textModel.alignment,
-            relativePosition: relativePosition,
-            anchorRelativePosition: relativeAnchorPosition,
+            relativePosition: self.position,
+            anchorRelativePosition: self.anchorPosition,
             cardinalRotation: self.textModel.cardinalRotation
         )
     }

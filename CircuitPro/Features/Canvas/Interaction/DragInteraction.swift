@@ -16,6 +16,8 @@ final class DragInteraction: CanvasInteraction {
     private var didMove: Bool = false
     private let dragThreshold: CGFloat = 4.0
     
+    var wantsRawInput: Bool { true }
+    
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         guard controller.selectedTool is CursorTool,
               !controller.selectedNodes.isEmpty else {

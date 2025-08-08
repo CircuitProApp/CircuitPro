@@ -111,6 +111,41 @@ final class SymbolNode: BaseNode {
         return compositePath.isEmpty ? nil : compositePath
     }
     
+    override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
+        // First, let the default BaseNode implementation check children.
+        // This will correctly hit-test primitives and pins.
+        if let hit = super.hitTest(point, tolerance: tolerance) {
+            // If a selectable child (like a PinNode) is hit, return it.
+            // If a non-selectable child (like a PrimitiveNode) is hit, BaseNode returns nil,
+            // but we want to treat that as a hit on the SymbolNode itself.
+            // The check `hit.node is PrimitiveNode` is a bit of a proxy for "non-selectable child".
+            // A more robust solution might involve a specific property on the node.
+            if hit.node.isSelectable {
+                return hit
+            }
+        }
+
+        // If no selectable children were hit, check if the point is within our core geometry.
+        // This handles clicks on the "body" of the symbol.
+        let coreGeometryBox = self.interactionBounds // This now correctly excludes text.
+        if coreGeometryBox.contains(point) {
+            return CanvasHitTarget(node: self, partIdentifier: nil, position: self.convert(point, to: nil))
+        }
+        
+        // Finally, if still no hit, check the text nodes specifically.
+        // If a text node is hit, we return the SymbolNode as the target.
+        for child in children {
+            guard let textNode = child as? AnchoredTextNode else { continue }
+            
+            let localPoint = point.applying(textNode.localTransform.inverted())
+            if textNode.hitTest(localPoint, tolerance: tolerance) != nil {
+                return CanvasHitTarget(node: self, partIdentifier: nil, position: self.convert(point, to: nil))
+            }
+        }
+
+        return nil
+    }
+
     override var interactionBounds: CGRect {
         var combinedBox = CGRect.null
 
