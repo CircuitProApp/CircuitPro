@@ -12,7 +12,8 @@ import AppKit
 ///
 /// This node extends `TextNode`, inheriting all its text-rendering capabilities, and adds
 /// visual adornments: a crosshair at the anchor point and a dashed line connecting
-//  the anchor to the text. All drawing operations are performed in the node's local coordinate space.
+/// the anchor to the text. All drawing operations are performed in the node's local coordinate space.
+@Observable
 final class AnchoredTextNode: TextNode {
 
     // MARK: - Anchor Properties
@@ -45,16 +46,17 @@ final class AnchoredTextNode: TextNode {
     // MARK: - Overridden Drawable Conformance
 
     override func makeBodyParameters() -> [DrawingParameters] {
-        // 1. Get the drawing parameters for the text itself by calling the superclass implementation.
         var params = super.makeBodyParameters()
 
-        // 2. Calculate the anchor's position relative to this node's local origin.
-        // The node's `position` is the text's position, and `anchorPosition` is the
-        // anchor's position, both in the parent's coordinate space. The difference gives
-        // us the vector from the text to the anchor.
-        let localAnchorPosition = anchorPosition - self.position
+        // Convert anchor to our local space
+        let localAnchorPosition: CGPoint
+        if let parent = self.parent {
+            localAnchorPosition = self.convert(anchorPosition, from: parent)
+        } else {
+            localAnchorPosition = anchorPosition
+        }
 
-        // 3. Draw the anchor crosshair at the local anchor position.
+        // Anchor crosshair
         let crossSize: CGFloat = 8.0
         let crossPath = CGMutablePath()
         crossPath.move(to: CGPoint(x: localAnchorPosition.x - crossSize / 2, y: localAnchorPosition.y))
@@ -62,48 +64,61 @@ final class AnchoredTextNode: TextNode {
         crossPath.move(to: CGPoint(x: localAnchorPosition.x, y: localAnchorPosition.y - crossSize / 2))
         crossPath.addLine(to: CGPoint(x: localAnchorPosition.x, y: localAnchorPosition.y + crossSize / 2))
 
-        let crossParams = DrawingParameters(
+        params.append(DrawingParameters(
             path: crossPath,
             lineWidth: 0.5,
             strokeColor: NSColor.systemGray.withAlphaComponent(0.8).cgColor
-        )
-        params.append(crossParams)
+        ))
 
-        // 4. Draw the dashed connector line.
-        let connectorPath = CGMutablePath()
-        connectorPath.move(to: localAnchorPosition)
-        
-        // The connection point is on the text's bounding box, which is already in local coordinates.
-        let textBoundingBox = super.boundingBox // Use the text's bounding box from the parent class
-        let connectionPoint = findConnectionPoint(from: localAnchorPosition, to: textBoundingBox)
-        connectorPath.addLine(to: connectionPoint)
+        // Very simple connector: to mid-x, min-y of bounding box
+        let textBounds = super.boundingBox
+        if !textBounds.isNull && !textBounds.isEmpty {
+            let connectionPoint = CGPoint(
+                x: textBounds.midX,
+                y: textBounds.minY
+            )
 
-        let connectorParams = DrawingParameters(
-            path: connectorPath,
-            lineWidth: 0.5,
-            strokeColor: NSColor.systemGray.withAlphaComponent(0.8).cgColor,
-            lineDashPattern: [2, 3]
-        )
-        params.append(connectorParams)
+            let connectorPath = CGMutablePath()
+            connectorPath.move(to: localAnchorPosition)
+            connectorPath.addLine(to: connectionPoint)
+
+            params.append(DrawingParameters(
+                path: connectorPath,
+                lineWidth: 0.5,
+                strokeColor: NSColor.systemGray.withAlphaComponent(0.8).cgColor
+            ))
+        }
 
         return params
     }
     
     /// Finds the best connection point on a rectangle's edge for a line from an external point.
     private func findConnectionPoint(from point: CGPoint, to rect: CGRect) -> CGPoint {
+        guard !rect.isNull && !rect.isEmpty && rect.width.isFinite && rect.height.isFinite else {
+            return point // or some safe fallback
+        }
+
         let center = CGPoint(x: rect.midX, y: rect.midY)
         let dx = center.x - point.x
         let dy = center.y - point.y
 
-        if rect.isEmpty || (dx == 0 && dy == 0) {
+        // Avoid any division by zero
+        if dx == 0 && dy == 0 {
             return center
         }
-        
-        // This is a simplified but effective algorithm to find the intersection point on the edge.
-        let x_intersect = point.x + (dy != 0 ? (dx / abs(dy)) * (rect.height / 2.0) : 0)
-        let y_intersect = point.y + (dx != 0 ? (dy / abs(dx)) * (rect.width / 2.0) : 0)
 
-        if x_intersect >= rect.minX && x_intersect <= rect.maxX {
+        // Safe intersection math
+        var x_intersect = point.x
+        var y_intersect = point.y
+        
+        if dy != 0 {
+            x_intersect += (dx / max(abs(dy), .ulpOfOne)) * (rect.height / 2.0)
+        }
+        if dx != 0 {
+            y_intersect += (dy / max(abs(dx), .ulpOfOne)) * (rect.width / 2.0)
+        }
+
+        if rect.minX...rect.maxX ~= x_intersect {
             return CGPoint(x: x_intersect, y: dy > 0 ? rect.minY : rect.maxY)
         } else {
             return CGPoint(x: dx > 0 ? rect.minX : rect.maxX, y: y_intersect)

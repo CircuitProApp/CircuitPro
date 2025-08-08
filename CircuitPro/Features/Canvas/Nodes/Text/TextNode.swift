@@ -9,6 +9,7 @@
 import AppKit
 
 /// A scene graph node that represents a `TextModel` on the canvas.
+@Observable
 class TextNode: BaseNode {
 
     // MARK: - Properties
@@ -83,4 +84,10 @@ class TextNode: BaseNode {
 
         return nil
     }
+    
+    override var boundingBox: CGRect {
+        let p = textModel.makeTextPath()
+         let box = p.boundingBoxOfPath
+         return box.isNull ? .null : box
+     }
 }
