@@ -70,10 +70,9 @@ final class CanvasEditorManager {
     func setupForFootprintEditing() {
         self.layers = LayerKind.footprintLayers.map { kind in
             CanvasLayer(
-                id: UUID(), // Each layer instance needs a stable ID
+                id: UUID(),
                 name: kind.label,
                 isVisible: true,
-                // Assumes you have a Color -> CGColor helper
                 color: NSColor(kind.defaultColor).cgColor,
                 zIndex: kind.zIndex,
                 kind: kind

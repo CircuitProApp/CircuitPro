@@ -82,8 +82,11 @@ final class DragInteraction: CanvasInteraction {
                 didMove = true
             }
             
-            // Pass the raw delta to the graph model to compute new positions.
-            graph.updateDrag(by: CGPoint(x: rawDelta.dx, y: rawDelta.dy))
+            // Snap the delta before passing it to the graph model.
+            let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
+            
+            // Pass the snapped delta to the graph model to compute new positions.
+            graph.updateDrag(by: CGPoint(x: finalDelta.dx, y: finalDelta.dy))
             
             // The model has changed, so trigger a redraw of the canvas.
             if let graphNode = context.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode {
