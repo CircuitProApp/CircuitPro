@@ -27,16 +27,26 @@ struct FootprintCanvasView: View {
                 nodes: $footprintEditor.elements,
                 selection: $footprintEditor.selectedElementIDs,
                 tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
+                environment: canvasManager.environment,
                 renderLayers: [
                     GridRenderLayer(),
                     ElementsRenderLayer(),
                     PreviewRenderLayer(),
+                    HandlesRenderLayer(),
+                    MarqueeRenderLayer(),
                     CrosshairsRenderLayer()
                 ],
                 interactions: [
-//                    ToolInteraction(),
-                    SelectionInteraction()
-                ]
+                    HandleInteraction(),
+                    ToolInteraction(),
+                    SelectionInteraction(),
+                    DragInteraction(),
+                    MarqueeInteraction()
+                ],
+                inputProcessors: [
+                    GridSnapProcessor()
+                ],
+                snapProvider: CircuitProSnapProvider()
             )
             .overlay(alignment: .leading) {
                 

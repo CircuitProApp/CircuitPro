@@ -5,57 +5,65 @@ class PreviewRenderLayer: RenderLayer {
     // A persistent container layer for all preview shapes.
     private let rootLayer = CALayer()
     
-    // The pool of reusable shape layers.
+    // The pool can be simplified back to only CAShapeLayers, since text is
+    // now also rendered as a vector path.
     private var shapeLayerPool: [CAShapeLayer] = []
 
     func install(on hostLayer: CALayer) {
+        rootLayer.contentsScale = hostLayer.contentsScale
         hostLayer.addSublayer(rootLayer)
     }
 
     func update(using context: RenderContext) {
         guard let tool = context.selectedTool,
-              !(tool is CursorTool),
               let mouseLocation = context.processedMouseLocation
         else {
-            // If no tool is active, or it's the cursor, or the mouse is not
-            // on the canvas, hide all preview layers and exit.
             hideAllLayers()
             return
         }
 
+        // Get the drawing primitives from the tool. These are already in world coordinates.
+        let drawingPrimitives = tool.preview(mouse: mouseLocation, context: context)
         
-        // Pass the *snapped* location to the tool's preview method.
-        let drawingParams = tool.preview(mouse: mouseLocation, context: context)
-
-        
-        // If the tool returns no preview shapes, hide all layers.
-        guard !drawingParams.isEmpty else {
+        guard !drawingPrimitives.isEmpty else {
             hideAllLayers()
             return
         }
 
-        // Use the layer pooling strategy to draw the shapes.
-        for (index, params) in drawingParams.enumerated() {
-            let shapeLayer = layer(at: index)
-            configure(layer: shapeLayer, from: params)
+        // Use a loop to dispatch each primitive to the correct configuration method.
+        // The switch now only handles fill and stroke cases.
+        var currentLayerIndex = 0
+        for primitive in drawingPrimitives {
+            let shapeLayer = layer(at: currentLayerIndex)
+            switch primitive {
+            case let .fill(path, color, rule):
+                configure(layer: shapeLayer, forFill: path, color: color, rule: rule)
+
+            case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash):
+                configure(layer: shapeLayer, forStroke: path, color: color, lineWidth: lineWidth, lineCap: lineCap, lineJoin: lineJoin, miterLimit: miterLimit, lineDash: lineDash)
+            
+            // The .text case is correctly removed.
+            }
+            currentLayerIndex += 1
         }
         
         // Hide any remaining, unused layers in the pool.
-        if drawingParams.count < shapeLayerPool.count {
-            for i in drawingParams.count..<shapeLayerPool.count {
+        if currentLayerIndex < shapeLayerPool.count {
+            for i in currentLayerIndex..<shapeLayerPool.count {
                 shapeLayerPool[i].isHidden = true
             }
         }
     }
 
-    // MARK: - Layer Pooling Helpers
-    
+    // MARK: - Layer Management
+
     private func hideAllLayers() {
         for layer in shapeLayerPool {
             layer.isHidden = true
         }
     }
-
+    
+    /// The layer pooling logic is simplified back to only handle CAShapeLayers.
     private func layer(at index: Int) -> CAShapeLayer {
         if index < shapeLayerPool.count {
             let layer = shapeLayerPool[index]
@@ -69,14 +77,26 @@ class PreviewRenderLayer: RenderLayer {
         return newLayer
     }
     
-    private func configure(layer: CAShapeLayer, from parameters: DrawingParameters) {
-        layer.path = parameters.path
-        layer.fillColor = parameters.fillColor
-        layer.strokeColor = parameters.strokeColor
-        layer.lineWidth = parameters.lineWidth
-        layer.lineDashPattern = parameters.lineDashPattern
-        layer.lineCap = parameters.lineCap
-        layer.lineJoin = parameters.lineJoin
-        layer.fillRule = parameters.fillRule
+    // MARK: - Layer Configuration
+    
+    // The text-related configuration and helper methods have been removed.
+
+    private func configure(layer: CAShapeLayer, forFill path: CGPath, color: CGColor, rule: CAShapeLayerFillRule) {
+        layer.path = path
+        layer.fillColor = color
+        layer.fillRule = rule
+        layer.strokeColor = nil
+        layer.lineWidth = 0
+    }
+
+    private func configure(layer: CAShapeLayer, forStroke path: CGPath, color: CGColor, lineWidth: CGFloat, lineCap: CAShapeLayerLineCap, lineJoin: CAShapeLayerLineJoin, miterLimit: CGFloat, lineDash: [NSNumber]?) {
+        layer.path = path
+        layer.fillColor = nil
+        layer.strokeColor = color
+        layer.lineWidth = lineWidth
+        layer.lineCap = lineCap
+        layer.lineJoin = lineJoin
+        layer.miterLimit = miterLimit
+        layer.lineDashPattern = lineDash
     }
 }

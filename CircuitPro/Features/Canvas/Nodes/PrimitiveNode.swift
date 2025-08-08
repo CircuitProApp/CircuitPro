@@ -48,8 +48,8 @@ class PrimitiveNode: BaseNode {
     
     // MARK: - Protocol Overrides
     
-    override func makeBodyParameters() -> [DrawingParameters] {
-        return primitive.makeBodyParameters()
+    override func makeDrawingPrimitives() -> [DrawingPrimitive] {
+        return primitive.makeDrawingPrimitives()
     }
     
     override func makeHaloPath() -> CGPath? {

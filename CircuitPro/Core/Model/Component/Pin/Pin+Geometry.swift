@@ -1,18 +1,9 @@
-//
-//  Pin+Geometry.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 7/24/25.
-//
-//  CORRECTED VERSION: Restores world-coordinate geometry calculations.
-//
-
 import AppKit
 import CoreText
 
 extension Pin {
 
-    // MARK: - Core Geometric Properties (World-Space)
+    // MARK: - Core Geometric Properties (Local Space)
 
     var length: CGFloat {
         switch lengthType {
@@ -23,136 +14,124 @@ extension Pin {
 
     var endpointRadius: CGFloat { 4.0 }
 
-    /// The calculated world-space start position of the pin's leg.
-    /// This is the same logic as the original Pin+Drawable.
+    /// The calculated start position of the pin's leg in its local coordinate space.
+    /// The end of the leg is always at the local origin (0,0).
     var localLegStart: CGPoint {
         let dir = cardinalRotation.direction
-        // Calculates start position relative to an endpoint at (0,0).
         return CGPoint(x: dir.x * length, y: dir.y * length)
     }
 
-    // MARK: - Composite Path and Layout (World-Space)
-    
-    /// Creates a single path representing the pin's footprint in WORLD coordinates.
-    func calculateCompositePath() -> CGPath {
-        let outline = CGMutablePath()
-        let textFattenAmount: CGFloat = 1.0 // A small width to fill in text for hit-testing.
+    // MARK: - Drawable Conformance
 
-        // 1. Add local line and circle paths.
-        let legPath = CGMutablePath()
-        legPath.move(to: localLegStart) // Use local start
-        legPath.addLine(to: .zero)      // End at the local origin (0,0)
-        outline.addPath(legPath)
-        
-        let endpointRect = CGRect(x: -endpointRadius, y: -endpointRadius, width: endpointRadius * 2, height: endpointRadius * 2)
-        outline.addPath(CGPath(ellipseIn: endpointRect, transform: nil)) // Centered on local origin
+    /// Generates the high-level drawing commands for the pin.
+    func makeDrawingPrimitives() -> [DrawingPrimitive] {
+         let pinColor = NSColor.systemBlue
+         var primitives: [DrawingPrimitive] = []
 
-        // 2. Add pin number. The layout function returns a local-space path.
-        if showNumber {
-            var (path, transform) = numberLayout()
-            if let transformedPath = path.copy(using: &transform) {
-                let fattedText = transformedPath.copy(strokingWithWidth: textFattenAmount, lineCap: .round, lineJoin: .round, miterLimit: 1)
-                outline.addPath(fattedText)
-            }
-        }
-        
-        // 3. Add pin label. The layout function also returns a local-space path.
-        if showLabel && !name.isEmpty {
-            var (path, transform) = labelLayout()
-            if let transformedPath = path.copy(using: &transform) {
-                let fattedText = transformedPath.copy(strokingWithWidth: textFattenAmount, lineCap: .round, lineJoin: .round, miterLimit: 1)
-                outline.addPath(fattedText)
-            }
-        }
-        
-        return outline
-    }
-    
-    func makeAllBodyParameters() -> [DrawingParameters] {
-        let pinColor = NSColor.systemBlue.cgColor
-        var params: [DrawingParameters] = []
-        let localOrigin = CGPoint.zero
+         // 1. Stroke the leg and endpoint
+         let legPath = CGMutablePath()
+         legPath.move(to: localLegStart)
+         legPath.addLine(to: .zero)
+         primitives.append(.stroke(path: legPath, color: pinColor.cgColor, lineWidth: 1.0))
+         
+         let endpointRect = CGRect(x: -endpointRadius, y: -endpointRadius, width: endpointRadius * 2, height: endpointRadius * 2)
+         primitives.append(.stroke(path: CGPath(ellipseIn: endpointRect, transform: nil), color: pinColor.cgColor, lineWidth: 1.0))
 
-        // 1. Draw Leg and Endpoint in local space.
-        let legPath = CGMutablePath()
-        legPath.move(to: localLegStart) // From local start
-        legPath.addLine(to: localOrigin) // To local origin
-        params.append(DrawingParameters(path: legPath, lineWidth: 1, strokeColor: pinColor))
-        
-        let endpointRect = CGRect(x: localOrigin.x - endpointRadius, y: localOrigin.y - endpointRadius, width: endpointRadius * 2, height: endpointRadius * 2)
-        params.append(DrawingParameters(path: CGPath(ellipseIn: endpointRect, transform: nil), lineWidth: 1, strokeColor: pinColor))
+         // 2. Fill the vector paths for the text
+         if showNumber {
+             let numberPath = numberLayout()
+             primitives.append(.fill(path: numberPath, color: pinColor.cgColor))
+         }
 
-        // 2 & 3. Draw text, also in local space.
-        if showNumber {
-            var (path, transform) = numberLayout()
-            if let finalPath = path.copy(using: &transform) {
-                params.append(DrawingParameters(path: finalPath, lineWidth: 0, fillColor: pinColor))
-            }
-        }
-        
-        if showLabel && !name.isEmpty {
-            var (path, transform) = labelLayout()
-            if let finalPath = path.copy(using: &transform) {
-                params.append(DrawingParameters(path: finalPath, lineWidth: 0, fillColor: pinColor))
-            }
-        }
-        return params
-    }
+         if showLabel && !name.isEmpty {
+             let labelPath = labelLayout()
+             primitives.append(.fill(path: labelPath, color: pinColor.cgColor))
+         }
 
-    // --- Text layout functions updated to use LOCAL coordinates ---
+         return primitives
+     }
 
-    func labelLayout() -> (path: CGPath, transform: CGAffineTransform) {
-        let font = NSFont.systemFont(ofSize: 10)
-        let pad: CGFloat = 4
-        let textPath = TextUtilities.path(for: name, font: font)
-        let trueBounds = textPath.boundingBoxOfPath
-        let (target, anchor): (CGPoint, CGPoint)
+     func makeHaloPath() -> CGPath? {
+         return calculateCompositePath()
+     }
+     
+     // MARK: - Composite Path & Layout
 
-        // All targets are now relative to localLegStart, not the pin's world position.
-        switch cardinalRotation {
-        case .west:
-            target = CGPoint(x: localLegStart.x - pad, y: localLegStart.y)
-            anchor = CGPoint(x: trueBounds.maxX, y: trueBounds.midY)
-        case .east:
-            target = CGPoint(x: localLegStart.x + pad, y: localLegStart.y)
-            anchor = CGPoint(x: trueBounds.minX, y: trueBounds.midY)
-        case .north:
-            target = CGPoint(x: localLegStart.x, y: localLegStart.y + pad)
-            anchor = CGPoint(x: trueBounds.midX, y: trueBounds.minY)
-        case .south:
-            target = CGPoint(x: localLegStart.x, y: localLegStart.y - pad)
-            anchor = CGPoint(x: trueBounds.midX, y: trueBounds.maxY)
-        default:
-            target = CGPoint(x: localLegStart.x + pad, y: localLegStart.y)
-            anchor = CGPoint(x: trueBounds.minX, y: trueBounds.midY)
-        }
-        
-        let transform = CGAffineTransform(translationX: target.x - anchor.x, y: target.y - anchor.y)
-        return (textPath, transform)
-    }
+     private func calculateCompositePath() -> CGPath {
+         let outline = CGMutablePath()
 
-    func numberLayout() -> (path: CGPath, transform: CGAffineTransform) {
-        let font = NSFont.systemFont(ofSize: 9, weight: .medium)
-        let pad: CGFloat = 5
-        let text = "\(number)"
-        let textPath = TextUtilities.path(for: text, font: font)
-        let trueBounds = textPath.boundingBoxOfPath
-        
-        // Midpoint is calculated on the LOCAL leg.
-        let mid = CGPoint(x: localLegStart.x / 2, y: localLegStart.y / 2)
-        let targetPos: CGPoint
+         // 1. Add leg and circle paths
+         let legPath = CGMutablePath()
+         legPath.move(to: localLegStart)
+         legPath.addLine(to: .zero)
+         outline.addPath(legPath)
+         
+         let endpointRect = CGRect(x: -endpointRadius, y: -endpointRadius, width: endpointRadius * 2, height: endpointRadius * 2)
+         outline.addPath(CGPath(ellipseIn: endpointRect, transform: nil))
 
-        switch cardinalRotation {
-        case .north:
-            targetPos = CGPoint(x: mid.x + pad, y: mid.y)
-        case .south:
-            targetPos = CGPoint(x: mid.x + pad, y: mid.y)
-        default: // Horizontal
-            targetPos = CGPoint(x: mid.x, y: mid.y + pad)
-        }
-        
-        let finalTarget = CGPoint(x: targetPos.x - trueBounds.midX, y: targetPos.y - trueBounds.midY)
-        let transform = CGAffineTransform(translationX: finalTarget.x - trueBounds.minX, y: finalTarget.y - trueBounds.minY)
-        return (textPath, transform)
-    }
+         // 2. Add the final, transformed text paths. No need to "fatten" them separately.
+         if showNumber {
+             outline.addPath(numberLayout())
+         }
+         if showLabel && !name.isEmpty {
+             outline.addPath(labelLayout())
+         }
+         
+         return outline
+     }
+
+     // --- Text layout functions now return a final, transformed CGPath ---
+
+     func labelLayout() -> CGPath {
+         let font = NSFont.systemFont(ofSize: 10)
+         let pad: CGFloat = 4
+         
+         let textPath = TextUtilities.path(for: name, font: font)
+         let bounds = textPath.boundingBoxOfPath
+         
+         let (targetPoint, anchorPoint): (CGPoint, CGPoint)
+
+         switch cardinalRotation {
+         case .west:
+             targetPoint = CGPoint(x: localLegStart.x - pad, y: localLegStart.y)
+             anchorPoint = CGPoint(x: bounds.maxX, y: bounds.midY)
+         case .east:
+             targetPoint = CGPoint(x: localLegStart.x + pad, y: localLegStart.y)
+             anchorPoint = CGPoint(x: bounds.minX, y: bounds.midY)
+         case .north:
+             targetPoint = CGPoint(x: localLegStart.x, y: localLegStart.y + pad)
+             anchorPoint = CGPoint(x: bounds.midX, y: bounds.minY)
+         case .south:
+             targetPoint = CGPoint(x: localLegStart.x, y: localLegStart.y - pad)
+             anchorPoint = CGPoint(x: bounds.midX, y: bounds.maxY)
+         default:
+             targetPoint = CGPoint(x: localLegStart.x + pad, y: localLegStart.y)
+             anchorPoint = CGPoint(x: bounds.minX, y: bounds.midY)
+         }
+         
+         var transform = CGAffineTransform(translationX: targetPoint.x - anchorPoint.x, y: targetPoint.y - anchorPoint.y)
+         return textPath.copy(using: &transform) ?? textPath
+     }
+
+     func numberLayout() -> CGPath {
+         let font = NSFont.systemFont(ofSize: 9, weight: .medium)
+         let pad: CGFloat = 5
+         
+         let textPath = TextUtilities.path(for: "\(number)", font: font)
+         let bounds = textPath.boundingBoxOfPath
+         
+         let mid = CGPoint(x: localLegStart.x / 2, y: localLegStart.y / 2)
+         let targetPoint: CGPoint
+
+         switch cardinalRotation {
+         case .north, .south:
+             targetPoint = CGPoint(x: mid.x + pad, y: mid.y)
+         default:
+             targetPoint = CGPoint(x: mid.x, y: mid.y + pad)
+         }
+         
+         let anchorPoint = CGPoint(x: bounds.midX, y: bounds.midY)
+         var transform = CGAffineTransform(translationX: targetPoint.x - anchorPoint.x, y: targetPoint.y - anchorPoint.y)
+         return textPath.copy(using: &transform) ?? textPath
+     }
 }

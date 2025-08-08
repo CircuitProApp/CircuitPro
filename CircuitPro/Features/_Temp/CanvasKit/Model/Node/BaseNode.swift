@@ -11,14 +11,12 @@ import Observation
 
 /// A concrete implementation of the `CanvasNode` protocol that provides the fundamental
 /// behaviors required for a scene graph, including hierarchy management and transform calculation.
-
 class BaseNode: CanvasNode {
 
     // MARK: - Stored Properties
     
     let id: UUID
     
-    // --- FIX 1: Use concrete BaseNode type and add redraw callback ---
     weak var parent: BaseNode?
     var children: [BaseNode] = []
     
@@ -28,24 +26,22 @@ class BaseNode: CanvasNode {
     
     var isVisible: Bool = true
     
-    // --- Overridable Properties ---
+    private var _cachedLocalContentBoundingBox: CGRect?
+    
+    // Overridable Properties
     
     /// Determines if the user can select this node directly.
-    /// Subclasses should override this. A `PrimitiveNode` might be selectable,
-    /// but a `PinNode` that's part of a larger symbol might not be.
     var isSelectable: Bool {
         return true
     }
     
     /// The node's position relative to its parent's origin.
-    /// Subclasses (like `PinNode`) must override this to get/set their underlying model's position.
     var position: CGPoint {
         get { .zero }
         set { /* Base implementation does nothing. */ }
     }
 
     /// The node's rotation in radians.
-    /// Subclasses (like `PinNode`) must override this to get/set their underlying model's rotation.
     var rotation: CGFloat {
         get { 0.0 }
         set { /* Base implementation does nothing. */ }
@@ -110,21 +106,17 @@ class BaseNode: CanvasNode {
 
     // MARK: - Overridable Drawing & Interaction (Default Implementations)
 
-    func makeBodyParameters() -> [DrawingParameters] {
+    func makeDrawingPrimitives() -> [DrawingPrimitive] {
         return [] // Base node has no appearance.
     }
     
     func makeHaloPath() -> CGPath? {
-        let box = self.boundingBox
-        guard !box.isNull else { return nil }
-        return CGPath(rect: box, transform: nil)
+        return nil
     }
 
     func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
         guard self.isVisible else { return nil }
 
-        // --- FIX 2: Simplified Hit-Testing Logic ---
-        // The children array is now `[BaseNode]`, so no casting is needed.
         for child in children.reversed() {
             let localPoint = point.applying(child.localTransform.inverted())
             if let hit = child.hitTest(localPoint, tolerance: tolerance) {
@@ -133,14 +125,77 @@ class BaseNode: CanvasNode {
         }
         return nil
     }
-
-    var boundingBox: CGRect {
-        // --- FIX 3: Simplified Bounding Box Logic ---
-        // The children array is now `[BaseNode]`, so no casting is needed.
-        let childBoxes = children.compactMap { child -> CGRect? in
-            guard child.isVisible else { return nil }
-            return child.boundingBox.applying(child.localTransform)
+    
+    func nodes(intersecting rect: CGRect) -> [BaseNode] {
+        var foundNodes: [BaseNode] = []
+        
+        // 1. Check if this node itself is selectable and intersects
+        if self.isSelectable {
+            // Get the node's interaction bounds in world coordinates
+            let worldBounds = self.interactionBounds.applying(self.worldTransform)
+            if !worldBounds.isNull && rect.intersects(worldBounds) {
+                foundNodes.append(self)
+            }
         }
-        return childBoxes.reduce(CGRect.null) { $0.union($1) }
+        
+        // 2. Recursively check all children
+        // This is the default container behavior.
+        for child in children where child.isVisible {
+            foundNodes.append(contentsOf: child.nodes(intersecting: rect))
+        }
+        
+        return foundNodes
+    }
+
+    /// The bounding box of the content drawn directly by this node, in its local coordinate space.
+     /// This is calculated from the node's drawing primitives and is cached for performance.
+     private var localContentBoundingBox: CGRect {
+         // Return the cached value if it exists.
+         if let cached = _cachedLocalContentBoundingBox {
+             return cached
+         }
+
+         // If no cache, calculate it from the drawing primitives.
+         let primitives = self.makeDrawingPrimitives()
+         var box = CGRect.null
+
+         for primitive in primitives {
+             switch primitive {
+             case .fill(let path, _, _):
+                 box = box.union(path.boundingBoxOfPath)
+             case .stroke(let path, _, let lineWidth, _, _, _, _):
+                 // For strokes, we must account for the line width.
+                 let strokeBox = path.boundingBoxOfPath.insetBy(dx: -lineWidth / 2, dy: -lineWidth / 2)
+                 box = box.union(strokeBox)
+             }
+         }
+         
+         // Store the result in the cache and return it.
+         _cachedLocalContentBoundingBox = box
+         return box
+     }
+
+     /// The node's total bounding box in its LOCAL coordinate space.
+     /// This is the union of its own content and all of its children's bounding boxes.
+     var boundingBox: CGRect {
+         // 1. Start with the bounding box of this node's own content.
+         var combinedBox = self.localContentBoundingBox
+
+         // 2. Iterate over all visible children.
+         for child in children where child.isVisible {
+             // Get the child's total bounding box (which is in its own local space).
+             let childBox = child.boundingBox
+             // Transform the child's box into our coordinate space.
+             let transformedChildBox = childBox.applying(child.localTransform)
+             // Union it with our combined box.
+             combinedBox = combinedBox.union(transformedChildBox)
+         }
+         
+         return combinedBox
+     }
+    
+    var interactionBounds: CGRect {
+        // The default implementation returns the full visual bounding box.
+        return self.boundingBox
     }
 }

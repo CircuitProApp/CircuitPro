@@ -48,7 +48,7 @@ class CanvasTool: Hashable {
     }
 
     /// Provides drawing parameters for a temporary preview (e.g., rubber-banding a line).
-    func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
+    func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         return []
     }
     

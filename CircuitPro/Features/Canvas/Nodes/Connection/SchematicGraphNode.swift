@@ -74,4 +74,52 @@ final class SchematicGraphNode: BaseNode {
         // and needs to be redrawn in the next render pass.
         self.onNeedsRedraw?()
     }
+    
+    override func nodes(intersecting rect: CGRect) -> [BaseNode] {
+        var foundNodes: [BaseNode] = []
+        
+        // Since the SchematicGraphNode itself isn't selectable, we bypass
+        // checking it and go straight to its children.
+        for child in children where child.isVisible {
+            // We call the base implementation on each child, allowing them to be found.
+            foundNodes.append(contentsOf: child.nodes(intersecting: rect))
+        }
+        
+        return foundNodes
+    }
+    
+    override func makeHaloPath() -> CGPath? {
+        // This method will be called by the renderer. The renderer's context provides
+        // the full set of highlighted node IDs.
+        
+        // We find which of our children are currently highlighted.
+        let highlightedChildren = self.children.filter { child in
+            // Assume you will have access to the context's highlighted IDs.
+            // For now, let's conceptualize this. The renderer will manage this state.
+            // Let's pretend we have a way to check: child.isHighlighted
+            // The actual implementation will be in the renderer logic later.
+            // Let's build the path logic for now.
+            return true // For demonstration. The real check happens in the renderer.
+        }
+        
+        // This logic will be moved to the renderer or a similar context-aware place.
+        // For now, let's just make a composite path of ALL children for demonstration.
+        
+        let compositePath = CGMutablePath()
+
+        // Iterate over ALL children to build a composite halo.
+        // In the real implementation, you'd filter this list by selected children.
+        for child in self.children {
+            guard let wireNode = child as? WireNode,
+                  let childHalo = wireNode.makeHaloPath() else {
+                continue
+            }
+            
+            // The child's halo is in its own coordinate space (world for a wire).
+            // Since the wire node's transform is identity, no extra transform is needed here.
+            compositePath.addPath(childHalo)
+        }
+        
+        return compositePath.isEmpty ? nil : compositePath
+    }
 }

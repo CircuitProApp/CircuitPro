@@ -49,20 +49,19 @@ final class RectangleTool: CanvasTool {
         }
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
+    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard let startPoint = start else { return [] }
         
         // Calculate the rectangle's frame for the rubber-band preview.
         let worldRect = CGRect(origin: startPoint, size: .zero).union(CGRect(origin: mouse, size: .zero))
         let path = CGPath(rect: worldRect, transform: nil)
 
-        // Return the drawing parameters for the preview layer.
-        return [DrawingParameters(
+        // Return a single stroke primitive for the preview layer.
+        return [.stroke(
             path: path,
+            color: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
             lineWidth: 1.0,
-            fillColor: nil,
-            strokeColor: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
-            lineDashPattern: [4, 4]
+            lineDash: [4, 4]
         )]
     }
 

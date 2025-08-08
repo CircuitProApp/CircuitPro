@@ -1,109 +1,151 @@
 import AppKit
 
+// MARK: - Elements Render Layer
+
 class ElementsRenderLayer: RenderLayer {
 
     private let rootLayer = CALayer()
-    private var layerPool: [CAShapeLayer] = []
+    private var shapeLayerPool: [CAShapeLayer] = []
 
     func install(on hostLayer: CALayer) {
+        rootLayer.contentsScale = hostLayer.contentsScale
         hostLayer.addSublayer(rootLayer)
     }
 
-    func update(using context: RenderContext) {
-        var allParams: [DrawingParameters] = []
-        collectParameters(from: context.sceneRoot, highlightedIDs: context.highlightedNodeIDs, finalParams: &allParams)
+    // MARK: - Update Cycle
 
+    func update(using context: RenderContext) {
+        // --- 1. Collect all HALO primitives with special grouping logic ---
+        var haloPrimitives: [DrawingPrimitive] = []
+        collectHaloPrimitives(from: context.sceneRoot, highlightedIDs: context.highlightedNodeIDs, finalPrimitives: &haloPrimitives)
+
+        // --- 2. Collect all BODY primitives ---
+        var bodyPrimitives: [DrawingPrimitive] = []
+        collectBodyPrimitives(from: context.sceneRoot, finalPrimitives: &bodyPrimitives)
+
+        // Combine the lists. Halos are drawn first, so they appear behind the bodies.
+        let allPrimitives = haloPrimitives + bodyPrimitives
+
+        // --- 3. Render all primitives using the layer pool ---
         var currentLayerIndex = 0
-        for params in allParams {
-            let layer = layer(at: currentLayerIndex)
-            configure(layer: layer, from: params)
+        for primitive in allPrimitives {
+            let shapeLayer = layer(at: currentLayerIndex)
+            switch primitive {
+            case let .fill(path, color, rule):
+                configure(layer: shapeLayer, forFill: path, color: color, rule: rule)
+
+            case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash):
+                configure(layer: shapeLayer, forStroke: path, color: color, lineWidth: lineWidth, lineCap: lineCap, lineJoin: lineJoin, miterLimit: miterLimit, lineDash: lineDash)
+            }
             currentLayerIndex += 1
         }
         
-        if currentLayerIndex < layerPool.count {
-            for i in currentLayerIndex..<layerPool.count {
-                layerPool[i].isHidden = true
+        // Hide any unused layers remaining in the pool.
+        if currentLayerIndex < shapeLayerPool.count {
+            for i in currentLayerIndex..<shapeLayerPool.count {
+                shapeLayerPool[i].isHidden = true
             }
         }
     }
+
+    // MARK: - Recursive Data Collection
+
+    /// Recursively collects only the main "body" drawing primitives from the scene graph.
+    private func collectBodyPrimitives(from node: BaseNode, finalPrimitives: inout [DrawingPrimitive]) {
+        guard node.isVisible else { return }
+        
+        let localPrimitives = node.makeDrawingPrimitives()
+        if !localPrimitives.isEmpty {
+            var worldTransform = node.worldTransform
+            for primitive in localPrimitives {
+                finalPrimitives.append(primitive.applying(transform: &worldTransform))
+            }
+        }
+        
+        // Recurse to children.
+        for child in node.children {
+            collectBodyPrimitives(from: child, finalPrimitives: &finalPrimitives)
+        }
+    }
+
+    /// Recursively collects halo primitives, with special grouping logic for certain container nodes.
+    private func collectHaloPrimitives(from node: BaseNode, highlightedIDs: Set<UUID>, finalPrimitives: inout [DrawingPrimitive]) {
+        guard node.isVisible else { return }
+
+        // --- SPECIAL CASE: UNIFIED HALO FOR SCHEMATIC GRAPH NODE ---
+        if let graphNode = node as? SchematicGraphNode {
+            let selectedChildren = graphNode.children.filter { highlightedIDs.contains($0.id) }
+            
+            // If more than one child is selected, create a single unified halo.
+            if !selectedChildren.isEmpty {
+                let compositePath = CGMutablePath()
+                for child in selectedChildren {
+                    // WireNode's halo path is already in world coordinates, so no transform is needed.
+                    if let childHaloPath = child.makeHaloPath() {
+                        compositePath.addPath(childHaloPath)
+                    }
+                }
+                
+                if !compositePath.isEmpty {
+                    finalPrimitives.append(haloPrimitive(for: compositePath))
+                }
+                // By returning here, we prevent individual halos from being drawn for these children.
+                return
+            }
+        }
+        
+        // --- DEFAULT HALO LOGIC FOR ALL OTHER NODES ---
+        // This runs if the node is not a handled group.
+        let isHighlighted = highlightedIDs.contains(node.id)
+        if isHighlighted {
+            // Prevent drawing a halo if the parent is also drawing one (e.g. Pin inside a selected Symbol)
+            let isParentHighlighted = node.parent.flatMap { highlightedIDs.contains($0.id) } ?? false
+            
+            if !isParentHighlighted, let haloPath = node.makeHaloPath() {
+                var worldTransform = node.worldTransform
+                if let worldPath = haloPath.copy(using: &worldTransform) {
+                    finalPrimitives.append(haloPrimitive(for: worldPath))
+                }
+            }
+        }
+        
+        // Recurse to children.
+        for child in node.children {
+            collectHaloPrimitives(from: child, highlightedIDs: highlightedIDs, finalPrimitives: &finalPrimitives)
+        }
+    }
+
+    // MARK: - Hit Testing
 
     func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
         let tolerance = 5.0 / max(context.magnification, .ulpOfOne)
         return context.sceneRoot.hitTest(point, tolerance: tolerance)
     }
+    
+    // MARK: - Layer Configuration & Helpers
 
-    private func collectParameters(from node: any CanvasNode, highlightedIDs: Set<UUID>, finalParams: inout [DrawingParameters]) {
-        guard node.isVisible else { return }
-
-        var localParams: [DrawingParameters] = []
-        
-        // Generate a halo if this node's ID is in the set to be highlighted...
-        let shouldHighlight: Bool
-        if let symbolNode = node as? SymbolNode {
-            // For SymbolNodes, be explicit: only highlight if the specific INSTANCE ID is in the set.
-            // This prevents highlighting all instances on the canvas if a broader, symbol-level
-            // ID were present in the highlight set.
-            shouldHighlight = highlightedIDs.contains(symbolNode.instance.id)
-        } else {
-            // For all other node types, use the default ID check.
-            shouldHighlight = highlightedIDs.contains(node.id)
-        }
-
-        if shouldHighlight {
-            
-            // ...BUT: Do not generate a halo if our parent is ALSO highlighted.
-            // This lets the parent draw a single composite halo for all its children.
-            let isParentHighlighted = node.parent.flatMap { parentNode in
-                highlightedIDs.contains(parentNode.id)
-            } ?? false
-
-            if !isParentHighlighted {
-                // This node is the "root" of a highlight group, so it is responsible for drawing.
-                if let haloParams = node.makeHaloParameters(selectedIDs: highlightedIDs) {
-                    localParams.append(haloParams)
-                }
-            }
-        }
-        
-        localParams.append(contentsOf: node.makeBodyParameters())
-
-        if !localParams.isEmpty {
-            var worldTransform = node.worldTransform
-            for var param in localParams {
-                if let worldPath = param.path.copy(using: &worldTransform) {
-                    param.path = worldPath
-                    finalParams.append(param)
-                }
-            }
-        }
-
-        for child in node.children {
-            collectParameters(from: child, highlightedIDs: highlightedIDs, finalParams: &finalParams)
-        }
+    private func haloPrimitive(for path: CGPath) -> DrawingPrimitive {
+        return .stroke(
+            path: path,
+            color: NSColor.systemBlue.withAlphaComponent(0.3).cgColor,
+            lineWidth: 5.0, // A slightly thicker halo for groups
+            lineCap: .round,
+            lineJoin: .round
+        )
     }
     
-    // MARK: - Layer Pooling Helpers (Unchanged)
+    private func configure(layer: CAShapeLayer, forFill path: CGPath, color: CGColor, rule: CAShapeLayerFillRule) {
+        layer.path = path; layer.fillColor = color; layer.fillRule = rule; layer.strokeColor = nil; layer.lineWidth = 0
+    }
+
+    private func configure(layer: CAShapeLayer, forStroke path: CGPath, color: CGColor, lineWidth: CGFloat, lineCap: CAShapeLayerLineCap, lineJoin: CAShapeLayerLineJoin, miterLimit: CGFloat, lineDash: [NSNumber]?) {
+        layer.path = path; layer.fillColor = nil; layer.strokeColor = color; layer.lineWidth = lineWidth; layer.lineCap = lineCap; layer.lineJoin = lineJoin; layer.miterLimit = miterLimit; layer.lineDashPattern = lineDash
+    }
     
     private func layer(at index: Int) -> CAShapeLayer {
-        if index < layerPool.count {
-            let layer = layerPool[index]
-            layer.isHidden = false
-            return layer
+        if index < shapeLayerPool.count {
+            shapeLayerPool[index].isHidden = false; return shapeLayerPool[index]
         }
-        let newLayer = CAShapeLayer()
-        layerPool.append(newLayer)
-        rootLayer.addSublayer(newLayer)
-        return newLayer
-    }
-    
-    private func configure(layer: CAShapeLayer, from parameters: DrawingParameters) {
-        layer.path = parameters.path
-        layer.fillColor = parameters.fillColor
-        layer.strokeColor = parameters.strokeColor
-        layer.lineWidth = parameters.lineWidth
-        layer.lineCap = parameters.lineCap
-        layer.lineJoin = parameters.lineJoin
-        layer.lineDashPattern = parameters.lineDashPattern
-        layer.fillRule = parameters.fillRule
+        let newLayer = CAShapeLayer(); shapeLayerPool.append(newLayer); rootLayer.addSublayer(newLayer); return newLayer
     }
 }

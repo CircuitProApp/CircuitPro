@@ -110,4 +110,26 @@ final class SymbolNode: BaseNode {
 
         return compositePath.isEmpty ? nil : compositePath
     }
+    
+    override var interactionBounds: CGRect {
+        var combinedBox = CGRect.null
+
+        // Iterate over children, but only include "core" geometry.
+        for child in children {
+            // IGNORE AnchoredTextNode for interaction bounds.
+            if child is AnchoredTextNode {
+                continue
+            }
+            
+            // For all other children (Primitives, Pins), include their bounds.
+            guard child.isVisible else { continue }
+            
+            // Use the child's interactionBounds, not its boundingBox, for consistency.
+            let childBox = child.interactionBounds
+            let transformedChildBox = childBox.applying(child.localTransform)
+            combinedBox = combinedBox.union(transformedChildBox)
+        }
+        
+        return combinedBox
+    }
 }

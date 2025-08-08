@@ -19,40 +19,21 @@ protocol GraphicPrimitive: Transformable, Drawable, Bounded, HandleEditable, Ide
 
 // MARK: - Drawable Conformance
 extension GraphicPrimitive {
-    
-    func makeBodyParameters() -> [DrawingParameters] {
-        let params = DrawingParameters(
-            path: makePath(),
-            lineWidth: filled ? 0.0 : strokeWidth, // No stroke if filled
-            fillColor: filled ? color.cgColor : nil,
-            strokeColor: filled ? nil : color.cgColor,
-            lineCap: .round,
-            lineJoin: .miter
-        )
-        return [params]
+    func makeDrawingPrimitives() -> [DrawingPrimitive] {
+        if filled {
+            return [.fill(path: makePath(), color: color.cgColor)]
+        } else {
+            return [.stroke(path: makePath(), color: color.cgColor, lineWidth: strokeWidth)]
+        }
     }
 
-    /// Provides the path for the default halo implementation in the `Drawable` protocol.
+    /// The halo path logic remains identical.
     func makeHaloPath() -> CGPath? {
         return makePath()
     }
-}
-
-extension GraphicPrimitive {
-    func makeHaloParameters(selectedIDs: Set<UUID>) -> DrawingParameters? {
-        guard selectedIDs.contains(self.id) else { return nil }
-
-        guard let path = makeHaloPath(), !path.isEmpty else { return nil }
-
-        let haloColor = self.color.nsColor.withAlphaComponent(0.3).cgColor
-
-        return DrawingParameters(
-            path: path,
-            lineWidth: 4.0,
-            fillColor: nil,
-            strokeColor: haloColor
-        )
-    }
+    
+    // The old makeBodyParameters() and makeHaloParameters() are no longer needed.
+    // The Renderer will handle halo styling.
 }
 
 // MARK: - Other Shared Implementations

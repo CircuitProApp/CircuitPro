@@ -9,35 +9,37 @@ final class PinTool: CanvasTool {
 
     // MARK: - Overridden Properties
 
-    override var symbolName: String { CircuitProSymbols.Symbol.pin }
+    override var symbolName: String { CircuitProSymbols.Symbol.pin } // Assuming you have a symbol asset named this.
     override var label: String { "Pin" }
 
     // MARK: - Overridden Methods
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
-        // This part remains correct.
+        // This method is already correct and does not need to change.
         let number = 1 // Placeholder
         let pin = Pin(name: "", number: number, position: location, cardinalRotation: rotation, type: .unknown, lengthType: .long)
         let node = PinNode(pin: pin)
         return .newNode(node)
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
-        // 1. Create a temporary pin. Its position can be .zero, as it's not used in local geometry calculations.
+    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
+        // 1. Create a temporary pin model to represent the preview.
+        // Its position can be .zero since we are describing it in a local space.
         let previewPin = Pin(name: "", number: 1, position: .zero, cardinalRotation: rotation, type: .unknown, lengthType: .long)
         
-        // 2. Get the LOCAL drawing parameters.
-        let localParameters = previewPin.makeAllBodyParameters()
+        // 2. Get the model's drawing commands in its local coordinate space.
+        let localPrimitives = previewPin.makeDrawingPrimitives()
         
-        // 3. Create a transform to move the local geometry to the mouse's location.
+        // 3. Create a transform to move the local shape to the mouse cursor's world position.
         var worldTransform = CGAffineTransform(translationX: mouse.x, y: mouse.y)
         
-        // 4. Map over the local parameters, applying the world transform to each path.
-        return localParameters.map { params in
-            var worldParams = params
-            worldParams.path = params.path.copy(using: &worldTransform) ?? params.path
-            return worldParams
+        // 4. Map over the local primitives, applying the transform to each one to get world-space primitives.
+        // This reuses the `applying(transform:)` helper, which correctly handles paths and text.
+        let worldPrimitives = localPrimitives.map { primitive in
+            primitive.applying(transform: &worldTransform)
         }
+        
+        return worldPrimitives
     }
     
     override func handleEscape() -> Bool {

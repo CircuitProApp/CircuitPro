@@ -37,11 +37,3 @@ protocol CanvasNode: AnyObject, CanvasElement {
     func convert(_ point: CGPoint, from sourceNode: BaseNode?) -> CGPoint
     func convert(_ point: CGPoint, to destinationNode: BaseNode?) -> CGPoint
 }
-
-// MARK: - Global Equatable Conformance
-
-/// Provides the required `==` implementation to compare two `any CanvasNode` types.
-/// Two nodes are considered equal if they have the same unique ID.
-func == (lhs: any CanvasNode, rhs: any CanvasNode) -> Bool {
-    return lhs.id == rhs.id
-}

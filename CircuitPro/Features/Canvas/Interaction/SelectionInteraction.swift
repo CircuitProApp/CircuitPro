@@ -3,6 +3,8 @@ import AppKit
 /// Handles node selection logic when the cursor is active.
 struct SelectionInteraction: CanvasInteraction {
     
+    var wantsRawInput: Bool { true }
+    
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         // This interaction only runs when the selection tool is active.
         guard controller.selectedTool is CursorTool else {

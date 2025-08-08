@@ -43,7 +43,7 @@ final class LineTool: CanvasTool {
         }
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
+    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard let startPoint = start else { return [] }
 
         // Create the rubber-band path for the preview.
@@ -51,12 +51,12 @@ final class LineTool: CanvasTool {
         path.move(to: startPoint)
         path.addLine(to: mouse)
 
-        return [DrawingParameters(
+        // Return a single stroke primitive with the same styling.
+        return [.stroke(
             path: path,
+            color: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
             lineWidth: 1.0,
-            fillColor: nil,
-            strokeColor: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
-            lineDashPattern: [4, 4]
+            lineDash: [4, 4]
         )]
     }
 

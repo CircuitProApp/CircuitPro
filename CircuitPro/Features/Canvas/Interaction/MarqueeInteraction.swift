@@ -40,22 +40,14 @@ final class MarqueeInteraction: CanvasInteraction {
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard case .dragging(let origin, _, _) = state else { return }
 
-        // 1. Calculate the marquee rectangle.
         let marqueeRect = CGRect(origin: origin, size: .zero).union(CGRect(origin: point, size: .zero))
         
-        // 2. Update the environment to draw the marquee.
         controller.updateEnvironment {
             $0.marqueeRect = marqueeRect
         }
 
-        // 3. Find intersecting nodes.
-        let intersectingNodes = context.sceneRoot.children.filter { node in
-            guard node.isSelectable, node.isVisible else { return false }
-            let worldBounds = node.boundingBox.applying(node.worldTransform)
-            return marqueeRect.intersects(worldBounds)
-        }
+        let intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
         
-        // 4. Update the temporary interaction highlight state.
         let highlightedIDs = Set(intersectingNodes.map { $0.id })
         controller.setInteractionHighlight(nodeIDs: highlightedIDs)
     }

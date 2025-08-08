@@ -57,11 +57,25 @@ final class ConnectionTool: CanvasTool {
         }
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
+    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard case .drawing(let startPoint, let direction) = state else { return [] }
+        
+        // Calculate the corner point for the two-segment orthogonal line.
         let corner = (direction == .horizontal) ? CGPoint(x: mouse.x, y: startPoint.y) : CGPoint(x: startPoint.x, y: mouse.y)
-        let path = CGMutablePath(); path.move(to: startPoint); path.addLine(to: corner); path.addLine(to: mouse)
-        return [DrawingParameters(path: path, strokeColor: NSColor.systemBlue.cgColor, lineDashPattern: [4, 2])]
+        
+        // Create the path for the preview.
+        let path = CGMutablePath()
+        path.move(to: startPoint)
+        path.addLine(to: corner)
+        path.addLine(to: mouse)
+        
+        // Return a single stroke primitive with the specified styling.
+        return [.stroke(
+            path: path,
+            color: NSColor.systemBlue.cgColor,
+            lineWidth: 1.0, // Default line width
+            lineDash: [4, 2]
+        )]
     }
     
     // MARK: - Keyboard Actions

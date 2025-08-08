@@ -48,35 +48,34 @@ final class PadTool: CanvasTool {
         return .newNode(node)
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
-        // 1. Create a temporary Pad and PadNode to generate the local-space geometry.
+    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
+        // 1. Create a temporary Pad model to generate its local-space geometry.
+        // Its position is .zero because we only care about its shape relative to its own center.
         let number = 1 // Placeholder
         let previewPad = Pad(
             number: number,
-            position: mouse, // Tentative position
-            cardinalRotation: rotation,
-            shape: shape,
-            type: type,
+            position: .zero,
+            shape: shape,               // Assuming `shape` is a state property of the tool
+            type: type,                 // Assuming `type` is a state property of the tool
             drillDiameter: drillDiameter
         )
-        let previewNode = PadNode(pad: previewPad)
-        let localParameters = previewNode.makeBodyParameters()
 
-        // 2. Create a translation transform to move the local geometry to the mouse cursor's position.
+        // 2. Get the pad's composite path in its local coordinate space.
+        let localPath = previewPad.calculateCompositePath()
+        guard !localPath.isEmpty else { return [] }
+
+        // 3. Create a transform to move the local path to the mouse cursor's world position.
         var transform = CGAffineTransform(translationX: mouse.x, y: mouse.y)
-
-        // 3. Map over the local drawing parameters, applying the transform to each path.
-        let worldParameters = localParameters.map { params -> DrawingParameters in
-            var worldParams = params
-            // `copy(using:)` safely creates a new, transformed CGPath.
-            worldParams.path = params.path.copy(using: &transform) ?? params.path
-            return worldParams
+        guard let worldPath = localPath.copy(using: &transform) else {
+            return []
         }
 
-        // 4. Return the parameters with paths correctly positioned in world space for rendering the preview.
-        return worldParameters
+        // 4. Define the preview's appearance.
+        let copperColor = NSColor.systemRed.withAlphaComponent(0.8).cgColor
+
+        // 5. Return a single .fill primitive using the final, world-space path.
+        return [.fill(path: worldPath, color: copperColor)]
     }
-    
     override func handleEscape() -> Bool {
         // Return false to indicate the tool should remain active.
         return false

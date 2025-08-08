@@ -42,7 +42,7 @@ class TextNode: BaseNode {
 
     // MARK: - Drawable Conformance
 
-    override func makeBodyParameters() -> [DrawingParameters] {
+    func makeBodyParameters() -> [DrawingParameters] {
         // The path is created in local space. The node's transform will be applied by the renderer.
         let localPath = textModel.makeTextPath()
         return [

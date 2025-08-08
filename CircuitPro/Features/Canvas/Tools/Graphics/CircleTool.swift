@@ -50,7 +50,7 @@ final class CircleTool: CanvasTool {
         }
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
+    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard let centerPoint = center else { return [] }
         
         // Create the preview path for the rubber-band effect.
@@ -58,12 +58,12 @@ final class CircleTool: CanvasTool {
         let rect = CGRect(x: centerPoint.x - radius, y: centerPoint.y - radius, width: radius * 2, height: radius * 2)
         let path = CGPath(ellipseIn: rect, transform: nil)
 
-        return [DrawingParameters(
+        // Return a single stroke primitive with the same visual styling.
+        return [.stroke(
             path: path,
+            color: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
             lineWidth: 1.0,
-            fillColor: nil,
-            strokeColor: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
-            lineDashPattern: [4, 4]
+            lineDash: [4, 4]
         )]
     }
 

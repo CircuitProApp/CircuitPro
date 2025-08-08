@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+
 @Observable
 final class VertexNode: BaseNode {
     let vertexID: ConnectionVertex.ID
@@ -14,9 +15,8 @@ final class VertexNode: BaseNode {
         set { /* Model is mutated by graph logic directly */ }
     }
 
-    // --- NEW: Add a computed property for the vertex type ---
     var type: VertexType {
-        guard let adjacency = graph.adjacency[vertexID] else { return .endpoint } // Default for safety
+        guard let adjacency = graph.adjacency[vertexID] else { return .endpoint }
         switch adjacency.count {
         case 0, 1: return .endpoint
         case 2: return .corner
@@ -30,24 +30,24 @@ final class VertexNode: BaseNode {
         super.init(id: vertexID)
     }
 
-    // --- NEW: Implement hitTest to return enriched information ---
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        let size = 4.0 + tolerance // A small touch target around the vertex
+        let size = 4.0 + tolerance
         let bounds = CGRect(x: -size / 2, y: -size / 2, width: size, height: size)
         
         guard bounds.contains(point) else { return nil }
-
-        // When hit, package its specific type into the partIdentifier.
+        
         return CanvasHitTarget(node: self, partIdentifier: self.type, position: self.position)
     }
     
-    override func makeBodyParameters() -> [DrawingParameters] {
-        // We can now use the computed property here as well.
+    // UPDATED: This method now returns DrawingPrimitive.
+    override func makeDrawingPrimitives() -> [DrawingPrimitive] {
         guard self.type == .junction || isInDebugMode else { return [] }
         
+        // The path is defined in local space, centered on the node's position.
         let path = CGPath(ellipseIn: CGRect(x: -2, y: -2, width: 4, height: 4), transform: nil)
         let color = isInDebugMode ? NSColor.systemOrange.cgColor : NSColor.controlAccentColor.cgColor
 
-        return [DrawingParameters(path: path, fillColor: color)]
+        // Return a specific .fill command.
+        return [.fill(path: path, color: color)]
     }
 }
