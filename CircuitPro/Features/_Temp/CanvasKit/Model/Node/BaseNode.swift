@@ -32,7 +32,7 @@ class BaseNode: CanvasNode {
     
     /// Determines if the user can select this node directly.
     var isSelectable: Bool {
-        return true
+        return parent != nil
     }
     
     /// The node's position relative to its parent's origin.
