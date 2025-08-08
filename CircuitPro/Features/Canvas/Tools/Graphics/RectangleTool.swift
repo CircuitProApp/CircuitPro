@@ -18,37 +18,33 @@ final class RectangleTool: CanvasTool {
     
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         if let startPoint = start {
-            // Second tap: Finalize the rectangle's dimensions.
             let rect = CGRect(origin: startPoint, size: .zero).union(CGRect(origin: location, size: .zero))
             
-            // 1. Create the data model for the primitive, preserving the original signature.
+            // --- MODIFIED ---
+            // Create the primitive, assigning the active layer ID from the context.
+            // If `activeLayerId` is nil (e.g., in a schematic view), the primitive
+            // will correctly be created as an "unlayered" element.
             let primitive = RectanglePrimitive(
                 id: UUID(),
                 size: rect.size,
                 cornerRadius: 0,
-                position: CGPoint(x: rect.midX, y: rect.midY), // Position is the center
+                position: CGPoint(x: rect.midX, y: rect.midY),
                 rotation: 0,
                 strokeWidth: 1,
                 filled: false,
-                color: SDColor(color: .blue) // Using a default color
+                layerId: context.activeLayerId // Assign the active layer!
             )
             
-            // 2. Wrap the primitive data in a scene graph node.
             let node = PrimitiveNode(primitive: .rectangle(primitive))
-
-            // 3. Reset the tool's internal state.
             self.start = nil
-            
-            // 4. Return the new node to be added to the scene.
             return .newNode(node)
             
         } else {
-            // First tap: Record the starting point.
             self.start = location
             return .noResult
         }
     }
-
+    
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard let startPoint = start else { return [] }
         
@@ -56,10 +52,12 @@ final class RectangleTool: CanvasTool {
         let worldRect = CGRect(origin: startPoint, size: .zero).union(CGRect(origin: mouse, size: .zero))
         let path = CGPath(rect: worldRect, transform: nil)
 
+        let previewColor = context.layers.first { $0.id == context.activeLayerId }?.color ?? NSColor.systemBlue.withAlphaComponent(0.8).cgColor
+
         // Return a single stroke primitive for the preview layer.
         return [.stroke(
             path: path,
-            color: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
+            color: previewColor,
             lineWidth: 1.0,
             lineDash: [4, 4]
         )]

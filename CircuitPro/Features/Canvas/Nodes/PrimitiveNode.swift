@@ -1,27 +1,22 @@
-//
-//  PrimitiveNode.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/4/25.
-//
+// PrimitiveNode.swift
 
 import CoreGraphics
 import Observation
 import SwiftUI
+
 /// A scene graph node that represents a single, editable graphic primitive on the canvas.
-///
 /// This class acts as a wrapper around an `AnyPrimitive` struct, giving it an identity
-/// and a place within the scene graph hierarchy. It delegates drawing, hit-testing,
-/// and bounding box calculations to its underlying primitive model.
+/// and a place within the scene graph hierarchy.
 @Observable
 class PrimitiveNode: BaseNode, Layerable {
     
-    // The underlying data model for this node.
     var primitive: AnyPrimitive {
         didSet {
             onNeedsRedraw?()
         }
     }
+    
+    // MARK: - Protocol Conformances
     
     override var position: CGPoint {
         get { primitive.position }
@@ -39,33 +34,34 @@ class PrimitiveNode: BaseNode, Layerable {
      }
     
     override var isSelectable: Bool {
-        // A primitive is not selectable if its parent is a SymbolNode.
         return !(parent is SymbolNode)
     }
     
+    // MARK: - Init
+    
     init(primitive: AnyPrimitive) {
         self.primitive = primitive
-        
-        // We pass the primitive's ID to the superclass initializer.
-        // This guarantees the PrimitiveNode and its underlying primitive
-        // share the exact same ID.
         super.init(id: primitive.id)
     }
     
-    // MARK: - Protocol Overrides
+    // MARK: - Drawing & Interaction Overrides
     
+    /// This default `Drawable` implementation is now intentionally unsafe for `PrimitiveNode`.
+    /// The renderer must call the primitive's specialized `makeDrawingPrimitives(with:)` method
+    /// after resolving the node's color.
     override func makeDrawingPrimitives() -> [DrawingPrimitive] {
-        return primitive.makeDrawingPrimitives()
+        fatalError("`PrimitiveNode` cannot be drawn directly. The renderer must resolve its color and use the primitive's 'makeDrawingPrimitives(with:)' method.")
     }
     
+    /// The node's halo path is delegated to the primitive.
     override func makeHaloPath() -> CGPath? {
         return primitive.makeHaloPath()
     }
     
+    /// The node's bounding box is delegated to the primitive.
     override var boundingBox: CGRect {
         return primitive.boundingBox
     }
-    
     
     var displayName: String {
         primitive.displayName
@@ -75,30 +71,20 @@ class PrimitiveNode: BaseNode, Layerable {
         primitive.symbol
     }
     
-    // --- THIS IS THE UPDATED HIT-TEST METHOD ---
+    /// The node's hit-test logic is delegated to the primitive.
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        // The 'point' is already in this node's local coordinate space.
-        
-        // 1. Delegate the geometry check to the underlying primitive.
-        //    We expect an `AnyHashable?` back, not a full CanvasHitTarget.
         guard let partId = primitive.hitTest(point, tolerance: tolerance) else {
-            // The primitive's geometry wasn't hit.
             return nil
         }
         
-        // 2. The primitive was hit. This node now builds the generic CanvasHitTarget.
         return CanvasHitTarget(
-            // The node that was hit is this instance of PrimitiveNode.
             node: self,
-            // The specific part that was hit is whatever the primitive returned.
             partIdentifier: partId,
-            // Convert the local hit point to world coordinates for the final result.
             position: point.applying(self.worldTransform)
         )
     }
 }
 
-// MARK: - Handle Editing Conformance
 extension PrimitiveNode: HandleEditable {
     
     func handles() -> [Handle] {

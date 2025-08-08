@@ -1,179 +1,181 @@
+// Features/Canvas/RenderLayers/ElementsRenderLayer.swift
+
 import AppKit
 
-// MARK: - Elements Render Layer
+/// Renders all canvas nodes and their selection halos, organizing them into a hierarchy
+/// of CALayers that mirrors the `CanvasLayer` data model from the context.
+final class ElementsRenderLayer: RenderLayer {
 
-class ElementsRenderLayer: RenderLayer {
-
-    private let rootLayer = CALayer()
-    private var shapeLayerPool: [CAShapeLayer] = []
+    private var backingLayers: [UUID: CALayer] = [:]
+    private var defaultLayer: CALayer?
+    private weak var hostLayer: CALayer?
 
     func install(on hostLayer: CALayer) {
-        rootLayer.contentsScale = hostLayer.contentsScale
-        hostLayer.addSublayer(rootLayer)
+        self.hostLayer = hostLayer
     }
-
-    // MARK: - Update Cycle
 
     func update(using context: RenderContext) {
-        var allPrimitives: [DrawingPrimitive] = []
-        // We use a single, smarter recursive function to collect everything.
-        collectPrimitives(from: context.sceneRoot, highlightedIDs: context.highlightedNodeIDs, finalPrimitives: &allPrimitives)
+        guard let hostLayer = self.hostLayer else { return }
 
-        // The rendering loop itself remains the same.
-        var currentLayerIndex = 0
-        for primitive in allPrimitives {
-            let shapeLayer = layer(at: currentLayerIndex)
-            switch primitive {
-            case let .fill(path, color, rule):
-                configure(layer: shapeLayer, forFill: path, color: color, rule: rule)
-            case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash):
-                configure(layer: shapeLayer, forStroke: path, color: color, lineWidth: lineWidth, lineCap: lineCap, lineJoin: lineJoin, miterLimit: miterLimit, lineDash: lineDash)
-            }
-            currentLayerIndex += 1
-        }
+        // 1. Setup the CALayer hierarchy to match the data model.
+        reconcileLayers(context: context, hostLayer: hostLayer)
+
+        // 2. Clear all layers completely before redrawing.
+        var allLayersToClear: [CALayer] = Array(backingLayers.values)
+        if let defaultLayer = self.defaultLayer { allLayersToClear.append(defaultLayer) }
+        allLayersToClear.forEach { $0.sublayers?.forEach { $0.removeFromSuperlayer() } }
+
+        // 3. Get all nodes in the scene.
+        let allNodes = context.sceneRoot.children.flatMap { flatten(node: $0) }
         
-        if currentLayerIndex < shapeLayerPool.count {
-            for i in currentLayerIndex..<shapeLayerPool.count {
-                shapeLayerPool[i].isHidden = true
+        // --- 4. GATHER ALL PRIMITIVES FIRST ---
+        
+        var bodyPrimitivesByLayer = gatherBodyPrimitives(from: allNodes, in: context)
+        var haloPrimitivesByLayer = gatherHaloPrimitives(from: context, allNodes: allNodes)
+        
+        // --- 5. RENDER EVERYTHING ---
+        
+        // Merge the keys from both dictionaries to ensure we visit every layer that has content.
+        let allLayerIDs = Set(bodyPrimitivesByLayer.keys).union(haloPrimitivesByLayer.keys)
+
+        for layerID in allLayerIDs {
+            let targetLayer: CALayer?
+            if let layerID = layerID, let backingLayer = backingLayers[layerID] {
+                targetLayer = backingLayer
+            } else {
+                targetLayer = getOrCreateDefaultLayer(on: hostLayer)
             }
+            
+            guard let renderLayer = targetLayer, !renderLayer.isHidden else { continue }
+            
+            // --- FIX: RENDER HALOS FIRST ---
+            // By rendering halos before bodies, the bodies will be drawn on top,
+            // correctly placing the halo "behind" the element.
+            if let halos = haloPrimitivesByLayer[layerID] {
+                render(primitives: halos, onto: renderLayer)
+            }
+            if let bodies = bodyPrimitivesByLayer[layerID] {
+                render(primitives: bodies, onto: renderLayer)
+            }
+            // --- END FIX ---
         }
     }
+    
+    // MARK: - Primitive Gathering
+    
+    /// Collects and transforms all "body" drawing primitives from the scene, grouped by layer.
+    private func gatherBodyPrimitives(from nodes: [BaseNode], in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+        var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
-    // MARK: - Recursive Data Collection (Corrected Logic)
-
-    private func collectPrimitives(from node: BaseNode, highlightedIDs: Set<UUID>, finalPrimitives: inout [DrawingPrimitive]) {
-        guard node.isVisible else { return }
-
-        // --- 1. HALO GENERATION (with special grouping logic) ---
-        var didHandleHaloForChildren = false
-
-        // SPECIAL CASE: Unified halo for SchematicGraphNode
-        if let graphNode = node as? SchematicGraphNode {
-            let selectedChildren = graphNode.children.filter { highlightedIDs.contains($0.id) }
-            if !selectedChildren.isEmpty {
-                let compositePath = CGMutablePath()
-                for child in selectedChildren {
-                    if let childHaloPath = child.makeHaloPath() {
-                        compositePath.addPath(childHaloPath)
-                    }
-                }
-                if !compositePath.isEmpty {
-                    finalPrimitives.append(haloPrimitive(for: compositePath))
-                }
-                // Mark that we've handled the halos for this group.
-                didHandleHaloForChildren = true
-            }
-        }
-        
-        // DEFAULT CASE: For any other node that is itself highlighted
-        if !didHandleHaloForChildren && highlightedIDs.contains(node.id) {
-            let isParentGroupHandled = (node.parent as? SchematicGraphNode) != nil && didHandleHaloForChildren
+        for node in nodes where node.isVisible {
+            var primitives: [DrawingPrimitive] = []
             
-            if !isParentGroupHandled, let haloPath = node.makeHaloPath() {
-                var worldTransform = node.worldTransform
-                if let worldPath = haloPath.copy(using: &worldTransform) {
-                    finalPrimitives.append(haloPrimitive(for: worldPath))
-                }
+            if let primitiveNode = node as? PrimitiveNode {
+                let resolvedColor = self.resolveColor(for: primitiveNode, in: context)
+                primitives = primitiveNode.primitive.makeDrawingPrimitives(with: resolvedColor)
+            } else {
+                primitives = node.makeDrawingPrimitives()
             }
-        }
-
-        // --- 2. BODY GENERATION ---
-        // This is always done for every node.
-        let localPrimitives = node.makeDrawingPrimitives()
-        if !localPrimitives.isEmpty {
-            var worldTransform = node.worldTransform
-            for primitive in localPrimitives {
-                finalPrimitives.append(primitive.applying(transform: &worldTransform))
-            }
-        }
-
-        // --- 3. RECURSION ---
-        // Always recurse into children. The logic within this function will handle
-        // each child appropriately on the next call.
-        for child in node.children {
-            collectPrimitives(from: child, highlightedIDs: highlightedIDs, finalPrimitives: &finalPrimitives)
-        }
-    }
-
-
-    /// Recursively collects halo primitives, with special grouping logic for certain container nodes.
-    private func collectHaloPrimitives(from node: BaseNode, highlightedIDs: Set<UUID>, finalPrimitives: inout [DrawingPrimitive]) {
-        guard node.isVisible else { return }
-
-        // --- SPECIAL CASE: UNIFIED HALO FOR SCHEMATIC GRAPH NODE ---
-        if let graphNode = node as? SchematicGraphNode {
-            let selectedChildren = graphNode.children.filter { highlightedIDs.contains($0.id) }
             
-            // If more than one child is selected, create a single unified halo.
-            if !selectedChildren.isEmpty {
-                let compositePath = CGMutablePath()
-                for child in selectedChildren {
-                    // WireNode's halo path is already in world coordinates, so no transform is needed.
-                    if let childHaloPath = child.makeHaloPath() {
-                        compositePath.addPath(childHaloPath)
-                    }
-                }
+            if !primitives.isEmpty {
+                var transform = node.worldTransform
+                let worldPrimitives = primitives.map { $0.applying(transform: &transform) }
                 
-                if !compositePath.isEmpty {
-                    finalPrimitives.append(haloPrimitive(for: compositePath))
-                }
-                // By returning here, we prevent individual halos from being drawn for these children.
-                return
+                let layerId = (node as? Layerable)?.layerId
+                primitivesByLayer[layerId, default: []].append(contentsOf: worldPrimitives)
             }
         }
-        
-        // --- DEFAULT HALO LOGIC FOR ALL OTHER NODES ---
-        // This runs if the node is not a handled group.
-        let isHighlighted = highlightedIDs.contains(node.id)
-        if isHighlighted {
-            // Prevent drawing a halo if the parent is also drawing one (e.g. Pin inside a selected Symbol)
-            let isParentHighlighted = node.parent.flatMap { highlightedIDs.contains($0.id) } ?? false
+        return primitivesByLayer
+    }
+    
+    /// Collects and transforms all "halo" drawing primitives for highlighted nodes, grouped by layer.
+    private func gatherHaloPrimitives(from context: RenderContext, allNodes: [BaseNode]) -> [UUID?: [DrawingPrimitive]] {
+        var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
+
+        let highlightedNodes = context.highlightedNodeIDs.compactMap { id in
+            allNodes.first { $0.id == id }
+        }
+
+        for node in highlightedNodes {
+            guard let haloPath = node.makeHaloPath() else { continue }
             
-            if !isParentHighlighted, let haloPath = node.makeHaloPath() {
-                var worldTransform = node.worldTransform
-                if let worldPath = haloPath.copy(using: &worldTransform) {
-                    finalPrimitives.append(haloPrimitive(for: worldPath))
-                }
+            let haloColor = resolveColor(for: node, in: context)
+            
+            let transparentHaloColor = haloColor.copy(alpha: 0.4) ?? haloColor
+            
+            let haloPrimitive = DrawingPrimitive.stroke(
+                path: haloPath,
+                color: transparentHaloColor,
+                lineWidth: 5.0, // This is in world coordinates now, which is likely too thick.
+                lineCap: .round, lineJoin: .round, miterLimit: 10, lineDash: nil
+            )
+            
+            var transform = node.worldTransform
+            let worldPrimitive = haloPrimitive.applying(transform: &transform)
+            
+            let layerId = (node as? Layerable)?.layerId
+            primitivesByLayer[layerId, default: []].append(worldPrimitive)
+        }
+        return primitivesByLayer
+    }
+
+    /// Renders a list of already-transformed primitives onto a target CALayer.
+    private func render(primitives: [DrawingPrimitive], onto parentLayer: CALayer) {
+        for primitive in primitives {
+            let shapeLayer = createShapeLayer(for: primitive)
+            parentLayer.addSublayer(shapeLayer)
+        }
+    }
+
+    // MARK: - Helpers
+
+    /// Determines the final color for any node.
+    private func resolveColor(for node: BaseNode, in context: RenderContext) -> CGColor {
+        if let primitiveNode = node as? PrimitiveNode {
+            if let overrideColor = primitiveNode.primitive.color { return overrideColor.cgColor }
+            if let layerId = primitiveNode.layerId, let layer = context.layers.first(where: { $0.id == layerId }) {
+                return layer.color
             }
         }
+        // Fallback for non-primitive nodes or unlayered primitives.
+        return NSColor.systemBlue.cgColor
+    }
+    
+    private func reconcileLayers(context: RenderContext, hostLayer: CALayer) {
+        let currentLayerIds = Set(backingLayers.keys)
+        let modelLayerIds = Set(context.layers.map { $0.id })
         
-        // Recurse to children.
-        for child in node.children {
-            collectHaloPrimitives(from: child, highlightedIDs: highlightedIDs, finalPrimitives: &finalPrimitives)
+        for id in currentLayerIds.subtracting(modelLayerIds) {
+            backingLayers[id]?.removeFromSuperlayer()
+            backingLayers.removeValue(forKey: id)
+        }
+        
+        for layerModel in context.layers where !currentLayerIds.contains(layerModel.id) {
+            let newLayer = CALayer(); newLayer.zPosition = CGFloat(layerModel.zIndex); hostLayer.addSublayer(newLayer); backingLayers[layerModel.id] = newLayer
+        }
+        
+        for layerModel in context.layers {
+            let backingLayer = backingLayers[layerModel.id]; backingLayer?.isHidden = !layerModel.isVisible; backingLayer?.zPosition = CGFloat(layerModel.zIndex)
         }
     }
-
-    // MARK: - Hit Testing
-
-    func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
-        let tolerance = 5.0 / max(context.magnification, .ulpOfOne)
-        return context.sceneRoot.hitTest(point, tolerance: tolerance)
-    }
     
-    // MARK: - Layer Configuration & Helpers
-
-    private func haloPrimitive(for path: CGPath) -> DrawingPrimitive {
-        return .stroke(
-            path: path,
-            color: NSColor.systemBlue.withAlphaComponent(0.3).cgColor,
-            lineWidth: 5.0, // A slightly thicker halo for groups
-            lineCap: .round,
-            lineJoin: .round
-        )
-    }
-    
-    private func configure(layer: CAShapeLayer, forFill path: CGPath, color: CGColor, rule: CAShapeLayerFillRule) {
-        layer.path = path; layer.fillColor = color; layer.fillRule = rule; layer.strokeColor = nil; layer.lineWidth = 0
+    private func getOrCreateDefaultLayer(on hostLayer: CALayer) -> CALayer {
+        if let defaultLayer = self.defaultLayer { return defaultLayer }
+        let newLayer = CALayer(); newLayer.zPosition = -1; hostLayer.addSublayer(newLayer); self.defaultLayer = newLayer; return newLayer
     }
 
-    private func configure(layer: CAShapeLayer, forStroke path: CGPath, color: CGColor, lineWidth: CGFloat, lineCap: CAShapeLayerLineCap, lineJoin: CAShapeLayerLineJoin, miterLimit: CGFloat, lineDash: [NSNumber]?) {
-        layer.path = path; layer.fillColor = nil; layer.strokeColor = color; layer.lineWidth = lineWidth; layer.lineCap = lineCap; layer.lineJoin = lineJoin; layer.miterLimit = miterLimit; layer.lineDashPattern = lineDash
-    }
-    
-    private func layer(at index: Int) -> CAShapeLayer {
-        if index < shapeLayerPool.count {
-            shapeLayerPool[index].isHidden = false; return shapeLayerPool[index]
+    private func createShapeLayer(for primitive: DrawingPrimitive) -> CAShapeLayer {
+        let shapeLayer = CAShapeLayer();
+        switch primitive {
+        case let .fill(path, color, rule):
+            shapeLayer.path = path; shapeLayer.fillColor = color; shapeLayer.fillRule = rule; shapeLayer.strokeColor = nil; shapeLayer.lineWidth = 0
+        case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash):
+            shapeLayer.path = path; shapeLayer.strokeColor = color; shapeLayer.lineWidth = lineWidth; shapeLayer.lineCap = lineCap; shapeLayer.lineJoin = lineJoin; shapeLayer.miterLimit = miterLimit; shapeLayer.lineDashPattern = lineDash; shapeLayer.fillColor = nil
         }
-        let newLayer = CAShapeLayer(); shapeLayerPool.append(newLayer); rootLayer.addSublayer(newLayer); return newLayer
+        return shapeLayer
+    }
+
+    private func flatten(node: BaseNode) -> [BaseNode] {
+        return [node] + node.children.flatMap { flatten(node: $0) }
     }
 }

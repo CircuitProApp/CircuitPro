@@ -10,7 +10,7 @@ import Observation
 
 @Observable
 final class CanvasEditorManager {
-
+    
     // MARK: - Canvas State
     var elements: [BaseNode] = [] {
         didSet {
@@ -31,20 +31,22 @@ final class CanvasEditorManager {
     
     var selectedTool: CanvasTool = CursorTool()
     var elementIndexMap: [UUID: Int] = [:]
-
+    
     // MARK: - Layer State (Primarily for Footprint)
-    var selectedLayer: CanvasLayer? = nil
-    var layerAssignments: [UUID: CanvasLayer] = [:]
-
+    var layers: [CanvasLayer] = []
+    
+    /// The ID of the currently active layer for drawing operations.
+    var activeLayerId: UUID?
+    
     // MARK: - Text State
     private(set) var textSourceMap: [UUID: TextSource] = [:]
     private(set) var textDisplayOptionsMap: [UUID: TextDisplayOptions] = [:]
-
+    
     // MARK: - Computed Properties
     var pins: [Pin] {
         elements.compactMap { ($0 as? PinNode)?.pin }
     }
-
+    
     var pads: [Pad] {
         elements.compactMap { ($0 as? PadNode)?.pad }
     }
@@ -52,10 +54,7 @@ final class CanvasEditorManager {
     var placedTextSources: Set<TextSource> {
         return Set(textSourceMap.values)
     }
-
-    // MARK: - Initializer
-    init() {}
-
+    
     // MARK: - State Management
     private func updateElementIndexMap() {
         elementIndexMap = Dictionary(
@@ -68,13 +67,38 @@ final class CanvasEditorManager {
         textDisplayOptionsMap = textDisplayOptionsMap.filter { currentTextElementIDs.contains($0.key) }
     }
     
+    func setupForFootprintEditing() {
+        self.layers = LayerKind.footprintLayers.map { kind in
+            CanvasLayer(
+                id: UUID(), // Each layer instance needs a stable ID
+                name: kind.label,
+                isVisible: true,
+                // Assumes you have a Color -> CGColor helper
+                color: NSColor(kind.defaultColor).cgColor,
+                zIndex: kind.zIndex,
+                kind: kind
+            )
+        }
+        self.layers.append(self.unlayeredSection)
+        // Set the first layer as active by default.
+        self.activeLayerId = self.layers.first?.id
+    }
+    
+    private let unlayeredSection: CanvasLayer = .init(
+        id: .init(),
+        name: "Unlayered",
+        isVisible: true,
+        color: NSColor.gray.cgColor,
+        zIndex: -1
+    )
+    
     func reset() {
         elements = []
         selectedElementIDs = []
         selectedTool = CursorTool()
         elementIndexMap = [:]
-        selectedLayer = nil
-        layerAssignments = [:]
+        layers = []
+        activeLayerId = nil
         textSourceMap = [:]
         textDisplayOptionsMap = [:]
     }
@@ -86,13 +110,13 @@ extension CanvasEditorManager {
     /// Adds a new text element to the canvas, linked to a specific data source.
     func addTextToSymbol(source: TextSource, displayName: String, componentData: (name: String, prefix: String, properties: [PropertyDefinition])) {
         guard !placedTextSources.contains(source) else { return }
-
+        
         let defaultPaper = PaperSize.component
         let canvasSize = defaultPaper.canvasSize()
         let centerPoint = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
         
         let newElementID = UUID()
-
+        
         // Add the source and default options to maps so resolveText can find them
         textSourceMap[newElementID] = source
         if case .dynamic = source {
@@ -100,33 +124,33 @@ extension CanvasEditorManager {
         }
         
         let resolvedText = resolveText(for: newElementID, source: source, componentData: componentData)
-
-//        let newElement = TextElement(
-//            id: newElementID,
-//            text: resolvedText.isEmpty ? displayName : resolvedText,
-//            position: centerPoint
-//        )
         
-//        elements.append(.text(newElement))
+        //        let newElement = TextElement(
+        //            id: newElementID,
+        //            text: resolvedText.isEmpty ? displayName : resolvedText,
+        //            position: centerPoint
+        //        )
+        
+        //        elements.append(.text(newElement))
     }
     
     /// Iterates through all dynamic text on the canvas and ensures its displayed text is up-to-date with the latest component data.
     func updateDynamicTextElements(componentData: (name: String, prefix: String, properties: [PropertyDefinition])) {
         for (elementID, source) in textSourceMap {
-//            guard let index = elementIndexMap[elementID],
-//                  case .text(var textElement) = elements[index] else {
-//                continue
-//            }
+            //            guard let index = elementIndexMap[elementID],
+            //                  case .text(var textElement) = elements[index] else {
+            //                continue
+            //            }
             
             let newText = resolveText(for: elementID, source: source, componentData: componentData)
             
-//            if textElement.text != newText {
-//                textElement.text = newText
-//                elements[index] = .text(textElement)
-//            }
+            //            if textElement.text != newText {
+            //                textElement.text = newText
+            //                elements[index] = .text(textElement)
+            //            }
         }
     }
-
+    
     /// Removes text elements from the canvas if their underlying property definition was deleted from the component.
     func synchronizeSymbolTextWithProperties(properties: [PropertyDefinition]) {
         let validPropertyIDs = Set(properties.map { $0.id })

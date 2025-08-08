@@ -14,7 +14,7 @@ struct LinePrimitive: GraphicPrimitive {
     var end: CGPoint
     var strokeWidth: CGFloat
     var filled: Bool = false // A line can't be filled, but protocol might require it.
-    var color: SDColor
+    var color: SDColor?
     
     var layerId: UUID?
 

@@ -16,7 +16,7 @@ struct RectanglePrimitive: GraphicPrimitive {
     var rotation: CGFloat
     var strokeWidth: CGFloat
     var filled: Bool
-    var color: SDColor
+    var color: SDColor?
     
     var layerId: UUID?
     

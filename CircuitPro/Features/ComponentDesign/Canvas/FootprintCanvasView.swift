@@ -27,6 +27,8 @@ struct FootprintCanvasView: View {
                 nodes: $footprintEditor.elements,
                 selection: $footprintEditor.selectedElementIDs,
                 tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
+                layers: $footprintEditor.layers,
+                activeLayerId: $footprintEditor.activeLayerId,
                 environment: canvasManager.environment,
                 renderLayers: [
                     GridRenderLayer(),
@@ -63,6 +65,10 @@ struct FootprintCanvasView: View {
             }
         } secondary: {
             Text("WIP")
+        }
+        .onAppear {
+            // When the view appears, tell the manager to set up the session.
+            componentDesignManager.footprintEditor.setupForFootprintEditing()
         }
     }
 }

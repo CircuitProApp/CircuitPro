@@ -26,7 +26,7 @@ final class LineTool: CanvasTool {
                 start: startPoint,
                 end: location,
                 strokeWidth: 1,
-                color: .init(color: .blue)
+                layerId: context.activeLayerId
             )
             
             // 2. Wrap it in a scene graph node.
@@ -50,11 +50,14 @@ final class LineTool: CanvasTool {
         let path = CGMutablePath()
         path.move(to: startPoint)
         path.addLine(to: mouse)
+        
+        let previewColor = context.layers.first { $0.id == context.activeLayerId }?.color ?? NSColor.systemBlue.withAlphaComponent(0.8).cgColor
+
 
         // Return a single stroke primitive with the same styling.
         return [.stroke(
             path: path,
-            color: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
+            color: previewColor,
             lineWidth: 1.0,
             lineDash: [4, 4]
         )]

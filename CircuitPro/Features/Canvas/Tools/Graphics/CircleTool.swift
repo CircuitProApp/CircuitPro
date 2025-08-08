@@ -31,8 +31,8 @@ final class CircleTool: CanvasTool {
                 position: centerPoint,
                 rotation: 0,
                 strokeWidth: 1,
-                color: .init(color: .blue),
-                filled: false
+                filled: false,
+                layerId: context.activeLayerId
             )
 
             // 2. Wrap it in a scene graph node.
@@ -58,10 +58,12 @@ final class CircleTool: CanvasTool {
         let rect = CGRect(x: centerPoint.x - radius, y: centerPoint.y - radius, width: radius * 2, height: radius * 2)
         let path = CGPath(ellipseIn: rect, transform: nil)
 
+        let previewColor = context.layers.first { $0.id == context.activeLayerId }?.color ?? NSColor.systemBlue.withAlphaComponent(0.8).cgColor
+
         // Return a single stroke primitive with the same visual styling.
         return [.stroke(
             path: path,
-            color: NSColor.systemBlue.withAlphaComponent(0.8).cgColor,
+            color: previewColor,
             lineWidth: 1.0,
             lineDash: [4, 4]
         )]

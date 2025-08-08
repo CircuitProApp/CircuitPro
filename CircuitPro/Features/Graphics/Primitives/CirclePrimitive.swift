@@ -14,7 +14,7 @@ struct CirclePrimitive: GraphicPrimitive {
     var position: CGPoint
     var rotation: CGFloat
     var strokeWidth: CGFloat
-    var color: SDColor
+    var color: SDColor?
     var filled: Bool
     
     var layerId: UUID?

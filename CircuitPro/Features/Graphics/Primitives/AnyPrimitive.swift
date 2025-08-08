@@ -93,7 +93,7 @@ enum AnyPrimitive: GraphicPrimitive, Identifiable, Hashable {
         }
     }
 
-    var color: SDColor {
+    var color: SDColor? {
         get {
             switch self {
             case .line(let line): return line.color
