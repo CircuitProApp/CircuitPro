@@ -25,7 +25,7 @@ protocol CanvasInteraction {
     /// Responds to a mouse up event.
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController)
     
-    // ... we can add keyDown, etc. as needed
+    func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool
 }
 
 // Provide default empty implementations so conformers only need to implement what they use.
@@ -34,4 +34,7 @@ extension CanvasInteraction {
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool { return false }
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) { }
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) { }
+    
+    func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool { return false }
+
 }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum CanvasToolResult {
+enum CanvasToolResult: Equatable {
     case noResult
     case newNode(BaseNode)
 }

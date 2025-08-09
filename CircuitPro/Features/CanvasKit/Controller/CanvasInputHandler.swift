@@ -92,4 +92,19 @@ final class CanvasInputHandler {
         controller.mouseLocation = nil
         controller.redraw()
     }
+    
+    func keyDown(_ event: NSEvent, in host: CanvasHostView) -> Bool {
+        let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
+        
+        for interaction in controller.interactions {
+            if interaction.keyDown(with: event, context: context, controller: controller) {
+                // The interaction handled the key.
+                controller.redraw()
+                return true // Report that the event WAS handled.
+            }
+        }
+        
+        // No interaction handled the key.
+        return false // Report that the event was NOT handled.
+    }
 }

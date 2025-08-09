@@ -80,9 +80,25 @@ final class CanvasHostView: NSView {
 
     override func mouseMoved(with event: NSEvent) { inputHandler.mouseMoved(event, in: self) }
     override func mouseExited(with event: NSEvent) { inputHandler.mouseExited() }
-    override func mouseDown(with event: NSEvent) { inputHandler.mouseDown(event, in: self) }
+    override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
+        
+        inputHandler.mouseDown(event, in: self)
+    }
     override func mouseDragged(with event: NSEvent) { inputHandler.mouseDragged(event, in: self) }
     override func mouseUp(with event: NSEvent) { inputHandler.mouseUp(event, in: self) }
+    
+    override func keyDown(with event: NSEvent) {
+        // Ask the input handler to process the event.
+        let wasHandledByInteraction = inputHandler.keyDown(event, in: self)
+        
+        // If our custom interactions (like ToolKeyInteraction) did NOT handle
+        // the event, we MUST pass it up the responder chain. This allows
+        // SwiftUI's .keyboardShortcut to receive it.
+        if !wasHandledByInteraction {
+            super.keyDown(with: event)
+        }
+    }
     
     // MARK: - Event Forwarding (Drag and Drop)
     
@@ -99,6 +115,14 @@ final class CanvasHostView: NSView {
     }
     
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        return dragDropHandler.performDragOperation(sender, in: self)
+        
+        let wasHandled = dragDropHandler.performDragOperation(sender, in: self)
+
+        
+        if wasHandled {
+            window?.makeFirstResponder(self)
+        }
+        
+        return wasHandled
     }
 }

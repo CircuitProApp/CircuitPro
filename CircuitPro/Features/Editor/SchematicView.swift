@@ -37,6 +37,7 @@ struct SchematicView: View {
                 CrosshairsRenderLayer()
             ],
             interactions: [
+                KeyCommandInteraction(),
                 ToolInteraction(),
                 SelectionInteraction(),
                 DragInteraction(),
