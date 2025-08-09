@@ -13,5 +13,6 @@ struct CircuitPro {
         /// The number of on-screen points that represent one millimeter
         /// in the canvas coordinate system.
         static let pointsPerMillimeter: CGFloat = 10.0
+        
     }
 }

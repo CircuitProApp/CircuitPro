@@ -75,7 +75,12 @@ struct SchematicView: View {
             guard let symbolDefinition = designComp.definition.symbol else { return nil }
             let resolvedProperties = PropertyResolver.resolve(from: designComp.definition, and: designComp.instance)
             let resolvedTexts = TextResolver.resolve(from: symbolDefinition, and: designComp.instance.symbolInstance, componentName: designComp.definition.name, reference: designComp.referenceDesignator, properties: resolvedProperties)
-            return SymbolNode(instance: designComp.instance.symbolInstance, symbol: symbolDefinition, resolvedTexts: resolvedTexts)
+            return SymbolNode(
+                instance: designComp.instance.symbolInstance,
+                symbol: symbolDefinition,
+                resolvedTexts: resolvedTexts,
+                graph: projectManager.schematicGraph // This works.
+            )
         }
         
         // Create the single SchematicGraphNode which acts as a container for wires and vertices.
@@ -132,7 +137,8 @@ struct SchematicView: View {
         let newNode = SymbolNode(
             instance: newComponentInstance.symbolInstance,
             symbol: symbolDefinition,
-            resolvedTexts: resolvedTexts
+            resolvedTexts: resolvedTexts,
+            graph: projectManager.schematicGraph // This also works.
         )
         
         // --- 7. MUTATE THE DATA MODELS ---

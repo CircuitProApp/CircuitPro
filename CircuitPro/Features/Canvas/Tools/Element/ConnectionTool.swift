@@ -27,32 +27,36 @@ final class ConnectionTool: CanvasTool {
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         switch self.state {
         case .idle:
-            // First click: Start drawing.
             let initialDirection = determineInitialDirection(from: context.hitTarget)
             self.state = .drawing(startPoint: location, direction: initialDirection)
-            return .noResult // No model change yet.
+            return .noResult
 
         case .drawing(let startPoint, let direction):
-            // Second click: A segment is complete.
-            
-            // Ignore clicks at the exact same location.
-            if startPoint == location { return .noResult }
+            // Same-point click
+            if startPoint == location {
+                // Double-click at the same location stops the tool
+                if context.clickCount >= 2 {
+                    self.state = .idle
+                }
+                // Either way, no new segment from a zero-length click
+                return .noResult
+            }
 
-            // Create the request node. This is a lightweight message, not a real visual node.
-            let strategy: SchematicGraph.ConnectionStrategy = (direction == .horizontal) ? .horizontalThenVertical : .verticalThenHorizontal
+            // Create the request node
+            let strategy: SchematicGraph.ConnectionStrategy =
+                (direction == .horizontal) ? .horizontalThenVertical : .verticalThenHorizontal
             let requestNode = ConnectionRequestNode(from: startPoint, to: location, strategy: strategy)
-            
-            // If the user clicked on an existing pin or wire, the tool's job is done.
-            if context.hitTarget != nil {
+
+            // Finish only when hitting a pin or anything in the schematic graph subtree
+            if shouldFinish(on: context.hitTarget) {
                 self.state = .idle
             } else {
-                // Otherwise, continue drawing from the new point.
+                // Continue drawing from the new point, toggling direction only for straight lines
                 let isStraightLine = (startPoint.x == location.x || startPoint.y == location.y)
                 let newDirection = isStraightLine ? direction.toggled() : direction
                 self.state = .drawing(startPoint: location, direction: newDirection)
             }
-            
-            // Return the request to be handled by the interaction layer.
+
             return .newNode(requestNode)
         }
     }
@@ -74,8 +78,14 @@ final class ConnectionTool: CanvasTool {
             path: path,
             color: NSColor.systemBlue.cgColor,
             lineWidth: 1.0, // Default line width
-            lineDash: [4, 2]
+            lineDash: [4, 4]
         )]
+    }
+    
+    private func shouldFinish(on hit: CanvasHitTarget?) -> Bool {
+        guard let node = hit?.node else { return false }
+        if node is PinNode { return true }
+        return belongsToSchematicGraph(node)
     }
     
     // MARK: - Keyboard Actions
@@ -86,13 +96,14 @@ final class ConnectionTool: CanvasTool {
         }
         return false
     }
-
-    override func handleReturn() -> CanvasToolResult {
-//        let wasDrawing = (self.state != .idle)
-        self.state = .idle
-        // We don't return a result here, as finishing doesn't create a new connection.
-        // Returning a repaint request might be useful if the state change requires it.
-        return  .noResult
+    
+    private func belongsToSchematicGraph(_ node: BaseNode) -> Bool {
+        var current: BaseNode? = node
+        while let c = current {
+            if c is SchematicGraphNode { return true }
+            current = c.parent
+        }
+        return false
     }
     
     // MARK: - Private Helpers

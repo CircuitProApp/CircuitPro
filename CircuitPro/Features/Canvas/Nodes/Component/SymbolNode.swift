@@ -21,6 +21,8 @@ final class SymbolNode: BaseNode {
     
     /// The library definition of the symbol, containing the template for primitives, pins, etc.
     let symbol: Symbol
+    
+    weak var graph: SchematicGraph?
 
     override var isSelectable: Bool { true }
 
@@ -48,45 +50,24 @@ final class SymbolNode: BaseNode {
 
     // MARK: - Initialization
 
-    init(instance: SymbolInstance, symbol: Symbol, resolvedTexts: [ResolvedText]) {
+    init(instance: SymbolInstance, symbol: Symbol, resolvedTexts: [ResolvedText], graph: SchematicGraph? = nil) {
         self.instance = instance
         self.symbol = symbol
-        // Initialize the BaseNode with the instance's ID.
+        self.graph = graph
         super.init(id: instance.id)
 
-        // The SymbolNode is now the single source of truth for its transform.
-        // We no longer pass the parent transform down to children during creation.
-        
-        // 1. Create and add child nodes for each primitive.
         for primitive in symbol.primitives {
-            let primitiveNode = PrimitiveNode(primitive: primitive)
-            self.addChild(primitiveNode)
+            self.addChild(PrimitiveNode(primitive: primitive))
         }
 
-        // 2. Create and add child nodes for each pin.
+        // Pass the optional graph reference to the PinNode initializer.
         for pin in symbol.pins {
-            let pinNode = PinNode(pin: pin)
-            self.addChild(pinNode)
+            self.addChild(PinNode(pin: pin, graph: self.graph))
         }
         
-        // 3. Create and add child nodes for each resolved text element.
         for resolvedText in resolvedTexts {
-            let textModel = TextModel(
-                id: UUID(),
-                text: resolvedText.text,
-                position: resolvedText.relativePosition, // Position is relative to the symbol
-                font: resolvedText.font,
-                color: resolvedText.color,
-                alignment: resolvedText.alignment,
-                cardinalRotation: resolvedText.cardinalRotation
-            )
-
-            let textNode = AnchoredTextNode(
-                textModel: textModel,
-                anchorPosition: resolvedText.anchorRelativePosition, // Anchor is also relative
-                anchorOwnerID: self.id,
-                origin: resolvedText.origin
-            )
+            let textModel = TextModel(id: UUID(), text: resolvedText.text, position: resolvedText.relativePosition, font: resolvedText.font, color: resolvedText.color, alignment: resolvedText.alignment, cardinalRotation: resolvedText.cardinalRotation)
+            let textNode = AnchoredTextNode(textModel: textModel, anchorPosition: resolvedText.anchorRelativePosition, anchorOwnerID: self.id, origin: resolvedText.origin)
             self.addChild(textNode)
         }
     }
