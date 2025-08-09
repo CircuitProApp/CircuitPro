@@ -50,11 +50,11 @@ final class SymbolNode: BaseNode {
 
     // MARK: - Initialization
 
-    init(instance: SymbolInstance, symbol: Symbol, resolvedTexts: [ResolvedText], graph: WireGraph? = nil) {
+    init(id: UUID, instance: SymbolInstance, symbol: Symbol, resolvedTexts: [ResolvedText], graph: WireGraph? = nil) {
         self.instance = instance
         self.symbol = symbol
         self.graph = graph
-        super.init(id: instance.id)
+        super.init(id: id)
 
         for primitive in symbol.primitives {
             self.addChild(PrimitiveNode(primitive: primitive))

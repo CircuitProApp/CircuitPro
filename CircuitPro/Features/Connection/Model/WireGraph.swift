@@ -12,7 +12,7 @@ import SwiftUI
 
 enum VertexOwnership: Hashable {
     case free
-    case pin(symbolID: UUID, pinID: UUID)
+    case pin(ownerID: UUID, pinID: UUID)
     case detachedPin // Temporarily marks a vertex that was a pin but is now being dragged
 }
 
@@ -89,8 +89,8 @@ class WireGraph { // swiftlint:disable:this type_body_length
     }
     
     /// Finds a vertex for a pin, or creates one, promoting a junction if necessary.
-    func getOrCreatePinVertex(at point: CGPoint, symbolID: UUID, pinID: UUID) -> WireVertex.ID {
-        let ownership: VertexOwnership = .pin(symbolID: symbolID, pinID: pinID)
+    func getOrCreatePinVertex(at point: CGPoint, ownerID: UUID, pinID: UUID) -> WireVertex.ID {
+        let ownership: VertexOwnership = .pin(ownerID: ownerID, pinID: pinID)
         if let existingVertex = findVertex(at: point) {
             // A vertex already exists here. We must claim it.
             vertices[existingVertex.id]?.ownership = ownership
@@ -167,13 +167,11 @@ class WireGraph { // swiftlint:disable:this type_body_length
     /// Call this when a drag gesture begins.
     /// It caches the initial state of the graph needed for calculations.
     public func beginDrag(selectedIDs: Set<UUID>) -> Bool {
-        // --- THIS IS THE FIX ---
-
-        // 1. Find pins of selected SYMBOLS. These are always movable.
+        // 1. Find pins of selected SYMBOLS (via their ComponentInstance owner). These are always movable.
         let symbolPinVertexIDs = vertices.values
             .filter { vertex in
-                if case .pin(let symbolID, _) = vertex.ownership {
-                    return selectedIDs.contains(symbolID)
+                if case .pin(let ownerID, _) = vertex.ownership {
+                    return selectedIDs.contains(ownerID)
                 }
                 return false
             }
@@ -712,9 +710,9 @@ class WireGraph { // swiftlint:disable:this type_body_length
         return nil
     }
     
-    func findVertex(ownedBy symbolID: UUID, pinID: UUID) -> WireVertex.ID? {
+    func findVertex(ownedBy ownerID: UUID, pinID: UUID) -> WireVertex.ID? {
         for vertex in vertices.values {
-            if case .pin(let sID, let pID) = vertex.ownership, sID == symbolID, pID == pinID {
+            if case .pin(let oID, let pID) = vertex.ownership, oID == ownerID, pID == pinID {
                 return vertex.id
             }
         }
@@ -850,7 +848,7 @@ class WireGraph { // swiftlint:disable:this type_body_length
         return discoveredNets
     }
     
-    public func syncPins(for instance: SymbolInstance, of symbol: Symbol) {
+    public func syncPins(for instance: SymbolInstance, of symbol: Symbol, ownerID: UUID) {
         // Calculate the symbol's rotation and position transforms once.
         let transform = CGAffineTransform(rotationAngle: instance.rotation)
             .concatenating(CGAffineTransform(translationX: instance.position.x, y: instance.position.y))
@@ -859,11 +857,11 @@ class WireGraph { // swiftlint:disable:this type_body_length
             // Calculate the pin's absolute world position.
             let worldPinPosition = pin.position.applying(transform)
 
-            // The vertex ownership uniquely identifies this pin.
-            let ownership: VertexOwnership = .pin(symbolID: instance.id, pinID: pin.id)
+            // The vertex ownership uniquely identifies this pin by its owner (ComponentInstance) and its own ID.
+            let ownership: VertexOwnership = .pin(ownerID: ownerID, pinID: pin.id)
             
             // Check if a vertex for this specific pin already exists.
-            if let existingVertexID = findVertex(ownedBy: instance.id, pinID: pin.id) {
+            if let existingVertexID = findVertex(ownedBy: ownerID, pinID: pin.id) {
                 // If it exists, move it to the new calculated position. This is important
                 // for handling programmatic moves or symbol rotations.
                 moveVertex(id: existingVertexID, to: worldPinPosition)
@@ -871,19 +869,19 @@ class WireGraph { // swiftlint:disable:this type_body_length
                 // If it doesn't exist, create it. `getOrCreatePinVertex` is perfect
                 // as it will also merge with any existing free vertices or wires at that location,
                 // effectively connecting the new pin to existing circuitry.
-                getOrCreatePinVertex(at: worldPinPosition, symbolID: instance.id, pinID: pin.id)
+                getOrCreatePinVertex(at: worldPinPosition, ownerID: ownerID, pinID: pin.id)
             }
         }
     }
 
-    /// Disowns all vertices associated with a given symbol instance, converting them to free vertices.
+    /// Disowns all vertices associated with a given component instance, converting them to free vertices.
     /// This must be called when a component is deleted. It ensures that any wires connected
     /// to the symbol's pins are not deleted, but instead remain on the canvas, attached to now-free vertices.
-    public func releasePins(for instanceID: UUID) {
-        // Find all vertices owned by the symbol instance being removed.
+    public func releasePins(for ownerID: UUID) {
+        // Find all vertices owned by the component instance being removed.
         let vertexIDsToRelease = vertices.values
             .filter { vertex in
-                if case .pin(let symbolID, _) = vertex.ownership, symbolID == instanceID {
+                if case .pin(let oID, _) = vertex.ownership, oID == ownerID {
                     return true
                 }
                 return false
