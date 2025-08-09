@@ -31,6 +31,7 @@ struct SchematicView: View {
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
+                SheetRenderLayer(),
                 ElementsRenderLayer(),
                 PreviewRenderLayer(),
                 MarqueeRenderLayer(),

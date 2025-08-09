@@ -28,6 +28,7 @@ struct SymbolCanvasView: View {
                 environment: canvasManager.environment,
                 renderLayers: [
                     GridRenderLayer(),
+                    SheetRenderLayer(),
                     ElementsRenderLayer(),
                     PreviewRenderLayer(),
                     HandlesRenderLayer(),
