@@ -13,7 +13,7 @@ class PinNode: BaseNode {
     }
     
     // --- CHANGE: The graph reference is now optional. ---
-    weak var graph: SchematicGraph?
+    weak var graph: WireGraph?
     
     enum Part: Hashable {
         case endpoint
@@ -39,7 +39,7 @@ class PinNode: BaseNode {
     }
     
     // --- CHANGE: The initializer now accepts an optional graph. ---
-    init(pin: Pin, graph: SchematicGraph? = nil) {
+    init(pin: Pin, graph: WireGraph? = nil) {
         self.pin = pin
         self.graph = graph
         super.init(id: pin.id)
@@ -60,9 +60,9 @@ class PinNode: BaseNode {
             return primitives
         }
         
-        let connectionCount = graph.adjacency[vertexID]?.count ?? 0
+        let wireCount = graph.adjacency[vertexID]?.count ?? 0
         
-        if connectionCount > 1 {
+        if wireCount > 1 {
             let dotPath = CGPath(ellipseIn: CGRect(x: -2, y: -2, width: 4, height: 4), transform: nil)
             let dotPrimitive = DrawingPrimitive.fill(path: dotPath, color: NSColor.controlAccentColor.cgColor)
             primitives.append(dotPrimitive)

@@ -1,5 +1,5 @@
 //
-//  SchematicGraph.swift
+//  WireGraph.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 7/17/25.
@@ -16,7 +16,7 @@ enum VertexOwnership: Hashable {
     case detachedPin // Temporarily marks a vertex that was a pin but is now being dragged
 }
 
-struct ConnectionVertex: Identifiable, Hashable {
+struct WireVertex: Identifiable, Hashable {
     let id: UUID
     var point: CGPoint
     var ownership: VertexOwnership
@@ -26,19 +26,19 @@ struct ConnectionVertex: Identifiable, Hashable {
         hasher.combine(id)
     }
 
-    static func == (lhs: ConnectionVertex, rhs: ConnectionVertex) -> Bool {
+    static func == (lhs: WireVertex, rhs: WireVertex) -> Bool {
         lhs.id == rhs.id
     }
 }
 
-struct ConnectionEdge: Identifiable, Hashable {
+struct WireEdge: Identifiable, Hashable {
     let id: UUID
-    let start: ConnectionVertex.ID
-    let end: ConnectionVertex.ID
+    let start: WireVertex.ID
+    let end: WireVertex.ID
 }
 
 @Observable
-class SchematicGraph { // swiftlint:disable:this type_body_length
+class WireGraph { // swiftlint:disable:this type_body_length
     // MARK: - Net Definition
     struct Net: Identifiable, Hashable, Equatable {
         let id: UUID // This is the persistent net ID
@@ -47,22 +47,22 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         let edgeCount: Int
     }
     
-    enum ConnectionStrategy {
+    enum WireConnectionStrategy {
         case horizontalThenVertical
         case verticalThenHorizontal
     }
     
     // MARK: - Graph State
-    private(set) var vertices: [ConnectionVertex.ID: ConnectionVertex] = [:]
-    private(set) var edges: [ConnectionEdge.ID: ConnectionEdge] = [:]
-    private(set) var adjacency: [ConnectionVertex.ID: Set<ConnectionEdge.ID>] = [:]
+    private(set) var vertices: [WireVertex.ID: WireVertex] = [:]
+    private(set) var edges: [WireEdge.ID: WireEdge] = [:]
+    private(set) var adjacency: [WireVertex.ID: Set<WireEdge.ID>] = [:]
     private var netNames: [UUID: String] = [:]
     private var nextNetNumber = 1
 
     // MARK: - Drag State
     private struct DragState {
         let originalVertexPositions: [UUID: CGPoint]
-        let selectedEdges: [ConnectionEdge]
+        let selectedEdges: [WireEdge]
         let verticesToMove: Set<UUID>
         var newVertices: Set<UUID> = []
     }
@@ -76,7 +76,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     
     /// The authoritative method for getting a vertex for a given point.
     /// It finds an existing vertex, splits an edge if the point is on one, or creates a new vertex.
-    func getOrCreateVertex(at point: CGPoint) -> ConnectionVertex.ID {
+    func getOrCreateVertex(at point: CGPoint) -> WireVertex.ID {
         if let existingVertex = findVertex(at: point) {
             return existingVertex.id
         }
@@ -89,7 +89,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     }
     
     /// Finds a vertex for a pin, or creates one, promoting a junction if necessary.
-    func getOrCreatePinVertex(at point: CGPoint, symbolID: UUID, pinID: UUID) -> ConnectionVertex.ID {
+    func getOrCreatePinVertex(at point: CGPoint, symbolID: UUID, pinID: UUID) -> WireVertex.ID {
         let ownership: VertexOwnership = .pin(symbolID: symbolID, pinID: pinID)
         if let existingVertex = findVertex(at: point) {
             // A vertex already exists here. We must claim it.
@@ -104,25 +104,25 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         return addVertex(at: point, ownership: ownership).id
     }
     
-    /// Creates a new orthogonal connection and normalizes the graph.
+    /// Creates a new orthogonal wire and normalizes the graph.
     func connect(
-        from startID: ConnectionVertex.ID,
-        to endID: ConnectionVertex.ID,
-        preferring strategy: ConnectionStrategy = .horizontalThenVertical
+        from startID: WireVertex.ID,
+        to endID: WireVertex.ID,
+        preferring strategy: WireConnectionStrategy = .horizontalThenVertical
     ) {
         guard let startVertex = vertices[startID], let endVertex = vertices[endID] else {
             assertionFailure("Cannot connect non-existent vertices.")
             return
         }
 
-        var affectedVertices: Set<ConnectionVertex.ID> = [startID, endID]
+        var affectedVertices: Set<WireVertex.ID> = [startID, endID]
         let startPoint = startVertex.point
         let destinationPoint = endVertex.point
 
         if startPoint.x == destinationPoint.x || startPoint.y == destinationPoint.y {
             connectStraightLine(from: startVertex, to: endVertex, affectedVertices: &affectedVertices)
         } else {
-            handleLShapeConnection(
+            handleLShapeWire(
                 from: startVertex,
                 to: endVertex,
                 strategy: strategy,
@@ -136,7 +136,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
 
     /// Deletes items and normalizes the graph.
     func delete(items: Set<UUID>) {
-        var verticesToCheck: Set<ConnectionVertex.ID> = []
+        var verticesToCheck: Set<WireVertex.ID> = []
         for itemID in items {
             if let edge = edges[itemID] {
                 verticesToCheck.insert(edge.start)
@@ -157,7 +157,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
 
     /// Moves a vertex to a new point. This is a low-level operation
     /// that does not perform normalization.
-    func moveVertex(id: ConnectionVertex.ID, to newPoint: CGPoint) {
+    func moveVertex(id: WireVertex.ID, to newPoint: CGPoint) {
         if vertices[id]?.point != newPoint {
             vertices[id]?.point = newPoint
         }
@@ -349,7 +349,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         guard var state = dragState else { return }
         
         // After the drag, convert any temporarily detached pins back to free vertices.
-        // Their connection to the actual pin is now a normal edge.
+        // Their wire to the actual pin is now a normal edge.
         for vertexID in vertices.keys {
             if let vertex = vertices[vertexID] {
                 if case .detachedPin = vertex.ownership {
@@ -371,7 +371,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     
     /// Normalizes the graph structure around a set of vertices.
     /// This involves merging coincident vertices and cleaning up collinear segments.
-    func normalize(around verticesToCheck: Set<ConnectionVertex.ID>) {
+    func normalize(around verticesToCheck: Set<WireVertex.ID>) {
         let mergedVertices = mergeCoincidentVertices(in: verticesToCheck)
         
         var allAffectedVertices = verticesToCheck
@@ -428,7 +428,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         }
     }
     
-    private func cleanupCollinearSegments(at vertexID: ConnectionVertex.ID) {
+    private func cleanupCollinearSegments(at vertexID: WireVertex.ID) {
         guard let centerVertex = vertices[vertexID] else { return }
         // We only clean up free junctions. Pin-owned vertices are sacred.
         guard case .free = centerVertex.ownership else { return }
@@ -437,10 +437,10 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         processCollinearRun(for: centerVertex, isHorizontal: false)
     }
     
-    private func mergeCoincidentVertices(in scope: Set<ConnectionVertex.ID>) -> Set<ConnectionVertex.ID> {
+    private func mergeCoincidentVertices(in scope: Set<WireVertex.ID>) -> Set<WireVertex.ID> {
         var verticesToProcess = scope.compactMap { vertices[$0] }
-        var processedIDs: Set<ConnectionVertex.ID> = []
-        var modifiedVertices: Set<ConnectionVertex.ID> = []
+        var processedIDs: Set<WireVertex.ID> = []
+        var modifiedVertices: Set<WireVertex.ID> = []
         let tolerance: CGFloat = 1e-6
         
         while let vertex = verticesToProcess.popLast() {
@@ -480,10 +480,10 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         return modifiedVertices
     }
     
-    private func processCollinearRun(for startVertex: ConnectionVertex, isHorizontal: Bool) {
-        var run: [ConnectionVertex] = []
-        var queue: [ConnectionVertex] = [startVertex]
-        var visitedIDs: Set<ConnectionVertex.ID> = [startVertex.id]
+    private func processCollinearRun(for startVertex: WireVertex, isHorizontal: Bool) {
+        var run: [WireVertex] = []
+        var queue: [WireVertex] = [startVertex]
+        var visitedIDs: Set<WireVertex.ID> = [startVertex.id]
         
         // 1. Find the entire continuous run of collinear vertices
         while let current = queue.popLast() {
@@ -501,7 +501,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         if run.count < 3 { return }
         
         // 2. Decide which vertices are topologically significant and must be kept
-        var keptIDs: Set<ConnectionVertex.ID> = []
+        var keptIDs: Set<WireVertex.ID> = []
         for vertex in run {
             // Always keep pin-owned vertices
             if case .pin = vertex.ownership {
@@ -552,8 +552,8 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     
     // MARK: - Private Implementation
     
-    private func connectStraightLine(from startVertex: ConnectionVertex, to endVertex: ConnectionVertex, affectedVertices: inout Set<ConnectionVertex.ID>) {
-        var verticesOnPath: [ConnectionVertex] = [startVertex, endVertex]
+    private func connectStraightLine(from startVertex: WireVertex, to endVertex: WireVertex, affectedVertices: inout Set<WireVertex.ID>) {
+        var verticesOnPath: [WireVertex] = [startVertex, endVertex]
         let otherVertices = vertices.values.filter {
             $0.id != startVertex.id && $0.id != endVertex.id && isPoint($0.point, onSegmentBetween: startVertex.point, p2: endVertex.point)
         }
@@ -568,7 +568,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         }
     }
     
-    private func handleLShapeConnection(from startVertex: ConnectionVertex, to endVertex: ConnectionVertex, strategy: ConnectionStrategy, affectedVertices: inout Set<ConnectionVertex.ID>) {
+    private func handleLShapeWire(from startVertex: WireVertex, to endVertex: WireVertex, strategy: WireConnectionStrategy, affectedVertices: inout Set<WireVertex.ID>) {
         let cornerPoint: CGPoint
         switch strategy {
         case .horizontalThenVertical: cornerPoint = CGPoint(x: endVertex.point.x, y: startVertex.point.y)
@@ -584,15 +584,15 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     }
     
     @discardableResult
-    private func addVertex(at point: CGPoint, ownership: VertexOwnership) -> ConnectionVertex {
-        let vertex = ConnectionVertex(id: UUID(), point: point, ownership: ownership, netID: nil)
+    private func addVertex(at point: CGPoint, ownership: VertexOwnership) -> WireVertex {
+        let vertex = WireVertex(id: UUID(), point: point, ownership: ownership, netID: nil)
         vertices[vertex.id] = vertex
         adjacency[vertex.id] = []
         return vertex
     }
     
     @discardableResult
-    private func addEdge(from startVertexID: ConnectionVertex.ID, to endVertexID: ConnectionVertex.ID) -> ConnectionEdge? {
+    private func addEdge(from startVertexID: WireVertex.ID, to endVertexID: WireVertex.ID) -> WireEdge? {
         guard vertices[startVertexID] != nil, vertices[endVertexID] != nil else { return nil }
         let isAlreadyConnected = adjacency[startVertexID]?.contains { edgeID in
             guard let edge = edges[edgeID] else { return false }
@@ -600,7 +600,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         } ?? false
         if isAlreadyConnected { return nil }
         
-        let edge = ConnectionEdge(id: UUID(), start: startVertexID, end: endVertexID)
+        let edge = WireEdge(id: UUID(), start: startVertexID, end: endVertexID)
         edges[edge.id] = edge
         adjacency[startVertexID]?.insert(edge.id)
         adjacency[endVertexID]?.insert(edge.id)
@@ -608,7 +608,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     }
     
     @discardableResult
-    private func splitEdgeAndInsertVertex(edgeID: UUID, at point: CGPoint, ownership: VertexOwnership = .free) -> ConnectionVertex.ID? {
+    private func splitEdgeAndInsertVertex(edgeID: UUID, at point: CGPoint, ownership: VertexOwnership = .free) -> WireVertex.ID? {
         guard let edgeToSplit = edges[edgeID] else { return nil }
         let startID = edgeToSplit.start
         let endID = edgeToSplit.end
@@ -624,7 +624,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         return newVertex.id
     }
     
-    private func removeVertex(id: ConnectionVertex.ID) {
+    private func removeVertex(id: WireVertex.ID) {
         if let connectedEdgeIDs = adjacency[id] {
             for edgeID in Array(connectedEdgeIDs) { removeEdge(id: edgeID) }
         }
@@ -632,7 +632,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         vertices.removeValue(forKey: id)
     }
     
-    private func removeEdge(id: ConnectionEdge.ID) {
+    private func removeEdge(id: WireEdge.ID) {
         guard let edge = edges.removeValue(forKey: id) else { return }
         adjacency[edge.start]?.remove(id)
         adjacency[edge.end]?.remove(id)
@@ -640,7 +640,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     
     // MARK: - Net Management
     
-    private func findNeighbor(of vertexID: UUID, where predicate: (UUID, ConnectionEdge) -> Bool) -> ConnectionVertex? {
+    private func findNeighbor(of vertexID: UUID, where predicate: (UUID, WireEdge) -> Bool) -> WireVertex? {
         guard let edges = adjacency[vertexID] else { return nil }
         for edgeID in edges {
             guard let edge = self.edges[edgeID] else { continue }
@@ -652,7 +652,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         return nil
     }
     
-    private func unifyNetIDs(between vertex1ID: ConnectionVertex.ID, and vertex2ID: ConnectionVertex.ID) {
+    private func unifyNetIDs(between vertex1ID: WireVertex.ID, and vertex2ID: WireVertex.ID) {
         let netID1 = vertices[vertex1ID]?.netID
         let netID2 = vertices[vertex2ID]?.netID
         
@@ -699,12 +699,12 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     }
     
     // MARK: - Graph Analysis
-    func findVertex(at point: CGPoint) -> ConnectionVertex? {
+    func findVertex(at point: CGPoint) -> WireVertex? {
         let tolerance: CGFloat = 1e-6
         return vertices.values.first { value in abs(value.point.x - point.x) < tolerance && abs(value.point.y - point.y) < tolerance }
     }
     
-    func findEdge(at point: CGPoint) -> ConnectionEdge? {
+    func findEdge(at point: CGPoint) -> WireEdge? {
         for edge in edges.values {
             guard let startVertex = vertices[edge.start], let endVertex = vertices[edge.end] else { continue }
             if isPoint(point, onSegmentBetween: startVertex.point, p2: endVertex.point) { return edge }
@@ -712,7 +712,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         return nil
     }
     
-    func findVertex(ownedBy symbolID: UUID, pinID: UUID) -> ConnectionVertex.ID? {
+    func findVertex(ownedBy symbolID: UUID, pinID: UUID) -> WireVertex.ID? {
         for vertex in vertices.values {
             if case .pin(let sID, let pID) = vertex.ownership, sID == symbolID, pID == pinID {
                 return vertex.id
@@ -721,9 +721,9 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         return nil
     }
     
-    private func getCollinearNeighbors(for centerVertex: ConnectionVertex) -> (horizontal: [ConnectionVertex], vertical: [ConnectionVertex]) {
+    private func getCollinearNeighbors(for centerVertex: WireVertex) -> (horizontal: [WireVertex], vertical: [WireVertex]) {
         guard let connectedEdgeIDs = adjacency[centerVertex.id] else { return ([], []) }
-        var h:[ConnectionVertex] = [], v:[ConnectionVertex] = []
+        var h:[WireVertex] = [], v:[WireVertex] = []
         let tolerance: CGFloat = 1e-6
         for edgeID in connectedEdgeIDs {
             guard let edge = edges[edgeID] else { continue }
@@ -745,10 +745,10 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         return false
     }
     
-    func net(startingFrom startVertexID: ConnectionVertex.ID) -> (vertices: Set<ConnectionVertex.ID>, edges: Set<ConnectionEdge.ID>) {
-        var visitedVertices: Set<ConnectionVertex.ID> = []
-        var visitedEdges: Set<ConnectionEdge.ID> = []
-        var queue: [ConnectionVertex.ID] = [startVertexID]
+    func net(startingFrom startVertexID: WireVertex.ID) -> (vertices: Set<WireVertex.ID>, edges: Set<WireEdge.ID>) {
+        var visitedVertices: Set<WireVertex.ID> = []
+        var visitedEdges: Set<WireEdge.ID> = []
+        var queue: [WireVertex.ID] = [startVertexID]
         guard vertices[startVertexID] != nil else { return ([], []) }
         visitedVertices.insert(startVertexID)
         while let currentVertexID = queue.popLast() {
@@ -771,7 +771,7 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         var unvisitedVertices = Set(vertices.keys)
         
         // A dictionary to hold the disconnected components (islands) found for each original net ID.
-        var componentsByNetID: [UUID: [[ConnectionVertex.ID]]] = [:]
+        var componentsByNetID: [UUID: [[WireVertex.ID]]] = [:]
         
         // First pass: Discover all connected components (islands) and group them by their existing net ID.
         while let startVertexID = unvisitedVertices.first {

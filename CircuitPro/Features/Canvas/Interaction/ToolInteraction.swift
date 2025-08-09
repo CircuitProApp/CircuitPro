@@ -29,10 +29,10 @@ struct ToolInteraction: CanvasInteraction {
 
         // --- THE CORRECT ORCHESTRATION LOGIC ---
 
-        if let request = newNode as? ConnectionRequestNode {
+        if let request = newNode as? WireRequestNode {
             // Find the one-and-only SchematicGraphNode in the scene.
             guard let schematicGraphNode = controller.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode else {
-                assertionFailure("A connection was requested, but no SchematicGraphNode exists in the scene.")
+                assertionFailure("A wire connection was requested, but no SchematicGraphNode exists in the scene.")
                 return true
             }
 

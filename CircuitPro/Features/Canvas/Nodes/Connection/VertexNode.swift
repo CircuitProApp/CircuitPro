@@ -3,8 +3,8 @@ import Observation
 
 @Observable
 final class VertexNode: BaseNode {
-    let vertexID: ConnectionVertex.ID
-    let graph: SchematicGraph
+    let vertexID: WireVertex.ID
+    let graph: WireGraph
     var isInDebugMode: Bool = true
 
     // A vertex is not selectable by the main cursor, but it must be hittable by tools.
@@ -24,7 +24,7 @@ final class VertexNode: BaseNode {
         }
     }
 
-    init(vertexID: ConnectionVertex.ID, graph: SchematicGraph) {
+    init(vertexID: WireVertex.ID, graph: WireGraph) {
         self.vertexID = vertexID
         self.graph = graph
         super.init(id: vertexID)

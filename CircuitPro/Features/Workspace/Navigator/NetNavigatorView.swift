@@ -1,5 +1,5 @@
 //
-//  ConnectionNavigatorView.swift
+//  NetNavigatorView.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 7/22/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ConnectionNavigatorView: View {
+struct NetNavigatorView: View {
     
     @Environment(\.projectManager)
     private var projectManager

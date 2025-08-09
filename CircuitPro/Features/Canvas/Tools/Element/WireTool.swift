@@ -1,13 +1,13 @@
 import SwiftUI
 import AppKit
 
-/// A stateful tool for drawing orthogonal connections. This tool is fully generic and
-/// emits its results as `ConnectionRequestNode` instances via the CanvasToolResult.
-final class ConnectionTool: CanvasTool {
+/// A stateful tool for drawing orthogonal wires. This tool is fully generic and
+/// emits its results as `WireRequestNode` instances via the CanvasToolResult.
+final class WireTool: CanvasTool {
 
     // MARK: - UI Representation
-    override var symbolName: String { CircuitProSymbols.Schematic.connectionWire }
-    override var label: String { "Connection" }
+    override var symbolName: String { CircuitProSymbols.Schematic.schematicWire }
+    override var label: String { "Wire" }
 
     // MARK: - Internal State
     private enum DrawingDirection {
@@ -43,9 +43,9 @@ final class ConnectionTool: CanvasTool {
             }
 
             // Create the request node
-            let strategy: SchematicGraph.ConnectionStrategy =
+            let strategy: WireGraph.WireConnectionStrategy =
                 (direction == .horizontal) ? .horizontalThenVertical : .verticalThenHorizontal
-            let requestNode = ConnectionRequestNode(from: startPoint, to: location, strategy: strategy)
+            let requestNode = WireRequestNode(from: startPoint, to: location, strategy: strategy)
 
             // Finish only when hitting a pin or anything in the schematic graph subtree
             if shouldFinish(on: context.hitTarget) {

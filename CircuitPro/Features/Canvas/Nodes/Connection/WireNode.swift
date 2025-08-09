@@ -3,8 +3,8 @@ import Observation
 
 @Observable
 final class WireNode: BaseNode {
-    let edgeID: ConnectionEdge.ID
-    let graph: SchematicGraph
+    let edgeID: WireEdge.ID
+    let graph: WireGraph
 
     override var isSelectable: Bool { true }
 
@@ -18,7 +18,7 @@ final class WireNode: BaseNode {
         return abs(startV.point.x - endV.point.x) < 1e-6 ? .vertical : .horizontal
     }
 
-    init(edgeID: ConnectionEdge.ID, graph: SchematicGraph) {
+    init(edgeID: WireEdge.ID, graph: WireGraph) {
         self.edgeID = edgeID
         self.graph = graph
         super.init(id: edgeID)

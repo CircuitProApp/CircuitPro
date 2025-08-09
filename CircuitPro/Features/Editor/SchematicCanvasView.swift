@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-struct SchematicView: View {
+struct SchematicCanvasView: View {
 
     // Injected
     var document: CircuitProjectDocument
@@ -58,7 +58,7 @@ struct SchematicView: View {
     }
     
     /// Builds the initial scene graph from the ProjectManager's data models.
-    /// This method now correctly synchronizes component pins with the SchematicGraph.
+    /// This method now correctly synchronizes component pins with the WireGraph.
     private func setupScene() {
         // Prevent re-running if the view updates.
         guard self.nodes.isEmpty else { return }

@@ -2,13 +2,13 @@ import AppKit
 
 
 /// Handles dragging selected nodes on the canvas.
-/// This interaction has special logic to handle dragging schematic connections via the `SchematicGraph` model.
+/// This interaction has special logic to handle dragging schematic wire via the `WireGraph` model.
 final class DragInteraction: CanvasInteraction {
     
     private struct DraggingState {
         let origin: CGPoint
         let originalNodePositions: [UUID: CGPoint]
-        let graph: SchematicGraph?
+        let graph: WireGraph?
     }
     
     private var state: DraggingState?
@@ -40,7 +40,7 @@ final class DragInteraction: CanvasInteraction {
             originalPositions[node.id] = node.position
         }
         
-        var activeGraph: SchematicGraph? = nil
+        var activeGraph: WireGraph? = nil
         if let graphNode = context.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode {
             let selectedIDs = Set(controller.selectedNodes.map { $0.id })
             if graphNode.graph.beginDrag(selectedIDs: selectedIDs) {

@@ -16,14 +16,14 @@ struct ProjectNavigatorView: View {
 
     enum SchematicNavigatorType: Displayable {
         case symbols
-        case connections
+        case nets
         
         var label: String {
             switch self {
             case .symbols:
                 return "Symbols"
-            case .connections:
-                return "Connections"
+            case .nets:
+                return "Nets"
             }
         }
     }
@@ -73,8 +73,8 @@ struct ProjectNavigatorView: View {
                     SymbolNavigatorView(document: document)
                         .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .leading)))
            
-                case .connections:
-                    ConnectionNavigatorView(document: document)
+                case .nets:
+                    NetNavigatorView(document: document)
                         .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .trailing)))
                 }
             }

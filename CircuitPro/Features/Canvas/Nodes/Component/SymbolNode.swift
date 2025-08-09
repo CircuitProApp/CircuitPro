@@ -22,7 +22,7 @@ final class SymbolNode: BaseNode {
     /// The library definition of the symbol, containing the template for primitives, pins, etc.
     let symbol: Symbol
     
-    weak var graph: SchematicGraph?
+    weak var graph: WireGraph?
 
     override var isSelectable: Bool { true }
 
@@ -50,7 +50,7 @@ final class SymbolNode: BaseNode {
 
     // MARK: - Initialization
 
-    init(instance: SymbolInstance, symbol: Symbol, resolvedTexts: [ResolvedText], graph: SchematicGraph? = nil) {
+    init(instance: SymbolInstance, symbol: Symbol, resolvedTexts: [ResolvedText], graph: WireGraph? = nil) {
         self.instance = instance
         self.symbol = symbol
         self.graph = graph

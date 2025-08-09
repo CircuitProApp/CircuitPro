@@ -8,14 +8,14 @@
 import SwiftUI
 
 enum FeedbackFeatureType: Displayable {
-    case connectionCreation
+    case schematicWire
     case navigatorView
     case componentDesign
     case libraryView
     
     var label: String {
         switch self {
-        case .connectionCreation: return "Connection Creation"
+        case .schematicWire: return "Schematic Wire"
         case .navigatorView: return "Navigator/Sidebar View"
         case .componentDesign: return "Component Design"
         case .libraryView: return "Library View"

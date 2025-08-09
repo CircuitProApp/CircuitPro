@@ -72,7 +72,7 @@ struct ToolbarView: View {
             selectedTool = tool
         } label: {
             Group {
-                if tool is ConnectionTool {
+                if tool is WireTool {
                     Image(tool.symbolName)
                 } else {
                     Image(systemName: tool.symbolName)

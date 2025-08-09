@@ -7,17 +7,17 @@
 
 import AppKit
 import Observation
-/// A special container node that manages the scene graph representation of a `SchematicGraph`.
+/// A special container node that manages the scene graph representation of a `WireGraph`.
 ///
 /// This node doesn't draw anything itself. Its purpose is to hold a reference to the
-/// `SchematicGraph` model and create, manage, and destroy `VertexNode` and `WireNode`
+/// `WireGraph` model and create, manage, and destroy `VertexNode` and `WireNode`
 /// children to reflect the current state of the graph's topology. It serves as the root
 /// for all schematic wiring visuals on the canvas.
 @Observable
 final class SchematicGraphNode: BaseNode {
 
     /// The single source of truth for the schematic's connectivity and geometry data.
-    let graph: SchematicGraph
+    let graph: WireGraph
 
     /// A flag to enable debug visualizations for vertices. When set, it's passed
     /// down to all child `VertexNode` instances.
@@ -40,7 +40,7 @@ final class SchematicGraphNode: BaseNode {
 
     /// Initializes the node with the graph data model.
     /// - Parameter graph: The `SchematicGraph` instance that this node will visually represent.
-    init(graph: SchematicGraph) {
+    init(graph: WireGraph) {
         self.graph = graph
         // The container needs its own unique, stable ID.
         super.init(id: UUID())
