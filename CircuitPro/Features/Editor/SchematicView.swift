@@ -27,7 +27,6 @@ struct SchematicView: View {
             magnification: $canvasManager.magnification,
             nodes: $nodes,
             selection: $selectedNodeIDs,
-            // Pass the state-managed tool instance here
             tool: $selectedTool.unwrapping(withDefault: defaultTool),
             environment: canvasManager.environment,
             renderLayers: [
@@ -37,7 +36,6 @@ struct SchematicView: View {
                 MarqueeRenderLayer(),
                 CrosshairsRenderLayer()
             ],
-            // Provide the fully configured list of interaction handlers
             interactions: [
                 ToolInteraction(),
                 SelectionInteraction(),
@@ -51,37 +49,48 @@ struct SchematicView: View {
             onModelDidChange: { self.document.updateChangeCount(.changeDone) }
         )
         .overlay(alignment: .leading) {
-            // The toolbar now updates the same selectedTool instance
             SchematicToolbarView(selectedSchematicTool: $selectedTool)
                 .padding(16)
         }
-        .onAppear(perform: setupScene) // Perform initial setup
+        .onAppear(perform: setupScene)
     }
     
     /// Builds the initial scene graph from the ProjectManager's data models.
+    /// This method now correctly synchronizes component pins with the SchematicGraph.
     private func setupScene() {
         // Prevent re-running if the view updates.
         guard self.nodes.isEmpty else { return }
 
-        // 1. Create the single SchematicGraphNode for our wiring.
-        let graphNode = SchematicGraphNode(graph: projectManager.schematicGraph)
-        graphNode.syncChildNodesFromModel()
-
-        // 2. Create SymbolNodes for each component instance.
-        let symbolNodes: [SymbolNode] = projectManager.designComponents.compactMap {
-            // ... your existing correct logic to create SymbolNodes ...
-            designComp in
+        // --- CRITICAL STEP 1: Initialize Graph Model State FIRST ---
+        // Before creating any scene nodes, we must tell the graph about every pin from every component instance.
+        // This populates the graph model with all the fixed, pin-owned vertices.
+        for designComp in projectManager.designComponents {
+            guard let symbolDefinition = designComp.definition.symbol else { continue }
+            projectManager.schematicGraph.syncPins(for: designComp.instance.symbolInstance, of: symbolDefinition)
+        }
+        
+        // --- STEP 2: Create the Visual Scene Nodes ---
+        // Create SymbolNodes for each component instance.
+        let symbolNodes: [SymbolNode] = projectManager.designComponents.compactMap { designComp in
             guard let symbolDefinition = designComp.definition.symbol else { return nil }
             let resolvedProperties = PropertyResolver.resolve(from: designComp.definition, and: designComp.instance)
             let resolvedTexts = TextResolver.resolve(from: symbolDefinition, and: designComp.instance.symbolInstance, componentName: designComp.definition.name, reference: designComp.referenceDesignator, properties: resolvedProperties)
             return SymbolNode(instance: designComp.instance.symbolInstance, symbol: symbolDefinition, resolvedTexts: resolvedTexts)
         }
         
-        // 3. Atomically set the nodes array ONCE. This is the initial state.
+        // Create the single SchematicGraphNode which acts as a container for wires and vertices.
+        let graphNode = SchematicGraphNode(graph: projectManager.schematicGraph)
+
+        // --- CRITICAL STEP 3: Sync Graph Visuals LAST ---
+        // Now that the graph model is fully populated, tell the graph *node* to create
+        // its visual children (`VertexNode` and `WireNode`) to match the model.
+        graphNode.syncChildNodesFromModel()
+
+        // Atomically set the nodes array for the canvas.
         self.nodes = symbolNodes + [graphNode]
     }
     
-    // handleComponentDrop function remains the same...
+    /// Handles dropping a new component onto the canvas from a library.
     private func handleComponentDrop(pasteboard: NSPasteboard, location: CGPoint) -> Bool {
         // 1. Decode the transferable data from the pasteboard.
         guard let data = pasteboard.data(forType: .transferableComponent),
@@ -101,13 +110,11 @@ struct SchematicView: View {
         let nextRefIndex = (instances.filter { $0.componentUUID == componentDefinition.uuid }.map(\.referenceDesignatorIndex).max() ?? 0) + 1
         
         // 4. Create the new data models for the document.
-        // The location has already been processed by the canvas's input processors (e.g., snapped to the grid).
         let newSymbolInstance = SymbolInstance(
             symbolUUID: symbolDefinition.uuid,
-            position: location, // Use the snapped location directly.
+            position: location, // The location is already snapped by the canvas input pipeline.
             cardinalRotation: .east
         )
-
         let newComponentInstance = ComponentInstance(
             componentUUID: componentDefinition.uuid,
             propertyInstances: [],
@@ -116,31 +123,62 @@ struct SchematicView: View {
             reference: nextRefIndex
         )
         
-        // 5. Resolve the text elements needed to construct the visual node.
+        // 5. Resolve text elements for the visual node.
         let designComp = DesignComponent(definition: componentDefinition, instance: newComponentInstance)
         let resolvedProperties = PropertyResolver.resolve(from: designComp.definition, and: designComp.instance)
-        let resolvedTexts = TextResolver.resolve(
-            from: symbolDefinition,
-            and: newSymbolInstance,
-            componentName: componentDefinition.name,
-            reference: designComp.referenceDesignator,
-            properties: resolvedProperties
-        )
+        let resolvedTexts = TextResolver.resolve(from: symbolDefinition, and: newComponentInstance.symbolInstance, componentName: componentDefinition.name, reference: designComp.referenceDesignator, properties: resolvedProperties)
 
-        // 6. Create the new SymbolNode for the scene graph.
+        // 6. Create the new visual SymbolNode.
         let newNode = SymbolNode(
             instance: newComponentInstance.symbolInstance,
             symbol: symbolDefinition,
             resolvedTexts: resolvedTexts
         )
         
-        // 7. Atomically update the source-of-truth models.
+        // --- 7. MUTATE THE DATA MODELS ---
         projectManager.selectedDesign?.componentInstances.append(newComponentInstance)
+        
+        // --- 8. SYNC THE GRAPH MODEL ---
+        projectManager.schematicGraph.syncPins(for: newSymbolInstance, of: symbolDefinition)
+
+        // --- 9. SYNC THE SCENE GRAPH ---
         nodes.append(newNode)
         
-        // 8. Notify the document of the change so it can be saved.
+        if let graphNode = nodes.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode {
+            graphNode.syncChildNodesFromModel()
+        }
+        
+        // 10. Notify the document of the change so it can be saved.
         document.updateChangeCount(.changeDone)
         
         return true
+    }
+    
+    /// Deletes all selected elements from the schematic, maintaining data integrity.
+    /// This method is essential and should be called from a main menu command (e.g., Edit > Delete).
+    private func deleteSelected() {
+        guard !selectedNodeIDs.isEmpty else { return }
+        
+        let symbolsToDelete = selectedNodeIDs.filter { id in nodes.contains { $0.id == id && $0 is SymbolNode } }
+        let graphElementsToDelete = selectedNodeIDs.filter { id in nodes.contains { $0.id == id && ($0 is WireNode || $0 is VertexNode) } }
+
+        // Step A: Release pins of deleted symbols from the graph FIRST.
+        for instanceID in symbolsToDelete {
+            projectManager.schematicGraph.releasePins(for: instanceID)
+        }
+
+        // Step B: Mutate the data models.
+        projectManager.componentInstances.removeAll { symbolsToDelete.contains($0.symbolInstance.id) }
+        projectManager.schematicGraph.delete(items: Set(graphElementsToDelete))
+
+        // Step C: Update the visual scene graph.
+        nodes.removeAll { selectedNodeIDs.contains($0.id) }
+        
+        if let graphNode = nodes.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode {
+            graphNode.syncChildNodesFromModel()
+        }
+        
+        selectedNodeIDs.removeAll()
+        document.updateChangeCount(.changeDone)
     }
 }

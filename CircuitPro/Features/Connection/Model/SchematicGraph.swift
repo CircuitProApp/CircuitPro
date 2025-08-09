@@ -167,22 +167,37 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
     /// Call this when a drag gesture begins.
     /// It caches the initial state of the graph needed for calculations.
     public func beginDrag(selectedIDs: Set<UUID>) -> Bool {
-        // A drag can affect selected edges OR vertices attached to selected symbols.
+        // --- THIS IS THE FIX ---
 
-        // 1. Find vertices that are part of selected symbols
-        let pinVertices = vertices.values.filter { vertex in
-            if case .pin(let symbolID, _) = vertex.ownership {
-                return selectedIDs.contains(symbolID)
+        // 1. Find pins of selected SYMBOLS. These are always movable.
+        let symbolPinVertexIDs = vertices.values
+            .filter { vertex in
+                if case .pin(let symbolID, _) = vertex.ownership {
+                    return selectedIDs.contains(symbolID)
+                }
+                return false
             }
-            return false
-        }
-        let pinVertexIDs = Set(pinVertices.map(\.id))
+            .map { $0.id }
 
-        // 2. Find vertices connected to selected edges
+        // 2. Find vertices of selected EDGES.
         let selectedEdges = self.edges.values.filter { selectedIDs.contains($0.id) }
-        let edgeVertexIDs = Set(selectedEdges.flatMap { [$0.start, $0.end] })
+        
+        // 3. Critically, only consider vertices from these edges that are NOT pins.
+        // Pins act as anchors and should not move when only their wire is selected.
+        let movableEdgeVertexIDs = selectedEdges
+            .flatMap { [$0.start, $0.end] }
+            .filter { vertexID in
+                // Keep the vertex ID only if its ownership is anything OTHER than .pin
+                guard let vertex = self.vertices[vertexID] else { return false }
+                if case .pin = vertex.ownership {
+                    return false // This is a pin, DO NOT move it.
+                }
+                return true // This is a free vertex, KEEP it.
+            }
 
-        let allMovableVertexIDs = pinVertexIDs.union(edgeVertexIDs)
+        // 4. The final set of vertices to move is the union of the two sets.
+        let allMovableVertexIDs = Set(symbolPinVertexIDs).union(movableEdgeVertexIDs)
+        
         guard !allMovableVertexIDs.isEmpty else {
             self.dragState = nil
             return false
@@ -833,5 +848,51 @@ class SchematicGraph { // swiftlint:disable:this type_body_length
         }
         
         return discoveredNets
+    }
+    
+    public func syncPins(for instance: SymbolInstance, of symbol: Symbol) {
+        // Calculate the symbol's rotation and position transforms once.
+        let transform = CGAffineTransform(rotationAngle: instance.rotation)
+            .concatenating(CGAffineTransform(translationX: instance.position.x, y: instance.position.y))
+
+        for pin in symbol.pins {
+            // Calculate the pin's absolute world position.
+            let worldPinPosition = pin.position.applying(transform)
+
+            // The vertex ownership uniquely identifies this pin.
+            let ownership: VertexOwnership = .pin(symbolID: instance.id, pinID: pin.id)
+            
+            // Check if a vertex for this specific pin already exists.
+            if let existingVertexID = findVertex(ownedBy: instance.id, pinID: pin.id) {
+                // If it exists, move it to the new calculated position. This is important
+                // for handling programmatic moves or symbol rotations.
+                moveVertex(id: existingVertexID, to: worldPinPosition)
+            } else {
+                // If it doesn't exist, create it. `getOrCreatePinVertex` is perfect
+                // as it will also merge with any existing free vertices or wires at that location,
+                // effectively connecting the new pin to existing circuitry.
+                getOrCreatePinVertex(at: worldPinPosition, symbolID: instance.id, pinID: pin.id)
+            }
+        }
+    }
+
+    /// Disowns all vertices associated with a given symbol instance, converting them to free vertices.
+    /// This must be called when a component is deleted. It ensures that any wires connected
+    /// to the symbol's pins are not deleted, but instead remain on the canvas, attached to now-free vertices.
+    public func releasePins(for instanceID: UUID) {
+        // Find all vertices owned by the symbol instance being removed.
+        let vertexIDsToRelease = vertices.values
+            .filter { vertex in
+                if case .pin(let symbolID, _) = vertex.ownership, symbolID == instanceID {
+                    return true
+                }
+                return false
+            }
+            .map { $0.id }
+            
+        // Change their ownership to `.free`. The graph normalization logic will handle them from here.
+        for id in vertexIDsToRelease {
+            vertices[id]?.ownership = .free
+        }
     }
 }
