@@ -15,6 +15,7 @@ final class ProjectManager {
     var project: CircuitProject
     var selectedDesign: CircuitDesign? 
     var selectedComponentIDs: Set<UUID> = []
+    var canvasNodes: [BaseNode] = []
     var selectedNetIDs: Set<UUID> = []
     var schematicGraph = WireGraph()
 
@@ -51,6 +52,47 @@ final class ProjectManager {
         return componentInstances.compactMap { inst in
             guard let def = dict[inst.componentUUID] else { return nil }
             return DesignComponent(definition: def, instance: inst)
+        }
+    }
+    
+    func rebuildCanvasNodes() {
+        // This logic is moved from SchematicCanvasView.syncNodesFromProjectManager
+        
+        // 1. Ensure the graph model is synchronized first
+        for designComp in designComponents {
+            guard let symbolDefinition = designComp.definition.symbol else { continue }
+            schematicGraph.syncPins(
+                for: designComp.instance.symbolInstance,
+                of: symbolDefinition,
+                ownerID: designComp.id
+            )
+        }
+
+        // 2. Build the Symbol nodes
+        let symbolNodes: [SymbolNode] = designComponents.compactMap { designComp in
+            guard let symbolDefinition = designComp.definition.symbol else { return nil }
+            let resolvedProperties = PropertyResolver.resolve(from: designComp.definition, and: designComp.instance)
+            let resolvedTexts = TextResolver.resolve(from: symbolDefinition, and: designComp.instance.symbolInstance, componentName: designComp.definition.name, reference: designComp.referenceDesignator, properties: resolvedProperties)
+            return SymbolNode(
+                id: designComp.id,
+                instance: designComp.instance.symbolInstance,
+                symbol: symbolDefinition,
+                resolvedTexts: resolvedTexts,
+                graph: schematicGraph
+            )
+        }
+
+        // 3. Build the Graph node
+        let graphNode = SchematicGraphNode(graph: schematicGraph)
+        graphNode.syncChildNodesFromModel()
+
+        // 4. Update the single source of truth for the canvas
+        // The check for changes is still a good optimization.
+        let newNodeIDs = Set(symbolNodes.map(\.id) + [graphNode.id])
+        let currentNodeIDs = Set(self.canvasNodes.map(\.id))
+        
+        if newNodeIDs != currentNodeIDs {
+            self.canvasNodes = symbolNodes + [graphNode]
         }
     }
 }

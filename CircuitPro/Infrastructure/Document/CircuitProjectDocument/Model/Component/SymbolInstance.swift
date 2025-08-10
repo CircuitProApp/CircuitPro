@@ -17,9 +17,9 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
     var position: CGPoint
     var cardinalRotation: CardinalRotation = .east
     
-    // 1. ADD THIS: Stores overrides for text defined in the master symbol.
+    // Stores overrides for text defined in the master symbol.
     var textOverrides: [TextOverride]
-    // 2. ADD THIS: Stores new text added only to this specific instance.
+    // Stores new text added only to this specific instance.
     var textInstances: [TextInstance]
 
     var rotation: CGFloat {

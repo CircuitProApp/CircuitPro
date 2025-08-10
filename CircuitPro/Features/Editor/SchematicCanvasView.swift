@@ -9,9 +9,6 @@ struct SchematicCanvasView: View {
 
     @Environment(\.projectManager)
     private var projectManager
-
-    // --- STATE MANAGEMENT ---
-    @State private var nodes: [BaseNode] = []
     
     // We hold the tools in state so they can be configured
     @State private var selectedTool: CanvasTool = CursorTool()
@@ -24,7 +21,7 @@ struct SchematicCanvasView: View {
         CanvasView(
             size: .constant(PaperSize.component.canvasSize()),
             magnification: $canvasManager.magnification,
-            nodes: $nodes,
+            nodes: $bindableProjectManager.canvasNodes,
             selection: $bindableProjectManager.selectedComponentIDs,
             tool: $selectedTool.unwrapping(withDefault: defaultTool),
             environment: canvasManager.environment,
@@ -53,90 +50,26 @@ struct SchematicCanvasView: View {
             SchematicToolbarView(selectedSchematicTool: $selectedTool)
                 .padding(16)
         }
-        .onAppear(perform: setupScene)
-        .onChange(of: nodes) {
-            // Sync changes from Canvas -> ProjectManager
+        .onAppear(perform: projectManager.rebuildCanvasNodes)
+        .onChange(of: projectManager.designComponents) {
+             // When the underlying data model changes, just tell the manager to rebuild.
+            projectManager.rebuildCanvasNodes()
+        }
+        .onChange(of: projectManager.canvasNodes) {
+            // This is the sync back from Canvas -> ProjectManager
             syncProjectManagerFromNodes()
         }
-        .onChange(of: projectManager.designComponents) {
-            // Sync changes from ProjectManager -> Canvas
-            syncNodesFromProjectManager()
-        }
     }
     
-    /// Builds the initial scene graph from the ProjectManager's data models.
-    private func setupScene() {
-        // --- CRITICAL STEP: Initialize Graph Model State FIRST ---
-        for designComp in projectManager.designComponents {
-            guard let symbolDefinition = designComp.definition.symbol else { continue }
-            projectManager.schematicGraph.syncPins(
-                for: designComp.instance.symbolInstance,
-                of: symbolDefinition,
-                ownerID: designComp.id
-            )
-        }
-        
-        // Now, build the visual scene from the project manager's state.
-        syncNodesFromProjectManager()
-    }
-
-    /// Rebuilds the entire scene graph from the `ProjectManager`'s data.
-    /// This is the source of truth.
-    private func syncNodesFromProjectManager() {
-        // First, ensure the graph model is aware of all pins from the source of truth.
-        // This is crucial for both initial setup and for when new components are added.
-        for designComp in projectManager.designComponents {
-            guard let symbolDefinition = designComp.definition.symbol else { continue }
-            // Pass the ComponentInstance ID as the owner.
-            projectManager.schematicGraph.syncPins(
-                for: designComp.instance.symbolInstance,
-                of: symbolDefinition,
-                ownerID: designComp.id
-            )
-        }
-        
-        let symbolNodes: [SymbolNode] = projectManager.designComponents.compactMap { designComp in
-            guard let symbolDefinition = designComp.definition.symbol else { return nil }
-            let resolvedProperties = PropertyResolver.resolve(from: designComp.definition, and: designComp.instance)
-            let resolvedTexts = TextResolver.resolve(from: symbolDefinition, and: designComp.instance.symbolInstance, componentName: designComp.definition.name, reference: designComp.referenceDesignator, properties: resolvedProperties)
-            return SymbolNode(
-                id: designComp.id,
-                instance: designComp.instance.symbolInstance,
-                symbol: symbolDefinition,
-                resolvedTexts: resolvedTexts,
-                graph: projectManager.schematicGraph
-            )
-        }
-        
-        let graphNode = SchematicGraphNode(graph: projectManager.schematicGraph)
-        graphNode.syncChildNodesFromModel()
-
-        // To prevent infinite update loops, only update the state if the node IDs have actually changed.
-        let newNodeIDs = Set(symbolNodes.map(\.id) + [graphNode.id])
-        let currentNodeIDs = Set(self.nodes.map(\.id))
-        
-        if newNodeIDs != currentNodeIDs {
-            self.nodes = symbolNodes + [graphNode]
-        }
-    }
-    
-    /// Compares the canvas `nodes` with the `ProjectManager` and removes any components
-    /// from the manager that no longer have a corresponding node on the canvas.
     private func syncProjectManagerFromNodes() {
-        let nodeIDs = Set(nodes.map(\.id))
-        
-        // Find which components in the project manager are missing from the canvas node list.
-        let missingComponents = projectManager.designComponents.filter { !nodeIDs.contains($0.id) }
-        
-        if !missingComponents.isEmpty {
-            // Before deleting the component models, tell the graph to release their pins.
-            for component in missingComponents {
-                // Release pins using the ComponentInstance ID.
-                projectManager.schematicGraph.releasePins(for: component.id)
+        let nodeIDs = Set(projectManager.canvasNodes.map(\.id))
+        let missingComponentIDs = Set(projectManager.designComponents.map(\.id)).subtracting(nodeIDs)
+
+        if !missingComponentIDs.isEmpty {
+            for componentID in missingComponentIDs {
+                projectManager.schematicGraph.releasePins(for: componentID)
             }
-            
-            let idsToRemove = Set(missingComponents.map(\.id))
-            projectManager.selectedDesign?.componentInstances.removeAll { idsToRemove.contains($0.id) }
+            projectManager.selectedDesign?.componentInstances.removeAll { missingComponentIDs.contains($0.id) }
             document.updateChangeCount(.changeDone)
         }
     }
