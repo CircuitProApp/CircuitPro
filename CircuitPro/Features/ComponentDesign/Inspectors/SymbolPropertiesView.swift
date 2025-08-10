@@ -34,6 +34,11 @@ struct SymbolPropertiesView: View {
                         PrimitivePropertiesView(primitive: $primitiveNode.primitive)
 
                     // --- Case 3 (Future): The selected element is a TextNode ---
+                    } else if let textNode = element as? TextNode {
+                        @Bindable var textNode = textNode
+                        
+                        TextPropertiesView(textElement: $textNode.textModel, editor: manager)
+                        
                     } else {
                         // Add other `else if let ... as? ...` blocks here for other node types.
                         Text("Properties for this element type are not yet implemented.")

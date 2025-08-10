@@ -12,7 +12,7 @@ import Observation
 final class CanvasEditorManager {
     
     // MARK: - Canvas State
-    var elements: [BaseNode] = [] {
+    var canvasNodes: [BaseNode] = [] {
         didSet {
             updateElementIndexMap()
         }
@@ -26,7 +26,7 @@ final class CanvasEditorManager {
         guard let index = elementIndexMap[id] else {
             return nil
         }
-        return elements[index]
+        return canvasNodes[index]
     }
     
     var selectedTool: CanvasTool = CursorTool()
@@ -44,11 +44,11 @@ final class CanvasEditorManager {
     
     // MARK: - Computed Properties
     var pins: [Pin] {
-        elements.compactMap { ($0 as? PinNode)?.pin }
+        canvasNodes.compactMap { ($0 as? PinNode)?.pin }
     }
     
     var pads: [Pad] {
-        elements.compactMap { ($0 as? PadNode)?.pad }
+        canvasNodes.compactMap { ($0 as? PadNode)?.pad }
     }
     
     var placedTextSources: Set<TextSource> {
@@ -58,13 +58,14 @@ final class CanvasEditorManager {
     // MARK: - State Management
     private func updateElementIndexMap() {
         elementIndexMap = Dictionary(
-            uniqueKeysWithValues: elements.enumerated().map { ($1.id, $0) }
+            uniqueKeysWithValues: canvasNodes.enumerated().map { ($1.id, $0) }
         )
         
-        // Prune any text source mappings that no longer have a corresponding element
-        let currentTextElementIDs = Set(elements.compactMap { $0 as? TextNode.ID })
-        textSourceMap = textSourceMap.filter { currentTextElementIDs.contains($0.key) }
-        textDisplayOptionsMap = textDisplayOptionsMap.filter { currentTextElementIDs.contains($0.key) }
+        // Prune any text source mappings that no longer have a corresponding element.
+        // This now correctly filters for TextNode objects and extracts their IDs.
+        let currentTextNodeIDs = Set(canvasNodes.compactMap { ($0 as? TextNode)?.id })
+        textSourceMap = textSourceMap.filter { currentTextNodeIDs.contains($0.key) }
+        textDisplayOptionsMap = textDisplayOptionsMap.filter { currentTextNodeIDs.contains($0.key) }
     }
     
     func setupForFootprintEditing() {
@@ -92,7 +93,7 @@ final class CanvasEditorManager {
     )
     
     func reset() {
-        elements = []
+        canvasNodes = []
         selectedElementIDs = []
         selectedTool = CursorTool()
         elementIndexMap = [:]
@@ -124,29 +125,33 @@ extension CanvasEditorManager {
         
         let resolvedText = resolveText(for: newElementID, source: source, componentData: componentData)
         
-        //        let newElement = TextElement(
-        //            id: newElementID,
-        //            text: resolvedText.isEmpty ? displayName : resolvedText,
-        //            position: centerPoint
-        //        )
+        // Create a a new TextModel with the resolved data.
+        let textModel = TextModel(
+            id: newElementID,
+            text: resolvedText.isEmpty ? displayName : resolvedText,
+            position: centerPoint
+        )
         
-        //        elements.append(.text(newElement))
+        // Create a new TextNode from the model and add it to the canvas.
+        let newNode = TextNode(textModel: textModel)
+        canvasNodes.append(newNode)
     }
     
     /// Iterates through all dynamic text on the canvas and ensures its displayed text is up-to-date with the latest component data.
     func updateDynamicTextElements(componentData: (name: String, prefix: String, properties: [PropertyDefinition])) {
         for (elementID, source) in textSourceMap {
-            //            guard let index = elementIndexMap[elementID],
-            //                  case .text(var textElement) = elements[index] else {
-            //                continue
-            //            }
+            guard let index = elementIndexMap[elementID],
+                  let textNode = canvasNodes[index] as? TextNode else {
+                continue
+            }
             
             let newText = resolveText(for: elementID, source: source, componentData: componentData)
             
-            //            if textElement.text != newText {
-            //                textElement.text = newText
-            //                elements[index] = .text(textElement)
-            //            }
+            // If the text has changed, update the text property on the node's model.
+            // Since TextModel is a struct, this correctly triggers observation.
+            if textNode.textModel.text != newText {
+                textNode.textModel.text = newText
+            }
         }
     }
     
@@ -163,7 +168,7 @@ extension CanvasEditorManager {
         guard !textElementsToRemove.isEmpty else { return }
         
         let idsToRemove = Set(textElementsToRemove.keys)
-        elements.removeAll { idsToRemove.contains($0.id) }
+        canvasNodes.removeAll { idsToRemove.contains($0.id) }
     }
     
     /// Gets the current display string for a given text element ID by resolving its source and applying display options.
@@ -215,5 +220,24 @@ extension CanvasEditorManager {
                 self.updateDynamicTextElements(componentData: componentData)
             }
         )
+    }
+    
+    func removeTextFromSymbol(source: TextSource) {
+        // Find all text element IDs that map to this source (should be at most one).
+        let idsToRemove = textSourceMap.filter { $0.value == source }.map { $0.key }
+        guard !idsToRemove.isEmpty else { return }
+
+        // Remove matching nodes from the canvas.
+        canvasNodes.removeAll { node in
+            idsToRemove.contains(node.id)
+        }
+
+        // Clean up state maps and selection.
+        for id in idsToRemove {
+            textSourceMap.removeValue(forKey: id)
+            textDisplayOptionsMap.removeValue(forKey: id)
+            selectedElementIDs.remove(id)
+        }
+        // canvasNodes didSet will update indices and prune any stragglers.
     }
 }

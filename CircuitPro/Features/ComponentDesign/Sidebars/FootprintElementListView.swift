@@ -4,7 +4,6 @@ import SwiftUI
 
 struct FootprintElementListView: View {
     /// The manager that holds the state for the canvas editor.
-    /// This should be passed in from the parent view.
     @Environment(ComponentDesignManager.self) private var componentDesignManager
     
     var editor: CanvasEditorManager {
@@ -12,16 +11,12 @@ struct FootprintElementListView: View {
     }
 
     /// A type-safe identifier for any selectable item in the outline.
-    /// Using AnyHashable allows us to use layer IDs and element IDs directly.
     typealias OutlineItemID = AnyHashable
 
     /// The identifiable data model for the hierarchical list.
     struct OutlineItem: Identifiable {
-        /// The unique ID for the item, which can be a layer's UUID or an element's UUID.
         let id: OutlineItemID
-        /// The content of the item, either a layer or a canvas element.
         let content: Content
-        /// The children of this item, used for layer grouping.
         let children: [OutlineItem]?
         
         enum Content {
@@ -34,6 +29,7 @@ struct FootprintElementListView: View {
     @State private var selection: Set<OutlineItemID> = []
     
     /// The set of layer IDs that are currently expanded in the UI.
+    /// This state variable now controls the DisclosureGroups.
     @State private var expandedLayers: Set<UUID> = []
     
     private var sortedLayers: [CanvasLayer] {
@@ -53,44 +49,65 @@ struct FootprintElementListView: View {
                 .font(.title3.weight(.semibold))
                 .padding(10)
             
-            // A hierarchical list that gets its data and children structure from outlineData.
-            List(outlineData, children: \.children, selection: $selection) { item in
-                switch item.content {
-                case .layer(let layer):
-                    // Renders the view for a layer row.
-                    layerRow(for: layer)
-                case .element(let element):
-                    // Renders the view for a canvas element row.
-                    // This assumes CanvasElementRowView is compatible with your BaseNode.
-                    CanvasElementRowView(element: element, editor: editor)
+            // Reverted to a List with ForEach and explicit DisclosureGroup to control expansion.
+            List(selection: $selection) {
+                ForEach(outlineData) { item in
+                    if case .layer(let layer) = item.content {
+                        disclosureGroupRow(for: layer, children: item.children ?? [])
+                    }
                 }
             }
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
             
-            // Your existing view for adding text sources.
             DynamicTextSourceListView(editor: editor)
         }
-        // Respond to changes in the UI selection.
+        // This logic remains unchanged and is compatible with the new structure.
         .onChange(of: selection) { handleSelectionChange() }
-        // Respond to programmatic changes from the manager.
         .onChange(of: editor.activeLayerId) { syncSelectionFromManager() }
         .onChange(of: editor.selectedElementIDs) { syncSelectionFromManager() }
         .onAppear {
-            // Set the initial selection and expansion state when the view appears.
             syncSelectionFromManager()
+            // This now correctly controls which disclosure groups start open.
+            // Populating with all layer IDs will auto-expand all layers.
             expandedLayers = Set(editor.layers.map { $0.id })
-            print(editor.layers)
         }
     }
     
     // MARK: - View Builders
 
+    /// Creates the DisclosureGroup for a layer and its children.
+    @ViewBuilder
+    private func disclosureGroupRow(for layer: CanvasLayer, children: [OutlineItem]) -> some View {
+        // Binding to control the expansion state of a single layer.
+        let isExpandedBinding = Binding<Bool>(
+            get: { self.expandedLayers.contains(layer.id) },
+            set: { isExpanded in
+                if isExpanded {
+                    self.expandedLayers.insert(layer.id)
+                } else {
+                    self.expandedLayers.remove(layer.id)
+                }
+            }
+        )
+        
+        DisclosureGroup(isExpanded: isExpandedBinding) {
+            ForEach(children) { childItem in
+                if case .element(let element) = childItem.content {
+                    CanvasElementRowView(element: element, editor: editor)
+                        .tag(childItem.id) // Tag elements for selection
+                }
+            }
+        } label: {
+            layerRow(for: layer)
+                .tag(layer.id) // Tag the layer itself for selection
+        }
+    }
+
     /// Creates the visual representation for a layer row in the list.
     @ViewBuilder
     private func layerRow(for layer: CanvasLayer) -> some View {
         HStack {
-            // Layer Color Swatch
             Image(systemName: "circle.fill")
                 .foregroundStyle(Color(cgColor: layer.color))
             
@@ -99,18 +116,17 @@ struct FootprintElementListView: View {
                 
             Spacer()
         }
-        .contentShape(Rectangle()) // Ensures the entire row is tappable
+        .contentShape(Rectangle())
     }
     
     // MARK: - Data Source
 
-    /// Assembles the hierarchical data structure for the `List`.
+    /// Assembles the hierarchical data structure for the `List`. (Unchanged from your new code)
     private var outlineData: [OutlineItem] {
-        let elementsByLayer = Dictionary(grouping: editor.elements) { node in
+        let elementsByLayer = Dictionary(grouping: editor.canvasNodes) { node in
             (node as? Layerable)?.layerId
         }
 
-        // Use sortedLayers instead of editor.layers
         let items = sortedLayers.map { layer -> OutlineItem in
             let childElements = (elementsByLayer[layer.id] ?? []).map { element in
                 OutlineItem(id: element.id, content: .element(element), children: nil)
@@ -123,45 +139,36 @@ struct FootprintElementListView: View {
     
     // MARK: - Selection Synchronization Logic
     
-    /// Updates the `CanvasEditorManager` when the user changes the selection in the list.
+    /// Updates the manager when the list selection changes. (Unchanged from your new code)
     private func handleSelectionChange() {
-        // Find the first selected ID that belongs to a layer.
         let selectedLayerId = selection.compactMap { $0 as? UUID }.first { id in
             editor.layers.contains(where: { $0.id == id })
         }
 
         if let selectedLayerId = selectedLayerId {
-            // If a layer was selected, it becomes the active layer.
             editor.activeLayerId = selectedLayerId
             editor.selectedElementIDs = []
             
-            // Enforce a single layer selection in the UI. If the user shift-clicks,
-            // we revert to selecting only the first layer clicked.
             if selection.count > 1 || selection.first as! UUID != selectedLayerId {
                 DispatchQueue.main.async {
                     self.selection = [selectedLayerId]
                 }
             }
         } else {
-            // If no layer is selected, then only elements are selected.
             editor.activeLayerId = nil
             editor.selectedElementIDs = Set(selection.compactMap { $0 as? UUID })
         }
     }
     
-    /// Updates the list's selection when the manager's state changes from another source
-    /// (e.g., clicking on the canvas).
+    /// Updates the list's selection from the manager. (Unchanged from your new code)
     private func syncSelectionFromManager() {
         var newSelection: Set<OutlineItemID> = []
         if let activeLayerId = editor.activeLayerId {
-            // If there's an active layer, it's the only thing selected.
             newSelection.insert(activeLayerId)
         } else {
-            // Otherwise, the selection is the set of selected element IDs.
             editor.selectedElementIDs.forEach { newSelection.insert($0) }
         }
         
-        // Only update the state if it has actually changed to prevent cycles.
         if self.selection != newSelection {
             self.selection = newSelection
         }

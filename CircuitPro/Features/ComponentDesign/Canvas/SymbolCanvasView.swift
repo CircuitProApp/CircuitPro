@@ -22,7 +22,7 @@ struct SymbolCanvasView: View {
             CanvasView(
                 size: .constant(PaperSize.component.canvasSize()),
                 magnification: $canvasManager.magnification,
-                nodes: $symbolEditor.elements,
+                nodes: $symbolEditor.canvasNodes,
                 selection: $symbolEditor.selectedElementIDs,
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
                 environment: canvasManager.environment,

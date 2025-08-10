@@ -12,7 +12,8 @@ struct FootprintCanvasView: View {
     @Environment(CanvasManager.self)
     private var canvasManager
     
-    @Environment(ComponentDesignManager.self) private var componentDesignManager
+    @Environment(ComponentDesignManager.self)
+    private var componentDesignManager
     
     @State private var isCollapsed: Bool = true
     
@@ -24,7 +25,7 @@ struct FootprintCanvasView: View {
             CanvasView(
                 size: .constant(PaperSize.component.canvasSize()),
                 magnification: $manager.magnification,
-                nodes: $footprintEditor.elements,
+                nodes: $footprintEditor.canvasNodes,
                 selection: $footprintEditor.selectedElementIDs,
                 tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
                 layers: $footprintEditor.layers,
@@ -53,9 +54,7 @@ struct FootprintCanvasView: View {
                 snapProvider: CircuitProSnapProvider()
             )
             .overlay(alignment: .leading) {
-                
                 FootprintDesignToolbarView()
-                
                     .padding(10)
             }
         } handle: {
@@ -69,7 +68,6 @@ struct FootprintCanvasView: View {
             Text("WIP")
         }
         .onAppear {
-            // When the view appears, tell the manager to set up the session.
             componentDesignManager.footprintEditor.setupForFootprintEditing()
         }
     }

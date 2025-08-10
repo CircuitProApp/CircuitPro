@@ -8,43 +8,39 @@
 import SwiftUI
 
 struct FootprintPropertiesView: View {
-    @Environment(ComponentDesignManager.self) private var componentDesignManager
+
+    @Environment(ComponentDesignManager.self)
+    private var componentDesignManager
     
     var body: some View {
         @Bindable var manager = componentDesignManager.footprintEditor
         
-        
         ScrollView {
-            // 2. Section for Pads
-            // Iterate over all footprint elements to find the selected pads.
-//            ForEach($manager.elements) { $element in
-//                if case .pad(let pad) = element, manager.selectedElementIDs.contains(pad.id) {
-//                    // Safely unwrap the binding to the pad.
-//                    if let padBinding = $element.pad {
-//                        
-//                        
-//                        PadPropertiesView(pad: padBinding)
-//                        
-//                    }
-//                } else if case .primitive(let primitive) = element, manager.selectedElementIDs.contains(primitive.id) {
-//                    // Safely unwrap the binding to the primitive.
-//                    if let primitiveBinding = $element.primitive {
-//                        
-//                        // This view will receive the binding for the primitive.
-//                        PrimitivePropertiesView(primitive: primitiveBinding)
-//                        
-//                    }
-//                } else if case .text(let text) = element, manager.selectedElementIDs.contains(text.id) {
-//                    if let textBinding = $element.text {
-//                        
-//                        TextPropertiesView(textElement: textBinding, editor: manager)
-//                        
-//                    }
-//                }
-//            }
-//            
-            Text("WIP")
-            
+            if let element = manager.singleSelectedElement {
+                if let padNode = element as? PadNode {
+                    @Bindable var padNode = padNode
+                    
+                    PadPropertiesView(pad: $padNode.pad)
+
+                } else if let primitiveNode = element as? PrimitiveNode {
+                    @Bindable var primitiveNode = primitiveNode
+                    
+                    PrimitivePropertiesView(primitive: $primitiveNode.primitive)
+
+                } else if let textNode = element as? TextNode {
+                    @Bindable var textNode = textNode
+
+                    TextPropertiesView(textElement: $textNode.textModel, editor: manager)
+
+                } else {
+                    Text("Properties for this element type are not yet implemented.")
+                        .padding()
+                }
+            }  else {
+                Text(manager.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
+                    .foregroundColor(.secondary)
+                    .padding()
+            }
         }
     }
 }

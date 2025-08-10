@@ -21,12 +21,10 @@ struct TextPropertiesView: View {
             Text("Text Properties")
                 .font(.title3.weight(.semibold))
             
-            // 1. Content Section
             contentSection
 
             Divider()
             
-            // 2. Transform Section
             InspectorSection("Transform") {
                 PointControlView(title: "Position", point: $textElement.position, displayOffset: PaperSize.component.centerOffset())
                 RotationControlView(object: $textElement, tickStepDegrees: 45, snapsToTicks: true)
@@ -34,18 +32,15 @@ struct TextPropertiesView: View {
             
             Divider()
 
-            // 3. Appearance Section
-            InspectorSection("Appearance") {
-                // In a real app, you'd have font pickers etc.
-                // For now, these are placeholders.
-                InspectorRow("Font") {
-                    TextField("Font Name", text: .constant(textElement.font.fontName))
-                        .inspectorField()
-                }
-                InspectorRow("Size") {
-                    InspectorNumericField(title: "Size", value: .constant(textElement.font.pointSize))
-                }
-            }
+//            InspectorSection("Appearance") {
+//                InspectorRow("Font") {
+//                    TextField("Font Name", text: .constant(textElement.font.fontName))
+//                        .inspectorField()
+//                }
+//                InspectorRow("Size") {
+//                    InspectorNumericField(title: "Size", value: .constant(textElement.font.pointSize))
+//                }
+//            }
         }
         .padding(10)
     }

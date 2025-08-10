@@ -25,9 +25,8 @@ enum CanvasToolRegistry {
         CircleTool()
     ]
 
-    // The logic for combining toolsets remains the same, as they are all `[CanvasTool]`.
     static let symbolDesignTools: [CanvasTool] =
-        cursor + graphicsTools + [PinTool()] + ruler + text
+        cursor + graphicsTools + [PinTool()] + ruler
 
     static let footprintDesignTools: [CanvasTool] =
         cursor + graphicsTools + [PadTool()] + ruler

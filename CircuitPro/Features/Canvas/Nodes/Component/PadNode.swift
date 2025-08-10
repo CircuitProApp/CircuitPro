@@ -5,6 +5,7 @@ import AppKit
 /// This `CanvasElement` wraps a `Pad` struct and is responsible for its drawing
 /// and hit-testing logic. It relies on the geometry calculations defined in the
 /// `Pad+Geometry` extension to generate its visual representation.
+@Observable
 class PadNode: BaseNode {
 
     // MARK: - Properties

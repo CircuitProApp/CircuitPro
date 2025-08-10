@@ -9,6 +9,7 @@ class HandlesRenderLayer: RenderLayer {
         // Configure constant properties that never change.
         shapeLayer.fillColor = NSColor.white.cgColor
         shapeLayer.strokeColor = NSColor.systemBlue.cgColor
+        shapeLayer.zPosition = 1_000_000 // A high value to ensure handles appear on top of all other content.
         
         hostLayer.addSublayer(shapeLayer)
     }

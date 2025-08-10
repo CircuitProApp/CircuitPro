@@ -12,8 +12,6 @@ struct ComponentCardView: View {
 
     let component: Component
 
-    @State private var selectedViewType: ComponentViewType = .symbol
-
     var body: some View {
         VStack(spacing: 5) {
             Group {

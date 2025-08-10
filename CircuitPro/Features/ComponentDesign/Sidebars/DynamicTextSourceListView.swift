@@ -16,10 +16,10 @@ struct DynamicTextSourceListView: View {
     }
 
     private var helpText: (_ isPlaced: Bool) -> String {
-        return { isPlaced in
+        { isPlaced in
             let location = (editor === componentDesignManager.symbolEditor) ? "symbol" : "footprint"
             if isPlaced {
-                return "Property is already on the \(location)"
+                return "Remove property from \(location)"
             } else {
                 return "Add property to \(location)"
             }
@@ -30,21 +30,26 @@ struct DynamicTextSourceListView: View {
         List {
             Section(header: Text("Dynamic Texts")) {
                 ForEach(componentDesignManager.availableTextSources, id: \.source) { item in
+                    let isPlaced = editor.placedTextSources.contains(item.source)
+
                     HStack {
                         Text(item.displayName)
                         Spacer()
                         Button {
-                            editor.addTextToSymbol(
-                                source: item.source,
-                                displayName: item.displayName,
-                                componentData: componentData
-                            )
+                            if isPlaced {
+                                editor.removeTextFromSymbol(source: item.source)
+                            } else {
+                                editor.addTextToSymbol(
+                                    source: item.source,
+                                    displayName: item.displayName,
+                                    componentData: componentData
+                                )
+                            }
                         } label: {
-                            Image(systemName: "plus.circle.fill")
+                            Image(systemName: isPlaced ? "minus.circle.fill" : "plus.circle.fill")
                         }
                         .buttonStyle(.plain)
-                        .disabled(editor.placedTextSources.contains(item.source))
-                        .help(helpText(editor.placedTextSources.contains(item.source)))
+                        .help(helpText(isPlaced))
                     }
                 }
             }

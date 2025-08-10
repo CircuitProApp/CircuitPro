@@ -14,7 +14,11 @@ class TextNode: BaseNode {
 
     // MARK: - Properties
 
-    var textModel: TextModel
+    var textModel: TextModel {
+        didSet {
+            onNeedsRedraw?()
+        }
+    }
 
     /// Defines the distinct, hittable parts of a TextNode.
     enum Part: Hashable {

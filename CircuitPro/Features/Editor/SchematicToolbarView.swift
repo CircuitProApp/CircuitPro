@@ -17,3 +17,10 @@ struct SchematicToolbarView: View {
         )
     }
 }
+
+//
+//  sad.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 8/10/25.
+//
