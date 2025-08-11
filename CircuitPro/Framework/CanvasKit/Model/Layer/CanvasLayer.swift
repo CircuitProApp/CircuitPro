@@ -5,9 +5,6 @@
 //  Created by Giorgi Tchelidze on 8/8/25.
 //
 
-
-// Features/_Temp/CanvasKit/Model/Layer/CanvasLayer.swift
-
 import SwiftUI
 import AppKit
 
@@ -20,8 +17,7 @@ struct CanvasLayer: Identifiable, Hashable {
     var isVisible: Bool
     var color: CGColor
     var zIndex: Int
-    
-    // An optional, application-specific enum linking to your LayerKind.
+
     let kind: AnyHashable?
     
     init(id: UUID = UUID(), name: String, isVisible: Bool = true, color: CGColor, zIndex: Int, kind: AnyHashable? = nil) {

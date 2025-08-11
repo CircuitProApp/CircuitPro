@@ -16,9 +16,6 @@ protocol CanvasNode: AnyObject, CanvasElement {
 
     // MARK: - Scene Graph API
     
-    // --- FIX: The parent and children are now typed as the concrete BaseNode ---
-    // This enforces a homogenous scene graph made of BaseNode subclasses.
-    
     /// A weak reference to the parent node. This must be weak to prevent retain cycles.
     var parent: BaseNode? { get set }
 

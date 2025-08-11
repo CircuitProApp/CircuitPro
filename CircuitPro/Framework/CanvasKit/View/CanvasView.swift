@@ -1,3 +1,10 @@
+//
+//  CanvasView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 8/11/25.
+//
+
 import SwiftUI
 import AppKit
 
@@ -6,7 +13,6 @@ struct CanvasView: NSViewRepresentable {
     // MARK: - SwiftUI State Bindings
     @Binding var size: CGSize
     @Binding var magnification: CGFloat
-    // The nodes binding now correctly and consistently uses the concrete `BaseNode` class.
     @Binding var nodes: [BaseNode]
     @Binding var selection: Set<UUID>
     @Binding var tool: CanvasTool?
@@ -20,12 +26,11 @@ struct CanvasView: NSViewRepresentable {
     let interactions: [any CanvasInteraction]
     let inputProcessors: [any InputProcessor]
     let snapProvider: any SnapProvider
-    // An optional callback to report the mouse's position to the parent view.
+
     var onMouseMoved: ((CGPoint?) -> Void)?
     
     let registeredDraggedTypes: [NSPasteboard.PasteboardType]
-    // A callback executed when a valid item is dropped onto the canvas. It receives
-    // the pasteboard and the drop location, and returns 'true' on success.
+
     let onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
     
     var onModelDidChange: (() -> Void)?
@@ -74,7 +79,6 @@ struct CanvasView: NSViewRepresentable {
         private var selectionBinding: Binding<Set<UUID>>
         private var nodesBinding: Binding<[BaseNode]>
         private var magnificationObservation: NSKeyValueObservation?
-        // --- MODIFICATION 1: Changed property to hold the notification observer ---
         private var boundsChangeObserver: Any?
 
         init(
@@ -112,27 +116,23 @@ struct CanvasView: NSViewRepresentable {
                     }
                 }
             }
-            
     
             guard let clipView = scrollView.contentView as? NSClipView else { return }
             
-            // First, you must explicitly enable these notifications.
             clipView.postsBoundsChangedNotifications = true
             
-            // Second, observe the notification that is now being posted.
             self.boundsChangeObserver = NotificationCenter.default.addObserver(
                 forName: NSView.boundsDidChangeNotification,
                 object: clipView,
                 queue: .main
             ) { [weak self] _ in
-                // Any change to the bounds (i.e., a pan) will trigger a redraw.
                 self?.canvasController.redraw()
             }
         }
         
         deinit {
             magnificationObservation?.invalidate()
-            // --- MODIFICATION 3: Clean up the new observer correctly ---
+ 
             if let observer = boundsChangeObserver {
                 NotificationCenter.default.removeObserver(observer)
             }
@@ -151,7 +151,6 @@ struct CanvasView: NSViewRepresentable {
         )
         coordinator.canvasController.onMouseMoved = self.onMouseMoved
         coordinator.canvasController.onMouseMoved = self.onMouseMoved
-               // Connect the on-drop callback to the controller instance.
         coordinator.canvasController.onPasteboardDropped = self.onPasteboardDropped
         coordinator.canvasController.onModelDidChange = self.onModelDidChange
         return coordinator
@@ -175,7 +174,6 @@ struct CanvasView: NSViewRepresentable {
         scrollView.minMagnification = 0.1
         scrollView.maxMagnification = 10.0
         
-        // This line now sets up both magnification and the new bounds observation
         coordinator.observeScrollView(scrollView)
         
         return scrollView

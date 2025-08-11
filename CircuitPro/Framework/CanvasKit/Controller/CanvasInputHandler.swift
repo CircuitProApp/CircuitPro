@@ -1,10 +1,16 @@
+//
+//  CanvasInputHandler.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 8/11/25.
+//
+
 import AppKit
 
 /// A lean input router that runs mouse events through a processing pipeline
 /// before passing them to a pluggable list of interactions.
 final class CanvasInputHandler {
 
-    // It only needs a reference to the controller, the source of truth.
     unowned let controller: CanvasController
 
     init(controller: CanvasController) {

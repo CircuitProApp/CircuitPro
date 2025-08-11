@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 8/3/25.
 //
 
-
 import AppKit
 
 /// Contains all information related to a specific user interaction event for a tool.

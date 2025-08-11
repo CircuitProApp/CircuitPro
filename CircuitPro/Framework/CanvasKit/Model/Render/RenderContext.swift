@@ -1,3 +1,10 @@
+//
+//  RenderContext.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 8/11/25.
+//
+
 import AppKit
 
 /// A snapshot of the canvas state, passed to each RenderLayer during a drawing pass.

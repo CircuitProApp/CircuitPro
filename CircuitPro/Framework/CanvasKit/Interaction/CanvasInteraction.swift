@@ -28,13 +28,10 @@ protocol CanvasInteraction {
     func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool
 }
 
-// Provide default empty implementations so conformers only need to implement what they use.
 extension CanvasInteraction {
     var wantsRawInput: Bool { false }
     func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool { return false }
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) { }
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) { }
-    
     func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool { return false }
-
 }

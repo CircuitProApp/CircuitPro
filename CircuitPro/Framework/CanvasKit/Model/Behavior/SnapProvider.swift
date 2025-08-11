@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 8/6/25.
 //
 
-
 import CoreGraphics
 
 /// Defines a contract for an engine that performs application-specific

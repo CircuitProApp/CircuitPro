@@ -1,3 +1,10 @@
+//
+//  Drawable.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 8/11/25.
+//
+
 import AppKit
 
 /// Describes an object's visual representation for rendering.

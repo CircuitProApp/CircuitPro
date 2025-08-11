@@ -1,4 +1,10 @@
-// Features/_Temp/CanvasKit/View/CanvasHostView.swift
+//
+//  CanvasHostView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 8/11/25.
+//
+
 import AppKit
 import UniformTypeIdentifiers
 
@@ -25,8 +31,6 @@ final class CanvasHostView: NSView {
             }
         }
         
-        // This is the correct way to register types. The NSView superclass
-        // handles storing and exposing this list via its own `registeredDraggedTypes` property.
         self.registerForDraggedTypes(registeredDraggedTypes)
 
         for renderLayer in controller.renderLayers {

@@ -34,7 +34,6 @@ extension DrawingPrimitive {
                 miterLimit: miterLimit,
                 lineDash: lineDash
             )
-        // The .text case is correctly removed from the switch.
         }
     }
 }
