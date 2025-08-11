@@ -19,7 +19,7 @@ struct Pin: Identifiable, Codable, Hashable, Transformable {
     var position: CGPoint
     var cardinalRotation: CardinalRotation = .east
     var type: PinType
-    var lengthType: PinLengthType = .long
+    var lengthType: PinLengthType = .regular
     var showLabel: Bool = true
     var showNumber: Bool = true
 }
