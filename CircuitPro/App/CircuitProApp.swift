@@ -31,7 +31,6 @@ struct CircuitProApp: App {
                             onDialogPresented: { dismiss() }
                         )
                     }
-                    .symbolVariant(.rectangle)
                     WelcomeButton(iconName: CircuitProSymbols.Generic.folder, title: "Open Existing Project...") {
                         CircuitProjectDocumentController.shared.openDocumentWithDialog(
                             configuration: .init(allowedContentTypes: [.circuitProject]),
@@ -39,10 +38,10 @@ struct CircuitProApp: App {
                         )
                     }
                     .symbolVariant(.rectangle)
-                    WelcomeButton(iconName: "square.badge.plus", title: "Create New Component...") {
+                    WelcomeButton(iconName: "books.vertical", title: "Create New Component...") {
                         openWindow(id: "ComponentDesignWindow")
                     }
-                    .symbolVariant(.rectangle)
+                    
                 },
                 onDrop: { url, dismiss in
                     Task {
