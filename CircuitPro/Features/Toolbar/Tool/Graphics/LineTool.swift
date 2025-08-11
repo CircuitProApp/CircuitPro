@@ -15,7 +15,7 @@ struct LineTool: CanvasTool {
 
     private var start: CGPoint?
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
+    mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         if let start = self.start {
             defer { self.start = nil }
             let line = LinePrimitive(
@@ -23,7 +23,7 @@ struct LineTool: CanvasTool {
                 start: start,
                 end: location,
                 strokeWidth: 1, // This is the persistent model stroke width
-                color: .init(color: context.selectedLayer.color)
+                color: .init(color: .red)
             )
             return .element(.primitive(.line(line)))
         } else {
@@ -32,7 +32,7 @@ struct LineTool: CanvasTool {
         }
     }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
+    mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
         guard let start else { return [] }
 
         let path = CGMutablePath()
@@ -43,7 +43,7 @@ struct LineTool: CanvasTool {
             path: path,
             lineWidth: 1.0,
             fillColor: nil,
-            strokeColor: NSColor(context.selectedLayer.color).cgColor,
+            strokeColor: NSColor(.red).cgColor,
             lineDashPattern: [4, 4]
         )]
     }

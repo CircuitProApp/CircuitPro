@@ -1,28 +1,12 @@
-//
-//  WorkbenchHitTestService.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 7/16/25.
-//
-
 import AppKit
 
 /// Performs detailed hit-testing for all interactive items on the workbench.
 struct WorkbenchHitTestService {
 
     /// Finds the most specific interactive element at a given point on the canvas.
-    ///
-    /// This method checks elements in reverse rendering order (top-most first) to ensure
-    /// the correct element is picked. It checks connections first, then standard canvas elements.
-    ///
-    /// - Parameters:
-    ///   - point: The point to test, in world coordinates.
-    ///   - elements: The array of all `CanvasElement` items on the workbench.
-    ///   - schematicGraph: The `SchematicGraph` containing all connection elements.
-    ///   - magnification: The current zoom level of the canvas, used to adjust hit tolerance.
-    /// - Returns: A `CanvasHitTarget` describing the hit, or `nil` if nothing was hit.
+    /// This is the main entry point for the hit-test service when coordinating multiple layers.
     func hitTest(
-        at point: CGPoint,
+        point: CGPoint,
         elements: [CanvasElement],
         schematicGraph: SchematicGraph,
         magnification: CGFloat
@@ -30,7 +14,8 @@ struct WorkbenchHitTestService {
         let tolerance = 5.0 / magnification
 
         // 1. Hit-test the schematic graph (vertices and edges).
-        if let graphHit = hitTestSchematicGraph(at: point, graph: schematicGraph, tolerance: tolerance) {
+        // Note: The static version is called here for consistency.
+        if let graphHit = Self.hitTestSchematicGraph(at: point, graph: schematicGraph, tolerance: tolerance) {
             return graphHit
         }
 
@@ -45,8 +30,10 @@ struct WorkbenchHitTestService {
         return nil
     }
 
-    /// Helper function to encapsulate hit-testing on the schematic graph.
-    private func hitTestSchematicGraph(
+    /// **Static** helper function to encapsulate hit-testing on the schematic graph.
+    /// By making this `static`, it can be called directly from other parts of the app,
+    /// like `ConnectionsRenderLayer`, without needing an instance of the service.
+    static func hitTestSchematicGraph(
         at point: CGPoint,
         graph: SchematicGraph,
         tolerance: CGFloat
@@ -62,12 +49,10 @@ struct WorkbenchHitTestService {
                 case 2: type = .corner
                 default: type = .junction
                 }
-
-                // A vertex was hit. Vertices are interactive but not selectable entities themselves.
-                // We create a CanvasHitTarget with an empty ownerPath.
+                
                 return CanvasHitTarget(
                     partID: vertex.id,
-                    ownerPath: [], // Empty path signifies no selectable owner.
+                    ownerPath: [], // Vertices aren't directly selectable entities
                     kind: .vertex(type: type),
                     position: vertex.point
                 )
@@ -79,20 +64,12 @@ struct WorkbenchHitTestService {
             guard let startVertex = graph.vertices[edge.start],
                   let endVertex = graph.vertices[edge.end] else { continue }
 
-            // Using a simple distance calculation for the edge hit test.
-            if isPointOnLineSegment(
-                point: point,
-                start: startVertex.point,
-                end: endVertex.point,
-                tolerance: tolerance
-            ) {
+            if isPointOnLineSegment(point: point, start: startVertex.point, end: endVertex.point, tolerance: tolerance) {
                 let orientation: LineOrientation = (startVertex.point.x == endVertex.point.x) ? .vertical : .horizontal
-
-                // An edge was hit. Edges ARE selectable.
-                // The ownerPath contains the edge's own ID.
+                
                 return CanvasHitTarget(
                     partID: edge.id,
-                    ownerPath: [edge.id], // The edge is its own selectable owner.
+                    ownerPath: [edge.id], // Edges are their own selectable owner
                     kind: .edge(orientation: orientation),
                     position: point
                 )
@@ -104,6 +81,7 @@ struct WorkbenchHitTestService {
 }
 
 /// Utility function to check if a point is close to a line segment.
+/// This is a top-level private function, which is fine, or it could be made a private static helper.
 private func isPointOnLineSegment(
     point: CGPoint,
     start startPoint: CGPoint,
@@ -122,7 +100,7 @@ private func isPointOnLineSegment(
         return hypot(point.x - startPoint.x, point.y - startPoint.y) < tolerance
     }
 
-    let projectionFactor = ((point.x - startPoint.x) * deltaX + (point.y - startPoint.y) * deltaY) / (deltaX * deltaX + deltaY * deltaY) // swiftlint:disable:this line_length
+    let projectionFactor = ((point.x - startPoint.x) * deltaX + (point.y - startPoint.y) * deltaY) / (deltaX * deltaX + deltaY * deltaY)
 
     let closestPoint: CGPoint
     if projectionFactor < 0 {

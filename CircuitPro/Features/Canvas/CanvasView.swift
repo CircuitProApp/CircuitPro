@@ -3,7 +3,7 @@ import AppKit
 
 struct CanvasView: NSViewRepresentable {
     
-    // MARK: – Bindings coming from the document
+    // Bindings (from document)
     @Bindable var manager: CanvasManager
     @Bindable var schematicGraph: SchematicGraph
     @Binding var elements: [CanvasElement]
@@ -12,33 +12,59 @@ struct CanvasView: NSViewRepresentable {
     var layerBindings: CanvasLayerBindings? = nil
     var onComponentDropped: ((TransferableComponent, CGPoint) -> Void)?
 
-    // MARK: – Coordinator holding the App-Kit subviews
+    // Coordinator holds the controller and manages callbacks
     final class Coordinator {
-        let workbench: WorkbenchView
-        let documentContainer: DocumentContainerView
+        let canvasController: CanvasController
+        private var parent: CanvasView
 
-        init() {
-            self.workbench = WorkbenchView(frame: .zero)
-            self.documentContainer = DocumentContainerView(workbench: workbench)
+        init(_ parent: CanvasView) {
+            self.parent = parent
+            self.canvasController = CanvasController()
+            setupCallbacks()
+        }
+        
+        func updateParent(_ parent: CanvasView) {
+            self.parent = parent
+        }
+
+        private func setupCallbacks() {
+            canvasController.onUpdateElements = { [weak self] newElements in
+                 DispatchQueue.main.async {
+                     self?.parent.elements = newElements
+                 }
+             }
+             canvasController.onUpdateSelectedIDs = { [weak self] newIDs in
+                 DispatchQueue.main.async {
+                     self?.parent.selectedIDs = newIDs
+                 }
+             }
+             canvasController.onUpdateSelectedTool = { [weak self] newTool in
+                 DispatchQueue.main.async {
+                     self?.parent.selectedTool = newTool
+                 }
+             }
         }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let documentContainer = context.coordinator.documentContainer
+        let controller = context.coordinator.canvasController
+        let canvasHostView = CanvasHostView(controller: controller)
 
-        // Scroll view scaffolding
+        // Wrapper view for shadow and centering
+        let containerView = DocumentContainerView(canvasHost: canvasHostView)
+
         let scrollView = CenteringNSScrollView()
-        scrollView.documentView = documentContainer
+        scrollView.documentView = containerView
         scrollView.hasHorizontalScroller = true
         scrollView.hasVerticalScroller = true
         scrollView.allowsMagnification = true
         scrollView.minMagnification = ZoomStep.minZoom
         scrollView.maxMagnification = ZoomStep.maxZoom
-        scrollView.magnification = manager.magnification
         
-        // Set a background color to create the "out of bounds" area
         scrollView.drawsBackground = false
         
         scrollView.postsBoundsChangedNotifications = true
@@ -46,73 +72,56 @@ struct CanvasView: NSViewRepresentable {
             forName: NSView.boundsDidChangeNotification,
             object: scrollView.contentView,
             queue: .main
-        ) { _ in
+        ) { [weak manager = self.manager] _ in
+            guard let manager = manager else { return }
             let origin = scrollView.contentView.bounds.origin
             let clip = scrollView.contentView.bounds.size
-            let boardHeight = context.coordinator.workbench.bounds.height
+            let boardHeight = containerView.bounds.height
             let flippedY = boardHeight - origin.y - clip.height
-            self.manager.scrollOrigin = CGPoint(x: origin.x, y: flippedY)
-            self.manager.magnification = scrollView.magnification
+            manager.scrollOrigin = CGPoint(x: origin.x, y: flippedY)
+            manager.magnification = scrollView.magnification
         }
         
         return scrollView
     }
 
-    // MARK: – Propagate state changes
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        let workbench = context.coordinator.workbench
-        let documentContainer = context.coordinator.documentContainer
+        context.coordinator.updateParent(self)
+        
+        let controller = context.coordinator.canvasController
+        let containerView = scrollView.documentView as! DocumentContainerView
+        let hostView = containerView.canvasHostView
 
-        let workbenchSize = manager.paperSize.canvasSize(orientation: workbench.sheetOrientation)
+        // 1. Sync state FROM SwiftUI Bindings INTO the CanvasController
+        controller.elements = elements
+        controller.selectedIDs = selectedIDs
+        controller.selectedTool = selectedTool
+        controller.schematicGraph = schematicGraph
+        
+        // From CanvasManager
+        controller.magnification = manager.magnification
+        controller.isSnappingEnabled = manager.enableSnapping
+        controller.snapGridSize = manager.gridSpacing.rawValue * 10.0
+        controller.showGuides = manager.showGuides
+        controller.crosshairsStyle = manager.crosshairsStyle
+        controller.paperSize = manager.paperSize
+        
+        // Callbacks are now managed by the Coordinator
+
+        // 2. Set the frame of the container and host views
+        let workbenchSize = manager.paperSize.canvasSize(orientation: .landscape) // landscape temp
         let scaleFactor: CGFloat = 1.4
         let containerSize = CGSize(width: workbenchSize.width * scaleFactor, height: workbenchSize.height * scaleFactor)
-
-        if documentContainer.frame.size != containerSize {
-            documentContainer.frame.size = containerSize
+        
+        if containerView.frame.size != containerSize {
+            containerView.frame.size = containerSize
+        }
+        if hostView.frame.size != workbenchSize {
+            hostView.frame.size = workbenchSize
         }
         
-        if workbench.frame.size != workbenchSize {
-            workbench.frame.size = workbenchSize
-        }
-        
-        // Pass state to Workbench
-        workbench.elements = elements
-        workbench.schematicGraph  = schematicGraph
-        workbench.selectedIDs = selectedIDs
-        workbench.selectedTool = selectedTool
-        workbench.magnification = manager.magnification
-        workbench.isSnappingEnabled = manager.enableSnapping
-        workbench.snapGridSize = manager.gridSpacing.rawValue * 10.0
-        workbench.showGuides = manager.showGuides
-        
-        // Pass configuration to Workbench
-        workbench.crosshairsStyle = manager.crosshairsStyle
-        workbench.paperSize = manager.paperSize
-        var cellValues = workbench.sheetCellValues
-        cellValues["Size"] = manager.paperSize.name.uppercased()
-        cellValues["Units"] = "mm"
-        workbench.sheetCellValues = cellValues
-        
-        // Callbacks
-        workbench.onUpdate = { self.elements = $0 }
-        workbench.onSelectionChange = { self.selectedIDs = $0 }
-        workbench.onToolChange = { self.selectedTool = $0 }
-        workbench.onMouseMoved = { position in self.manager.mouseLocation = position }
-        workbench.onComponentDropped = onComponentDropped
-        workbench.onPinHoverChange = { id in
-            if let id = id { print("Hovering pin \(id)") }
-        }
-        
-        if let layers = layerBindings {
-            workbench.selectedLayer = layers.selectedLayer.wrappedValue ?? .layer0
-            let assignments = layers.layerAssignments
-            workbench.onPrimitiveAdded = { id, layer in
-                assignments.wrappedValue[id] = layer
-            }
-        } else {
-            workbench.selectedLayer = .layer0
-            workbench.onPrimitiveAdded = nil
-        }
+        // 3. Trigger a redraw
+        controller.redraw()
         
         // Sync external zoom changes
         if scrollView.magnification != manager.magnification {

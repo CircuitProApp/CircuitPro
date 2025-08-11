@@ -1,77 +1,87 @@
-//
-//  WorkbenchKeyCommandController.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 7/15/25.
-//
-
 import AppKit
 
-/// Interprets Return / Esc / Delete / R and forwards them to the
-/// appropriate gesture or tool helper.  Owns **no** transient state.
+/// Interprets key presses (Return, Esc, Delete, R) and forwards them to the
+/// appropriate gesture or tool helper. Owns no transient state.
 final class WorkbenchKeyCommandController {
 
-    unowned let workbench: WorkbenchView
-    unowned let coordinator: WorkbenchInputCoordinator   // to reach rotation helper etc.
+    unowned let controller: CanvasController
+    unowned let coordinator: WorkbenchInputCoordinator
 
     init(
-        workbench: WorkbenchView,
+        controller: CanvasController,
         coordinator: WorkbenchInputCoordinator
     ) {
-        self.workbench   = workbench
+        self.controller   = controller
         self.coordinator = coordinator
     }
 
-    /// Returns `true` when the key was consumed.
+    /// Returns `true` if the key press was handled.
     func handle(_ event: NSEvent) -> Bool {
-        let key = event.charactersIgnoringModifiers?.lowercased()
+        guard let key = event.charactersIgnoringModifiers?.lowercased() else {
+            return false
+        }
 
         switch key {
 
-        // Rotate tool or selection
+        // 'R' key: Rotate the active tool or the current selection.
         case "r":
-            if var tool = workbench.selectedTool, tool.id != "cursor" {
+            // If there's an active tool, let it handle the rotation.
+            if var tool = controller.selectedTool, tool.id != "cursor" {
+                let context = coordinator.currentContext() // Tool might need context
                 tool.handleRotate()
-                workbench.selectedTool = tool
-            } else if let id = workbench.selectedIDs.first,
-                      let center = workbench.elements
-                .first(where: { $0.id == id })?
-                .primitives.first?.position {
-                coordinator.enterRotationMode(around: center)
-            }
+                controller.selectedTool = tool
+            
+            // Otherwise, if there's a selection, start a mouse-based rotation gesture.
+            } else if let id = controller.selectedIDs.first,
+                               let element = controller.elements.first(where: { $0.id == id }) {
+                         
+                         // --- THIS IS THE FIX ---
+                         // Calculate the center point directly from public properties.
+                         let boundingBox = element.boundingBox
+                         let center = CGPoint(x: boundingBox.midX, y: boundingBox.midY)
+                         // --- END FIX ---
+                         
+                         coordinator.enterRotationMode(around: center)
+                     }
             return true
 
-        // Tool-specific Return
-        case "\r", "\u{3}":
+        // 'Enter' or 'Return' key: Confirm the current tool action.
+        case "\r", "\u{3}": // \u{3} is Enter on the numeric keypad
             coordinator.handleReturnKeyPress()
             return true
 
-        // Escape
+        // 'Escape' key: Cancel the current tool or gesture.
         case "\u{1b}":
-            if var tool = workbench.selectedTool, tool.id != "cursor" {
-                if tool.handleEscape() {
-                    workbench.selectedTool = tool
-                } else {
-                    // The tool had no state to clear, so switch to the cursor tool.
-                    workbench.selectedTool = AnyCanvasTool(CursorTool())
+            // If an active tool can handle escape, let it.
+            if var tool = controller.selectedTool, tool.id != "cursor" {
+                if !tool.handleEscape() {
+                    // If the tool didn't handle it (e.g., nothing to clear),
+                    // default to switching back to the cursor tool.
+                    controller.selectedTool = AnyCanvasTool(CursorTool())
                 }
-                return true
+            // If the rotation gesture is active, cancel it.
+            } else if coordinator.isRotating {
+                coordinator.cancelRotation()
             }
+            return true
 
-        // Delete / Backspace
+        // 'Delete' or 'Backspace' key.
         case String(UnicodeScalar(NSDeleteCharacter)!),
-            String(UnicodeScalar(NSBackspaceCharacter)!):
-            if var tool = workbench.selectedTool, tool.id != "cursor" {
+             String(UnicodeScalar(NSBackspaceCharacter)!):
+            
+            // If an active tool can handle backspace (e.g., deleting points), let it.
+            if var tool = controller.selectedTool, tool.id != "cursor" {
                 tool.handleBackspace()
-                workbench.selectedTool = tool
+                controller.selectedTool = tool
+            // Otherwise, delete the currently selected elements.
             } else {
                 coordinator.deleteSelectedElements()
             }
             return true
 
         default:
-            break
+            // The key was not one of our commands.
+            return false
         }
-        return false
     }
 }

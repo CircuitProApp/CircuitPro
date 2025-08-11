@@ -1,71 +1,58 @@
-//
-//  ToolActionController.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 7/16/25.
-//
-
 import AppKit
 
-/// Executes the currently selected canvas tool on mouse-down.
-/// Stateless: every call builds its own `CanvasToolContext`.
 final class ToolActionController {
 
-    unowned let workbench: WorkbenchView
-    let hitTest: WorkbenchHitTestService
+    unowned let controller: CanvasController
+    unowned let hitTestService: WorkbenchInputCoordinator
 
-    init(
-        workbench: WorkbenchView,
-        hitTest: WorkbenchHitTestService
-    ) {
-        self.workbench = workbench
-        self.hitTest = hitTest
+    init(controller: CanvasController, hitTestService: WorkbenchInputCoordinator) {
+        self.controller = controller
+        self.hitTestService = hitTestService
     }
 
-    /// Returns `true` when the event was consumed.
     func handleMouseDown(at point: CGPoint, event: NSEvent) -> Bool {
+        guard var tool = controller.selectedTool, tool.id != "cursor" else {
+            return false
+        }
+        
+        // --- This is the final, clean implementation ---
 
-        guard var tool = workbench.selectedTool,
-              tool.id != "cursor" else { return false }
+        let snappedPoint = controller.snap(point)
+        
+        // 1. Get the complete state of the canvas for rendering reference.
+        let renderContext = hitTestService.currentContext()
+        
+        // 2. Perform the event-specific hit-test.
+        let hitTarget = hitTestService.hitTest(point: snappedPoint)
 
-        let snapped = workbench.snap(point)
-
-        // Perform a hit-test to create a rich context for the tool.
-        let hitTarget = workbench.hitTestService.hitTest(
-            at: snapped,
-            elements: workbench.elements,
-            schematicGraph: workbench.schematicGraph,
-            magnification: workbench.magnification
-        )
-
-        let ctx = CanvasToolContext(
-            existingPinCount: workbench.elements.reduce(0) { $1.isPin ? $0 + 1 : $0 },
-            existingPadCount: workbench.elements.reduce(0) { $1.isPad ? $0 + 1 : $0 },
-            selectedLayer: workbench.selectedLayer,
-            magnification: workbench.magnification,
+        // 3. Create the lightweight, specific context for THIS interaction.
+        let interactionContext = ToolInteractionContext(
+            clickCount: event.clickCount,
             hitTarget: hitTarget,
-            schematicGraph: workbench.schematicGraph,
-            clickCount: event.clickCount
+            renderContext: renderContext
         )
 
-        let result = tool.handleTap(at: snapped, context: ctx)
+        // 4. Call the tool with the correct interaction-specific context.
+        // (This requires the CanvasTool protocol to be updated).
+        let result = tool.handleTap(at: snappedPoint, context: interactionContext)
+
+        // --- End of new implementation ---
 
         switch result {
         case .element(let newElement):
-            workbench.elements.append(newElement)
-            if case .primitive(let prim) = newElement {
-                workbench.onPrimitiveAdded?(prim.id, ctx.selectedLayer)
-            }
-            workbench.onUpdate?(workbench.elements)
+            controller.elements.append(newElement)
+            controller.onUpdateElements?(controller.elements)
 
         case .schematicModified:
-            break
+            controller.syncPinPositionsToGraph()
 
         case .noResult:
             break
         }
 
-        workbench.selectedTool = tool
+        controller.selectedTool = tool
+        controller.onUpdateSelectedTool?(tool)
+        
         return true
     }
 }

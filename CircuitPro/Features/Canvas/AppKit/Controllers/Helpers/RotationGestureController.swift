@@ -1,54 +1,78 @@
-//
-//  RotationGestureController.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 7/15/25.
-//
-
 import AppKit
 
-/// Tracks a mouse-based rotation gesture for the current selection.
 final class RotationGestureController {
 
-    unowned let workbench: WorkbenchView
+    unowned let controller: CanvasController
+    private var pivotPoint: CGPoint?
+    private var originalRotations: [UUID: CGFloat] = [:]
 
-    private var origin: CGPoint?
-    private var isActive = false
-
-    init(workbench: WorkbenchView) {
-        self.workbench = workbench
+    var active: Bool {
+        return pivotPoint != nil
     }
 
-    // starts a new gesture (invoked from the “R” key shortcut)
-    func begin(at point: CGPoint) {
-        origin = point
-        isActive = true
+    init(controller: CanvasController) {
+        self.controller = controller
     }
 
-    // cancels the gesture (Esc pressed or second R tap)
-    func cancel() {
-        origin   = nil
-        isActive = false
+    /// Starts a new rotation gesture around a given pivot point.
+    func begin(around pivot: CGPoint) {
+        guard !controller.selectedIDs.isEmpty else { return }
+        
+        pivotPoint = pivot
+        originalRotations.removeAll()
+        for element in controller.elements where controller.selectedIDs.contains(element.id) {
+            originalRotations[element.id] = element.transformable.rotation
+        }
     }
 
-    // called from mouse-move to update the angle
+    /// **NEW:** Commits the current rotation and ends the gesture.
+    /// This is called when the user clicks the mouse to confirm the new angle.
+    func commit() {
+        // The controller's `elements` array already has the final rotation from the last `update`.
+        // All we need to do is clean up our internal gesture state.
+        pivotPoint = nil
+        originalRotations.removeAll()
+    }
+
+    /// **NEW:** Cancels the gesture and reverts all changes.
+    /// This is called when the user presses the Escape key.
+    func cancelAndRevert() {
+        if active, !originalRotations.isEmpty {
+            var updatedElements = controller.elements
+            for i in updatedElements.indices {
+                if let originalRotation = originalRotations[updatedElements[i].id] {
+                    updatedElements[i].setRotation(originalRotation)
+                }
+            }
+            controller.elements = updatedElements
+            controller.onUpdateElements?(updatedElements) // Inform SwiftUI of the revert
+        }
+        
+        // Reset state.
+        pivotPoint = nil
+        originalRotations.removeAll()
+    }
+
+    /// Updates the rotation based on the cursor's new position.
     func update(to cursor: CGPoint) {
-        guard isActive, let origin else { return }
+        guard let pivot = self.pivotPoint else { return }
 
-        var angle = atan2(cursor.y - origin.y, cursor.x - origin.x)
-
+        let currentAngle = atan2(cursor.y - pivot.y, cursor.x - pivot.x)
+        let snappedAngle: CGFloat
         if !NSEvent.modifierFlags.contains(.shift) {
-            let step: CGFloat = .pi / 12 // 15 °
-            angle = round(angle / step) * step
+            let step: CGFloat = .pi / 12 // 15 degrees
+            snappedAngle = round(currentAngle / step) * step
+        } else {
+            snappedAngle = currentAngle
         }
 
-        var updated = workbench.elements
-        for i in updated.indices where workbench.selectedIDs.contains(updated[i].id) {
-            updated[i].setRotation(angle)
+        var updatedElements = controller.elements
+        for i in updatedElements.indices {
+            if originalRotations[updatedElements[i].id] != nil {
+                 updatedElements[i].setRotation(snappedAngle)
+            }
         }
-        workbench.elements = updated
-        workbench.onUpdate?(updated)
+        controller.elements = updatedElements
+        controller.onUpdateElements?(updatedElements)
     }
-
-    var active: Bool { isActive }
 }

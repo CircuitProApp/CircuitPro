@@ -18,7 +18,7 @@ struct RulerTool: CanvasTool {
     private var end: CGPoint?
     private var clicks: Int = 0
 
-    mutating func handleTap(at location: CGPoint, context: CanvasToolContext) -> CanvasToolResult {
+    mutating func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         switch clicks {
         case 0:
             start = location
@@ -39,7 +39,7 @@ struct RulerTool: CanvasTool {
         return .noResult
     }
 
-    mutating func preview(mouse: CGPoint, context: CanvasToolContext) -> [DrawingParameters] {
+    mutating func preview(mouse: CGPoint, context: RenderContext) -> [DrawingParameters] {
         guard let start = start else { return [] }
         let color: NSColor = .black
 
