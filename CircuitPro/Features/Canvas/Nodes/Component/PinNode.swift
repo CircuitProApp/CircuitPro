@@ -8,6 +8,7 @@ class PinNode: BaseNode {
     
     var pin: Pin {
         didSet {
+            invalidateContentBoundingBox()
             onNeedsRedraw?()
         }
     }

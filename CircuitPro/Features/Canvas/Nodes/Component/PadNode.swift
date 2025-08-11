@@ -12,6 +12,7 @@ class PadNode: BaseNode {
 
     var pad: Pad {
         didSet {
+            invalidateContentBoundingBox()
             onNeedsRedraw?()
         }
     }

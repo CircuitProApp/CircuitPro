@@ -147,6 +147,14 @@ class BaseNode: CanvasNode {
         return foundNodes
     }
 
+    /// Invalidates the cached content bounding box.
+    ///
+    /// Call this method whenever a change to the node's properties would alter the result of `makeDrawingPrimitives()`.
+    /// This ensures that the `localContentBoundingBox` is recalculated on its next access.
+    func invalidateContentBoundingBox() {
+        _cachedLocalContentBoundingBox = nil
+    }
+
     /// The bounding box of the content drawn directly by this node, in its local coordinate space.
      /// This is calculated from the node's drawing primitives and is cached for performance.
      private var localContentBoundingBox: CGRect {
