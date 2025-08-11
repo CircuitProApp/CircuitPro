@@ -17,7 +17,10 @@ struct WorkspaceView: View {
 
     @State private var showInspector: Bool = false
     @State private var showFeedbackSheet: Bool = false
+    @State private var isShowingLibrary: Bool = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    
+
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -47,7 +50,16 @@ struct WorkspaceView: View {
                     FeedbackFormView()
                         .frame(minWidth: 400, minHeight: 300)
                 }
+                .libraryPanel(isPresented: $isShowingLibrary)
                 .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            isShowingLibrary.toggle()
+                        } label: {
+                            Image(systemName: "plus")
+                                .imageScale(.large)
+                        }
+                    }
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             showFeedbackSheet.toggle()
