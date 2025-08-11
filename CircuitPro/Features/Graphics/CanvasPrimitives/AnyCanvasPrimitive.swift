@@ -1,5 +1,5 @@
 //
-//  GraphicPrimitive.swift
+//  AnyCanvasPrimitive.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 21.06.25.
@@ -9,12 +9,12 @@ import Foundation
 import CoreGraphics
 import AppKit
 
-/// A type-erased wrapper so we can store heterogeneous primitives in one array.
-enum AnyPrimitive: GraphicPrimitive, Identifiable, Hashable {
+/// A type-erased wrapper so we can store heterogeneous canvas primitives in one array.
+enum AnyCanvasPrimitive: GraphicPrimitive, Identifiable, Hashable {
 
-    case line(LinePrimitive)
-    case rectangle(RectanglePrimitive)
-    case circle(CirclePrimitive)
+    case line(CanvasLine)
+    case rectangle(CanvasRectangle)
+    case circle(CanvasCircle)
 
     var id: UUID {
         switch self {
@@ -136,19 +136,6 @@ enum AnyPrimitive: GraphicPrimitive, Identifiable, Hashable {
         }
     }
 
-    var size: CGSize {
-        switch self {
-        case .rectangle(let rectangle):
-            return rectangle.size
-        case .circle(let circle):
-            return CGSize(width: circle.radius * 2, height: circle.radius * 2)
-        case .line(let line):
-            let width = abs(line.end.x - line.start.x)
-            let height = abs(line.end.y - line.start.y)
-            return CGSize(width: width, height: height)
-        }
-    }
-
     var snapsToCenter: Bool {
         switch self {
         case .rectangle: return false // uses corner snapping
@@ -156,7 +143,7 @@ enum AnyPrimitive: GraphicPrimitive, Identifiable, Hashable {
         }
     }
 
-    func handles() -> [Handle] {
+    func handles() -> [CanvasHandle] {
         switch self {
         case .line(let line): return line.handles()
         case .rectangle(let rectangle): return rectangle.handles()
@@ -165,7 +152,7 @@ enum AnyPrimitive: GraphicPrimitive, Identifiable, Hashable {
     }
 
     mutating func updateHandle(
-        _ kind: Handle.Kind,
+        _ kind: CanvasHandle.Kind,
         to newPos: CGPoint,
         opposite opp: CGPoint? = nil
     ) {
@@ -180,7 +167,7 @@ enum AnyPrimitive: GraphicPrimitive, Identifiable, Hashable {
     }
 }
 
-extension AnyPrimitive {
+extension AnyCanvasPrimitive {
     var displayName: String {
         switch self {
         case .rectangle:
@@ -193,7 +180,7 @@ extension AnyPrimitive {
     }
 }
 
-extension AnyPrimitive {
+extension AnyCanvasPrimitive {
     var symbol: String {
         switch self {
         case .rectangle:
@@ -203,5 +190,52 @@ extension AnyPrimitive {
         case .line:
             CircuitProSymbols.Graphic.line
         }
+    }
+}
+
+import SwiftUI
+
+// Allows creating bindings to the specific canvas primitive within an AnyCanvasPrimitive binding.
+extension Binding where Value == AnyCanvasPrimitive {
+    var rectangle: Binding<CanvasRectangle>? {
+        guard case .rectangle = self.wrappedValue else { return nil }
+        return Binding<CanvasRectangle>(
+            get: {
+                if case .rectangle(let value) = self.wrappedValue {
+                    return value
+                } else {
+                    fatalError("The primitive is no longer a rectangle.")
+                }
+            },
+            set: { self.wrappedValue = .rectangle($0) }
+        )
+    }
+
+    var circle: Binding<CanvasCircle>? {
+        guard case .circle = self.wrappedValue else { return nil }
+        return Binding<CanvasCircle>(
+            get: {
+                if case .circle(let value) = self.wrappedValue {
+                    return value
+                } else {
+                    fatalError("The primitive is no longer a circle.")
+                }
+            },
+            set: { self.wrappedValue = .circle($0) }
+        )
+    }
+
+    var line: Binding<CanvasLine>? {
+        guard case .line = self.wrappedValue else { return nil }
+        return Binding<CanvasLine>(
+            get: {
+                if case .line(let value) = self.wrappedValue {
+                    return value
+                } else {
+                    fatalError("The primitive is no longer a line.")
+                }
+            },
+            set: { self.wrappedValue = .line($0) }
+        )
     }
 }

@@ -10,7 +10,7 @@ import SwiftUI
 @Observable
 class PrimitiveNode: BaseNode, Layerable {
     
-    var primitive: AnyPrimitive {
+    var primitive: AnyCanvasPrimitive {
         didSet {
             onNeedsRedraw?()
         }
@@ -39,7 +39,7 @@ class PrimitiveNode: BaseNode, Layerable {
     
     // MARK: - Init
     
-    init(primitive: AnyPrimitive) {
+    init(primitive: AnyCanvasPrimitive) {
         self.primitive = primitive
         super.init(id: primitive.id)
     }
@@ -87,12 +87,12 @@ class PrimitiveNode: BaseNode, Layerable {
 
 extension PrimitiveNode: HandleEditable {
     
-    func handles() -> [Handle] {
+    func handles() -> [CanvasHandle] {
         // Delegate directly to the wrapped AnyPrimitive.
         return primitive.handles()
     }
     
-    func updateHandle(_ kind: Handle.Kind, to position: CGPoint, opposite frozenOpposite: CGPoint?) {
+    func updateHandle(_ kind: CanvasHandle.Kind, to position: CGPoint, opposite frozenOpposite: CGPoint?) {
         // AnyPrimitive is a value type (enum), so calling a mutating method
         // on the 'primitive' property modifies it in place.
         primitive.updateHandle(kind, to: position, opposite: frozenOpposite)

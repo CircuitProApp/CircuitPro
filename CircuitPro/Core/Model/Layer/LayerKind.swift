@@ -97,11 +97,11 @@ extension LayerKind {
         case .silkscreen:   return UUID(uuidString: "C6C6E6A7-8A6A-4B6A-8E1A-9F0A2A3A5F9B")!
         case .solderMask:   return UUID(uuidString: "A5A5D5A4-7A5A-4A5A-7D0A-8F9A1A2A4F8A")!
         case .paste:        return UUID(uuidString: "D4D4F4B3-6A4A-494A-6C9A-7F8A0A1A3F7A")!
-        case .adhesive:     return UUID(uuidString: "E3E3G3C2-5A3A-483A-5B8A-6F7A9A0A2F6A")!
-        case .courtyard:    return UUID(uuidString: "F2F2H2D1-4A2A-472A-4A7A-5F6A8A9A1F5A")!
-        case .fabrication:  return UUID(uuidString: "0101I1E0-3A1A-461A-396A-4F5A7A8A0F4A")!
-        case .boardOutline: return UUID(uuidString: "1212J2F9-2A0A-450A-285A-3F4A6A7A9F3A")!
-        case .innerCopper:  return UUID(uuidString: "2323K3G8-1A9A-449A-174A-2F3A5A6A8F2A")!
+        case .adhesive:     return UUID(uuidString: "E3E3F3C2-5A3A-483A-5B8A-6F7A9A0A2F6A")!
+        case .courtyard:    return UUID(uuidString: "F2F2E2D1-4A2A-472A-4A7A-5F6A8A9A1F5A")!
+        case .fabrication:  return UUID(uuidString: "0101D1E0-3A1A-461A-396A-4F5A7A8A0F4A")!
+        case .boardOutline: return UUID(uuidString: "1212A2F9-2A0A-450A-285A-3F4A6A7A9F3A")!
+        case .innerCopper:  return UUID(uuidString: "2323B3A8-1A9A-449A-174A-2F3A5A6A8F2A")!
         }
     }
 }

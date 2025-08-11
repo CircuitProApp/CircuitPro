@@ -8,13 +8,13 @@
 import SwiftUI
 
 protocol HandleEditable {
-    func handles() -> [Handle]
+    func handles() -> [CanvasHandle]
 
-    mutating func updateHandle(_ kind: Handle.Kind, to position: CGPoint, opposite frozenOpposite: CGPoint?)
+    mutating func updateHandle(_ kind: CanvasHandle.Kind, to position: CGPoint, opposite frozenOpposite: CGPoint?)
 }
 
 extension HandleEditable {
-    mutating func updateHandle(_ kind: Handle.Kind, to position: CGPoint) {
+    mutating func updateHandle(_ kind: CanvasHandle.Kind, to position: CGPoint) {
         updateHandle(kind, to: position, opposite: nil)
     }
 }

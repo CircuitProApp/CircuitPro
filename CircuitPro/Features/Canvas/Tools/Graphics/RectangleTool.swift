@@ -24,10 +24,9 @@ final class RectangleTool: CanvasTool {
             // Create the primitive, assigning the active layer ID from the context.
             // If `activeLayerId` is nil (e.g., in a schematic view), the primitive
             // will correctly be created as an "unlayered" element.
-            let primitive = RectanglePrimitive(
+            let primitive = CanvasRectangle(
                 id: UUID(),
-                size: rect.size,
-                cornerRadius: 0,
+                shape: RectanglePrimitive(size: rect.size, cornerRadius: 0),
                 position: CGPoint(x: rect.midX, y: rect.midY),
                 rotation: 0,
                 strokeWidth: 1,

@@ -8,14 +8,16 @@
 import SwiftUI
 
 struct PrimitivePropertiesView: View {
-    @Binding var primitive: AnyPrimitive
+    @Binding var primitive: AnyCanvasPrimitive
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             Text("\(primitive.displayName) Properties")
                 .font(.title3.weight(.semibold))
+            
             switch primitive {
             case .rectangle:
+                // Use the new binding helper, consistent with other cases.
                 if let rectBinding = $primitive.rectangle {
                     RectanglePropertiesView(rectangle: rectBinding)
                 }
@@ -28,6 +30,7 @@ struct PrimitivePropertiesView: View {
                     LinePropertiesView(line: lineBinding)
                 }
             default:
+                // This case can be removed if you cover all enum cases.
                 Text("Unsupported primitive")
                     .foregroundStyle(.secondary)
             }
@@ -39,7 +42,7 @@ struct PrimitivePropertiesView: View {
 // MARK: - Properties Views for Each Primitive Type
 
 struct RectanglePropertiesView: View {
-    @Binding var rectangle: RectanglePrimitive
+    @Binding var rectangle: CanvasRectangle
     
     
     var body: some View {
@@ -54,8 +57,8 @@ struct RectanglePropertiesView: View {
                 
                 InspectorRow("Size") {
                   
-                    InspectorNumericField(title: "W", value: $rectangle.size.width, unit: "mm")
-                    InspectorNumericField(title: "H", value: $rectangle.size.height, unit: "mm")
+                    InspectorNumericField(title: "W", value: $rectangle.shape.size.width, unit: "mm")
+                    InspectorNumericField(title: "H", value: $rectangle.shape.size.height, unit: "mm")
                     
             
                 }
@@ -71,7 +74,7 @@ struct RectanglePropertiesView: View {
 }
 
 struct CirclePropertiesView: View {
-    @Binding var circle: CirclePrimitive
+    @Binding var circle: CanvasCircle
     
     var body: some View {
 
@@ -86,7 +89,7 @@ struct CirclePropertiesView: View {
                 
           
                 InspectorRow("Radius") {
-                    InspectorNumericField(value: $circle.radius, unit: "mm")
+                    InspectorNumericField(value: $circle.shape.radius, unit: "mm")
                     Color.clear
                 }
              
@@ -102,19 +105,19 @@ struct CirclePropertiesView: View {
 }
 
 struct LinePropertiesView: View {
-    @Binding var line: LinePrimitive
+    @Binding var line: CanvasLine
     
     var body: some View {
 
             InspectorSection("Transform") {
                 PointControlView(
                     title: "Start Point",
-                    point: $line.start,
+                    point: $line.startPoint,
                     displayOffset: PaperSize.component.centerOffset(),
                 )
                 PointControlView(
                     title: "End Point",
-                    point: $line.end,
+                    point: $line.endPoint,
                     displayOffset: PaperSize.component.centerOffset()
                 )
                 RotationControlView(object: $line)

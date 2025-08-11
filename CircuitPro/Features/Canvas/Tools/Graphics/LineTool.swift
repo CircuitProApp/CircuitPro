@@ -20,17 +20,17 @@ final class LineTool: CanvasTool {
         if let startPoint = self.start {
             // Second tap: Finalize the line.
             
-            // 1. Create the primitive data model, preserving the original signature.
-            let linePrimitive = LinePrimitive(
-                id: UUID(),
+            // 1. Create the line using the new convenience initializer.
+            //    All the complex math is now cleanly encapsulated in the model itself.
+            let line = CanvasLine(
                 start: startPoint,
                 end: location,
-                strokeWidth: 1,
+                strokeWidth: 1.0,
                 layerId: context.activeLayerId
             )
             
             // 2. Wrap it in a scene graph node.
-            let node = PrimitiveNode(primitive: .line(linePrimitive))
+            let node = PrimitiveNode(primitive: .line(line))
             
             // 3. Reset tool state and return the new node.
             self.start = nil

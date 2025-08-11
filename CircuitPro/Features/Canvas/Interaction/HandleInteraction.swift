@@ -9,7 +9,7 @@ final class HandleInteraction: CanvasInteraction {
         ///   - node: A reference to the node being edited.
         ///   - handleKind: The kind of handle being dragged.
         ///   - oppositeHandleWorldPosition: The world-space position of the opposite handle, used to anchor resizing.
-        case dragging(node: BaseNode & HandleEditable, handleKind: Handle.Kind, oppositeHandleWorldPosition: CGPoint?)
+        case dragging(node: BaseNode & HandleEditable, handleKind: CanvasHandle.Kind, oppositeHandleWorldPosition: CGPoint?)
     }
 
     private var state: State = .ready

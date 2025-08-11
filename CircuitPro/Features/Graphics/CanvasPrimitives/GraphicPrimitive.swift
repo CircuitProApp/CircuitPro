@@ -4,6 +4,10 @@
 //
 //  Created by Giorgi Tchelidze on 21.06.25.
 //
+//  This protocol defines the interface for a primitive that can be drawn on the canvas.
+//  It combines a pure data primitive from `PrimitiveKit` with canvas-specific properties
+//  like position, rotation, color, and stroke width.
+//
 
 import AppKit
 

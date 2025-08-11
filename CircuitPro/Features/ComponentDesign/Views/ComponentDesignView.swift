@@ -159,9 +159,9 @@ struct ComponentDesignView: View {
             textDefinitions.append(definition)
         }
         
-        let rawPrimitives: [AnyPrimitive] = symbolEditor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
+        let rawPrimitives: [AnyCanvasPrimitive] = symbolEditor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
         
-        let primitives = rawPrimitives.map { prim -> AnyPrimitive in
+        let primitives = rawPrimitives.map { prim -> AnyCanvasPrimitive in
             var copy = prim
             copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
             return copy

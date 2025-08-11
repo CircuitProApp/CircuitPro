@@ -1,5 +1,5 @@
 //
-//  RectanglePrimitive.swift
+//  CanvasRectangle.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 21.06.25.
@@ -7,11 +7,10 @@
 
 import AppKit
 
-struct RectanglePrimitive: GraphicPrimitive {
+struct CanvasRectangle: GraphicPrimitive {
 
     let id: UUID
-    var size: CGSize
-    var cornerRadius: CGFloat
+    var shape: RectanglePrimitive
     var position: CGPoint
     var rotation: CGFloat
     var strokeWidth: CGFloat
@@ -19,27 +18,23 @@ struct RectanglePrimitive: GraphicPrimitive {
     var color: SDColor?
     
     var layerId: UUID?
-    
-    var maximumCornerRadius: CGFloat {
-        return min(size.width, size.height) / 2
-    }
 
-    func handles() -> [Handle] {
-        let halfW = size.width / 2
-        let halfH = size.height / 2
+    func handles() -> [CanvasHandle] {
+        let halfW = shape.size.width / 2
+        let halfH = shape.size.height / 2
 
         // Handles are defined in the primitive's local coordinate space,
         // assuming a center at (0,0) and no rotation. The render layer
         // is responsible for applying the node's world transform.
         return [
-            Handle(kind: .rectTopLeft,    position: CGPoint(x: -halfW, y:  halfH)),
-            Handle(kind: .rectTopRight,   position: CGPoint(x:  halfW, y:  halfH)),
-            Handle(kind: .rectBottomRight,position: CGPoint(x:  halfW, y: -halfH)),
-            Handle(kind: .rectBottomLeft, position: CGPoint(x: -halfW, y: -halfH))
+            CanvasHandle(kind: .rectTopLeft,    position: CGPoint(x: -halfW, y:  halfH)),
+            CanvasHandle(kind: .rectTopRight,   position: CGPoint(x:  halfW, y:  halfH)),
+            CanvasHandle(kind: .rectBottomRight,position: CGPoint(x:  halfW, y: -halfH)),
+            CanvasHandle(kind: .rectBottomLeft, position: CGPoint(x: -halfW, y: -halfH))
         ]
     }
     mutating func updateHandle(
-        _ kind: Handle.Kind,
+        _ kind: CanvasHandle.Kind,
         to dragLocal: CGPoint,
         opposite oppLocal: CGPoint?
     ) {
@@ -49,7 +44,7 @@ struct RectanglePrimitive: GraphicPrimitive {
         // In this space, the rectangle is centered at (0,0) before this update.
 
         // The new size is the absolute difference between the two local points.
-        size = CGSize(
+        shape.size = CGSize(
             width: max(abs(dragLocal.x - oppLocal.x), 1),
             height: max(abs(dragLocal.y - oppLocal.y), 1)
         )
@@ -78,14 +73,14 @@ struct RectanglePrimitive: GraphicPrimitive {
     func makePath() -> CGPath {
         // Create the rect centered at the origin, not at self.position.
         let frame = CGRect(
-            x: -size.width * 0.5,
-            y: -size.height * 0.5,
-            width: size.width,
-            height: size.height
+            x: -shape.size.width * 0.5,
+            y: -shape.size.height * 0.5,
+            width: shape.size.width,
+            height: shape.size.height
         )
 
         let path = CGMutablePath()
-        let clampedCornerRadius = max(0, min(cornerRadius, min(size.width, size.height) * 0.5))
+        let clampedCornerRadius = max(0, min(shape.cornerRadius, min(shape.size.width, shape.size.height) * 0.5))
         path.addRoundedRect(in: frame, cornerWidth: clampedCornerRadius, cornerHeight: clampedCornerRadius)
 
         return path

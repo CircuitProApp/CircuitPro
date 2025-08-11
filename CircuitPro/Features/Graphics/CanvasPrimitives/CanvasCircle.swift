@@ -1,5 +1,5 @@
 //
-//  CirclePrimitive.swift
+//  CanvasCircle.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 21.06.25.
@@ -7,10 +7,10 @@
 
 import AppKit
 
-struct CirclePrimitive: GraphicPrimitive {
+struct CanvasCircle: GraphicPrimitive {
 
     let id: UUID
-    var radius: CGFloat
+    var shape: CirclePrimitive
     var position: CGPoint
     var rotation: CGFloat
     var strokeWidth: CGFloat
@@ -19,14 +19,14 @@ struct CirclePrimitive: GraphicPrimitive {
     
     var layerId: UUID?
 
-    func handles() -> [Handle] {
+    func handles() -> [CanvasHandle] {
         // The handle is defined in local space, assuming a center at (0,0)
         // and no rotation. The render layer will apply the world transform.
-        return [Handle(kind: .circleRadius, position: CGPoint(x: radius, y: 0))]
+        return [CanvasHandle(kind: .circleRadius, position: CGPoint(x: shape.radius, y: 0))]
     }
 
     mutating func updateHandle(
-        _ kind: Handle.Kind,
+        _ kind: CanvasHandle.Kind,
         to newPos: CGPoint
     ) {
         guard kind == .circleRadius else { return }
@@ -38,14 +38,14 @@ struct CirclePrimitive: GraphicPrimitive {
         let dragVectorInParentSpace = newPos.applying(CGAffineTransform(rotationAngle: self.rotation))
 
         // The new radius is the length of this stable vector.
-        radius = max(hypot(dragVectorInParentSpace.x, dragVectorInParentSpace.y), 1)
+        shape.radius = max(hypot(dragVectorInParentSpace.x, dragVectorInParentSpace.y), 1)
 
         // The new rotation is the angle of this stable vector.
         rotation = atan2(dragVectorInParentSpace.y, dragVectorInParentSpace.x)
     }
 
     mutating func updateHandle(
-        _ kind: Handle.Kind,
+        _ kind: CanvasHandle.Kind,
         to newPos: CGPoint,
         opposite _: CGPoint?
     ) {
@@ -58,7 +58,7 @@ struct CirclePrimitive: GraphicPrimitive {
         // THE FIX: The center is now CGPoint.zero, not self.position.
         path.addArc(
             center: .zero,
-            radius: radius,
+            radius: shape.radius,
             startAngle: 0,
             endAngle: .pi * 2,
             clockwise: false

@@ -1,5 +1,5 @@
 //
-//  Handle.swift
+//  CanvasHandle.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 21.06.25.
@@ -7,7 +7,7 @@
 
 import CoreGraphics
 
-struct Handle: Hashable {
+struct CanvasHandle: Hashable {
 
     enum Kind: Hashable {
         case circleRadius
@@ -21,9 +21,9 @@ struct Handle: Hashable {
 
 }
 
-extension Handle.Kind {
+extension CanvasHandle.Kind {
     /// The handle that is geometrically opposite to self, if any.
-    var opposite: Handle.Kind? {
+    var opposite: CanvasHandle.Kind? {
         switch self {
         case .rectTopLeft: return .rectBottomRight
         case .rectTopRight: return .rectBottomLeft

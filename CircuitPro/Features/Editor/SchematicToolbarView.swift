@@ -13,14 +13,8 @@ struct SchematicToolbarView: View {
     var body: some View {
         ToolbarView(
             tools: CanvasToolRegistry.schematicTools,
-            selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool())
+            selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool()),
+            dividerAfter: { $0 is CursorTool }
         )
     }
 }
-
-//
-//  sad.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/10/25.
-//

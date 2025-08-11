@@ -25,9 +25,9 @@ final class CircleTool: CanvasTool {
             let radius = hypot(location.x - centerPoint.x, location.y - centerPoint.y)
             
             // 1. Create the primitive data model, preserving the original signature.
-            let circlePrimitive = CirclePrimitive(
+            let circlePrimitive = CanvasCircle(
                 id: UUID(),
-                radius: radius,
+                shape: CirclePrimitive(radius: radius),
                 position: centerPoint,
                 rotation: 0,
                 strokeWidth: 1,
