@@ -10,7 +10,7 @@ import AppKit
 /// An enum that describes a single, high-level drawing operation.
 enum DrawingPrimitive {
     case fill(path: CGPath, color: CGColor, rule: CAShapeLayerFillRule = .nonZero)
-    case stroke(path: CGPath, color: CGColor, lineWidth: CGFloat, lineCap: CAShapeLayerLineCap = .round, lineJoin: CAShapeLayerLineJoin = .round, miterLimit: CGFloat = 10, lineDash: [NSNumber]? = nil)
+    case stroke(path: CGPath, color: CGColor, lineWidth: CGFloat, lineCap: CAShapeLayerLineCap = .round, lineJoin: CAShapeLayerLineJoin = .miter, miterLimit: CGFloat = 10, lineDash: [NSNumber]? = nil)
 }
 
 extension DrawingPrimitive {

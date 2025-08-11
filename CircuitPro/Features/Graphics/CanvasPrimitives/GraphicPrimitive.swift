@@ -46,7 +46,22 @@ extension GraphicPrimitive {
     /// The halo path logic remains correct because it only defines a SHAPE, not a color.
     /// The renderer will be responsible for resolving the halo's color and applying it.
     func makeHaloPath() -> CGPath? {
-        return makePath()
+        let path = makePath()
+        
+        // This constant defines the extra width for the halo. A value of 4.0 means the
+        // visible halo will extend 2.0 points from the edge of the primitive.
+        let haloPadding: CGFloat = 4.0
+
+        if filled {
+            // For a filled shape, the halo is an outline created by stroking the shape's path.
+            // When the renderer fills this new path, it creates a border around the original shape.
+            return path.copy(strokingWithWidth: haloPadding, lineCap: .round, lineJoin: .miter, miterLimit: 10)
+        } else {
+            // For a stroked shape, the halo must be visibly wider than the shape's own stroke.
+            // We create a new path based on the original stroke width plus the halo padding.
+            let totalWidth = self.strokeWidth + haloPadding
+            return path.copy(strokingWithWidth: totalWidth, lineCap: .round, lineJoin: .miter, miterLimit: 10)
+        }
     }
 }
 
