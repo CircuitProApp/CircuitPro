@@ -24,7 +24,7 @@ struct CircuitProApp: App {
         Group {
             WelcomeWindow(
                 actions: { dismiss in
-                    WelcomeButton(iconName: CircuitProSymbols.Generic.plus, title: "Create New Project...") {
+                    WelcomeButton(iconName: "plus.square", title: "Create New Project...") {
                         CircuitProjectDocumentController.shared.createFileDocumentWithDialog(
                             configuration:
                                     .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject),
@@ -39,7 +39,7 @@ struct CircuitProApp: App {
                         )
                     }
                     .symbolVariant(.rectangle)
-                    WelcomeButton(iconName: CircuitProSymbols.Generic.plus, title: "Create New Component...") {
+                    WelcomeButton(iconName: "square.badge.plus", title: "Create New Component...") {
                         openWindow(id: "ComponentDesignWindow")
                     }
                     .symbolVariant(.rectangle)
