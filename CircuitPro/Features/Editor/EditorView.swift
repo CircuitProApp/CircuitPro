@@ -1,3 +1,10 @@
+//
+//  EditorView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 7/29/25.
+//
+
 import SwiftUI
 import AppKit
 

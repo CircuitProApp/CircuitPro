@@ -1,3 +1,10 @@
+//
+//  VertexType.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 7/29/25.
+//
+
 import Foundation
 
 /// The type of vertex that was hit.

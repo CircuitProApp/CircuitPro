@@ -1,18 +1,23 @@
+//
+//  SchematicCanvasView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 7/29/25.
+//
+
 import SwiftUI
 import SwiftData
 
 struct SchematicCanvasView: View {
 
-    // Injected
     var document: CircuitProjectDocument
     @State var canvasManager = CanvasManager()
 
     @Environment(\.projectManager)
     private var projectManager
     
-    // We hold the tools in state so they can be configured
     @State private var selectedTool: CanvasTool = CursorTool()
-    @State private var defaultTool: CanvasTool = CursorTool()
+    let defaultTool: CanvasTool = CursorTool()
     
     var body: some View {
         @Bindable var bindableProjectManager = projectManager
@@ -103,9 +108,6 @@ struct SchematicCanvasView: View {
             reference: nextRefIndex
         )
         
-        // --- MUTATE THE DATA MODEL ---
-        // The `.onChange(of: projectManager.designComponents)` modifier will automatically
-        // call `syncNodesFromProjectManager` to update the canvas.
         projectManager.selectedDesign?.componentInstances.append(newComponentInstance)
         
         // Sync the graph model for the new component.
