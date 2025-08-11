@@ -1,8 +1,13 @@
+//
+//  CardinalRotation.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 8/11/25.
+//
+
 import SwiftUI
 
 enum CardinalRotation: CGFloat, CaseIterable, Codable, Hashable {
-    // Cases are now named by their direction for clarity.
-    // Raw values now match standard mathematical angles (0° is East).
     case east      = 0
     case northeast = 45
     case north     = 90

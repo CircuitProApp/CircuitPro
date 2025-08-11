@@ -87,9 +87,9 @@ enum PaperSize {
     }
 
     func canvasSize(
-        scale unitsPerMM: CGFloat = 10,
         orientation: PaperOrientation = .landscape
     ) -> CGSize {
+        let unitsPerMM = CircuitPro.Constants.pointsPerMillimeter
         let (wMM, hMM) = dimensions
         let width = CGFloat(wMM) * unitsPerMM
         let height = CGFloat(hMM) * unitsPerMM
@@ -101,10 +101,9 @@ enum PaperSize {
     }
 
     func centerOffset(
-        scale unitsPerMM: CGFloat = 10,
         orientation: PaperOrientation = .landscape
     ) -> CGPoint {
-        let sizeInPoints = self.canvasSize(scale: unitsPerMM, orientation: orientation)
+        let sizeInPoints = self.canvasSize(orientation: orientation)
         return CGPoint(
             x: -sizeInPoints.width / 2,
             y: -sizeInPoints.height / 2

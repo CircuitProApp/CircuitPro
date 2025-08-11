@@ -22,7 +22,7 @@ struct SymbolElementListView: View {
                 .font(.title3.weight(.semibold))
                 .padding(10)
 
-            if manager.elements.isEmpty {
+            if manager.canvasNodes.isEmpty {
                 ContentUnavailableView {
                     Label {
                         Text("No Symbol Elements")
@@ -38,10 +38,11 @@ struct SymbolElementListView: View {
                 .frame(maxHeight: .infinity)
             } else {
                 List(selection: $manager.selectedElementIDs) {
-                    ForEach(manager.elements) { element in
+                    ForEach(manager.canvasNodes) { element in
                         CanvasElementRowView(element: element, editor: symbolEditor)
                             .tag(element.id)
                     }
+                 
                 }
                 .listStyle(.inset)
                 .scrollContentBackground(.hidden)

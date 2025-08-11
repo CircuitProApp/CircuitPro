@@ -45,28 +45,28 @@ struct NavigatorView: View {
 
         VStack(spacing: 0) {
             Divider().foregroundStyle(.quaternary)
-
-            HStack(spacing: 17) {
-                ForEach(NavigatorViewTab.allCases.dropLast()) { tab in
-                    Button {
-                        selectedTab = tab
-                    } label: {
-                        Image(systemName: tab.icon)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 13, height: 13)
-                            .foregroundStyle(selectedTab == tab ? .blue : .secondary)
-
-                    }
-                    .buttonStyle(.plain)
-                    .help(tab.label)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 28)
-            .foregroundStyle(.secondary)
-
-            Divider().foregroundStyle(.quaternary)
+//
+//            HStack(spacing: 17) {
+//                ForEach(NavigatorViewTab.allCases.dropLast()) { tab in
+//                    Button {
+//                        selectedTab = tab
+//                    } label: {
+//                        Image(systemName: tab.icon)
+//                            .resizable()
+//                            .scaledToFit()
+//                            .frame(width: 13, height: 13)
+//                            .foregroundStyle(selectedTab == tab ? .blue : .secondary)
+//
+//                    }
+//                    .buttonStyle(.plain)
+//                    .help(tab.label)
+//                }
+//            }
+//            .frame(maxWidth: .infinity)
+//            .frame(height: 28)
+//            .foregroundStyle(.secondary)
+//
+//            Divider().foregroundStyle(.quaternary)
 
             switch selectedTab {
             case .projectNavigator:

@@ -37,7 +37,7 @@ struct EditorView: View {
                 } else {
                     switch selectedEditor {
                     case .schematic:
-                        SchematicView(document: document, canvasManager: selectedCanvasManager)
+                        SchematicCanvasView(document: document, canvasManager: selectedCanvasManager)
                     case .layout:
                         LayoutView()
                     }

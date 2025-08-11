@@ -2,7 +2,7 @@
 //  ComponentValidator.swift
 //  CircuitPro
 //
-//  Created by Gemini on 8/1/25.
+//  Created by Giorgi Tchelidze on 8/1/25.
 //
 
 import Foundation
@@ -48,19 +48,21 @@ struct ComponentValidator {
             if manager.selectedCategory == nil {
                 errors.append(.init(message: "Choose a category.", requirement: ComponentDesignStage.ComponentRequirement.category))
             }
-            if !manager.componentProperties.contains(where: { $0.key != nil }) {
-                errors.append(.init(message: "At least one property should have a key.", requirement: ComponentDesignStage.ComponentRequirement.properties))
+            if manager.componentProperties.isEmpty {
+                errors.append(.init(message: "At least one property must be defined.", requirement: ComponentDesignStage.ComponentRequirement.properties))
             }
         case .symbol:
-            if manager.symbolEditor.elements.compactMap({ $0.asPrimitive }).isEmpty {
-                errors.append(.init(message: "No symbol created.", requirement: ComponentDesignStage.SymbolRequirement.primitives))
+            let symbolPrimitives = manager.symbolEditor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
+            if symbolPrimitives.isEmpty {
+                errors.append(.init(message: "No symbol created. The symbol must contain at least one shape.", requirement: ComponentDesignStage.SymbolRequirement.primitives))
             }
             if manager.symbolEditor.pins.isEmpty {
-                errors.append(.init(message: "No pins added to symbol.", requirement: ComponentDesignStage.SymbolRequirement.pins))
+                errors.append(.init(message: "No pins added to symbol. The symbol must have at least one pin.", requirement: ComponentDesignStage.SymbolRequirement.pins))
             }
         case .footprint:
-            if manager.footprintEditor.elements.compactMap({ $0.asPrimitive }).isEmpty {
-                errors.append(.init(message: "No footprint created.", requirement: ComponentDesignStage.SymbolRequirement.primitives))
+            let footprintPrimitives = manager.footprintEditor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
+            if footprintPrimitives.isEmpty {
+                errors.append(.init(message: "No footprint created. The footprint must contain at least one shape.", requirement: ComponentDesignStage.SymbolRequirement.primitives))
             }
             if manager.footprintEditor.pads.isEmpty {
                 errors.append(.init(message: "No pads added to footprint.", requirement: ComponentDesignStage.FootprintRequirement.pads))
@@ -70,12 +72,12 @@ struct ComponentValidator {
                     let isTooLarge: Bool
                     switch pad.shape {
                     case .circle(let radius):
-                        isTooLarge = drillDiameter > radius
+                        isTooLarge = drillDiameter >= (radius * 2)
                     case .rect(let width, let height):
-                        isTooLarge = drillDiameter > width || drillDiameter > height
+                        isTooLarge = drillDiameter >= min(width, height)
                     }
                     if isTooLarge {
-                        warnings.append(.init(message: "Drill diameter for pad \(pad.number) exceeds its size.", requirement: ComponentDesignStage.FootprintRequirement.padDrillSize))
+                        warnings.append(.init(message: "Drill diameter for pad \(pad.number) is larger than or equal to the pad size.", requirement: ComponentDesignStage.FootprintRequirement.padDrillSize))
                     }
                 }
             }

@@ -10,19 +10,31 @@ struct PinPropertiesView: View {
 
     @Binding var pin: Pin
 
+    private var allLengthTypes: [PinLengthType] { PinLengthType.allCases }
+
+    private var lengthIndex: Binding<Double> {
+        Binding<Double>(
+            get: { Double(allLengthTypes.firstIndex(of: pin.lengthType) ?? 2) },
+            set: {
+                let index = Int(round($0))
+                if allLengthTypes.indices.contains(index) {
+                    pin.lengthType = allLengthTypes[index]
+                }
+            }
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Pin Properties")
                 .font(.title3.weight(.semibold))
             
-            // 1. Identity and Type Section
             InspectorSection("Identity and Type") {
-                // The Grid handles the two-column layout for this section.
-            
                     InspectorRow("Name") {
                         TextField("e.g. SDA", text: $pin.name)
                             .inspectorField()
                     }
+
                     InspectorRow("Number") {
                         HStack(spacing: 0) {
                             InspectorNumericField(value: $pin.number)
@@ -39,33 +51,28 @@ struct PinPropertiesView: View {
                         .labelsHidden()
                         .controlSize(.small)
                     }
-                
             }
-            
+
             Divider()
+
             InspectorSection("Transform") {
                 PointControlView(title: "Position", point: $pin.position, displayOffset: PaperSize.component.centerOffset())
-       
                 RotationControlView(object: $pin, tickStepDegrees: 90, snapsToTicks: true)
             }
 
             Divider()
 
-            // 2. Display Section
             InspectorSection( "Display") {
-               
                 InspectorRow("Length") {
-                    Picker("Length", selection: $pin.lengthType) {
-                        ForEach(PinLengthType.allCases) { pinLengthType in
-                            Text(pinLengthType.label).tag(pinLengthType)
-                        }
-                    }
-                    .labelsHidden()
+                    Slider(
+                        value: lengthIndex,
+                        in: 0...Double(allLengthTypes.count - 1),
+                        step: 1
+                    )
                     .controlSize(.small)
                 }
        
                 InspectorRow("Name") {
-                    // This control spans both columns and is placed on its own row.
                     Toggle("Show Name", isOn: $pin.showLabel)
                         .labelsHidden()
                         .disabled(pin.name.isEmpty)
@@ -75,10 +82,7 @@ struct PinPropertiesView: View {
                     Toggle("Show Number", isOn: $pin.showNumber)
                         .labelsHidden()
                 }
-
-                
             }
-
         }
         .padding(10)
     }

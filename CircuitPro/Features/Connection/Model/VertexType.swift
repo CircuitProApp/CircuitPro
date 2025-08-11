@@ -2,10 +2,10 @@ import Foundation
 
 /// The type of vertex that was hit.
 public enum VertexType {
-    /// An endpoint of a connection.
+    /// An endpoint of a wire.
     case endpoint
-    /// A corner in a connection.
+    /// A corner in a wire.
     case corner
-    /// A junction where multiple connections meet.
+    /// A junction where multiple wires meet.
     case junction
 }

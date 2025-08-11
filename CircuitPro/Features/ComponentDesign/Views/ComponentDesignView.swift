@@ -83,8 +83,6 @@ struct ComponentDesignView: View {
             }
         }
         .onAppear {
-            symbolCanvasManager.showGuides = true
-            footprintCanvasManager.showGuides = true
             symbolCanvasManager.paperSize = .component
             footprintCanvasManager.paperSize = .component
         }
@@ -127,33 +125,43 @@ struct ComponentDesignView: View {
         let canvasSize = symbolCanvasManager.paperSize.canvasSize(orientation: .landscape)
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
 
-        var textDefinitions = [TextDefinition]()
-        let textCanvasElements = symbolEditor.elements.compactMap { $0.asTextElement }
+        var textDefinitions: [TextDefinition] = []
+        let textNodes = symbolEditor.canvasNodes.compactMap { $0 as? TextNode }
 
-        for textElement in textCanvasElements {
-            let relativePosition = CGPoint(x: textElement.position.x - anchor.x, y: textElement.position.y - anchor.y)
-            
-            if let source = symbolEditor.textSourceMap[textElement.id] {
-                let displayOptions = symbolEditor.textDisplayOptionsMap[textElement.id, default: .allVisible]
+        for textNode in textNodes {
+            let relativePosition = CGPoint(x: textNode.position.x - anchor.x, y: textNode.position.y - anchor.y)
+            var definition: TextDefinition
+
+            if let source = symbolEditor.textSourceMap[textNode.id] {
+                // This is dynamically sourced text (e.g., a property).
+                let displayOptions = symbolEditor.textDisplayOptionsMap[textNode.id, default: .allVisible]
                 
-                textDefinitions.append(TextDefinition(
+                definition = TextDefinition(
                     source: source,
                     relativePosition: relativePosition,
-                    cardinalRotation: textElement.cardinalRotation,
+                    cardinalRotation: textNode.textModel.cardinalRotation,
                     displayOptions: displayOptions
-                ))
+                )
             } else {
-                textDefinitions.append(TextDefinition(
-                    source: .static(textElement.text),
+                // This is static text.
+                definition = TextDefinition(
+                    source: .static(textNode.textModel.text),
                     relativePosition: relativePosition,
-                    cardinalRotation: textElement.cardinalRotation
-                ))
+                    cardinalRotation: textNode.textModel.cardinalRotation
+                )
             }
+            
+            // Preserve styling from the node's model.
+            definition.font = textNode.textModel.font
+            definition.color = textNode.textModel.color
+            definition.alignment = textNode.textModel.alignment
+            
+            textDefinitions.append(definition)
         }
         
-        let rawPrimitives: [AnyPrimitive] = symbolEditor.elements.compactMap { $0.asPrimitive }
-
-        let primitives = rawPrimitives.map { prim -> AnyPrimitive in
+        let rawPrimitives: [AnyCanvasPrimitive] = symbolEditor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
+        
+        let primitives = rawPrimitives.map { prim -> AnyCanvasPrimitive in
             var copy = prim
             copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
             return copy
@@ -188,7 +196,6 @@ struct ComponentDesignView: View {
         modelContext.insert(newComponent)
         didCreateComponent = true
     }
-
     private func resetForNewComponent() {
         componentDesignManager.resetAll()
         currentStage = .details

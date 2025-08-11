@@ -18,7 +18,7 @@ class Symbol {
     var name: String
 
     var component: Component?
-    var primitives: [AnyPrimitive]
+    var primitives: [AnyCanvasPrimitive]
     var pins: [Pin]
     
     var textDefinitions: [TextDefinition]
@@ -27,7 +27,7 @@ class Symbol {
         uuid: UUID = UUID(),
         name: String,
         component: Component? = nil,
-        primitives: [AnyPrimitive] = [],
+        primitives: [AnyCanvasPrimitive] = [],
         pins: [Pin] = [],
         textDefinitions: [TextDefinition] = []
     ) {

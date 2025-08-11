@@ -1,3 +1,10 @@
+//
+//  CircuitProApp.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 4/01/25.
+//
+
 import SwiftUI
 import SwiftData
 import WelcomeWindow
@@ -17,14 +24,13 @@ struct CircuitProApp: App {
         Group {
             WelcomeWindow(
                 actions: { dismiss in
-                    WelcomeButton(iconName: CircuitProSymbols.Generic.plus, title: "Create New Project...") {
+                    WelcomeButton(iconName: "plus.square", title: "Create New Project...") {
                         CircuitProjectDocumentController.shared.createFileDocumentWithDialog(
                             configuration:
                                     .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject),
                             onDialogPresented: { dismiss() }
                         )
                     }
-                    .symbolVariant(.rectangle)
                     WelcomeButton(iconName: CircuitProSymbols.Generic.folder, title: "Open Existing Project...") {
                         CircuitProjectDocumentController.shared.openDocumentWithDialog(
                             configuration: .init(allowedContentTypes: [.circuitProject]),
@@ -32,10 +38,10 @@ struct CircuitProApp: App {
                         )
                     }
                     .symbolVariant(.rectangle)
-                    WelcomeButton(iconName: CircuitProSymbols.Generic.plus, title: "Create New Component...") {
+                    WelcomeButton(iconName: "books.vertical", title: "Create New Component...") {
                         openWindow(id: "ComponentDesignWindow")
                     }
-                    .symbolVariant(.rectangle)
+                    
                 },
                 onDrop: { url, dismiss in
                     Task {
