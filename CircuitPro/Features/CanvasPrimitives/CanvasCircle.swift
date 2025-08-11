@@ -7,7 +7,7 @@
 
 import AppKit
 
-struct CanvasCircle: GraphicPrimitive {
+struct CanvasCircle: CanvasPrimitive {
 
     let id: UUID
     var shape: CirclePrimitive

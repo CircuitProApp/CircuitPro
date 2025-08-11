@@ -10,7 +10,7 @@ import CoreGraphics
 import AppKit
 
 /// A type-erased wrapper so we can store heterogeneous canvas primitives in one array.
-enum AnyCanvasPrimitive: GraphicPrimitive, Identifiable, Hashable {
+enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
 
     case line(CanvasLine)
     case rectangle(CanvasRectangle)

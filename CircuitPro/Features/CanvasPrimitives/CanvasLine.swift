@@ -7,7 +7,7 @@
 
 import AppKit
 
-struct CanvasLine: GraphicPrimitive {
+struct CanvasLine: CanvasPrimitive {
 
     let id: UUID
     var shape: LinePrimitive

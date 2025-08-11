@@ -60,7 +60,7 @@ class TextNode: BaseNode {
         let localPath = textModel.makeTextPath()
         // The halo is a stroked version of the local path.
         return localPath.copy(
-            strokingWithWidth: 2.0, // Adjust for desired halo thickness
+            strokingWithWidth: 1.0, // Adjust for desired halo thickness
             lineCap: .round,
             lineJoin: .round,
             miterLimit: 1.0

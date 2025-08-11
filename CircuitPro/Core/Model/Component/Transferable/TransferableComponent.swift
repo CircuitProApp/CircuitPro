@@ -21,15 +21,32 @@ extension UTType {
     static let transferableComponent = UTType(exportedAs: "app.circuitpro.transferable-component-data")
 }
 
+
 extension View {
     @ViewBuilder
-    func draggableIfPresent<T: Transferable>(_ item: T?, symbol: Symbol?) -> some View {
-        if let item, let symbol {
+    func draggableIfPresent<T: Transferable>(
+        _ item: T?,
+        symbol: Symbol? = nil,
+        onDragInitiated: (() -> Void)? = nil
+    ) -> some View {
+        if let item {
             self.draggable(item) {
-               SymbolThumbnail(symbol: symbol)
+                // The Group unifies the two conditional branches into a single View expression.
+                Group {
+//                    if let symbol {
+//                        SymbolThumbnail(symbol: symbol)
+//                    } else {
+                        // This mimics the default drag preview behavior.
+                        self          
+//                    }
+                }
+                // We attach the onAppear modifier to the Group.
+                // The preview view is created exactly once when the drag begins,
+                // so onAppear is the perfect hook to trigger the callback.
+                .onAppear {
+                    onDragInitiated?()
+                }
             }
-        } else if let item {
-            self.draggable(item)
         } else {
             self
         }

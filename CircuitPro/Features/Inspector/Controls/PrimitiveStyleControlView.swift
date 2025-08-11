@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct PrimitiveStyleControlView<T: GraphicPrimitive>: View {
+struct PrimitiveStyleControlView<T: CanvasPrimitive>: View {
     @Binding var object: T
     
     /// A private computed property to determine if the primitive supports filling.

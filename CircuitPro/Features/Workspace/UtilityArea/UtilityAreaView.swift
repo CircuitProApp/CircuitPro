@@ -10,47 +10,20 @@ import SwiftData
 
 enum UtilityAreaTab: Displayable {
 
-    case appLibrary
-    case userLibrary
+    case canvasConsole
 
     var label: String {
         switch self {
-        case .appLibrary:
-            return "App Library"
-        case .userLibrary:
-            return "User Library"
+        case .canvasConsole:
+            return "Canvas Console"
+
         }
     }
 
     var icon: String {
         switch self {
-        case .appLibrary:
-            return "books.vertical"
-        case .userLibrary:
-            return "person"
-        }
-    }
-}
-
-enum ComponentCategoryFilter: Identifiable, Hashable {
-    case all
-    case category(ComponentCategory)
-
-    var id: String {
-        switch self {
-        case .all:
-            return "all"
-        case .category(let category):
-            return category.rawValue
-        }
-    }
-
-    var label: String {
-        switch self {
-        case .all:
-            return "All"
-        case .category(let category):
-            return category.label
+        case .canvasConsole:
+            return "apple.terminal"
         }
     }
 }
@@ -60,29 +33,7 @@ struct UtilityAreaView: View {
     @Environment(\.projectManager)
     private var projectManager
     
-    @Environment(\.modelContext)
-    private var modelContext
-
-    @Query(
-        filter: #Predicate<Component> { component in
-            // Dynamic filtering will be handled through a computed property
-            true
-        },
-        sort: [SortDescriptor(\.name, order: .forward)]
-    )
-    private var components: [Component]
-
-    @State private var selectedCategory: ComponentCategoryFilter = .all
-    @State private var selectedTab: UtilityAreaTab = .appLibrary
-
-    var filteredComponents: [Component] {
-        switch selectedCategory {
-        case .all:
-            return components
-        case .category(let category):
-            return components.filter { $0.category == category }
-        }
-    }
+    @State private var selectedTab: UtilityAreaTab = .canvasConsole
 
     var body: some View {
         HStack(spacing: 0) {
@@ -105,25 +56,7 @@ struct UtilityAreaView: View {
 
     private var selectionView: some View {
         Group {
-            switch selectedTab {
-            case .appLibrary:
-                List(
-                    [ComponentCategoryFilter.all] + ComponentCategory.allCases.map { .category($0) },
-                    id: \.self,
-                    selection: $selectedCategory
-                ) { filter in
-                    HStack(spacing: 5) {
-                        Image(systemName: "text.page")
-                            .foregroundStyle(selectedCategory == filter ? .primary : .secondary)
-                        Text(filter.label)
-                    }
-                    .listRowSeparator(.hidden)
-                }
-                .listStyle(.inset)
-                .scrollContentBackground(.hidden)
-            case .userLibrary:
-                Text("User library")
-            }
+            Text("WIP")
         }
     }
 
@@ -136,7 +69,7 @@ struct UtilityAreaView: View {
                     Image(systemName: tab == selectedTab ? "\(tab.icon).fill" : tab.icon)
                         .font(.system(size: 12.5))
                         .foregroundStyle(selectedTab == tab ? .blue : .secondary)
-                        .if(tab == .appLibrary) { view in
+                        .if(tab == .canvasConsole) { view in
                             view.padding(.top, 12.5)
                         }
                 }
@@ -151,20 +84,9 @@ struct UtilityAreaView: View {
 
     private var contentView: some View {
         Group {
-            switch selectedTab {
-            case .appLibrary:
-                ComponentGridView(filteredComponents) { component in
-                    ComponentCardView(component: component)
-                        .contextMenu {
-                            Button("Delete Component") {
-                                modelContext.delete(component)
-                            }
-                        }
-                }
-                .contentMargins([.top, .leading, .bottom], 10, for: .scrollContent)
-            case .userLibrary:
-                Text("User library")
-            }
+
+                Text("WIP")
+            
         }
     }
 }

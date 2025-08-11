@@ -39,7 +39,11 @@ class LibraryPanelManager {
         panel.backgroundColor = .clear
         panel.hasShadow = true
 
-        let hostingController = NSHostingController(rootView: LibraryPanelView())
+        
+        let rootView = LibraryPanelView()
+                .modelContainer(ModelContainerManager.shared.container)
+        
+        let hostingController = NSHostingController(rootView: rootView)
         panel.contentViewController = hostingController
 
         self.resignKeyObserver = NotificationCenter.default.addObserver(

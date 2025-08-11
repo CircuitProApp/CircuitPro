@@ -7,7 +7,7 @@
 
 import AppKit
 
-struct CanvasRectangle: GraphicPrimitive {
+struct CanvasRectangle: CanvasPrimitive {
 
     let id: UUID
     var shape: RectanglePrimitive

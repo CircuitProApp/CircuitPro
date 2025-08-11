@@ -1,17 +1,13 @@
 //
-//  GraphicPrimitive.swift
+//  CanvasPrimitive.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 21.06.25.
 //
-//  This protocol defines the interface for a primitive that can be drawn on the canvas.
-//  It combines a pure data primitive from `PrimitiveKit` with canvas-specific properties
-//  like position, rotation, color, and stroke width.
-//
 
 import AppKit
 
-protocol GraphicPrimitive: Transformable, Drawable, Bounded, HandleEditable, Identifiable, Codable, Equatable, Hashable, Layerable {
+protocol CanvasPrimitive: Transformable, Drawable, Bounded, HandleEditable, Identifiable, Codable, Equatable, Hashable, Layerable {
 
     var id: UUID { get }
     var color: SDColor? { get set }
@@ -22,11 +18,11 @@ protocol GraphicPrimitive: Transformable, Drawable, Bounded, HandleEditable, Ide
 }
 
 // MARK: - Drawable Conformance
-extension GraphicPrimitive {
+extension CanvasPrimitive {
     func makeDrawingPrimitives() -> [DrawingPrimitive] {
         // We crash intentionally to alert the developer that they are using the wrong code path.
         // The renderer should always use `makeDrawingPrimitives(with:)` for this type.
-        fatalError("`makeDrawingPrimitives()` should not be called directly on a GraphicPrimitive. The renderer must resolve the color first and call `makeDrawingPrimitives(with: resolvedColor)`.")
+        fatalError("`makeDrawingPrimitives()` should not be called directly on a CanvasPrimitive. The renderer must resolve the color first and call `makeDrawingPrimitives(with: resolvedColor)`.")
     }
 
     // --- NEW METHOD: This is the correct way to draw a primitive. ---
@@ -50,7 +46,7 @@ extension GraphicPrimitive {
         
         // This constant defines the extra width for the halo. A value of 4.0 means the
         // visible halo will extend 2.0 points from the edge of the primitive.
-        let haloPadding: CGFloat = 4.0
+        let haloPadding: CGFloat = 0.5
 
         if filled {
             // For a filled shape, the halo is an outline created by stroking the shape's path.
@@ -66,7 +62,7 @@ extension GraphicPrimitive {
 }
 
 // MARK: - Other Shared Implementations
-extension GraphicPrimitive {
+extension CanvasPrimitive {
 
     func hitTest(_ point: CGPoint, tolerance: CGFloat = 5) -> AnyHashable? {
         let path = makePath()
