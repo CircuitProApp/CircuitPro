@@ -9,14 +9,17 @@ import SwiftUI
 
 struct LibraryListView: View {
     
+    
+    @Environment(\.modelContext) private var modelContext
+    
     var filteredComponents: [Component] = []
     @Binding var selectedComponentID: UUID?
     
     init(filteredComponents: [Component], selectedComponentID: Binding<UUID?>) {
         self.filteredComponents = filteredComponents
         self._selectedComponentID = selectedComponentID
-
-          
+        
+        
     }
     
     
@@ -35,6 +38,13 @@ struct LibraryListView: View {
                                     ComponentListRowView(component: component, category: category, selectedComponentID: $selectedComponentID)
                                         .padding(.horizontal, 6)
                                         .contentShape(.rect)
+                                        #if DEBUG
+                                        .contextMenu {
+                                            Button("Delete") {
+                                                modelContext.delete(component)
+                                            }
+                                        }
+                                        #endif
                                     
                                     
                                     
@@ -61,18 +71,18 @@ struct LibraryListView: View {
                 }
                 .frame(width: 272)
                 
-            
-        
-            
+                
+                
+                
             }
-         
+            
         } else {
             Text("No Matches")
                 .foregroundStyle(.secondary)
                 .frame(width: 272)
                 .frame(maxHeight: .infinity)
         }
-
+        
     }
 }
 
@@ -102,7 +112,7 @@ struct ComponentListRowView: View {
             Text(component.name)
                 .foregroundStyle(isSelected ? .white : .primary)
         }
-      
+        
         .padding(4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)

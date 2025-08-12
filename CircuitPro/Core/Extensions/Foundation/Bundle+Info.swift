@@ -1,8 +1,8 @@
 //
 //  Bundle+Info.swift
-//  CodeEditModules/CodeEditUtils
+//  CircuitPro
 //
-//  Created by Lukas Pistrol on 01.05.22.
+//  Created by Giorgi Tchelidze 08/13/2025.
 //
 
 import Foundation
@@ -24,13 +24,12 @@ extension Bundle {
     }
 
     /// Returns the main bundle's version string if available (e.g. 1.0.0)
-    static var versionString: String? {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+    var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
     }
 
-    /// Returns the main bundle's build string if available (e.g. 123)
-    static var buildString: String? {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+    var buildVersion: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
     }
 
     static var versionPostfix: String? {

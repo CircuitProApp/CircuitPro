@@ -5,14 +5,17 @@ import UniformTypeIdentifiers
 
 #if DEBUG
 /// Developer-only utilities for exporting a clean, single-file SwiftData store.
-/// This version correctly handles the macOS App Sandbox by using an NSSavePanel
-/// to ask the developer where to save the exported file.
 final class DeveloperTools {
+    
+    // The name of the debug store file, for clarity.
+    private static let debugStoreFileName = "appLibrary_debug.store"
 
     static func exportAndSavePopulatedLibrary() {
         print("🛠️ Starting populated library export...")
         do {
             let tempURL = try exportToTemporaryFile()
+            // The base name "appLibrary" is correct, as we want the exported files
+            // to be named "appLibrary.store" and "appLibrary.json" for release.
             presentFolderPicker(for: tempURL, fileBaseName: "appLibrary")
         } catch {
             print("❌ Export failed: \(error)")
@@ -32,40 +35,32 @@ final class DeveloperTools {
         }
     }
     
-    /// Presents an NSOpenPanel configured to select a folder, then saves the .store and .json files inside it.
     private static func presentFolderPicker(for sourceStoreURL: URL, fileBaseName: String) {
-        // --- THIS IS THE CORRECT IMPLEMENTATION ---
-        // Use NSOpenPanel, not NSSavePanel, to select a directory.
         let panel = NSOpenPanel()
-        
         panel.title = "Choose Folder to Export Library Files"
-        panel.prompt = "Choose" // The button text
+        panel.prompt = "Choose"
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
-        // ------------------------------------------
 
         if panel.runModal() == .OK {
-            // panel.url will be the URL of the FOLDER the user chose.
             guard let folderURL = panel.url else {
                 print("❌ Could not get destination folder URL from panel.")
                 return
             }
             
-            // Construct the final URLs for both files INSIDE the chosen folder.
             let storeDestinationURL = folderURL.appendingPathComponent("\(fileBaseName).store")
             let jsonDestinationURL = folderURL.appendingPathComponent("\(fileBaseName).json")
             
             do {
-                // Save the .store file
                 try? FileManager.default.removeItem(at: storeDestinationURL)
                 try FileManager.default.copyItem(at: sourceStoreURL, to: storeDestinationURL)
                 print("✅ Library .store file successfully exported to \(storeDestinationURL.path)")
 
-                // Save the .json file
+                // Corresponds to the metadata file that should accompany the store.
                 let jsonTemplate = """
                 {
-                    "version": "0.0.1",
+                    "version": "0.0.1"
                 }
                 """
                 try jsonTemplate.write(to: jsonDestinationURL, atomically: true, encoding: .utf8)
@@ -80,9 +75,18 @@ final class DeveloperTools {
     }
     
     private static func exportToTemporaryFile() throws -> URL {
-        guard let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { fatalError("Cannot find Application Support directory.") }
-        let sourceURL = appSupportURL.appendingPathComponent("appLibrary.store")
-        guard FileManager.default.fileExists(atPath: sourceURL.path) else { throw NSError(domain: "DevTools", code: 1, userInfo: [NSLocalizedDescriptionKey: "Source developer library not found."]) }
+        guard let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            fatalError("Cannot find Application Support directory.")
+        }
+        
+        // --- MODIFIED ---
+        // Source the export from the correct DEBUG database.
+        let sourceURL = appSupportURL.appendingPathComponent(self.debugStoreFileName)
+        
+        guard FileManager.default.fileExists(atPath: sourceURL.path) else {
+            throw NSError(domain: "DevTools", code: 1, userInfo: [NSLocalizedDescriptionKey: "Source developer library '\(self.debugStoreFileName)' not found."])
+        }
+        
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("store")
         try vacuumInto(from: sourceURL, to: tempURL)
         try setSQLiteJournalModeDelete(at: tempURL)
@@ -93,25 +97,20 @@ final class DeveloperTools {
 
 // MARK: - UTType Definition
 private extension UTType {
-    // Define a Uniform Type Identifier for our .store file extension so the Save Panel can use it.
     static let database = UTType(filenameExtension: "store")!
 }
 
-// MARK: - SwiftData helper for creating an empty store
+// MARK: - SwiftData and SQLite Helpers (No Changes)
 private extension DeveloperTools {
     static func createEmptySwiftDataStore(at url: URL, models: [any PersistentModel.Type]) throws {
         let schema = Schema(models)
         let config = ModelConfiguration(url: url)
         _ = try ModelContainer(for: schema, configurations: config)
     }
-}
-
-// MARK: - SQLite helpers
-private extension DeveloperTools {
+    
     static func vacuumInto(from source: URL, to dest: URL) throws {
         try? FileManager.default.removeItem(at: dest)
         var db: OpaquePointer?
-        // Note: Open source in READONLY mode for safety during export.
         try openSQLite(at: source, flags: SQLITE_OPEN_READONLY, db: &db)
         defer { sqlite3_close(db) }
         sqlite3_busy_timeout(db, 4000)
