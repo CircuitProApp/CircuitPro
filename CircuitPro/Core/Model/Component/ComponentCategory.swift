@@ -6,7 +6,7 @@
 //
 import SwiftUI
 
-enum ComponentCategory: String, Codable, CaseIterable, Identifiable {
+enum ComponentCategory: Displayable {
     case passive
     case active
     case electromechanical
@@ -22,8 +22,6 @@ enum ComponentCategory: String, Codable, CaseIterable, Identifiable {
     case oscillator
     case protection
     case miscellaneous
-
-    var id: String { rawValue }
 
     var label: String {
         switch self {
@@ -42,6 +40,41 @@ enum ComponentCategory: String, Codable, CaseIterable, Identifiable {
         case .oscillator: return "Oscillator"
         case .protection: return "Protection"
         case .miscellaneous: return "Miscellaneous"
+        }
+    }
+    
+    var color: Color? {
+        switch self {
+        case .passive:
+                .red
+        case .active:
+                .orange
+        case .electromechanical:
+                .yellow
+        case .connector:
+                .green
+        case .power:
+                .teal
+        case .analog:
+                .mint
+        case .digital:
+                .blue
+        case .rf:
+                .red
+        case .sensor:
+                .purple
+        case .microcontroller:
+                .gray
+        case .memory:
+                .pink
+        case .display:
+                .cyan
+        case .oscillator:
+                .indigo
+        case .protection:
+                .blue
+        case .miscellaneous:
+                .purple
         }
     }
 }

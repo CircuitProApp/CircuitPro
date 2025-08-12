@@ -23,30 +23,49 @@ struct LibraryListView: View {
     
     var body: some View {
         if filteredComponents.isNotEmpty {
-            List(selection: $selectedComponentID) {
-                ForEach(ComponentCategory.allCases) { category in
-                    // Filter the components for the current category.
-                    let componentsInCategory = filteredComponents.filter { $0.category == category }
-
-                    if !componentsInCategory.isEmpty {
-                        Section(header:    Text(category.label)) {
-                            ForEach(componentsInCategory) { component in
-                                ComponentListRowView(component: component)
-                                    .tag(component.uuid)
-                                    .listRowSeparatorTint(.secondary.opacity(0.25))
-                            }
-                        }
- 
-                          
+            ScrollView {
+                LazyVStack(alignment: .leading, pinnedViews: .sectionHeaders) {
+                    ForEach(ComponentCategory.allCases) { category in
+                        // Filter the components for the current category.
+                        let componentsInCategory = filteredComponents.filter { $0.category == category }
                         
+                        if !componentsInCategory.isEmpty {
+                            Section {
+                                ForEach(componentsInCategory) { component in
+                                    ComponentListRowView(component: component, category: category, selectedComponentID: $selectedComponentID)
+                                        .padding(.horizontal, 6)
+                                        .contentShape(.rect)
+                                    
+                                    
+                                    
+                                }
+                            } header: {
+                                
+                                Text(category.label)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(2.5)
+                                    .background(.ultraThinMaterial)
+                                
+                                
+                                
+                                
+                            }
+                            
+                            
+                            
+                            
+                        }
                     }
                 }
-            }
-            .frame(width: 272)
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-                  .background(Color.clear)
+                .frame(width: 272)
+                
             
+        
+            
+            }
+         
         } else {
             Text("No Matches")
                 .foregroundStyle(.secondary)
@@ -57,16 +76,23 @@ struct LibraryListView: View {
     }
 }
 
+
 struct ComponentListRowView: View {
     
     var component: Component
+    var category: ComponentCategory
+    @Binding var selectedComponentID: UUID?
+    
+    private var isSelected: Bool {
+        selectedComponentID == component.uuid
+    }
     
     var body: some View {
         HStack {
             Text(component.referenceDesignatorPrefix)
             
                 .frame(width: 32, height: 32)
-                .background(.teal)
+                .background(category.color ?? .accentColor)
                 .clipShape(.rect(cornerRadius: 5))
                 .font(.subheadline)
                 .fontDesign(.rounded)
@@ -74,7 +100,18 @@ struct ComponentListRowView: View {
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
             Text(component.name)
+                .foregroundStyle(isSelected ? .white : .primary)
         }
-        .draggableIfPresent(TransferableComponent(component: component), symbol: nil, onDragInitiated: LibraryPanelManager.hide)
+      
+        .padding(4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(.rect)
+        .draggableIfPresent(TransferableComponent(component: component), onDragInitiated: LibraryPanelManager.hide)
+        .background(isSelected ? Color.blue : Color.clear)
+        .clipShape(.rect(cornerRadius: 8))
+        .onTapGesture {
+            selectedComponentID = component.uuid
+        }
+        .preventWindowMove()
     }
 }

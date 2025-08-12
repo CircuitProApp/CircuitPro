@@ -11,6 +11,7 @@ import SwiftUI
 protocol Displayable: CaseIterable, Identifiable, Codable, Hashable {
     var label: String { get }
     var icon: String? { get }
+    var color: Color? { get }
     var helpText: String? { get }
 }
 
@@ -19,5 +20,6 @@ extension Displayable {
 
     // Provide default nil implementations
     var icon: String? { nil }
+    var color: Color? { nil }
     var helpText: String? { nil }
 }

@@ -11,7 +11,6 @@ import SwiftData
 struct LibraryPanelView: View {
     
     @State private var searchText: String = ""
-    @FocusState private var isFocused: Bool
     
     // This state variable will store the ID of the selected component.
     // It's optional because nothing is selected at first.
@@ -49,30 +48,7 @@ struct LibraryPanelView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 13) {
-                Image(systemName: "line.3.horizontal.decrease.circle")
-                    .foregroundColor(.secondary)
-                
-                TextField("Search Components", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .focused($isFocused)
-                Spacer(minLength: 0)
-                if searchText.isNotEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: CircuitProSymbols.Generic.xmark)
-                            .symbolVariant(.circle.fill)
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    
-                }
-
-            }
-            .padding(13)
-            .font(.title2)
-            
+            LibrarySearchView(searchText: $searchText)
             Divider()
 //            HStack(spacing: 10) {
 //                Image(systemName: "square")
@@ -116,8 +92,5 @@ struct LibraryPanelView: View {
         .frame(minWidth: 682, minHeight: 373)
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 10))
-        .onAppear {
-            isFocused = true
-        }
     }
 }
