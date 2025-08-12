@@ -39,9 +39,9 @@ final class CanvasController {
     var onNeedsRedraw: (() -> Void)?
     var onSelectionChanged: ((Set<UUID>) -> Void)?
     var onNodesChanged: (([BaseNode]) -> Void)?
-    var onMouseMoved: (
-        (CGPoint?) -> Void
-    )?
+    
+    // New consolidated callback
+    var onCanvasChange: ((CanvasChangeContext) -> Void)?
     
     /// A generic callback to notify the owner that a persistent model was mutated.
     var onModelDidChange: (() -> Void)?

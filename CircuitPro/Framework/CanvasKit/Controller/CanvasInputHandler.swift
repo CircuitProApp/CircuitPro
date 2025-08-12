@@ -94,8 +94,6 @@ final class CanvasInputHandler {
     }
 
     func mouseExited() {
-        // Setting the raw mouse location to nil is correct.
-        controller.mouseLocation = nil
         controller.redraw()
     }
     

@@ -26,14 +26,13 @@ struct CanvasView: NSViewRepresentable {
     let interactions: [any CanvasInteraction]
     let inputProcessors: [any InputProcessor]
     let snapProvider: any SnapProvider
-
-    var onMouseMoved: ((CGPoint?) -> Void)?
     
     let registeredDraggedTypes: [NSPasteboard.PasteboardType]
-
     let onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
-    
     var onModelDidChange: (() -> Void)?
+    
+    // The new callback property for canvas state changes.
+    var onCanvasChange: ((CanvasChangeContext) -> Void)?
 
     init(
         size: Binding<CGSize>,
@@ -48,7 +47,6 @@ struct CanvasView: NSViewRepresentable {
         interactions: [any CanvasInteraction],
         inputProcessors: [any InputProcessor] = [],
         snapProvider: any SnapProvider = NoOpSnapProvider(),
-        onMouseMoved: ((CGPoint?) -> Void)? = nil,
         registeredDraggedTypes: [NSPasteboard.PasteboardType] = [],
         onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil,
         onModelDidChange: (() -> Void)? = {}
@@ -59,13 +57,12 @@ struct CanvasView: NSViewRepresentable {
         self._selection = selection
         self._tool = tool
         self._layers = layers
-         self._activeLayerId = activeLayerId
+        self._activeLayerId = activeLayerId
         self.environment = environment
         self.renderLayers = renderLayers
         self.interactions = interactions
         self.inputProcessors = inputProcessors
         self.snapProvider = snapProvider
-        self.onMouseMoved = onMouseMoved
         self.registeredDraggedTypes = registeredDraggedTypes
         self.onPasteboardDropped = onPasteboardDropped
         self.onModelDidChange = onModelDidChange
@@ -147,12 +144,12 @@ struct CanvasView: NSViewRepresentable {
             renderLayers: self.renderLayers,
             interactions: self.interactions,
             inputProcessors: self.inputProcessors,
-            snapProvider: self.snapProvider,
+            snapProvider: self.snapProvider
         )
-        coordinator.canvasController.onMouseMoved = self.onMouseMoved
-        coordinator.canvasController.onMouseMoved = self.onMouseMoved
+        // Wire up the remaining callbacks
         coordinator.canvasController.onPasteboardDropped = self.onPasteboardDropped
         coordinator.canvasController.onModelDidChange = self.onModelDidChange
+        coordinator.canvasController.onCanvasChange = self.onCanvasChange
         return coordinator
     }
 
@@ -182,6 +179,9 @@ struct CanvasView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
         
+        // Pass the new callback closure to the controller.
+        controller.onCanvasChange = self.onCanvasChange
+        
         controller.sync(
             nodes: self.nodes,
             selection: self.selection,
@@ -189,7 +189,7 @@ struct CanvasView: NSViewRepresentable {
             magnification: self.magnification,
             environment: self.environment,
             layers: self.layers,
-                   activeLayerId: self.activeLayerId
+            activeLayerId: self.activeLayerId
         )
         
         if let hostView = scrollView.documentView, hostView.frame.size != self.size {
@@ -203,6 +203,19 @@ struct CanvasView: NSViewRepresentable {
         scrollView.documentView?.needsDisplay = true
     }
 }
+
+// MARK: - Modifier
+
+extension CanvasView {
+    /// Registers a callback to be invoked whenever the canvas's view state changes,
+    /// such as when the mouse moves or the visible area scrolls.
+    func onCanvasChange(_ perform: @escaping (CanvasChangeContext) -> Void) -> CanvasView {
+        var view = self
+        view.onCanvasChange = perform
+        return view
+    }
+}
+
 
 extension CGFloat {
     func isApproximatelyEqual(to other: CGFloat, tolerance: CGFloat = 1e-9) -> Bool {

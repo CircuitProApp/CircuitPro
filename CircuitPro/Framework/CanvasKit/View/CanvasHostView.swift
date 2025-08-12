@@ -53,6 +53,15 @@ final class CanvasHostView: NSView {
     func performLayerUpdate() {
         let context = controller.currentContext(for: self.bounds, visibleRect: self.visibleRect)
 
+        // Create the change context and fire the callback.
+        // This is the ideal central point for this event.
+        let changeContext = CanvasChangeContext(
+            rawMouseLocation: context.mouseLocation,
+            processedMouseLocation: context.processedMouseLocation,
+            visibleRect: context.visibleRect
+        )
+        controller.onCanvasChange?(changeContext)
+
         CATransaction.begin()
         CATransaction.setDisableActions(true)
 
@@ -93,12 +102,8 @@ final class CanvasHostView: NSView {
     override func mouseUp(with event: NSEvent) { inputHandler.mouseUp(event, in: self) }
     
     override func keyDown(with event: NSEvent) {
-        // Ask the input handler to process the event.
         let wasHandledByInteraction = inputHandler.keyDown(event, in: self)
         
-        // If our custom interactions (like ToolKeyInteraction) did NOT handle
-        // the event, we MUST pass it up the responder chain. This allows
-        // SwiftUI's .keyboardShortcut to receive it.
         if !wasHandledByInteraction {
             super.keyDown(with: event)
         }
@@ -122,7 +127,6 @@ final class CanvasHostView: NSView {
         
         let wasHandled = dragDropHandler.performDragOperation(sender, in: self)
 
-        
         if wasHandled {
             window?.makeFirstResponder(self)
         }

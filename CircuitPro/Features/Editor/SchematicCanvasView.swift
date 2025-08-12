@@ -51,6 +51,9 @@ struct SchematicCanvasView: View {
             onPasteboardDropped: handleComponentDrop,
             onModelDidChange: { self.document.updateChangeCount(.changeDone) }
         )
+        .onCanvasChange { context in
+            canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
+        }
         .overlay(alignment: .leading) {
             SchematicToolbarView(selectedSchematicTool: $selectedTool)
                 .padding(16)
