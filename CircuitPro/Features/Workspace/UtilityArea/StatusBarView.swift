@@ -14,18 +14,13 @@ struct StatusBarView: View {
 
     var body: some View {
         HStack {
-            CanvasControlView(editorType: editorType)
+            SnappingControlView()
             Divider()
                 .foregroundStyle(.quinary)
                 .frame(height: 12)
                 .padding(.leading, 4)
             Spacer()
-            HStack {
-                Text(String(format: "x: %.0f", canvasManager.mouseLocationInMM.x))
-                Text(String(format: "y: %.0f", canvasManager.mouseLocationInMM.y))
-            }
-            .font(.system(size: 12))
-            .foregroundStyle(.secondary)
+          MouseLocationView()
 
             Spacer()
             if editorType != .schematic {

@@ -11,12 +11,13 @@ import AppKit
 struct CanvasView: NSViewRepresentable {
 
     // MARK: - SwiftUI State Bindings
-    @Binding var size: CGSize
-    @Binding var magnification: CGFloat
+    // Consolidated into a single binding!
+    @Binding var viewport: CanvasViewport
+    
+    // Model-related bindings remain separate
     @Binding var nodes: [BaseNode]
     @Binding var selection: Set<UUID>
     @Binding var tool: CanvasTool?
-    
     @Binding var layers: [CanvasLayer]
     @Binding var activeLayerId: UUID?
 
@@ -30,13 +31,10 @@ struct CanvasView: NSViewRepresentable {
     let registeredDraggedTypes: [NSPasteboard.PasteboardType]
     let onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
     var onModelDidChange: (() -> Void)?
-    
-    // The new callback property for canvas state changes.
     var onCanvasChange: ((CanvasChangeContext) -> Void)?
 
     init(
-        size: Binding<CGSize>,
-        magnification: Binding<CGFloat>,
+        viewport: Binding<CanvasViewport>,
         nodes: Binding<[BaseNode]>,
         selection: Binding<Set<UUID>>,
         tool: Binding<CanvasTool?> = .constant(nil),
@@ -51,8 +49,7 @@ struct CanvasView: NSViewRepresentable {
         onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil,
         onModelDidChange: (() -> Void)? = {}
     ) {
-        self._size = size
-        self._magnification = magnification
+        self._viewport = viewport
         self._nodes = nodes
         self._selection = selection
         self._tool = tool
@@ -72,14 +69,17 @@ struct CanvasView: NSViewRepresentable {
     
     final class Coordinator: NSObject {
         let canvasController: CanvasController
-        private var magnificationBinding: Binding<CGFloat>
+        
+        // The coordinator now holds a binding to the entire viewport struct.
+        private var viewportBinding: Binding<CanvasViewport>
+        
         private var selectionBinding: Binding<Set<UUID>>
         private var nodesBinding: Binding<[BaseNode]>
         private var magnificationObservation: NSKeyValueObservation?
         private var boundsChangeObserver: Any?
 
         init(
-            magnification: Binding<CGFloat>,
+            viewport: Binding<CanvasViewport>,
             nodes: Binding<[BaseNode]>,
             selection: Binding<Set<UUID>>,
             renderLayers: [any RenderLayer],
@@ -87,7 +87,7 @@ struct CanvasView: NSViewRepresentable {
             inputProcessors: [any InputProcessor],
             snapProvider: any SnapProvider
         ) {
-            self.magnificationBinding = magnification
+            self.viewportBinding = viewport
             self.nodesBinding = nodes
             self.selectionBinding = selection
             self.canvasController = CanvasController(renderLayers: renderLayers, interactions: interactions, inputProcessors: inputProcessors, snapProvider: snapProvider)
@@ -108,8 +108,9 @@ struct CanvasView: NSViewRepresentable {
             magnificationObservation = scrollView.observe(\.magnification, options: .new) { [weak self] _, change in
                 guard let self = self, let newValue = change.newValue else { return }
                 DispatchQueue.main.async {
-                    if !self.magnificationBinding.wrappedValue.isApproximatelyEqual(to: newValue) {
-                        self.magnificationBinding.wrappedValue = newValue
+                    if !self.viewportBinding.wrappedValue.magnification.isApproximatelyEqual(to: newValue) {
+                        // Update the magnification on the binding
+                        self.viewportBinding.wrappedValue.magnification = newValue
                     }
                 }
             }
@@ -118,18 +119,23 @@ struct CanvasView: NSViewRepresentable {
             
             clipView.postsBoundsChangedNotifications = true
             
+            // This observer now updates the visibleRect on the binding.
             self.boundsChangeObserver = NotificationCenter.default.addObserver(
                 forName: NSView.boundsDidChangeNotification,
                 object: clipView,
                 queue: .main
             ) { [weak self] _ in
-                self?.canvasController.redraw()
+                guard let self = self else { return }
+                DispatchQueue.main.async {
+                    // Update the visibleRect on the binding
+                    self.viewportBinding.wrappedValue.visibleRect = clipView.bounds
+                }
+                self.canvasController.redraw()
             }
         }
         
         deinit {
             magnificationObservation?.invalidate()
- 
             if let observer = boundsChangeObserver {
                 NotificationCenter.default.removeObserver(observer)
             }
@@ -138,7 +144,7 @@ struct CanvasView: NSViewRepresentable {
     
     func makeCoordinator() -> Coordinator {
         let coordinator = Coordinator(
-            magnification: $magnification,
+            viewport: $viewport, // Pass the single binding
             nodes: $nodes,
             selection: $selection,
             renderLayers: self.renderLayers,
@@ -146,7 +152,7 @@ struct CanvasView: NSViewRepresentable {
             inputProcessors: self.inputProcessors,
             snapProvider: self.snapProvider
         )
-        // Wire up the remaining callbacks
+        // Wire up other callbacks...
         coordinator.canvasController.onPasteboardDropped = self.onPasteboardDropped
         coordinator.canvasController.onModelDidChange = self.onModelDidChange
         coordinator.canvasController.onCanvasChange = self.onCanvasChange
@@ -156,6 +162,7 @@ struct CanvasView: NSViewRepresentable {
     // MARK: - NSViewRepresentable Lifecycle
 
     func makeNSView(context: Context) -> NSScrollView {
+        // ... (makeNSView is mostly the same, creating the host view and scroll view) ...
         let coordinator = context.coordinator
         let canvasHostView = CanvasHostView(controller: coordinator.canvasController, registeredDraggedTypes: self.registeredDraggedTypes)
         let scrollView = CenteringNSScrollView()
@@ -178,44 +185,42 @@ struct CanvasView: NSViewRepresentable {
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
-        
-        // Pass the new callback closure to the controller.
         controller.onCanvasChange = self.onCanvasChange
         
         controller.sync(
             nodes: self.nodes,
             selection: self.selection,
             tool: self.tool,
-            magnification: self.magnification,
+            magnification: self.viewport.magnification, // Read from viewport
             environment: self.environment,
             layers: self.layers,
             activeLayerId: self.activeLayerId
         )
         
-        if let hostView = scrollView.documentView, hostView.frame.size != self.size {
-            hostView.frame.size = self.size
+        // Sync state from SwiftUI (@Binding) to the AppKit view
+        if let hostView = scrollView.documentView, hostView.frame.size != self.viewport.size {
+            hostView.frame.size = self.viewport.size
         }
         
-        if !scrollView.magnification.isApproximatelyEqual(to: self.magnification) {
-            scrollView.magnification = self.magnification
+        if !scrollView.magnification.isApproximatelyEqual(to: self.viewport.magnification) {
+            scrollView.magnification = self.viewport.magnification
+        }
+        
+        // This makes programmatic scrolling possible!
+        if let clipView = scrollView.contentView as? NSClipView {
+            
+            // We only apply the binding's value to the view IF it's not our
+            // special "autoCenter" command. This allows CenteringNSScrollView's
+            // initial layout to "win" the first race.
+            if self.viewport.visibleRect != CanvasViewport.autoCenter && clipView.bounds != self.viewport.visibleRect {
+                // Once the binding has a real rect, it becomes the source of truth.
+                clipView.bounds = self.viewport.visibleRect
+            }
         }
         
         scrollView.documentView?.needsDisplay = true
     }
 }
-
-// MARK: - Modifier
-
-extension CanvasView {
-    /// Registers a callback to be invoked whenever the canvas's view state changes,
-    /// such as when the mouse moves or the visible area scrolls.
-    func onCanvasChange(_ perform: @escaping (CanvasChangeContext) -> Void) -> CanvasView {
-        var view = self
-        view.onCanvasChange = perform
-        return view
-    }
-}
-
 
 extension CGFloat {
     func isApproximatelyEqual(to other: CGFloat, tolerance: CGFloat = 1e-9) -> Bool {

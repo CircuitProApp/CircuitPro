@@ -23,8 +23,7 @@ struct FootprintCanvasView: View {
         
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
-                size: .constant(PaperSize.component.canvasSize()),
-                magnification: $manager.magnification,
+                viewport: $manager.viewport,
                 nodes: $footprintEditor.canvasNodes,
                 selection: $footprintEditor.selectedElementIDs,
                 tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
@@ -59,7 +58,7 @@ struct FootprintCanvasView: View {
             }
         } handle: {
             HStack {
-                CanvasControlView(editorType: .layout)
+                SnappingControlView()
                 Spacer()
                 GridSpacingControlView()
                 ZoomControlView()

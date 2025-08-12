@@ -14,7 +14,7 @@ struct AdjustedForMagnification: ViewModifier {
     var bounds: ClosedRange<Double> = 1.0...Double.infinity
 
     func body(content: Content) -> some View {
-        let rawMagnification = canvasManager.magnification
+        let rawMagnification = canvasManager.viewport.magnification
         let clampedMagnification = bounds.clamp(rawMagnification)
 
         return content

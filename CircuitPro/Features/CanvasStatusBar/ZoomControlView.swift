@@ -6,7 +6,7 @@ struct ZoomControlView: View {
     private var canvasManager
 
     var currentZoom: CGFloat {
-        canvasManager.magnification
+        canvasManager.viewport.magnification
     }
 
     var clampedZoomText: String {
@@ -18,7 +18,7 @@ struct ZoomControlView: View {
         let current = currentZoom
         if let currentIndex = ZoomStep.allCases.firstIndex(where: { $0.rawValue >= current }), currentIndex > 0 {
             let newZoom = ZoomStep.allCases[currentIndex - 1].rawValue
-            canvasManager.magnification = newZoom
+            canvasManager.viewport.magnification = newZoom
         }
     }
 
@@ -27,7 +27,7 @@ struct ZoomControlView: View {
         if let currentIndex = ZoomStep.allCases.firstIndex(where: { $0.rawValue > current }),
            currentIndex < ZoomStep.allCases.count {
             let newZoom = ZoomStep.allCases[currentIndex].rawValue
-            canvasManager.magnification = newZoom
+            canvasManager.viewport.magnification = newZoom
         }
     }
 
@@ -37,7 +37,7 @@ struct ZoomControlView: View {
             Menu {
                 ForEach(ZoomStep.allCases) { step in
                     Button {
-                        canvasManager.magnification = step.rawValue
+                        canvasManager.viewport.magnification = step.rawValue
                     } label: {
                         Text(step.label)
                     }

@@ -20,8 +20,7 @@ struct SymbolCanvasView: View {
 
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
-                size: .constant(PaperSize.component.canvasSize()),
-                magnification: $canvasManager.magnification,
+                viewport: $canvasManager.viewport,
                 nodes: $symbolEditor.canvasNodes,
                 selection: $symbolEditor.selectedElementIDs,
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
@@ -54,7 +53,7 @@ struct SymbolCanvasView: View {
             }
         } handle: {
             HStack {
-                CanvasControlView(editorType: .layout)
+                SnappingControlView()
                 Spacer()
                 GridSpacingControlView()
                 ZoomControlView()

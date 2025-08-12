@@ -24,8 +24,7 @@ struct SchematicCanvasView: View {
         @Bindable var canvasManager = self.canvasManager
 
         CanvasView(
-            size: .constant(PaperSize.component.canvasSize()),
-            magnification: $canvasManager.magnification,
+            viewport: $canvasManager.viewport,
             nodes: $bindableProjectManager.canvasNodes,
             selection: $bindableProjectManager.selectedComponentIDs,
             tool: $selectedTool.unwrapping(withDefault: defaultTool),

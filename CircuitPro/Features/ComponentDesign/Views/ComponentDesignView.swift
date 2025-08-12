@@ -83,8 +83,8 @@ struct ComponentDesignView: View {
             }
         }
         .onAppear {
-            symbolCanvasManager.paperSize = .component
-            footprintCanvasManager.paperSize = .component
+            symbolCanvasManager.viewport.size = PaperSize.component.canvasSize()
+            footprintCanvasManager.viewport.size = PaperSize.component.canvasSize()
         }
         .alert("Error", isPresented: $showError, actions: {
           Button("OK", role: .cancel) { }
@@ -122,7 +122,7 @@ struct ComponentDesignView: View {
         }
 
         let symbolEditor = componentDesignManager.symbolEditor
-        let canvasSize = symbolCanvasManager.paperSize.canvasSize(orientation: .landscape)
+        let canvasSize = symbolCanvasManager.viewport.size
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
 
         var textDefinitions: [TextDefinition] = []
