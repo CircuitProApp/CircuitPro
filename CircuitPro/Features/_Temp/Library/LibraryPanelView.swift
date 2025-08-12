@@ -76,7 +76,7 @@ struct LibraryPanelView: View {
                             .font(.title)
                             .foregroundStyle(.primary)
                         // You could add more details here later.
-                        Text("Category: \(component.category?.label)")
+                        Text("Category: \(component.category.label)")
                             .font(.headline)
                             .foregroundStyle(.secondary)
                     } else {

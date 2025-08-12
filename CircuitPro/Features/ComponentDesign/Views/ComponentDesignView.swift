@@ -173,14 +173,15 @@ struct ComponentDesignView: View {
             copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
             return copy
         }
+        
+        guard let category = componentDesignManager.selectedCategory else { return }
 
         let newComponent = Component(
             name: componentDesignManager.componentName,
             referenceDesignatorPrefix: componentDesignManager.referenceDesignatorPrefix,
             symbol: nil,
             footprints: [],
-            category: componentDesignManager.selectedCategory,
-            package: componentDesignManager.selectedPackageType,
+            category: category,
             propertyDefinitions: componentDesignManager.componentProperties
         )
 

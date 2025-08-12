@@ -64,18 +64,18 @@ struct ComponentDetailView: View {
                     .frame(width: 250)
                     .validationStatus(componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.category))
                 }
-                SectionView("Package Type") {
-                    Picker("Package Type", selection: $manager.selectedPackageType) {
-                        Text("Select a Package Type").tag(nil as PackageType?)
-
-                        ForEach(PackageType.allCases) { packageType in
-                            Text(packageType.label).tag(Optional(packageType))
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    .frame(width: 250)
-                }
+//                SectionView("Package Type") {
+//                    Picker("Package Type", selection: $manager.selectedPackageType) {
+//                        Text("Select a Package Type").tag(nil as PackageType?)
+//
+//                        ForEach(PackageType.allCases) { packageType in
+//                            Text(packageType.label).tag(Optional(packageType))
+//                        }
+//                    }
+//                    .pickerStyle(.menu)
+//                    .labelsHidden()
+//                    .frame(width: 250)
+//                }
             }
             SectionView("Properties") {
                 ComponentPropertiesView(

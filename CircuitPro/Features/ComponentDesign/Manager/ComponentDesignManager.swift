@@ -31,7 +31,7 @@ final class ComponentDesignManager {
             refreshValidation()
         }
     }
-    var selectedPackageType: PackageType?
+//    var selectedPackageType: PackageType?
 
     /// The internal state for properties being edited in the UI.
     /// The key can be nil because a user can add a new row before selecting a key.
@@ -96,7 +96,7 @@ final class ComponentDesignManager {
         componentName = ""
         referenceDesignatorPrefix = ""
         selectedCategory = nil
-        selectedPackageType = nil
+//        selectedPackageType = nil
         draftProperties = [DraftPropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())]
         
         symbolEditor.reset()

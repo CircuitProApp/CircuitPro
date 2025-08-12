@@ -24,8 +24,7 @@ class Component {
     var symbol: Symbol?
 
     var footprints: [Footprint]
-    var category: ComponentCategory?
-    var package: PackageType?
+    var category: ComponentCategory
     var propertyDefinitions: [PropertyDefinition]
 
     init(
@@ -34,8 +33,7 @@ class Component {
         referenceDesignatorPrefix: String,
         symbol: Symbol? = nil,
         footprints: [Footprint] = [],
-        category: ComponentCategory? = nil,
-        package: PackageType? = nil,
+        category: ComponentCategory,
         propertyDefinitions: [PropertyDefinition] = []
     ) {
         self.uuid = uuid
@@ -44,7 +42,6 @@ class Component {
         self.symbol = symbol
         self.footprints = footprints
         self.category = category
-        self.package = package
         self.propertyDefinitions = propertyDefinitions
     }
 }

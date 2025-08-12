@@ -24,13 +24,23 @@ final class ModelContainerManager {
                 ]),
                 allowsSave: true
             )
+            
+            let userLibraryConfig = ModelConfiguration(
+                "userLibrary",
+                schema: Schema([
+                    Component.self,
+                    Symbol.self,
+                    Footprint.self
+                ]),
+                allowsSave: true
+            )
 
             container = try ModelContainer(
                 for:
                     Component.self,
                     Symbol.self,
                     Footprint.self,
-                configurations: appLibraryConfig
+                configurations: appLibraryConfig, userLibraryConfig
             )
 
             // Log the container's store file location
