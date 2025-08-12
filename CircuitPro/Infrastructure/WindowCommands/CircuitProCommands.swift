@@ -1,25 +1,16 @@
 //
-//  CodeEditCommands.swift
+//  CircuitProCommands.swift
 //  CodeEdit
 //
-//  Created by Wouter Hennen on 11/03/2023.
+//  Created by Giorgi Tchelidze on 8/12/2025.
 //
 
 import SwiftUI
 
 struct CircuitProCommands: Commands {
-//    @AppSettings(\.sourceControl.general.sourceControlIsEnabled)
-//    private var sourceControlIsEnabled
 
     var body: some Commands {
         MainCommands()
-//        FileCommands()
-//        ViewCommands()
-//        FindCommands()
-//        NavigateCommands()
-//        if sourceControlIsEnabled { SourceControlCommands() }
-//        ExtensionCommands()
-//        WindowCommands()
-//        HelpCommands()
+        LibraryCommands()
     }
 }

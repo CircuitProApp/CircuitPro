@@ -2,13 +2,13 @@
 //  MainCommands.swift
 //  CodeEdit
 //
-//  Created by Wouter Hennen on 13/03/2023.
+//  Created by Giorgi Tchelidze on 8/12/2025.
 //
 
 import SwiftUI
-// import Sparkle
 
 struct MainCommands: Commands {
+
     @Environment(\.openWindow)
     var openWindow
 
@@ -17,10 +17,6 @@ struct MainCommands: Commands {
             Button("About \(Bundle.displayName)") {
                 openWindow(id: "about")
             }
-
-//            Button("Check for updates...") {
-//                NSApp.sendAction(#selector(SPUStandardUpdaterController.checkForUpdates(_:)), to: nil, from: nil)
-//            }
         }
 
 //        CommandGroup(replacing: .appSettings) {

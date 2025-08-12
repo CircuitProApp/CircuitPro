@@ -4,8 +4,10 @@
 //
 //  Created by Giorgi Tchelidze on 8/11/25.
 //
+//
 
 import SwiftUI
+
 
 class LibraryPanelManager {
     private static var libraryPanel: NSPanel?
@@ -65,6 +67,17 @@ class LibraryPanelManager {
         panel.close()
     }
     
+    // Toggles the visibility of the panel.
+    public static func toggle() {
+        if let panel = libraryPanel, panel.isVisible {
+            hide()
+        } else if libraryPanel == nil {
+            // When toggling, there's no specific view state to update on dismiss,
+            // so we pass an empty closure.
+            show(onDismiss: {})
+        }
+    }
+    
     private class PanelDelegate: NSObject, NSWindowDelegate {
         func windowWillClose(_ notification: Notification) {
             if let observer = LibraryPanelManager.resignKeyObserver {
@@ -72,7 +85,7 @@ class LibraryPanelManager {
                 LibraryPanelManager.resignKeyObserver = nil
             }
             
-            // Call the dismiss handler to update the binding in SwiftUI.
+            // Call the dismiss handler to update the binding in SwiftUI if it was provided.
             LibraryPanelManager.onDismiss?()
 
             // Clean up static properties.
