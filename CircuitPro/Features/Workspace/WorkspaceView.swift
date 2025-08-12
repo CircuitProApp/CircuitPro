@@ -20,7 +20,9 @@ struct WorkspaceView: View {
     @State private var isShowingLibrary: Bool = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     
-
+    @State private var showingUpdateAlert = false
+    @State private var alertTitle = ""
+    @State private var alertMessage = ""
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -91,6 +93,33 @@ struct WorkspaceView: View {
                 projectManager.selectedDesign = projectManager.project.designs.first!
             }
         }
+
+        
+            .onAppear {
+                              // This runs when your main view first appears.
+                              // We run it only in Release mode to avoid during development.
+                              #if !DEBUG
+                              Task {
+                                  do {
+                                      if let newVersion = try await LibraryUpdater.checkForUpdates() {
+                                          alertTitle = "Library Updated"
+                                          // The new, more accurate message:
+                                          alertMessage = "The component library has been successfully updated to version \(newVersion) and is ready to use."
+                                          showingUpdateAlert = true
+                                      }
+                                  } catch {
+                                      // If an error occurred, show an error alert
+                                      alertTitle = "Update Failed"
+                                      alertMessage = "Could not update the component library. Please check your internet connection and try again later. Error: \(error.localizedDescription)"
+                                      showingUpdateAlert = true
+                                  }
+                              }
+                              #endif
+                          }
+                          .alert(isPresented: $showingUpdateAlert) {
+                              Alert(title: Text(alertTitle), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+                          }
+
     }
 }
 

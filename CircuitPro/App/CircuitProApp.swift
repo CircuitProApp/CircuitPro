@@ -15,6 +15,8 @@ struct CircuitProApp: App {
 
     @Environment(\.openWindow)
     private var openWindow
+    
+
 
     init() {
         _ = CircuitProjectDocumentController.shared
@@ -24,13 +26,14 @@ struct CircuitProApp: App {
         Group {
             WelcomeWindow(
                 actions: { dismiss in
-                    WelcomeButton(iconName: "plus.square", title: "Create New Project...") {
+                    WelcomeButton(iconName: CircuitProSymbols.Generic.plus, title: "Create New Project...") {
                         CircuitProjectDocumentController.shared.createFileDocumentWithDialog(
                             configuration:
                                     .init(allowedContentTypes: [.circuitProject], defaultFileType: .circuitProject),
                             onDialogPresented: { dismiss() }
                         )
                     }
+                    .symbolVariant(.square)
                     WelcomeButton(iconName: CircuitProSymbols.Generic.folder, title: "Open Existing Project...") {
                         CircuitProjectDocumentController.shared.openDocumentWithDialog(
                             configuration: .init(allowedContentTypes: [.circuitProject]),
@@ -49,11 +52,12 @@ struct CircuitProApp: App {
                     }
                 }
             )
-
+    
             AboutWindow(actions: {}, footer: { AboutFooterView() })
-            .commands {
-                CircuitProCommands()
-            }
+            
+        }
+        .commands {
+            CircuitProCommands()
         }
 
         Window("Component Design", id: "ComponentDesignWindow") {
