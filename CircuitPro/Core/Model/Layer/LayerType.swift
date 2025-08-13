@@ -21,27 +21,6 @@ struct LayerType: Hashable, Codable, Identifiable {
     }
 }
 
-/// Represents the total number of copper layers in a manufacturable PCB.
-enum BoardLayerCount: Int, CaseIterable, Codable, Identifiable {
-    case two = 2
-    case four = 4
-    case six = 6
-    case eight = 8
-    case ten = 10
-    case twelve = 12
-    case fourteen = 14
-    case sixteen = 16
-
-    var id: Int { self.rawValue }
-
-    /// The number of inner copper layers for this board type.
-    var innerLayerCount: Int {
-        guard self.rawValue > 2 else { return 0 }
-        return self.rawValue - 2
-    }
-}
-
-
 // MARK: - Default Colors
 extension LayerType {
     var defaultColor: Color {
