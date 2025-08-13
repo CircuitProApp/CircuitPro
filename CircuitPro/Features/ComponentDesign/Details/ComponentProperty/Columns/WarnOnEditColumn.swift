@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct WarnOnEditColumn: View {
-    @Binding var property: DraftPropertyDefinition
+    @Binding var property: DraftProperty
 
     var body: some View {
         Toggle("Warn on Edit", isOn: $property.warnsOnEdit)

@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct PropertyColumn: View {
-    @Binding var property: DraftPropertyDefinition
-    let allProperties: [DraftPropertyDefinition]
+    @Binding var property: DraftProperty
+    let allProperties: [DraftProperty]
 
     var body: some View {
         Menu {
@@ -99,12 +99,12 @@ struct PropertyColumn: View {
         // Correct the property's value type
         switch key.allowedValueType {
         case .single:
-            if case .range = property.defaultValue {
-                property.defaultValue = .single(nil)
+            if case .range = property.value {
+                property.value = .single(nil)
             }
         case .range:
-            if case .single = property.defaultValue {
-                property.defaultValue = .range(min: nil, max: nil)
+            if case .single = property.value {
+                property.value = .range(min: nil, max: nil)
             }
         }
 

@@ -5,7 +5,7 @@ extension TextSource {
         with displayOptions: TextDisplayOptions,
         componentName: String,
         reference: String,
-        properties: [ResolvedProperty]
+        properties: [Property.Resolved]
     ) -> String {
         switch self {
         case .static(let text):

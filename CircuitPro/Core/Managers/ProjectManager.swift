@@ -4,6 +4,7 @@
 //
 //  Created by Giorgi Tchelidze on 4/5/25.
 //
+
 import SwiftUI
 import Observation
 import SwiftData
@@ -13,7 +14,7 @@ final class ProjectManager {
 
     let modelContext: ModelContext
     var project: CircuitProject
-    var selectedDesign: CircuitDesign? 
+    var selectedDesign: CircuitDesign?
     var selectedComponentIDs: Set<UUID> = []
     var canvasNodes: [BaseNode] = []
     var selectedNetIDs: Set<UUID> = []
@@ -37,18 +38,14 @@ final class ProjectManager {
 
     // 2. Centralised lookup
     var designComponents: [DesignComponent] {
-        // 2.1 gather the UUIDs the design references
         let uuids = Set(componentInstances.map(\.componentUUID))
         guard !uuids.isEmpty else { return [] }
 
-        // 2.2 fetch all definitions in ONE round-trip
         let request = FetchDescriptor<Component>(predicate: #Predicate { uuids.contains($0.uuid) })
         let defs = (try? modelContext.fetch(request)) ?? []
 
-        // 2.3 build a dictionary for fast lookup
         let dict = Dictionary(uniqueKeysWithValues: defs.map { ($0.uuid, $0) })
 
-        // 2.4 zip every instance with its definition (skip dangling refs gracefully)
         return componentInstances.compactMap { inst in
             guard let def = dict[inst.componentUUID] else { return nil }
             return DesignComponent(definition: def, instance: inst)
@@ -56,8 +53,6 @@ final class ProjectManager {
     }
     
     func rebuildCanvasNodes() {
-        // This logic is moved from SchematicCanvasView.syncNodesFromProjectManager
-        
         // 1. Ensure the graph model is synchronized first
         for designComp in designComponents {
             guard let symbolDefinition = designComp.definition.symbol else { continue }
@@ -68,12 +63,24 @@ final class ProjectManager {
             )
         }
 
-        // 2. Build the Symbol nodes
+        // 2. Build the Symbol nodes using compactMap
+        // This allows the closure to return `nil` for components without a symbol.
         let symbolNodes: [SymbolNode] = designComponents.compactMap { designComp in
             guard let symbolDefinition = designComp.definition.symbol else { return nil }
-            let resolvedProperties = PropertyResolver.resolve(from: designComp.definition, and: designComp.instance)
-            print(symbolDefinition.textDefinitions)
-            let resolvedTexts = TextResolver.resolve(from: symbolDefinition, and: designComp.instance.symbolInstance, componentName: designComp.definition.name, reference: designComp.referenceDesignator, properties: resolvedProperties)
+            
+            // Get the resolved properties directly from the DesignComponent.
+            let resolvedProperties = designComp.displayedProperties
+            
+            // Pass the new [Property.Resolved] type to the TextResolver.
+            // This assumes TextResolver has been updated to accept [Property.Resolved].
+            let resolvedTexts = TextResolver.resolve(
+                from: symbolDefinition,
+                and: designComp.instance.symbolInstance,
+                componentName: designComp.definition.name,
+                reference: designComp.referenceDesignator,
+                properties: resolvedProperties
+            )
+            
             return SymbolNode(
                 id: designComp.id,
                 instance: designComp.instance.symbolInstance,
@@ -88,7 +95,6 @@ final class ProjectManager {
         graphNode.syncChildNodesFromModel()
 
         // 4. Update the single source of truth for the canvas
-        // The check for changes is still a good optimization.
         let newNodeIDs = Set(symbolNodes.map(\.id) + [graphNode.id])
         let currentNodeIDs = Set(self.canvasNodes.map(\.id))
         

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		5E2704182DF5F410008B26BC /* AboutWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 5E2704172DF5F410008B26BC /* AboutWindow */; };
 		5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */; };
+		C74071182E4CB87B001D6831 /* ResolvableMacro in Frameworks */ = {isa = PBXBuildFile; productRef = C74071172E4CB87B001D6831 /* ResolvableMacro */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C74071182E4CB87B001D6831 /* ResolvableMacro in Frameworks */,
 				5E2704182DF5F410008B26BC /* AboutWindow in Frameworks */,
 				5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */,
 			);
@@ -74,6 +76,7 @@
 			packageProductDependencies = (
 				5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */,
 				5E2704172DF5F410008B26BC /* AboutWindow */,
+				C74071172E4CB87B001D6831 /* ResolvableMacro */,
 			);
 			productName = Electron;
 			productReference = 5E5AB35A2D9C60330069B623 /* CircuitPro.app */;
@@ -107,6 +110,7 @@
 				5E0B73522DDF58BE0061123B /* XCRemoteSwiftPackageReference "SwiftLintPlugin" */,
 				5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */,
 				5E2704162DF5F410008B26BC /* XCRemoteSwiftPackageReference "AboutWindow" */,
+				C74071162E4CB87B001D6831 /* XCLocalSwiftPackageReference "../ResolvableMacro" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5E5AB35B2D9C60330069B623 /* Products */;
@@ -348,6 +352,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		C74071162E4CB87B001D6831 /* XCLocalSwiftPackageReference "../ResolvableMacro" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../ResolvableMacro;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		5E0B73522DDF58BE0061123B /* XCRemoteSwiftPackageReference "SwiftLintPlugin" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -385,6 +396,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */;
 			productName = WelcomeWindow;
+		};
+		C74071172E4CB87B001D6831 /* ResolvableMacro */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ResolvableMacro;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

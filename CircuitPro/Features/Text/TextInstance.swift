@@ -77,7 +77,7 @@ extension TextInstance: ResolvableText {
         with override: TextOverride?,
         componentName: String,
         reference: String,
-        properties: [ResolvedProperty]
+        properties: [Property.Resolved]
     ) -> ResolvedText? {
         // An instance-level text cannot be hidden by an override, and it doesn't use dynamic data.
         return ResolvedText(

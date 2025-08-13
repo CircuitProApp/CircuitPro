@@ -95,7 +95,7 @@ extension TextDefinition: ResolvableText {
         with override: TextOverride?,
         componentName: String,
         reference: String,
-        properties: [ResolvedProperty]
+        properties: [Property.Resolved]
     ) -> ResolvedText? {
         if let override, !override.isVisible { return nil }
 

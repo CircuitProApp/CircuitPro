@@ -25,7 +25,7 @@ class Component {
 
     var footprints: [Footprint]
     var category: ComponentCategory
-    var propertyDefinitions: [PropertyDefinition]
+    var propertyDefinitions: [Property.Definition]
 
     init(
         uuid: UUID = UUID(),
@@ -34,7 +34,7 @@ class Component {
         symbol: Symbol? = nil,
         footprints: [Footprint] = [],
         category: ComponentCategory,
-        propertyDefinitions: [PropertyDefinition] = []
+        propertyDefinitions: [Property.Definition] = []
     ) {
         self.uuid = uuid
         self.name = name

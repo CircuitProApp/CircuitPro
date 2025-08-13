@@ -11,7 +11,7 @@ struct DynamicTextSourceListView: View {
     @Environment(ComponentDesignManager.self) private var componentDesignManager
     let editor: CanvasEditorManager
 
-    private var componentData: (name: String, prefix: String, properties: [PropertyDefinition]) {
+    private var componentData: (name: String, prefix: String, properties: [Property.Definition]) {
         (componentDesignManager.componentName, componentDesignManager.referenceDesignatorPrefix, componentDesignManager.componentProperties)
     }
 

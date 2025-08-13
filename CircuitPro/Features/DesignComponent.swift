@@ -21,13 +21,16 @@ struct DesignComponent: Identifiable, Hashable {
         definition.referenceDesignatorPrefix + instance.referenceDesignatorIndex.description
     }
 
-    var displayedProperties: [ResolvedProperty] {
-        return PropertyResolver.resolve(from: definition, and: instance)
+    var displayedProperties: [Property.Resolved] {
+        return Property.Resolver.resolve(
+            definitions: definition.propertyDefinitions,
+            overrides: instance.propertyOverrides,
+            instances: instance.propertyInstances
+        )
     }
     
     /// When the UI makes an edit, it can call this simple method.
-    func save(editedProperty: ResolvedProperty) {
-        // Correctly calls the `update(with:)` method instead of the old `commit(changeTo:)`.
+    func save(editedProperty: Property.Resolved) {
         instance.update(with: editedProperty)
     }
 }

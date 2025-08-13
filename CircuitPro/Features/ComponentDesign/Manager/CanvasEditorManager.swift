@@ -109,7 +109,7 @@ final class CanvasEditorManager {
 extension CanvasEditorManager {
     
     /// Adds a new text element to the canvas, linked to a specific data source.
-    func addTextToSymbol(source: TextSource, displayName: String, componentData: (name: String, prefix: String, properties: [PropertyDefinition])) {
+    func addTextToSymbol(source: TextSource, displayName: String, componentData: (name: String, prefix: String, properties: [Property.Definition])) {
         guard !placedTextSources.contains(source) else { return }
         
         let defaultPaper = PaperSize.component
@@ -139,7 +139,7 @@ extension CanvasEditorManager {
     }
     
     /// Iterates through all dynamic text on the canvas and ensures its displayed text is up-to-date with the latest component data.
-    func updateDynamicTextElements(componentData: (name: String, prefix: String, properties: [PropertyDefinition])) {
+    func updateDynamicTextElements(componentData: (name: String, prefix: String, properties: [Property.Definition])) {
         for (elementID, source) in textSourceMap {
             guard let index = elementIndexMap[elementID],
                   let textNode = canvasNodes[index] as? TextNode else {
@@ -157,7 +157,7 @@ extension CanvasEditorManager {
     }
     
     /// Removes text elements from the canvas if their underlying property definition was deleted from the component.
-    func synchronizeSymbolTextWithProperties(properties: [PropertyDefinition]) {
+    func synchronizeSymbolTextWithProperties(properties: [Property.Definition]) {
         let validPropertyIDs = Set(properties.map { $0.id })
         let textElementsToRemove = textSourceMap.filter { (_, source) in
             if case .dynamic(.property(let definitionID)) = source {
@@ -173,7 +173,7 @@ extension CanvasEditorManager {
     }
     
     /// Gets the current display string for a given text element ID by resolving its source and applying display options.
-    private func resolveText(for elementID: UUID, source: TextSource, componentData: (name: String, prefix: String, properties: [PropertyDefinition])) -> String {
+    private func resolveText(for elementID: UUID, source: TextSource, componentData: (name: String, prefix: String, properties: [Property.Definition])) -> String {
         switch source {
         case .static(let text):
             return text
@@ -194,7 +194,7 @@ extension CanvasEditorManager {
             }
             
             if options.showValue {
-                let valueDescription = prop.defaultValue.description
+                let valueDescription = prop.value.description
                 parts.append(valueDescription.isEmpty ? "?" : valueDescription)
             }
             
@@ -207,7 +207,7 @@ extension CanvasEditorManager {
     }
     
     /// Creates a `Binding` for a specific text element's display options.
-    func bindingForDisplayOptions(with id: UUID, componentData: (name: String, prefix: String, properties: [PropertyDefinition])) -> Binding<TextDisplayOptions>? {
+    func bindingForDisplayOptions(with id: UUID, componentData: (name: String, prefix: String, properties: [Property.Definition])) -> Binding<TextDisplayOptions>? {
         guard let source = textSourceMap[id], case .dynamic = source else {
             return nil
         }

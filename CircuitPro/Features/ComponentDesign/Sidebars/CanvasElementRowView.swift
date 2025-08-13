@@ -12,7 +12,7 @@ struct CanvasElementRowView: View {
     let element: any CanvasNode
     let editor: CanvasEditorManager
     
-    private var componentProperties: [PropertyDefinition] {
+    private var componentProperties: [Property.Definition] {
         componentDesignManager.componentProperties
     }
     

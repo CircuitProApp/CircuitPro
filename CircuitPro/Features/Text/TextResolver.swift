@@ -6,7 +6,7 @@ struct TextResolver {
         and instance: SymbolInstance,
         componentName: String,
         reference: String,
-        properties: [ResolvedProperty]
+        properties: [Property.Resolved]
     ) -> [ResolvedText] {
         
         let overrideMap = Dictionary(
@@ -22,15 +22,16 @@ struct TextResolver {
             )
         }
 
-        let instanceTexts = instance.textInstances.compactMap {
-            $0.resolve(
-                with: nil, // Instance texts can't be overridden
-                componentName: componentName,
-                reference: reference,
-                properties: properties
-            )
-        }
+ //       let instanceTexts = instance.textInstances.compactMap {
+//            $0.resolve(
+//                with: , // Instance texts can't be overridden
+//                componentName: componentName,
+//                reference: reference,
+//                properties: properties
+//            )
+            
+//        }
 
-        return definitionTexts + instanceTexts
+        return definitionTexts
     }
 }

@@ -9,10 +9,10 @@ import SwiftUI
 
 struct ComponentPropertiesView: View {
 
-    @Binding var componentProperties: [DraftPropertyDefinition]
+    @Binding var componentProperties: [DraftProperty]
     var validationState: ValidationState
     
-    @State private var selectedProperties: Set<DraftPropertyDefinition.ID> = []
+    @State private var selectedProperties: Set<DraftProperty.ID> = []
     @State private var selectedValueType: PropertyValueType = .single
 
     var body: some View {
@@ -41,7 +41,7 @@ struct ComponentPropertiesView: View {
     var addOrRemoveProperty: some View {
         HStack {
             Button {
-                let newProperty = DraftPropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())
+                let newProperty = DraftProperty(key: nil, value: .single(nil), unit: .init())
                 componentProperties.append(newProperty)
             } label: {
                 Image(systemName: CircuitProSymbols.Generic.plus)

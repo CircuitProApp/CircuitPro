@@ -14,8 +14,8 @@ final class ComponentInstance: Identifiable, Codable {
     var id: UUID
     var componentUUID: UUID
     
-    var propertyOverrides: [PropertyOverride]
-    var propertyInstances: [PropertyInstance] // Correctly renamed from adHocProperties
+    var propertyOverrides: [Property.Override]
+    var propertyInstances: [Property.Instance]
 
     var symbolInstance: SymbolInstance
     var footprintInstance: FootprintInstance?
@@ -25,8 +25,8 @@ final class ComponentInstance: Identifiable, Codable {
     init(
         id: UUID = UUID(),
         componentUUID: UUID,
-        propertyOverrides: [PropertyOverride] = [],
-        propertyInstances: [PropertyInstance] = [], // Correctly renamed
+        propertyOverrides: [Property.Override] = [],
+        propertyInstances: [Property.Instance] = [],
         symbolInstance: SymbolInstance,
         footprintInstance: FootprintInstance? = nil,
         reference: Int = 0
@@ -34,7 +34,7 @@ final class ComponentInstance: Identifiable, Codable {
         self.id = id
         self.componentUUID = componentUUID
         self.propertyOverrides = propertyOverrides
-        self.propertyInstances = propertyInstances // Correctly renamed
+        self.propertyInstances = propertyInstances
         self.symbolInstance = symbolInstance
         self.footprintInstance = footprintInstance
         self.referenceDesignatorIndex = reference
@@ -44,7 +44,7 @@ final class ComponentInstance: Identifiable, Codable {
         case _id = "id"
         case _componentUUID = "componentUUID"
         case _propertyOverrides = "propertyOverrides"
-        case _propertyInstances = "propertyInstances" // Correctly renamed
+        case _propertyInstances = "propertyInstances"
         case _symbolInstance = "symbolInstance"
         case _footprintInstance = "footprintInstance"
         case _referenceDesignatorIndex = "referenceDesignatorIndex"

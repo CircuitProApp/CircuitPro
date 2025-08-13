@@ -5,6 +5,6 @@ protocol ResolvableText {
         with override: TextOverride?,
         componentName: String,
         reference: String,
-        properties: [ResolvedProperty]
+        properties: [Property.Resolved]
     ) -> ResolvedText?
 }

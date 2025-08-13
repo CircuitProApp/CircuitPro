@@ -17,27 +17,19 @@ final class ComponentDesignManager {
 
     // MARK: - Component Metadata
     var componentName: String = "" {
-        didSet {
-            didUpdateComponentData()
-        }
+        didSet { didUpdateComponentData() }
     }
     var referenceDesignatorPrefix: String = "" {
-        didSet {
-            didUpdateComponentData()
-        }
+        didSet { didUpdateComponentData() }
     }
     var selectedCategory: ComponentCategory? {
-        didSet {
-            refreshValidation()
-        }
+        didSet { refreshValidation() }
     }
-//    var selectedPackageType: PackageType?
 
     /// The internal state for properties being edited in the UI.
-    /// The key can be nil because a user can add a new row before selecting a key.
-    var draftProperties: [DraftPropertyDefinition] = [DraftPropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())] {
+    /// This now uses the new `DraftProperty` model.
+    var draftProperties: [DraftProperty] = [DraftProperty(key: nil, value: .single(nil), unit: .init())] { // <-- Updated type and value
         didSet {
-            // We still use the computed `componentProperties` for synchronization and validation.
             let validProperties = componentProperties
             symbolEditor.synchronizeSymbolTextWithProperties(properties: validProperties)
             footprintEditor.synchronizeSymbolTextWithProperties(properties: validProperties)
@@ -45,23 +37,24 @@ final class ComponentDesignManager {
         }
     }
     
-    /// A computed property that returns only the valid, non-optional `PropertyDefinition`s.
-    /// This is the canonical data that should be used for saving the component and for any logic
-    /// that requires a valid property key.
-    var componentProperties: [PropertyDefinition] {
+    /// A computed property that returns only the valid, non-optional `Property.Definition`s.
+    /// This is the canonical data that should be used for saving the component.
+    var componentProperties: [Property.Definition] { // <-- Updated return type
         draftProperties.compactMap { draft in
             guard let key = draft.key else { return nil }
-            return PropertyDefinition(
+            // Creates the macro-generated `Property.Definition` struct.
+            return Property.Definition( // <-- Updated to use macro-generated type
                 id: draft.id,
                 key: key,
-                defaultValue: draft.defaultValue,
                 unit: draft.unit,
-                warnsOnEdit: draft.warnsOnEdit
+                warnsOnEdit: draft.warnsOnEdit,
+                value: draft.value // <-- Field name updated from 'defaultValue'
             )
         }
     }
 
-    /// A computed property providing a list of text sources available for dynamic placement on canvases.
+    /// A computed property providing a list of text sources.
+    /// No changes are needed here, as `Property.Definition` still has `key` and `id`.
     var availableTextSources: [(displayName: String, source: TextSource)] {
         var sources: [(String, TextSource)] = []
         if !componentName.isEmpty { sources.append(("Name", .dynamic(.componentName))) }
@@ -96,8 +89,8 @@ final class ComponentDesignManager {
         componentName = ""
         referenceDesignatorPrefix = ""
         selectedCategory = nil
-//        selectedPackageType = nil
-        draftProperties = [DraftPropertyDefinition(key: nil, defaultValue: .single(nil), unit: .init())]
+        // Reset with the new `DraftProperty` struct
+        draftProperties = [DraftProperty(key: nil, value: .single(nil), unit: .init())] // <-- Updated type and value
         
         symbolEditor.reset()
         footprintEditor.reset()
