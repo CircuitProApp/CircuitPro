@@ -99,6 +99,7 @@ extension AnchoredTextNode {
             font: self.textModel.font,
             color: self.textModel.color,
             alignment: self.textModel.alignment,
+            anchor: self.textModel.anchor,
             relativePosition: self.position,
             anchorRelativePosition: self.anchorPosition,
             cardinalRotation: self.textModel.cardinalRotation

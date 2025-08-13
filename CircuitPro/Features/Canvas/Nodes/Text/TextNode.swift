@@ -46,32 +46,75 @@ class TextNode: BaseNode {
 
     // MARK: - Drawable Conformance
 
-    override func makeDrawingPrimitives() -> [DrawingPrimitive] {
+    private func makeFinalPath() -> CGPath {
+         let untransformedPath = textModel.makeTextPath()
+         guard !untransformedPath.isEmpty else { return untransformedPath }
 
-        let localPath = textModel.makeTextPath()
-      
-        return [.fill(
-                path: localPath,
-                color: textModel.color
-            )]
-    }
+         let bounds = untransformedPath.boundingBoxOfPath
 
-    override func makeHaloPath() -> CGPath? {
-        let localPath = textModel.makeTextPath()
-        // The halo is a stroked version of the local path.
-        return localPath.copy(
-            strokingWithWidth: 1.0, // Adjust for desired halo thickness
-            lineCap: .round,
-            lineJoin: .round,
-            miterLimit: 1.0
-        )
-    }
+         // Calculate the target point on the bounds that should be moved to the origin (0,0).
+         let targetX: CGFloat
+         let targetY: CGFloat
+
+         // Determine the target X coordinate based on the anchor.
+         switch textModel.anchor {
+         case .topLeft, .middleLeading, .bottomLeft:
+             targetX = bounds.minX
+         case .topCenter, .middleCenter, .bottomCenter:
+             targetX = bounds.midX
+         case .topRight, .middleTrailing, .bottomRight:
+             targetX = bounds.maxX
+         }
+
+         // Determine the target Y coordinate based on the anchor.
+         switch textModel.anchor {
+         case .topLeft, .topCenter, .topRight:
+             // NOTE: In a Y-up coordinate system (like AppKit's views),
+             // the maximum Y value is the top of the bounding box.
+             targetY = bounds.maxY
+         case .middleLeading, .middleCenter, .middleTrailing:
+             targetY = bounds.midY
+         case .bottomLeft, .bottomCenter, .bottomRight:
+             targetY = bounds.minY
+         }
+         
+         // The offset is the vector needed to move the target point to (0,0).
+         let offset = CGVector(dx: -targetX, dy: -targetY)
+         
+         // Apply the offset transform to the path.
+         var transform = CGAffineTransform(translationX: offset.dx, y: offset.dy)
+         return untransformedPath.copy(using: &transform) ?? untransformedPath
+     }
+
+     // MARK: - Drawable Conformance
+
+     override func makeDrawingPrimitives() -> [DrawingPrimitive] {
+         let finalPath = makeFinalPath()
+         guard !finalPath.isEmpty else { return [] }
+       
+         return [.fill(
+             path: finalPath,
+             color: textModel.color
+         )]
+     }
+
+     override func makeHaloPath() -> CGPath? {
+         let finalPath = makeFinalPath()
+         guard !finalPath.isEmpty else { return nil }
+         
+         return finalPath.copy(
+             strokingWithWidth: 1.0,
+             lineCap: .round,
+             lineJoin: .round,
+             miterLimit: 1.0
+         )
+     }
 
     // MARK: - Hittable Conformance
 
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
         // The `point` parameter is in the node's local coordinate space.
-        let localPath = textModel.makeTextPath()
+        let localPath = makeFinalPath()
         let localBounds = localPath.boundingBoxOfPath
 
         // Check for a hit within the local bounding box, expanded by the tolerance.
@@ -88,7 +131,7 @@ class TextNode: BaseNode {
     }
     
     override var boundingBox: CGRect {
-        let p = textModel.makeTextPath()
+        let p = makeFinalPath()
          let box = p.boundingBoxOfPath
          return box.isNull ? .null : box
      }

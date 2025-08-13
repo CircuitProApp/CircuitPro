@@ -40,8 +40,8 @@ struct CanvasElementRowView: View {
     }
     
     //    @ViewBuilder
-    //    private func textElementRow(_ textElement: TextElement) -> some View {
-    //        if let source = editor.textSourceMap[textElement.id] {
+    //    private func textElementRow(_ textModel: TextElement) -> some View {
+    //        if let source = editor.textSourceMap[textModel.id] {
     //            switch source {
     //            case .dynamic(.componentName):
     //                Label("Component Name", systemImage: "c.square.fill")
@@ -51,10 +51,10 @@ struct CanvasElementRowView: View {
     //                let displayName = componentProperties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
     //                Label(displayName, systemImage: "tag.fill")
     //            case .static:
-    //                Label("\"\(textElement.text)\"", systemImage: "text.bubble.fill")
+    //                Label("\"\(textModel.text)\"", systemImage: "text.bubble.fill")
     //            }
     //        } else {
-    //            Label("\"\(textElement.text)\"", systemImage: "text.bubble.fill")
+    //            Label("\"\(textModel.text)\"", systemImage: "text.bubble.fill")
     //        }
     //    }
 }

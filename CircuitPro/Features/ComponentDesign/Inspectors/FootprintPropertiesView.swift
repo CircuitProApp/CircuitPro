@@ -30,7 +30,7 @@ struct FootprintPropertiesView: View {
                 } else if let textNode = element as? TextNode {
                     @Bindable var textNode = textNode
 
-                    TextPropertiesView(textElement: $textNode.textModel, editor: manager)
+                    TextPropertiesView(textModel: $textNode.textModel, editor: manager)
 
                 } else {
                     Text("Properties for this element type are not yet implemented.")

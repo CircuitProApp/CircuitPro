@@ -37,7 +37,7 @@ struct SymbolPropertiesView: View {
                     } else if let textNode = element as? TextNode {
                         @Bindable var textNode = textNode
                         
-                        TextPropertiesView(textElement: $textNode.textModel, editor: manager)
+                        TextPropertiesView(textModel: $textNode.textModel, editor: manager)
                         
                     } else {
                         // Add other `else if let ... as? ...` blocks here for other node types.

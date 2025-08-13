@@ -28,6 +28,7 @@ struct ResolvedText: Identifiable {
     var font: NSFont
     var color: CGColor
     var alignment: NSTextAlignment
+    var anchor: TextAnchor
     
     // --- Positional data ---
     var relativePosition: CGPoint // The final position relative to the parent symbol.

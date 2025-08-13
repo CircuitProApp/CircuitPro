@@ -8,10 +8,14 @@
 import SwiftUI
 
 struct TextPropertiesView: View {
-    @Binding var textElement: TextModel
-    let editor: CanvasEditorManager
-    @Environment(ComponentDesignManager.self) private var componentDesignManager
     
+    @Environment(ComponentDesignManager.self)
+    private var componentDesignManager
+    
+    @Binding var textModel: TextModel
+
+    let editor: CanvasEditorManager
+
     private var componentData: (name: String, prefix: String, properties: [PropertyDefinition]) {
         (componentDesignManager.componentName, componentDesignManager.referenceDesignatorPrefix, componentDesignManager.componentProperties)
     }
@@ -26,21 +30,25 @@ struct TextPropertiesView: View {
             Divider()
             
             InspectorSection("Transform") {
-                PointControlView(title: "Position", point: $textElement.position, displayOffset: PaperSize.component.centerOffset())
-                RotationControlView(object: $textElement, tickStepDegrees: 45, snapsToTicks: true)
+                PointControlView(title: "Position", point: $textModel.position, displayOffset: PaperSize.component.centerOffset())
+                RotationControlView(object: $textModel, tickStepDegrees: 45, snapsToTicks: true)
             }
             
             Divider()
 
-//            InspectorSection("Appearance") {
+            InspectorSection("Appearance") {
+                InspectorRow("Alignment") {
+                    AnchorPickerView(selectedAnchor: $textModel.anchor)
+//                        .inspectorField()
+                }
 //                InspectorRow("Font") {
-//                    TextField("Font Name", text: .constant(textElement.font.fontName))
+//                    TextField("Font Name", text: .constant(textModel.font.fontName))
 //                        .inspectorField()
 //                }
 //                InspectorRow("Size") {
-//                    InspectorNumericField(title: "Size", value: .constant(textElement.font.pointSize))
+//                    InspectorNumericField(title: "Size", value: .constant(textModel.font.pointSize))
 //                }
-//            }
+            }
         }
         .padding(10)
     }
@@ -49,7 +57,7 @@ struct TextPropertiesView: View {
     /// depending on whether it is static or dynamically linked to a property.
     @ViewBuilder
     private var contentSection: some View {
-        let source = editor.textSourceMap[textElement.id]
+        let source = editor.textSourceMap[textModel.id]
 
         InspectorSection("Content") {
             // This part is the same: Show the source description.
@@ -62,7 +70,7 @@ struct TextPropertiesView: View {
                 }
             } else {
                 InspectorRow("Text") {
-                    TextField("Static Text", text: $textElement.text)
+                    TextField("Static Text", text: $textModel.text)
                         .inspectorField()
                 }
             }
@@ -70,7 +78,7 @@ struct TextPropertiesView: View {
             // If the source is a property, show the display option toggles.
             if let source, case .dynamic(.property) = source {
                 // Get a binding to the display options from the manager.
-                if let optionsBinding = editor.bindingForDisplayOptions(with: textElement.id, componentData: componentData) {
+                if let optionsBinding = editor.bindingForDisplayOptions(with: textModel.id, componentData: componentData) {
                     
                     Text("Display Options").font(.caption).foregroundColor(.secondary)
                     

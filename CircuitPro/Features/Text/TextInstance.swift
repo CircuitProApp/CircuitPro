@@ -14,12 +14,13 @@ struct TextInstance: Identifiable, Codable, Hashable, TextCore {
     var cardinalRotation: CardinalRotation = .east
     var font: NSFont = .systemFont(ofSize: 12)
     var color: CGColor = NSColor.labelColor.cgColor
+    var anchor: TextAnchor = .bottomLeft
     var alignment: NSTextAlignment = .center
     
     // MARK: - Manual Codable Conformance
     
     enum CodingKeys: String, CodingKey {
-        case id, text, relativePosition, alignment, cardinalRotation
+        case id, text, relativePosition, alignment, cardinalRotation, anchor
         case fontName, fontSize, colorData
     }
 
@@ -30,9 +31,10 @@ struct TextInstance: Identifiable, Codable, Hashable, TextCore {
         self.relativePosition = try container.decode(CGPoint.self, forKey: .relativePosition)
         self.cardinalRotation = try container.decodeIfPresent(CardinalRotation.self, forKey: .cardinalRotation) ?? .east
         
-        // --- THIS IS THE FIX for NSTextAlignment ---
         let alignmentRawValue = try container.decode(Int.self, forKey: .alignment)
         self.alignment = NSTextAlignment(rawValue: alignmentRawValue) ?? .center
+        
+        self.anchor = try container.decode(TextAnchor.self, forKey: .anchor)
         
         // Decode Font
         let fontName = try container.decode(String.self, forKey: .fontName)
@@ -55,8 +57,9 @@ struct TextInstance: Identifiable, Codable, Hashable, TextCore {
         try container.encode(relativePosition, forKey: .relativePosition)
         try container.encode(cardinalRotation, forKey: .cardinalRotation)
         
-        // --- THIS IS THE FIX for NSTextAlignment ---
         try container.encode(alignment.rawValue, forKey: .alignment)
+        
+        try container.encode(anchor, forKey: .anchor)
 
         // Encode Font
         try container.encode(font.fontName, forKey: .fontName)
@@ -83,6 +86,7 @@ extension TextInstance: ResolvableText {
             font: font,
             color: color,
             alignment: alignment,
+            anchor: anchor,
             relativePosition: relativePosition,
             anchorRelativePosition: relativePosition,
             cardinalRotation: cardinalRotation

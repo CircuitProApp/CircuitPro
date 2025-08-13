@@ -6,4 +6,5 @@ protocol TextCore {
     var font: NSFont { get set }
     var color: CGColor { get set }
     var alignment: NSTextAlignment { get set }
+    var anchor: TextAnchor { get set }
 }

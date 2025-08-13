@@ -17,6 +17,7 @@ final class CanvasEditorManager {
             updateElementIndexMap()
         }
     }
+    
     var selectedElementIDs: Set<UUID> = []
     
     var singleSelectedElement: BaseNode? {
@@ -120,7 +121,7 @@ extension CanvasEditorManager {
         // Add the source and default options to maps so resolveText can find them
         textSourceMap[newElementID] = source
         if case .dynamic = source {
-            textDisplayOptionsMap[newElementID] = .allVisible
+            textDisplayOptionsMap[newElementID] = .default
         }
         
         let resolvedText = resolveText(for: newElementID, source: source, componentData: componentData)
@@ -129,7 +130,7 @@ extension CanvasEditorManager {
         let textModel = TextModel(
             id: newElementID,
             text: resolvedText.isEmpty ? displayName : resolvedText,
-            position: centerPoint
+            position: centerPoint, anchor: .bottomLeft
         )
         
         // Create a new TextNode from the model and add it to the canvas.
@@ -185,7 +186,7 @@ extension CanvasEditorManager {
                 return "Invalid Property"
             }
             
-            let options = textDisplayOptionsMap[elementID, default: .allVisible]
+            let options = textDisplayOptionsMap[elementID, default: .default]
             var parts: [String] = []
             
             if options.showKey {
@@ -213,7 +214,7 @@ extension CanvasEditorManager {
         
         return Binding<TextDisplayOptions>(
             get: {
-                return self.textDisplayOptionsMap[id, default: .allVisible]
+                return self.textDisplayOptionsMap[id, default: .default]
             },
             set: { newOptions in
                 self.textDisplayOptionsMap[id] = newOptions

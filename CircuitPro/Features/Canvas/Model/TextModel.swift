@@ -14,6 +14,7 @@ struct TextModel: Identifiable {
     let id: UUID
     var text: String
     var position: CGPoint
+    var anchor: TextAnchor
     var font: NSFont = .systemFont(ofSize: 12)
     var color: CGColor = NSColor.black.cgColor
     var alignment: NSTextAlignment = .left
@@ -33,7 +34,6 @@ extension TextModel {
     /// Generates the raw, un-transformed path for the text glyphs.
     /// The path's origin is the text's baseline start point.
     func makeTextPath() -> CGPath {
-        // Assuming you have a TextUtilities class for this.
         return TextUtilities.path(for: text, font: font)
     }
 }

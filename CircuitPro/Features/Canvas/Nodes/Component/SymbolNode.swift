@@ -66,7 +66,7 @@ final class SymbolNode: BaseNode {
         }
         
         for resolvedText in resolvedTexts {
-            let textModel = TextModel(id: UUID(), text: resolvedText.text, position: resolvedText.relativePosition, font: resolvedText.font, color: resolvedText.color, alignment: resolvedText.alignment, cardinalRotation: resolvedText.cardinalRotation)
+            let textModel = TextModel(id: UUID(), text: resolvedText.text, position: resolvedText.relativePosition, anchor: resolvedText.anchor, font: resolvedText.font, color: resolvedText.color, alignment: resolvedText.alignment, cardinalRotation: resolvedText.cardinalRotation)
             let textNode = AnchoredTextNode(textModel: textModel, anchorPosition: resolvedText.anchorRelativePosition, anchorOwnerID: self.id, origin: resolvedText.origin)
             self.addChild(textNode)
         }

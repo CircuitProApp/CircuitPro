@@ -15,25 +15,28 @@ struct TextDefinition: Identifiable, Codable, Hashable, TextCore {
     var font: NSFont = .systemFont(ofSize: 12)
     var color: CGColor = NSColor.black.cgColor
     var alignment: NSTextAlignment = .center
-    var displayOptions: TextDisplayOptions = .allVisible
+    var anchor: TextAnchor = .bottomLeft
+    var displayOptions: TextDisplayOptions = .default
     
     init (
         source: TextSource,
         relativePosition: CGPoint,
         cardinalRotation: CardinalRotation = .east,
-        displayOptions: TextDisplayOptions = .allVisible
+        displayOptions: TextDisplayOptions = .default,
+        anchor: TextAnchor = .bottomLeft
     ) {
         self.source = source
         self.relativePosition = relativePosition
         self.cardinalRotation = cardinalRotation
         self.displayOptions = displayOptions
+        self.anchor = anchor
     }
 
 
     // MARK: - Manual Codable Conformance
     
     enum CodingKeys: String, CodingKey {
-        case id, source, displayOptions, relativePosition, alignment, cardinalRotation
+        case id, source, displayOptions, relativePosition, alignment, cardinalRotation, anchor
         case fontName, fontSize, colorData
     }
 
@@ -44,10 +47,12 @@ struct TextDefinition: Identifiable, Codable, Hashable, TextCore {
         self.relativePosition = try container.decode(CGPoint.self, forKey: .relativePosition)
         
         self.cardinalRotation = try container.decodeIfPresent(CardinalRotation.self, forKey: .cardinalRotation) ?? .east
-        self.displayOptions = try container.decodeIfPresent(TextDisplayOptions.self, forKey: .displayOptions) ?? .allVisible
+        self.displayOptions = try container.decodeIfPresent(TextDisplayOptions.self, forKey: .displayOptions) ?? .default
         
         let alignmentRawValue = try container.decode(Int.self, forKey: .alignment)
         self.alignment = NSTextAlignment(rawValue: alignmentRawValue) ?? .center
+        
+        self.anchor = try container.decode(TextAnchor.self, forKey: .anchor)
         
         // Decode Font
         let fontName = try container.decode(String.self, forKey: .fontName)
@@ -75,6 +80,8 @@ struct TextDefinition: Identifiable, Codable, Hashable, TextCore {
         // Encode Font
         try container.encode(font.fontName, forKey: .fontName)
         try container.encode(font.pointSize, forKey: .fontSize)
+        
+        try container.encode(anchor, forKey: .anchor)
 
         // Encode Color
         let nsColor = NSColor(cgColor: color) ?? .black
@@ -105,6 +112,7 @@ extension TextDefinition: ResolvableText {
             font: font,
             color: color,
             alignment: alignment,
+            anchor: anchor,
             relativePosition: override?.relativePositionOverride ?? relativePosition,
             anchorRelativePosition: relativePosition,
             cardinalRotation: cardinalRotation
@@ -112,23 +120,4 @@ extension TextDefinition: ResolvableText {
     }
 }
 
-//
-//  TextDisplayOptions.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 7/26/25.
-//
 
-import Foundation
-
-/// Defines how a dynamic property source should be formatted into a final string.
-struct TextDisplayOptions: Codable, Hashable {
-    var showKey: Bool
-    var showValue: Bool
-    var showUnit: Bool
-
-    /// A default configuration where all parts are visible.
-    static var allVisible: TextDisplayOptions {
-        TextDisplayOptions(showKey: true, showValue: true, showUnit: true)
-    }
-}

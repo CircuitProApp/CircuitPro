@@ -17,7 +17,7 @@ class TextTool: CanvasTool {
         let newTextModel = TextModel(
             id: UUID(),
             text: "Text",
-            position: location
+            position: location, anchor: .bottomLeft
         )
 
         let newTextNode = TextNode(textModel: newTextModel)

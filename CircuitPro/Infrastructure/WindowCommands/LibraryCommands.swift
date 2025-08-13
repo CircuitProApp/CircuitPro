@@ -11,12 +11,10 @@ struct LibraryCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .toolbar) {
             Button("Component Library") {
-                // This assumes LibraryPanelManager.toggle() is a function you've defined.
-                // LibraryPanelManager.toggle()
+                 LibraryPanelManager.toggle()
             }
             .keyboardShortcut("l", modifiers: [.command, .shift])
 
-            // The following section will only be compiled into Debug builds.
             #if DEBUG
             Divider()
 

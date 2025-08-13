@@ -40,6 +40,7 @@ struct RotationControlView<T: Transformable>: View {
                     tickStepDegrees: tickStepDegrees,
                     snapsToTicks: snapsToTicks
                 )
+                .border(.red)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 InspectorNumericField(
                     value: rotationInDegrees,

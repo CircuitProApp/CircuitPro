@@ -134,7 +134,7 @@ struct ComponentDesignView: View {
 
             if let source = symbolEditor.textSourceMap[textNode.id] {
                 // This is dynamically sourced text (e.g., a property).
-                let displayOptions = symbolEditor.textDisplayOptionsMap[textNode.id, default: .allVisible]
+                let displayOptions = symbolEditor.textDisplayOptionsMap[textNode.id, default: .default]
                 
                 definition = TextDefinition(
                     source: source,
@@ -155,6 +155,7 @@ struct ComponentDesignView: View {
             definition.font = textNode.textModel.font
             definition.color = textNode.textModel.color
             definition.alignment = textNode.textModel.alignment
+            definition.anchor = textNode.textModel.anchor
             
             textDefinitions.append(definition)
         }

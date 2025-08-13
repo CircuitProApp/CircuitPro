@@ -72,6 +72,7 @@ final class ProjectManager {
         let symbolNodes: [SymbolNode] = designComponents.compactMap { designComp in
             guard let symbolDefinition = designComp.definition.symbol else { return nil }
             let resolvedProperties = PropertyResolver.resolve(from: designComp.definition, and: designComp.instance)
+            print(symbolDefinition.textDefinitions)
             let resolvedTexts = TextResolver.resolve(from: symbolDefinition, and: designComp.instance.symbolInstance, componentName: designComp.definition.name, reference: designComp.referenceDesignator, properties: resolvedProperties)
             return SymbolNode(
                 id: designComp.id,
