@@ -32,6 +32,7 @@ struct FootprintCanvasView: View {
                 environment: canvasManager.environment,
                 renderLayers: [
                     GridRenderLayer(),
+                    AxesRenderLayer(),
                     SheetRenderLayer(),
                     ElementsRenderLayer(),
                     PreviewRenderLayer(),

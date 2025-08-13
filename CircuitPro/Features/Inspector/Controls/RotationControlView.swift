@@ -28,28 +28,23 @@ struct RotationControlView<T: Transformable>: View {
     }
     
     var body: some View {
-        
         InspectorRow("Rotate") {
-  
-                RadialSlider(
-                    value: rotationInDegrees,
-                    range: 0...360,
-                    zeroAngle: .east,
-                    isContinuous: true,
-                    tickCount: tickCount,
-                    tickStepDegrees: tickStepDegrees,
-                    snapsToTicks: snapsToTicks
-                )
-                .border(.red)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                InspectorNumericField(
-                    value: rotationInDegrees,
-                    maxDecimalPlaces: 1,
-                    unit: "°",
-                    alignment: .center
-                )
-            
-            
+            RadialSlider(
+                value: rotationInDegrees,
+                range: 0...360,
+                zeroAngle: .east,
+                isContinuous: true,
+                tickCount: tickCount,
+                tickStepDegrees: tickStepDegrees,
+                snapsToTicks: snapsToTicks
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            InspectorNumericField(
+                value: rotationInDegrees,
+                maxDecimalPlaces: 1,
+                unit: "°",
+                alignment: .center
+            )
         }
     }
 }

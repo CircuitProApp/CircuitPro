@@ -17,6 +17,8 @@ class GridRenderLayer: RenderLayer {
         minorGridLayer.fillColor = NSColor.gray.withAlphaComponent(minorBaseAlpha).cgColor
         majorGridLayer.strokeColor = nil
         minorGridLayer.strokeColor = nil
+        majorGridLayer.zPosition = -100
+        minorGridLayer.zPosition = -100
 
         hostLayer.addSublayer(majorGridLayer)
         hostLayer.addSublayer(minorGridLayer)

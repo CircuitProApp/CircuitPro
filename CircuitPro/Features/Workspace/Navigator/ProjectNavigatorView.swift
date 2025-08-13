@@ -44,7 +44,7 @@ struct ProjectNavigatorView: View {
                 HStack(spacing: 2.5) {
                     ForEach(SchematicNavigatorType.allCases, id: \.self) { tab in
                         Button {
-                            withAnimation(.snappy(duration: 0.25)) {
+                            withAnimation(.smooth(duration: 0.3)) {
                                 schematicNavigatorView = tab
                             }
                         } label: {

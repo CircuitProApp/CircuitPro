@@ -11,7 +11,8 @@ struct ComponentDesignStageContainerView: View {
     
     @Binding var currentStage: ComponentDesignStage
     
-    @Environment(ComponentDesignManager.self) private var componentDesignManager
+    @Environment(ComponentDesignManager.self)
+    private var componentDesignManager
     
     let symbolCanvasManager: CanvasManager
     let footprintCanvasManager: CanvasManager
