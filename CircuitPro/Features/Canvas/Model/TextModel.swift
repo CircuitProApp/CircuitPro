@@ -15,9 +15,9 @@ struct TextModel: Identifiable {
     var text: String
     var position: CGPoint
     var anchor: TextAnchor
-    var font: NSFont = .systemFont(ofSize: 12)
-    var color: CGColor = NSColor.black.cgColor
-    var alignment: NSTextAlignment = .left
+    var font: SDFont = .init(font: .systemFont(ofSize: 12))
+    var color: SDColor = .init(color: .primary)
+    var alignment: SDAlignment = .left
 
     // Keep the cardinal rotation for snapping behavior.
     var cardinalRotation: CardinalRotation = .east
@@ -34,6 +34,6 @@ extension TextModel {
     /// Generates the raw, un-transformed path for the text glyphs.
     /// The path's origin is the text's baseline start point.
     func makeTextPath() -> CGPath {
-        return TextUtilities.path(for: text, font: font)
+        return TextUtilities.path(for: text, font: font.nsFont)
     }
 }

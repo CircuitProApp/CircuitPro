@@ -21,9 +21,8 @@ class TextTool: CanvasTool {
         )
 
         let newTextNode = TextNode(textModel: newTextModel)
-        let newAnchoredTextNode = AnchoredTextNode(textModel: newTextModel, anchorPosition: location, anchorOwnerID: .init(), origin: .instance(instanceID: .init()))
 
-        return .newNode(newAnchoredTextNode)
+        return .newNode(newTextNode)
     }
 
     /// Handles the Escape key. This tool has no intermediate state, so it

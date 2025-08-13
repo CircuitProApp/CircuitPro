@@ -21,7 +21,7 @@ class Symbol {
     var primitives: [AnyCanvasPrimitive]
     var pins: [Pin]
     
-    var textDefinitions: [TextDefinition]
+    var textDefinitions: [CircuitText.Definition]
 
     init(
         uuid: UUID = UUID(),
@@ -29,7 +29,7 @@ class Symbol {
         component: Component? = nil,
         primitives: [AnyCanvasPrimitive] = [],
         pins: [Pin] = [],
-        textDefinitions: [TextDefinition] = []
+        textDefinitions: [CircuitText.Definition] = []
     ) {
         self.uuid = uuid
         self.name = name

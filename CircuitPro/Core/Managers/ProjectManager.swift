@@ -30,13 +30,12 @@ final class ProjectManager {
         self.modelContext   = modelContext
     }
 
-    // 1. Convenience
+    // --- Convenience properties are unchanged ---
     var componentInstances: [ComponentInstance] {
         get { selectedDesign?.componentInstances ?? [] }
         set { selectedDesign?.componentInstances = newValue }
     }
 
-    // 2. Centralised lookup
     var designComponents: [DesignComponent] {
         let uuids = Set(componentInstances.map(\.componentUUID))
         guard !uuids.isEmpty else { return [] }
@@ -53,7 +52,7 @@ final class ProjectManager {
     }
     
     func rebuildCanvasNodes() {
-        // 1. Ensure the graph model is synchronized first
+        // 1. Sync the wire graph model first. (Unchanged)
         for designComp in designComponents {
             guard let symbolDefinition = designComp.definition.symbol else { continue }
             schematicGraph.syncPins(
@@ -63,24 +62,25 @@ final class ProjectManager {
             )
         }
 
-        // 2. Build the Symbol nodes using compactMap
-        // This allows the closure to return `nil` for components without a symbol.
+        // 2. Build the Symbol nodes.
         let symbolNodes: [SymbolNode] = designComponents.compactMap { designComp in
             guard let symbolDefinition = designComp.definition.symbol else { return nil }
             
-            // Get the resolved properties directly from the DesignComponent.
             let resolvedProperties = designComp.displayedProperties
             
-            // Pass the new [Property.Resolved] type to the TextResolver.
-            // This assumes TextResolver has been updated to accept [Property.Resolved].
+            // THE FIX: Call TextResolver with the new, correct signature.
+            // We now pass the specific arrays of definitions, overrides, and instances.
             let resolvedTexts = TextResolver.resolve(
-                from: symbolDefinition,
-                and: designComp.instance.symbolInstance,
+                definitions: symbolDefinition.textDefinitions,
+                overrides: designComp.instance.symbolInstance.textOverrides,
+                instances: designComp.instance.symbolInstance.textInstances,
                 componentName: designComp.definition.name,
                 reference: designComp.referenceDesignator,
                 properties: resolvedProperties
             )
             
+            // This SymbolNode initializer is now correct because `resolvedTexts`
+            // is the correct `[CircuitText.Resolved]` type.
             return SymbolNode(
                 id: designComp.id,
                 instance: designComp.instance.symbolInstance,
@@ -90,11 +90,11 @@ final class ProjectManager {
             )
         }
 
-        // 3. Build the Graph node
+        // 3. Build the Graph node. (Unchanged)
         let graphNode = SchematicGraphNode(graph: schematicGraph)
         graphNode.syncChildNodesFromModel()
 
-        // 4. Update the single source of truth for the canvas
+        // 4. Update the single source of truth for the canvas. (Unchanged)
         let newNodeIDs = Set(symbolNodes.map(\.id) + [graphNode.id])
         let currentNodeIDs = Set(self.canvasNodes.map(\.id))
         

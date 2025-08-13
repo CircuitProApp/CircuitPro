@@ -21,13 +21,16 @@ struct ComponentDesignView: View {
     @State private var symbolCanvasManager = CanvasManager()
     @State private var footprintCanvasManager = CanvasManager()
 
+    // ... other state properties remain the same ...
     @State private var showError = false
     @State private var showWarning = false
     @State private var messages = [String]()
     @State private var didCreateComponent = false
     @State private var showFeedbackSheet: Bool = false
 
+
     var body: some View {
+        // --- THIS ENTIRE VIEW BODY REMAINS UNCHANGED ---
         Group {
             if didCreateComponent {
                 ComponentDesignSuccessView(
@@ -99,6 +102,7 @@ struct ComponentDesignView: View {
     }
 
     private func createComponent() {
+        // --- Validation logic remains the same ---
         if !componentDesignManager.validateForCreation() {
             let errorMessages = componentDesignManager.validationSummary.errors.values
                 .flatMap { $0 }
@@ -120,45 +124,49 @@ struct ComponentDesignView: View {
             showWarning = true
             return
         }
-
+        
+        // --- THE REFACTORED LOGIC BEGINS HERE ---
+        
         let symbolEditor = componentDesignManager.symbolEditor
         let canvasSize = symbolCanvasManager.viewport.size
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
 
-        var textDefinitions: [TextDefinition] = []
         let textNodes = symbolEditor.canvasNodes.compactMap { $0 as? TextNode }
-
-        for textNode in textNodes {
+        
+        // Convert each TextNode from the canvas into a new CircuitText.Definition
+        let textDefinitions: [CircuitText.Definition] = textNodes.map { textNode in
             let relativePosition = CGPoint(x: textNode.position.x - anchor.x, y: textNode.position.y - anchor.y)
-            var definition: TextDefinition
-
-            if let source = symbolEditor.textSourceMap[textNode.id] {
-                // This is dynamically sourced text (e.g., a property).
-                let displayOptions = symbolEditor.textDisplayOptionsMap[textNode.id, default: .default]
-                
-                definition = TextDefinition(
-                    source: source,
-                    relativePosition: relativePosition,
-                    cardinalRotation: textNode.textModel.cardinalRotation,
-                    displayOptions: displayOptions
-                )
+            
+            // Determine the content source and display options based on editor maps
+            let contentSource: TextSource
+            let displayOptions: TextDisplayOptions
+            
+            if let sourceFromMap = symbolEditor.textSourceMap[textNode.id] {
+                contentSource = sourceFromMap
+                displayOptions = symbolEditor.textDisplayOptionsMap[textNode.id, default: .default]
             } else {
-                // This is static text.
-                definition = TextDefinition(
-                    source: .static(textNode.textModel.text),
-                    relativePosition: relativePosition,
-                    cardinalRotation: textNode.textModel.cardinalRotation
-                )
+                contentSource = .static(textNode.textModel.text)
+                displayOptions = .default
             }
             
-            // Preserve styling from the node's model.
-            definition.font = textNode.textModel.font
-            definition.color = textNode.textModel.color
-            definition.alignment = textNode.textModel.alignment
-            definition.anchor = textNode.textModel.anchor
-            
-            textDefinitions.append(definition)
+            // Create the new, immutable Definition struct by calling its single memberwise initializer.
+            return CircuitText.Definition(
+                id: UUID(), // A new, persistent ID for the data model
+                contentSource: contentSource,
+                text: "", // Not used by definitions, but required by the init
+                displayOptions: displayOptions,
+                relativePosition: relativePosition,
+                definitionPosition: relativePosition, // For a new definition, these start identical
+                font: textNode.textModel.font,
+                color: textNode.textModel.color,
+                anchor: textNode.textModel.anchor,
+                alignment: textNode.textModel.alignment,
+                cardinalRotation: textNode.textModel.cardinalRotation,
+                isVisible: true
+            )
         }
+        
+        // --- The rest of the creation logic remains the same ---
         
         let rawPrimitives: [AnyCanvasPrimitive] = symbolEditor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
         
@@ -191,13 +199,15 @@ struct ComponentDesignView: View {
             component: newComponent,
             primitives: primitives,
             pins: pins,
-            textDefinitions: textDefinitions
+            textDefinitions: textDefinitions // Use the newly created definitions
         )
 
         newComponent.symbol = newSymbol
         modelContext.insert(newComponent)
         didCreateComponent = true
     }
+    
+    // --- resetForNewComponent remains the same ---
     private func resetForNewComponent() {
         componentDesignManager.resetAll()
         currentStage = .details

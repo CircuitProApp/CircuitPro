@@ -1,38 +1,52 @@
 import AppKit
 import Observation
 
-/// A scene graph node that represents a text element visually anchored to a parent object.
+/// A scene graph node that extends `TextNode` to add visual adornments for its anchor.
 ///
-/// This node extends `TextNode`, inheriting all its text-rendering capabilities, and adds
-/// visual adornments: a crosshair at the anchor point and a dashed line connecting
-/// the anchor to the text. All drawing operations are performed in the node's local coordinate space.
+/// This node draws a crosshair at the text's original definition position and a dashed
+/// line connecting that anchor to the text's current position. It acts as the bridge
+/// between the resolved `CircuitText` data model and the `TextModel` used for rendering.
 @Observable
 final class AnchoredTextNode: TextNode {
 
-    // MARK: - Anchor Properties
+    // MARK: - Anchor and Data Provenance
 
-    /// The position of the anchor in the parent's coordinate space.
-    var anchorPosition: CGPoint
+    /// The original, un-overridden position from the definition.
+    let definitionPosition: CGPoint
 
-    /// The ID of the node that owns this anchor (e.g., a SymbolNode).
-    let anchorOwnerID: UUID
+    /// The ID of the parent symbol that owns this text.
+    let ownerID: UUID
 
-    /// A link back to the original data model for committing changes.
-    let origin: TextOrigin
+    /// A link back to the data model's origin (definition or instance).
+    let source: CircuitText.Source
+    
+    private let contentSource: TextSource
+    private let displayOptions: TextDisplayOptions
 
     // MARK: - Initialization
 
     init(
-        textModel: TextModel,
-        anchorPosition: CGPoint,
-        anchorOwnerID: UUID,
-        origin: TextOrigin
+        resolvedText: CircuitText.Resolved,
+        ownerID: UUID
     ) {
-        self.anchorPosition = anchorPosition
-        self.anchorOwnerID = anchorOwnerID
-        self.origin = origin
+        self.ownerID = ownerID
+        self.source = resolvedText.source
+        self.definitionPosition = resolvedText.definitionPosition
+        self.contentSource = resolvedText.contentSource
+        self.displayOptions = resolvedText.displayOptions
 
-        super.init(textModel: textModel)
+        let textModelForRenderer = TextModel(
+            id: resolvedText.id,
+            text: resolvedText.text,
+            position: resolvedText.relativePosition,
+            anchor: resolvedText.anchor,
+            font: resolvedText.font,
+            color: resolvedText.color,
+            alignment: resolvedText.alignment,
+            cardinalRotation: resolvedText.cardinalRotation
+        )
+        
+        super.init(textModel: textModelForRenderer)
     }
 
     // MARK: - Overridden Drawable Conformance
@@ -41,43 +55,17 @@ final class AnchoredTextNode: TextNode {
         // 1. Get the drawing primitives for the text itself from the superclass.
         var primitives = super.makeDrawingPrimitives()
 
-        // 2. Convert the anchor point from the parent's space to our local space.
-        let localAnchorPosition: CGPoint
-        if let parent = self.parent {
-            localAnchorPosition = self.convert(anchorPosition, from: parent)
-        } else {
-            localAnchorPosition = anchorPosition
-        }
-
+        // 2. Convert the definition's anchor point to our local coordinate space.
+        let localAnchorPosition = self.convert(definitionPosition, from: parent)
         let adornmentColor = NSColor.systemGray.withAlphaComponent(0.8).cgColor
 
-        // 3. Create the drawing primitive for the anchor crosshair.
-        let crossSize: CGFloat = 8.0
-        let crossPath = CGMutablePath()
-        crossPath.move(to: CGPoint(x: localAnchorPosition.x - crossSize / 2, y: localAnchorPosition.y))
-        crossPath.addLine(to: CGPoint(x: localAnchorPosition.x + crossSize / 2, y: localAnchorPosition.y))
-        crossPath.move(to: CGPoint(x: localAnchorPosition.x, y: localAnchorPosition.y - crossSize / 2))
-        crossPath.addLine(to: CGPoint(x: localAnchorPosition.x, y: localAnchorPosition.y + crossSize / 2))
+        // 3. Create and append the drawing primitive for the anchor crosshair.
+        let crosshairPath = makeCrosshairPath(at: localAnchorPosition)
+        primitives.append(.stroke(path: crosshairPath, color: adornmentColor, lineWidth: 0.5))
 
-        primitives.append(.stroke(path: crossPath, color: adornmentColor, lineWidth: 0.5))
-
-        // 4. Create the drawing primitive for the connector line.
-        let textBounds = super.boundingBox
-        if !textBounds.isNull && !textBounds.isEmpty {
-            let connectionPoint: CGPoint
-            if textBounds.midY > localAnchorPosition.y {
-                // Text is above the anchor, connect to the bottom-middle of the text.
-                connectionPoint = CGPoint(x: textBounds.midX, y: textBounds.minY)
-            } else {
-                // Text is below or level with the anchor, connect to the top-middle of the text.
-                connectionPoint = CGPoint(x: textBounds.midX, y: textBounds.maxY)
-            }
-
-            let connectorPath = CGMutablePath()
-            connectorPath.move(to: localAnchorPosition)
-            connectorPath.addLine(to: connectionPoint)
-
-            primitives.append(.stroke(path: connectorPath, color: adornmentColor, lineWidth: 0.5, lineDash: [2, 2]))
+        // 4. Create and append the drawing primitive for the dashed connector line.
+        if let connectorPath = makeConnectorPath(from: localAnchorPosition) {
+             primitives.append(.stroke(path: connectorPath, color: adornmentColor, lineWidth: 0.5, lineDash: [2, 2]))
         }
 
         return primitives
@@ -86,23 +74,79 @@ final class AnchoredTextNode: TextNode {
 
 
 // MARK: - Committing Changes
-
 extension AnchoredTextNode {
-    /// Converts the node's current state back into a `ResolvedText` data model.
-    func toResolvedText() -> ResolvedText {
-        // The node's `position` is already relative to its parent (the SymbolNode),
-        // and its `anchorPosition` is also stored relative to the parent.
-        // The implementation is now simple and correct.
-        return ResolvedText(
-            origin: self.origin,
-            text: self.textModel.text,
-            font: self.textModel.font,
-            color: self.textModel.color,
-            alignment: self.textModel.alignment,
-            anchor: self.textModel.anchor,
-            relativePosition: self.position,
-            anchorRelativePosition: self.anchorPosition,
-            cardinalRotation: self.textModel.cardinalRotation
+    /// Converts the node's current state back into an immutable `CircuitText.Resolved` data model.
+    func toResolvedModel() -> CircuitText.Resolved {
+        return CircuitText.Resolved(
+            source: self.source,
+            contentSource: self.contentSource,
+            text: textModel.text,
+            displayOptions: self.displayOptions,
+            relativePosition: textModel.position,
+            definitionPosition: self.definitionPosition,
+            font: textModel.font,
+            color: textModel.color,
+            anchor: textModel.anchor,
+            alignment: textModel.alignment,
+            cardinalRotation: textModel.cardinalRotation,
+            isVisible: true
         )
+    }
+}
+
+
+// MARK: - Private Path Generation Helpers
+private extension AnchoredTextNode {
+    /// Creates the CGPath for the crosshair symbol centered at a given point.
+    func makeCrosshairPath(at center: CGPoint, size: CGFloat = 8.0) -> CGPath {
+        let halfSize = size / 2
+        let path = CGMutablePath()
+        
+        // Horizontal line
+        path.move(to: CGPoint(x: center.x - halfSize, y: center.y))
+        path.addLine(to: CGPoint(x: center.x + halfSize, y: center.y))
+        
+        // Vertical line
+        path.move(to: CGPoint(x: center.x, y: center.y - halfSize))
+        path.addLine(to: CGPoint(x: center.x, y: center.y + halfSize))
+        
+        return path
+    }
+    
+    /// Creates the CGPath for the dashed line connecting the anchor to the text's bounding box.
+    func makeConnectorPath(from anchorPosition: CGPoint) -> CGPath? {
+        // The bounding box from the superclass is already in our local coordinate space.
+        let textBounds = super.boundingBox
+        guard !textBounds.isNull else { return nil }
+        
+        // Determine the best point on the text's bounding box to connect to.
+        let connectionPoint = determineConnectionPoint(on: textBounds, towards: anchorPosition)
+        
+        let path = CGMutablePath()
+        path.move(to: anchorPosition)
+        path.addLine(to: connectionPoint)
+        
+        return path
+    }
+    
+    /// Calculates the optimal point on a bounding box to draw a connector line to.
+    /// This logic prevents the connector from awkwardly crossing through the text.
+    func determineConnectionPoint(on rect: CGRect, towards point: CGPoint) -> CGPoint {
+        // If the text is positioned significantly above or below the anchor,
+        // connect to the center of the top or bottom edge.
+        if abs(point.y - rect.midY) > abs(point.x - rect.midX) {
+             if point.y > rect.maxY { // Anchor is above the text
+                 return CGPoint(x: rect.midX, y: rect.maxY)
+             } else if point.y < rect.minY { // Anchor is below the text
+                 return CGPoint(x: rect.midX, y: rect.minY)
+             }
+        }
+        
+        // Otherwise, connect to the center of the left or right edge.
+        if point.x > rect.maxX { // Anchor is to the right of the text
+            return CGPoint(x: rect.maxX, y: rect.midY)
+        } else { // Anchor is to the left of the text
+            return CGPoint(x: rect.minX, y: rect.midY)
+        }
     }
 }

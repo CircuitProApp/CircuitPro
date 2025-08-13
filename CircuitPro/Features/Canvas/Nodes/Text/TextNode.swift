@@ -94,7 +94,7 @@ class TextNode: BaseNode {
        
          return [.fill(
              path: finalPath,
-             color: textModel.color
+             color: textModel.color.cgColor
          )]
      }
 

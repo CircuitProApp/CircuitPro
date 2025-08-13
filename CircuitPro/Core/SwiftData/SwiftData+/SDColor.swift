@@ -1,9 +1,10 @@
 //
-//  ColorEntity.swift
+//  SDColor.swift
 //  Circuit Pro
 //
 //  Created by Giorgi Tchelidze on 4/5/25.
 //
+
 import SwiftUI
 import AppKit
 
