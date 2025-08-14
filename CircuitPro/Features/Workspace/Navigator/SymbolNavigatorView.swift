@@ -43,7 +43,7 @@ struct SymbolNavigatorView: View {
         }
 
         // 1.3 Persist change
-//        document.updateChangeCount(.changeDone)
+        document.scheduleAutosave()
     }
 
     var body: some View {

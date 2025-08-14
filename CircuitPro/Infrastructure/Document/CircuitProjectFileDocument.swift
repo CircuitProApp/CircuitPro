@@ -8,12 +8,34 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+@Observable
 final class CircuitProjectFileDocument: ReferenceFileDocument {
     typealias Snapshot = CircuitProject
 
     static var readableContentTypes: [UTType] { [.circuitProject] }
+    
+    private var autosaveWorkItem: DispatchWorkItem?
+    var autosaveDelay: TimeInterval = 2 // tune as needed
 
-    @Published var model: CircuitProject
+    func scheduleAutosave() {
+        autosaveWorkItem?.cancel()
+
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, let url = self.fileURL else { return }
+            do {
+                try self.write(to: url)
+                print("AUTOSAVE")
+            } catch {
+                // Non-blocking error handling; consider a banner/toast instead of an alert.
+                NSLog("Autosave failed: \(error.localizedDescription)")
+            }
+        }
+
+        autosaveWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + autosaveDelay, execute: work)
+    }
+
+    var model: CircuitProject
     // Track the backing URL when opened/saved programmatically
     var fileURL: URL?
 
