@@ -10,8 +10,6 @@ import SwiftData
 
 @main
 struct CircuitProApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-
     var body: some Scene {
         WelcomeWindowScene()
             .commands {
@@ -31,6 +29,8 @@ struct CircuitProApp: App {
         }
         .defaultSize(width: 1000, height: 700)
         .windowToolbarStyle(.unifiedCompact)
+        .restorationBehavior(.disabled)
+        .defaultLaunchBehavior(.suppressed)
 
         Window("Component Design", id: "ComponentDesignWindow") {
             ComponentDesignView()

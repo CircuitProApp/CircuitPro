@@ -30,7 +30,9 @@ public struct DesignNavigatorView: View {
                     Image(systemName: CircuitProSymbols.Design.design)
                     TextField("Design Name", text: $design.name)
                         .textFieldStyle(.plain)
-                        .onSubmit { /*document.renameDesign(design) */}
+                        .onSubmit {
+                            document.renameDesign(design, undoManager: undoManager)
+                        }
                 }
                 .controlSize(.small)
                 .frame(height: 14)
@@ -85,7 +87,7 @@ public struct DesignNavigatorView: View {
 
                 Spacer()
                 Button {
-//                    document.addNewDesign()
+                    document.addNewDesign(undoManager: undoManager)
                 } label: {
                     Image(systemName: CircuitProSymbols.Generic.plus)
                 }
