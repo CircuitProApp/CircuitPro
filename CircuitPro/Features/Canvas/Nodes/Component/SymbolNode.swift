@@ -63,7 +63,7 @@ final class SymbolNode: BaseNode {
         for resolvedText in resolvedTexts {
             let textNode = AnchoredTextNode(
                 resolvedText: resolvedText,
-                ownerID: self.id
+                ownerInstance: self.instance
             )
             self.addChild(textNode)
         }
@@ -86,30 +86,20 @@ final class SymbolNode: BaseNode {
     }
     
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        // First, let the default BaseNode implementation check children.
-        if let hit = super.hitTest(point, tolerance: tolerance) {
-            if hit.node.isSelectable {
-                return hit
-            }
+        // First, delegate to the base implementation to hit-test all children.
+        // This correctly finds hits on selectable children (like pins or text nodes)
+        // and returns a target pointing to that specific child.
+        if let childHit = super.hitTest(point, tolerance: tolerance) {
+            return childHit
         }
 
-        // If no selectable children were hit, check if the point is within our core geometry.
-        let coreGeometryBox = self.interactionBounds
-        if coreGeometryBox.contains(point) {
+        // If no children were hit, check if the point intersects with this symbol's
+        // own "body" geometry (which excludes text nodes).
+        if interactionBounds.contains(point) {
             return CanvasHitTarget(node: self, partIdentifier: nil, position: self.convert(point, to: nil))
         }
-        
-        // Finally, if still no hit, check the text nodes specifically.
-        // If a text node is hit, we return the SymbolNode as the target.
-        for child in children {
-            guard let textNode = child as? AnchoredTextNode else { continue }
-            
-            let localPoint = point.applying(textNode.localTransform.inverted())
-            if textNode.hitTest(localPoint, tolerance: tolerance) != nil {
-                return CanvasHitTarget(node: self, partIdentifier: nil, position: self.convert(point, to: nil))
-            }
-        }
 
+        // If neither children nor the body were hit, there's no hit.
         return nil
     }
 

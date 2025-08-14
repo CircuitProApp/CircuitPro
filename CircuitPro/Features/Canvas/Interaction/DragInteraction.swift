@@ -99,7 +99,17 @@ final class DragInteraction: CanvasInteraction {
         }
         
         if didMove {
-             controller.onModelDidChange?()
+            // Persist changes for any nodes that were moved.
+            for node in controller.selectedNodes {
+                // If the dragged node is an anchored text, tell it to commit its
+                // state back to its owning SymbolInstance model.
+                if let textNode = node as? AnchoredTextNode {
+                    textNode.commitChanges()
+                }
+            }
+            
+            // Notify the document that the model has changed and needs saving.
+            controller.onModelDidChange?()
         }
         
         self.state = nil

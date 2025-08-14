@@ -14,8 +14,9 @@ final class AnchoredTextNode: TextNode {
     /// The original, un-overridden position from the definition.
     let definitionPosition: CGPoint
 
-    /// The ID of the parent symbol that owns this text.
-    let ownerID: UUID
+    /// A direct, unowned reference to the symbol instance that owns this text.
+    /// This provides the link needed to persist changes back to the main data model.
+    unowned let ownerInstance: SymbolInstance
 
     /// A link back to the data model's origin (definition or instance).
     let source: CircuitText.Source
@@ -27,16 +28,28 @@ final class AnchoredTextNode: TextNode {
 
     init(
         resolvedText: CircuitText.Resolved,
-        ownerID: UUID
+        ownerInstance: SymbolInstance
     ) {
-        self.ownerID = ownerID
+        self.ownerInstance = ownerInstance
         self.source = resolvedText.source
         self.definitionPosition = resolvedText.definitionPosition
         self.contentSource = resolvedText.contentSource
         self.displayOptions = resolvedText.displayOptions
 
+        // ID Generation Logic
+        let nodeID: UUID
+        switch resolvedText.source {
+        case .definition(let definitionID):
+            // Definition-based texts need a unique, stable ID per symbol instance.
+            // We generate one by combining the instance's ID and the text's definition ID.
+            nodeID = Self.generateStableID(for: ownerInstance.id, with: definitionID)
+        case .instance:
+            // Instance-specific texts already have a unique ID.
+            nodeID = resolvedText.id
+        }
+
         let textModelForRenderer = TextModel(
-            id: resolvedText.id,
+            id: nodeID,
             text: resolvedText.text,
             position: resolvedText.relativePosition,
             anchor: resolvedText.anchor,
@@ -75,6 +88,13 @@ final class AnchoredTextNode: TextNode {
 
 // MARK: - Committing Changes
 extension AnchoredTextNode {
+    /// Persists the node's current visual state back into the main data model (`SymbolInstance`).
+    /// This is the critical step that saves changes like repositioning.
+    func commitChanges() {
+        let resolvedModel = self.toResolvedModel()
+        self.ownerInstance.update(with: resolvedModel)
+    }
+
     /// Converts the node's current state back into an immutable `CircuitText.Resolved` data model.
     func toResolvedModel() -> CircuitText.Resolved {
         return CircuitText.Resolved(
@@ -148,5 +168,31 @@ private extension AnchoredTextNode {
         } else { // Anchor is to the left of the text
             return CGPoint(x: rect.minX, y: rect.midY)
         }
+    }
+}
+
+// MARK: - ID Generation
+private extension AnchoredTextNode {
+    /// Generates a stable, unique UUID for a text node by combining the parent symbol's instance ID
+    /// with the text's own definition ID. This is crucial for ensuring that texts derived from the
+    /// same definition have unique identifiers across different symbol instances.
+    ///
+    /// We achieve this by XORing the bytes of the two UUIDs.
+    static func generateStableID(for ownerID: UUID, with definitionID: UUID) -> UUID {
+        var ownerBytes = ownerID.uuid
+        var definitionBytes = definitionID.uuid
+
+        let resultTuple = (
+            ownerBytes.0 ^ definitionBytes.0, ownerBytes.1 ^ definitionBytes.1,
+            ownerBytes.2 ^ definitionBytes.2, ownerBytes.3 ^ definitionBytes.3,
+            ownerBytes.4 ^ definitionBytes.4, ownerBytes.5 ^ definitionBytes.5,
+            ownerBytes.6 ^ definitionBytes.6, ownerBytes.7 ^ definitionBytes.7,
+            ownerBytes.8 ^ definitionBytes.8, ownerBytes.9 ^ definitionBytes.9,
+            ownerBytes.10 ^ definitionBytes.10, ownerBytes.11 ^ definitionBytes.11,
+            ownerBytes.12 ^ definitionBytes.12, ownerBytes.13 ^ definitionBytes.13,
+            ownerBytes.14 ^ definitionBytes.14, ownerBytes.15 ^ definitionBytes.15
+        )
+        
+        return UUID(uuid: resultTuple)
     }
 }
