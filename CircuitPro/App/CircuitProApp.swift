@@ -12,6 +12,9 @@ import SwiftData
 struct CircuitProApp: App {
     var body: some Scene {
         WelcomeWindowScene()
+            .commands {
+                CircuitProCommands()
+            }
 
         WindowGroup(for: DocumentID.self) { $docID in
             if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {
@@ -22,16 +25,11 @@ struct CircuitProApp: App {
                                        modelContext: ModelContainerManager.shared.container.mainContext))
                     .focusedSceneValue(\.activeDocumentID, id)
                     .onDisappear { DocumentRegistry.shared.close(id: id) }
-            } else {
-                // Avoid showing a placeholder window; close it if it appears unintentionally.
-                AutoClosingEmptyWindow()
             }
         }
         .defaultSize(width: 1000, height: 700)
         .windowToolbarStyle(.unifiedCompact)
-        .commands {
-            CircuitProCommands()
-        }
+        .handlesExternalEvents(matching: ["document"])
 
         Window("Component Design", id: "ComponentDesignWindow") {
             ComponentDesignView()

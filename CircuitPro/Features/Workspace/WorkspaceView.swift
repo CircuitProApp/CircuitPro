@@ -53,6 +53,7 @@ struct WorkspaceView: View {
                         .frame(minWidth: 400, minHeight: 300)
                 }
                 .libraryPanel(isPresented: $isShowingLibrary)
+                .layoutPriority(1)
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
