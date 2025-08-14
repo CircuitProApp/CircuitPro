@@ -42,13 +42,3 @@ struct CircuitProApp: App {
         AboutWindowScene()
     }
 }
-
-// Closes a nil-routed window immediately so users never see an empty placeholder.
-private struct AutoClosingEmptyWindow: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let v = NSView(frame: .zero)
-        DispatchQueue.main.async { v.window?.performClose(nil) }
-        return v
-    }
-    func updateNSView(_ nsView: NSView, context: Context) {}
-}
