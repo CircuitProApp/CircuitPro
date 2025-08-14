@@ -10,7 +10,8 @@ import WelcomeWindow
 
 struct WelcomeWindowScene: Scene {
     
-    @Environment(\.openWindow) private var openWindow
+    @Environment(\.openWindow)
+    private var openWindow
     
     var body: some Scene {
         WelcomeWindow(
@@ -42,7 +43,17 @@ struct WelcomeWindowScene: Scene {
                     CircuitProjectDocumentService.shared.open(at: url) { id in
                         openWindow(value: id)
                         dismiss()
-                    } onCancel: {}
+                    }
+                }
+            },
+            openHandler: { urls, dismiss in
+                for url in urls {
+                    Task { @MainActor in
+                        CircuitProjectDocumentService.shared.open(at: url) { id in
+                            openWindow(value: id)
+                            dismiss()
+                        }
+                    }
                 }
             }
         )

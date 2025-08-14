@@ -373,8 +373,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/CodeEditApp/CodeEditWelcomeWindow";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				branch = main;
+				kind = branch;
 			};
 		};
 		C7A321B62E4E68470002FD0E /* XCRemoteSwiftPackageReference "Resolvable" */ = {

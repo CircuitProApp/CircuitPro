@@ -1,5 +1,5 @@
 {
-  "originHash" : "753ae516de3e92bd06cc175421a3f4f9c4d70930f989b5b6a8a6879f6c1b6fcd",
+  "originHash" : "a9e250fda5bff1e25b6cafa00bd924d157fa358c6b58aa1afb09c5e3ba34349d",
   "pins" : [
     {
       "identity" : "aboutwindow",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/CodeEditApp/CodeEditWelcomeWindow",
       "state" : {
-        "revision" : "a23cb09e34e781079981260aaa576e7e18969737",
-        "version" : "1.0.1"
+        "branch" : "main",
+        "revision" : "c42d5b24a807b98b3b5131e531eb0969762492cc"
       }
     },
     {
