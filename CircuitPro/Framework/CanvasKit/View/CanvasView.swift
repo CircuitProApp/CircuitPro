@@ -212,9 +212,10 @@ struct CanvasView: NSViewRepresentable {
             // We only apply the binding's value to the view IF it's not our
             // special "autoCenter" command. This allows CenteringNSScrollView's
             // initial layout to "win" the first race.
-            if self.viewport.visibleRect != CanvasViewport.autoCenter && clipView.bounds != self.viewport.visibleRect {
-                // Once the binding has a real rect, it becomes the source of truth.
-                clipView.bounds = self.viewport.visibleRect
+            if self.viewport.visibleRect != CanvasViewport.autoCenter && clipView.bounds.origin != self.viewport.visibleRect.origin {
+                // Sync the scroll position from the binding, but let AppKit's layout manage the size.
+                // This prevents conflicts during resize animations where the binding's size might be stale.
+                clipView.bounds.origin = self.viewport.visibleRect.origin
             }
         }
         
