@@ -13,7 +13,7 @@ struct EditorView: View {
     @Environment(\.projectManager)
     private var projectManager
 
-    var document: CircuitProjectDocument
+    var document: CircuitProjectFileDocument
 
     @State private var showUtilityArea: Bool = true
 

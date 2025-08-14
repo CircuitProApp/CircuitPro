@@ -12,7 +12,7 @@ struct NetNavigatorView: View {
     @Environment(\.projectManager)
     private var projectManager
     
-    var document: CircuitProjectDocument
+    var document: CircuitProjectFileDocument
     
     var body: some View {
         @Bindable var bindableProjectManager = projectManager

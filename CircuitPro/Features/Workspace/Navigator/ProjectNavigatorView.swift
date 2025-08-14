@@ -12,7 +12,7 @@ struct ProjectNavigatorView: View {
     @Environment(\.projectManager)
     private var projectManager
 
-    var document: CircuitProjectDocument
+    var document: CircuitProjectFileDocument
 
     enum SchematicNavigatorType: Displayable {
         case symbols

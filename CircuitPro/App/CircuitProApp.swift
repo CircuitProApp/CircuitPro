@@ -7,38 +7,28 @@
 
 import SwiftUI
 import SwiftData
-import WelcomeWindow
-import AboutWindow
-
-import SwiftUI
-import SwiftData
 
 @main
 struct CircuitProApp: App {
-    @Environment(\.openWindow) private var openWindow
-
-    init() {
-        _ = CircuitProjectDocumentController.shared
-    }
-
     var body: some Scene {
-        Group {
-            WelcomeWindow(
-                actions: { dismiss in
-                    WelcomeWindowActions(dismiss: dismiss)
-                },
-                onDrop: { url, dismiss in
-                    Task { @MainActor in
-                        NSDocumentController.shared.openDocument(at: url, display: false) { id in
-                            openWindow(value: id) // NOTE: value-based open, no id: label
-                            dismiss()
-                        } onError: { _ in }
-                    }
-                }
-            )
+        WelcomeWindowScene()
 
-            AboutWindow(actions: {}, footer: { AboutFooterView() })
+        WindowGroup(for: DocumentID.self) { $docID in
+            if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {
+                WorkspaceView(document: doc)
+                    .modelContainer(ModelContainerManager.shared.container)
+                    .environment(\.projectManager,
+                        ProjectManager(project: doc.model,
+                                       modelContext: ModelContainerManager.shared.container.mainContext))
+                    .focusedSceneValue(\.activeDocumentID, id)
+                    .onDisappear { DocumentRegistry.shared.close(id: id) }
+            } else {
+                // Avoid showing a placeholder window; close it if it appears unintentionally.
+                AutoClosingEmptyWindow()
+            }
         }
+        .defaultSize(width: 1000, height: 700)
+        .windowToolbarStyle(.unifiedCompact)
         .commands {
             CircuitProCommands()
         }
@@ -49,22 +39,16 @@ struct CircuitProApp: App {
                 .modelContainer(ModelContainerManager.shared.container)
         }
 
-        // macOS 14+: typed window group for value-based routing
-        WindowGroup(for: DocumentID.self) { $docID in
-            if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {
-                WorkspaceView(document: doc)
-                    .modelContainer(ModelContainerManager.shared.container)
-                    .environment(\.projectManager, doc.projectManager)
-                    .focusedSceneValue(\.activeDocumentID, id)
-                    .onDisappear {
-                        DocumentRegistry.shared.close(id: id)
-                    }
-            } else {
-                Text("No document available")
-                    .frame(minWidth: 800, minHeight: 600)
-            }
-        }
-        .defaultSize(width: 1000, height: 700)
-        .windowToolbarStyle(.unifiedCompact)
+        AboutWindowScene()
     }
+}
+
+// Closes a nil-routed window immediately so users never see an empty placeholder.
+private struct AutoClosingEmptyWindow: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let v = NSView(frame: .zero)
+        DispatchQueue.main.async { v.window?.performClose(nil) }
+        return v
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }

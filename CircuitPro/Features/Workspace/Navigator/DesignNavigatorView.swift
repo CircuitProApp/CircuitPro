@@ -9,12 +9,13 @@ import SwiftUI
 
 public struct DesignNavigatorView: View {
 
+    @Environment(\.undoManager) private var undoManager
     @Environment(\.projectManager)
     private var projectManager
 
     @State private var isExpanded: Bool = true
 
-    var document: CircuitProjectDocument
+    var document: CircuitProjectFileDocument
 
     public var body: some View {
         @Bindable var bindableProjectManager = projectManager
@@ -29,7 +30,7 @@ public struct DesignNavigatorView: View {
                     Image(systemName: CircuitProSymbols.Design.design)
                     TextField("Design Name", text: $design.name)
                         .textFieldStyle(.plain)
-                        .onSubmit { document.renameDesign(design) }
+                        .onSubmit { /*document.renameDesign(design) */}
                 }
                 .controlSize(.small)
                 .frame(height: 14)
@@ -39,7 +40,7 @@ public struct DesignNavigatorView: View {
                         if projectManager.selectedDesign == design {
                             projectManager.selectedDesign = nil
                         }
-                        document.deleteDesign(design)
+                        document.deleteDesign(design, undoManager: undoManager)
 
                     }
                 }
@@ -51,7 +52,7 @@ public struct DesignNavigatorView: View {
             .overlay {
                 if projectManager.project.designs.isEmpty {
                     Button("Create a Design") {
-                        document.addNewDesign()
+                        document.addNewDesign(undoManager: undoManager)
                         projectManager.selectedDesign = projectManager.project.designs.first!
                     }
                 }
@@ -84,7 +85,7 @@ public struct DesignNavigatorView: View {
 
                 Spacer()
                 Button {
-                    document.addNewDesign()
+//                    document.addNewDesign()
                 } label: {
                     Image(systemName: CircuitProSymbols.Generic.plus)
                 }

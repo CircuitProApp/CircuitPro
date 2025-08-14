@@ -10,7 +10,7 @@ import SwiftData
 
 struct SchematicCanvasView: View {
 
-    var document: CircuitProjectDocument
+    var document: CircuitProjectFileDocument
     @State var canvasManager = CanvasManager()
 
     @Environment(\.projectManager)
@@ -48,7 +48,7 @@ struct SchematicCanvasView: View {
             snapProvider: CircuitProSnapProvider(),
             registeredDraggedTypes: [.transferableComponent],
             onPasteboardDropped: handleComponentDrop,
-            onModelDidChange: { self.document.updateChangeCount(.changeDone) }
+            onModelDidChange: { /*self.document.updateChangeCount(.changeDone)*/ }
         )
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
@@ -77,7 +77,7 @@ struct SchematicCanvasView: View {
                 projectManager.schematicGraph.releasePins(for: componentID)
             }
             projectManager.selectedDesign?.componentInstances.removeAll { missingComponentIDs.contains($0.id) }
-            document.updateChangeCount(.changeDone)
+//            document.updateChangeCount(.changeDone)
         }
     }
     
@@ -119,7 +119,7 @@ struct SchematicCanvasView: View {
             ownerID: newComponentInstance.id
         )
         
-        document.updateChangeCount(.changeDone)
+//        document.updateChangeCount(.changeDone)
         
         return true
     }

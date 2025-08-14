@@ -16,7 +16,7 @@ struct SymbolNavigatorView: View {
     @Query private var components: [Component]
 
 
-    var document: CircuitProjectDocument
+    var document: CircuitProjectFileDocument
 
     // 1. Delete logic, deferred to avoid exclusivity violations
     private func performDelete(on designComponent: DesignComponent, selected: inout Set<UUID>) {
@@ -43,7 +43,7 @@ struct SymbolNavigatorView: View {
         }
 
         // 1.3 Persist change
-        document.updateChangeCount(.changeDone)
+//        document.updateChangeCount(.changeDone)
     }
 
     var body: some View {

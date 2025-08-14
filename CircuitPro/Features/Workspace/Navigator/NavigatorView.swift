@@ -39,7 +39,7 @@ enum NavigatorViewTab: Displayable {
 struct NavigatorView: View {
 
     @State private var selectedTab: NavigatorViewTab = .projectNavigator
-    var document: CircuitProjectDocument
+    var document: CircuitProjectFileDocument
 
     var body: some View {
 

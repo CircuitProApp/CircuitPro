@@ -13,7 +13,7 @@ struct WorkspaceView: View {
     @Environment(\.projectManager)
     private var projectManager
     
-    var document: CircuitProjectDocument
+    var document: CircuitProjectFileDocument
     
     @State private var showInspector: Bool = false
     @State private var showFeedbackSheet: Bool = false
