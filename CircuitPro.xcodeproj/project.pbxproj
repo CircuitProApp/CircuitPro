@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		5E2704182DF5F410008B26BC /* AboutWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 5E2704172DF5F410008B26BC /* AboutWindow */; };
 		5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */; };
-		C75D8AB82E4CE1AF006655CE /* ResolvableMacro in Frameworks */ = {isa = PBXBuildFile; productRef = C75D8AB72E4CE1AF006655CE /* ResolvableMacro */; };
+		C7A321B82E4E68470002FD0E /* Resolvable in Frameworks */ = {isa = PBXBuildFile; productRef = C7A321B72E4E68470002FD0E /* Resolvable */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,9 +29,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C75D8AB82E4CE1AF006655CE /* ResolvableMacro in Frameworks */,
 				5E2704182DF5F410008B26BC /* AboutWindow in Frameworks */,
 				5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */,
+				C7A321B82E4E68470002FD0E /* Resolvable in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -76,7 +76,7 @@
 			packageProductDependencies = (
 				5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */,
 				5E2704172DF5F410008B26BC /* AboutWindow */,
-				C75D8AB72E4CE1AF006655CE /* ResolvableMacro */,
+				C7A321B72E4E68470002FD0E /* Resolvable */,
 			);
 			productName = Electron;
 			productReference = 5E5AB35A2D9C60330069B623 /* CircuitPro.app */;
@@ -110,7 +110,7 @@
 				5E0B73522DDF58BE0061123B /* XCRemoteSwiftPackageReference "SwiftLintPlugin" */,
 				5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */,
 				5E2704162DF5F410008B26BC /* XCRemoteSwiftPackageReference "AboutWindow" */,
-				C75D8AB62E4CE1AF006655CE /* XCRemoteSwiftPackageReference "ResolvableMacro" */,
+				C7A321B62E4E68470002FD0E /* XCRemoteSwiftPackageReference "Resolvable" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5E5AB35B2D9C60330069B623 /* Products */;
@@ -377,9 +377,9 @@
 				minimumVersion = 1.0.0;
 			};
 		};
-		C75D8AB62E4CE1AF006655CE /* XCRemoteSwiftPackageReference "ResolvableMacro" */ = {
+		C7A321B62E4E68470002FD0E /* XCRemoteSwiftPackageReference "Resolvable" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/CircuitProApp/ResolvableMacro";
+			repositoryURL = "https://github.com/CircuitProApp/Resolvable";
 			requirement = {
 				branch = main;
 				kind = branch;
@@ -398,10 +398,10 @@
 			package = 5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */;
 			productName = WelcomeWindow;
 		};
-		C75D8AB72E4CE1AF006655CE /* ResolvableMacro */ = {
+		C7A321B72E4E68470002FD0E /* Resolvable */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = C75D8AB62E4CE1AF006655CE /* XCRemoteSwiftPackageReference "ResolvableMacro" */;
-			productName = ResolvableMacro;
+			package = C7A321B62E4E68470002FD0E /* XCRemoteSwiftPackageReference "Resolvable" */;
+			productName = Resolvable;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

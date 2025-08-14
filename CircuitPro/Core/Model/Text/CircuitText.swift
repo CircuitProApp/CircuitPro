@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import ResolvableMacro
+import Resolvable
 
 @Resolvable
 struct CircuitText {

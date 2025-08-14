@@ -5,7 +5,7 @@
 //  Created by Giorgi Tchelidze on 8/13/25.
 //
 
-import ResolvableMacro
+import Resolvable
 import SwiftUI
 
 @Resolvable

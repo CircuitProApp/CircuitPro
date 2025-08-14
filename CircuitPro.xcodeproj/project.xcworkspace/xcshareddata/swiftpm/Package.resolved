@@ -1,5 +1,5 @@
 {
-  "originHash" : "6d99903e7e7b0c34dd19ac7d62dec495837905412c819e79e263d51b9ee75612",
+  "originHash" : "753ae516de3e92bd06cc175421a3f4f9c4d70930f989b5b6a8a6879f6c1b6fcd",
   "pins" : [
     {
       "identity" : "aboutwindow",
@@ -20,12 +20,12 @@
       }
     },
     {
-      "identity" : "resolvablemacro",
+      "identity" : "resolvable",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/CircuitProApp/ResolvableMacro",
+      "location" : "https://github.com/CircuitProApp/Resolvable",
       "state" : {
         "branch" : "main",
-        "revision" : "4bfbd0d05cf8d90f8ca493c18c58189c8935b5de"
+        "revision" : "427defc96b6967ddeb0e6527574991f8789e12c5"
       }
     },
     {
