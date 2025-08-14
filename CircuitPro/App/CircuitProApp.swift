@@ -10,13 +10,12 @@ import SwiftData
 import WelcomeWindow
 import AboutWindow
 
+import SwiftUI
+import SwiftData
+
 @main
 struct CircuitProApp: App {
-
-    @Environment(\.openWindow)
-    private var openWindow
-    
-
+    @Environment(\.openWindow) private var openWindow
 
     init() {
         _ = CircuitProjectDocumentController.shared
@@ -29,14 +28,16 @@ struct CircuitProApp: App {
                     WelcomeWindowActions(dismiss: dismiss)
                 },
                 onDrop: { url, dismiss in
-                    Task {
-                        CircuitProjectDocumentController.shared.openDocument(at: url, onCompletion: { dismiss() })
+                    Task { @MainActor in
+                        NSDocumentController.shared.openDocument(at: url, display: false) { id in
+                            openWindow(value: id) // NOTE: value-based open, no id: label
+                            dismiss()
+                        } onError: { _ in }
                     }
                 }
             )
-    
+
             AboutWindow(actions: {}, footer: { AboutFooterView() })
-            
         }
         .commands {
             CircuitProCommands()
@@ -47,5 +48,23 @@ struct CircuitProApp: App {
                 .frame(minWidth: 800, minHeight: 600)
                 .modelContainer(ModelContainerManager.shared.container)
         }
+
+        // macOS 14+: typed window group for value-based routing
+        WindowGroup(for: DocumentID.self) { $docID in
+            if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {
+                WorkspaceView(document: doc)
+                    .modelContainer(ModelContainerManager.shared.container)
+                    .environment(\.projectManager, doc.projectManager)
+                    .focusedSceneValue(\.activeDocumentID, id)
+                    .onDisappear {
+                        DocumentRegistry.shared.close(id: id)
+                    }
+            } else {
+                Text("No document available")
+                    .frame(minWidth: 800, minHeight: 600)
+            }
+        }
+        .defaultSize(width: 1000, height: 700)
+        .windowToolbarStyle(.unifiedCompact)
     }
 }
