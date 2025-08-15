@@ -10,6 +10,7 @@
 import Foundation
 import SwiftUI
 
+// --- Existing Enums and Structs are unchanged ---
 enum VertexOwnership: Hashable {
     case free
     case pin(ownerID: UUID, pinID: UUID)
@@ -36,6 +37,7 @@ struct WireEdge: Identifiable, Hashable {
     let start: WireVertex.ID
     let end: WireVertex.ID
 }
+
 
 @Observable
 class WireGraph { // swiftlint:disable:this type_body_length
@@ -67,6 +69,118 @@ class WireGraph { // swiftlint:disable:this type_body_length
         var newVertices: Set<UUID> = []
     }
     private var dragState: DragState?
+    
+    // MARK: - New Persistence API
+    
+    /// A callback closure that gets executed whenever the graph's topology changes,
+    /// signaling that the model should be persisted.
+    var onModelDidChange: (() -> Void)?
+    
+    /// Builds the graph from an array of persistent `Wire` objects.
+    /// This method creates vertices with pin ownership at a temporary `CGPoint.zero` location.
+    /// The `syncPins` method must be called afterward to move these vertices to their correct final positions.
+    public func build(from wires: [Wire]) {
+        guard !wires.isEmpty else { return }
+
+        // Clear any existing graph state before building from persistent data.
+        self.vertices.removeAll()
+        self.edges.removeAll()
+        self.adjacency.removeAll()
+        self.netNames.removeAll()
+        self.nextNetNumber = 1
+
+        var attachmentMap: [AttachmentPoint: WireVertex.ID] = [:]
+
+        // Helper to get or create a vertex for a given attachment point.
+        func getVertexID(for point: AttachmentPoint, netID: UUID) -> WireVertex.ID {
+            if let existingID = attachmentMap[point] {
+                return existingID
+            }
+
+            let newVertex: WireVertex
+            switch point {
+            case .free(let pt):
+                newVertex = addVertex(at: pt, ownership: .free)
+            case .pin(let componentInstanceID, let pinID):
+                // Create pin-owned vertices at a placeholder location. `syncPins` will position them correctly later.
+                newVertex = addVertex(at: .zero, ownership: .pin(ownerID: componentInstanceID, pinID: pinID))
+            }
+            
+            // Assign the persistent net ID to the new vertex.
+            vertices[newVertex.id]?.netID = netID
+            attachmentMap[point] = newVertex.id
+            return newVertex.id
+        }
+        
+        // Iterate through each persistent wire and its segments to reconstruct the graph.
+        for wire in wires {
+            for segment in wire.segments {
+                let startID = getVertexID(for: segment.start, netID: wire.id)
+                let endID = getVertexID(for: segment.end, netID: wire.id)
+
+                if startID != endID {
+                    addEdge(from: startID, to: endID)
+                }
+            }
+        }
+    }
+    
+    /// Converts the current in-memory graph state into an array of serializable `Wire` objects.
+    public func toWires() -> [Wire] {
+        var wires: [Wire] = []
+        var processedVertices = Set<WireVertex.ID>()
+
+        for vertexID in vertices.keys {
+            guard !processedVertices.contains(vertexID) else { continue }
+
+            let (netVertices, netEdges) = net(startingFrom: vertexID)
+            guard !netEdges.isEmpty, let netID = vertices[vertexID]?.netID else {
+                processedVertices.formUnion(netVertices)
+                continue
+            }
+
+            let segments = netEdges.compactMap { edgeID -> WireSegment? in
+                guard let edge = self.edges[edgeID],
+                      let startVertex = self.vertices[edge.start],
+                      let endVertex = self.vertices[edge.end],
+                      let startPoint = attachmentPoint(for: startVertex),
+                      let endPoint = attachmentPoint(for: endVertex) else { return nil }
+                
+                return WireSegment(start: startPoint, end: endPoint)
+            }
+
+            if !segments.isEmpty {
+                wires.append(Wire(id: netID, segments: segments))
+            }
+            processedVertices.formUnion(netVertices)
+        }
+        return wires
+    }
+
+    /// Converts a `WireVertex` into its serializable `AttachmentPoint` representation.
+    private func attachmentPoint(for vertex: WireVertex) -> AttachmentPoint? {
+        switch vertex.ownership {
+        case .free, .detachedPin: // Treat detached pins as free for persistence.
+            return .free(point: vertex.point)
+        case .pin(let ownerID, let pinID):
+            return .pin(componentInstanceID: ownerID, pinID: pinID)
+        }
+    }
+    
+    /// Releases ownership of all pins associated with a given component instance ID.
+    /// This is called when a component is deleted, turning its connected pins into free-floating vertices.
+    public func releasePins(for ownerID: UUID) {
+        let verticesToRelease = vertices.values.filter { vertex in
+            if case .pin(let oID, _) = vertex.ownership, oID == ownerID {
+                return true
+            }
+            return false
+        }
+        for var vertex in verticesToRelease {
+            vertex.ownership = .free
+            vertices[vertex.id] = vertex
+        }
+    }
 
     // MARK: - Public API
     /// Renames a net.
@@ -132,6 +246,7 @@ class WireGraph { // swiftlint:disable:this type_body_length
 
         unifyNetIDs(between: startID, and: endID)
         normalize(around: affectedVertices)
+        onModelDidChange?()
     }
 
     /// Deletes items and normalizes the graph.
@@ -153,6 +268,7 @@ class WireGraph { // swiftlint:disable:this type_body_length
             }
         }
         normalize(around: verticesToCheck)
+        onModelDidChange?()
     }
 
     /// Moves a vertex to a new point. This is a low-level operation
@@ -363,6 +479,7 @@ class WireGraph { // swiftlint:disable:this type_body_length
         
         // Clean up
         self.dragState = nil
+        onModelDidChange?()
     }
     
     // MARK: - Graph Normalization
@@ -848,49 +965,27 @@ class WireGraph { // swiftlint:disable:this type_body_length
         return discoveredNets
     }
     
-    public func syncPins(for instance: SymbolInstance, of symbol: Symbol, ownerID: UUID) {
-        // Calculate the symbol's rotation and position transforms once.
-        let transform = CGAffineTransform(rotationAngle: instance.rotation)
-            .concatenating(CGAffineTransform(translationX: instance.position.x, y: instance.position.y))
+    /// Synchronizes the positions of vertices owned by component pins.
+    /// This method finds vertices that were loaded from the document and moves them to their correct,
+    /// calculated positions based on the symbol's instance transform and pin definition.
+    func syncPins(
+        for symbolInstance: SymbolInstance,
+        of symbolDefinition: Symbol,
+        ownerID: UUID
+    ) {
+        for pinDef in symbolDefinition.pins {
+            let rotatedPinPos = pinDef.position.applying(CGAffineTransform(rotationAngle: symbolInstance.rotation))
+            let absolutePos = CGPoint(x: symbolInstance.position.x + rotatedPinPos.x,
+                                      y: symbolInstance.position.y + rotatedPinPos.y)
 
-        for pin in symbol.pins {
-            // Calculate the pin's absolute world position.
-            let worldPinPosition = pin.position.applying(transform)
-
-            // The vertex ownership uniquely identifies this pin by its owner (ComponentInstance) and its own ID.
-            let ownership: VertexOwnership = .pin(ownerID: ownerID, pinID: pin.id)
-            
-            // Check if a vertex for this specific pin already exists.
-            if let existingVertexID = findVertex(ownedBy: ownerID, pinID: pin.id) {
-                // If it exists, move it to the new calculated position. This is important
-                // for handling programmatic moves or symbol rotations.
-                moveVertex(id: existingVertexID, to: worldPinPosition)
+            // Look for a vertex that was created by `build(from:)` for this specific pin.
+            if let existingVertexID = findVertex(ownedBy: ownerID, pinID: pinDef.id) {
+                // If found, move it from its placeholder location to the correct absolute position.
+                moveVertex(id: existingVertexID, to: absolutePos)
             } else {
-                // If it doesn't exist, create it. `getOrCreatePinVertex` is perfect
-                // as it will also merge with any existing free vertices or wires at that location,
-                // effectively connecting the new pin to existing circuitry.
-                getOrCreatePinVertex(at: worldPinPosition, ownerID: ownerID, pinID: pin.id)
+                // If no vertex exists, this component is new or not connected. Create a new pin vertex.
+                getOrCreatePinVertex(at: absolutePos, ownerID: ownerID, pinID: pinDef.id)
             }
-        }
-    }
-
-    /// Disowns all vertices associated with a given component instance, converting them to free vertices.
-    /// This must be called when a component is deleted. It ensures that any wires connected
-    /// to the symbol's pins are not deleted, but instead remain on the canvas, attached to now-free vertices.
-    public func releasePins(for ownerID: UUID) {
-        // Find all vertices owned by the component instance being removed.
-        let vertexIDsToRelease = vertices.values
-            .filter { vertex in
-                if case .pin(let oID, _) = vertex.ownership, oID == ownerID {
-                    return true
-                }
-                return false
-            }
-            .map { $0.id }
-            
-        // Change their ownership to `.free`. The graph normalization logic will handle them from here.
-        for id in vertexIDsToRelease {
-            vertices[id]?.ownership = .free
         }
     }
 }

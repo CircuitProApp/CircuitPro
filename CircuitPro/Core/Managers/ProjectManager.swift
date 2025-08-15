@@ -1,5 +1,5 @@
 //
-//  CanvasManager 2.swift
+//  ProjectManager.swift
 //  Circuit Pro
 //
 //  Created by Giorgi Tchelidze on 4/5/25.
@@ -51,8 +51,21 @@ final class ProjectManager {
         }
     }
     
+    /// Persists the current state of the schematic graph back to the design model.
+    func persistSchematicGraph() {
+        guard selectedDesign != nil else { return }
+        selectedDesign?.wires = schematicGraph.toWires()
+    }
+    
     func rebuildCanvasNodes() {
-        // 1. Sync the wire graph model first. (Unchanged)
+        // 0. Load persisted wire data. This builds the graph structure but with
+        // pin vertices at placeholder locations.
+        if let wires = selectedDesign?.wires {
+            schematicGraph.build(from: wires)
+        }
+
+        // 1. Sync pin vertices. This finds the loaded pin vertices (by their ownership IDs)
+        // and moves them to their correct, calculated positions.
         for designComp in designComponents {
             guard let symbolDefinition = designComp.definition.symbol else { continue }
             schematicGraph.syncPins(
@@ -61,6 +74,10 @@ final class ProjectManager {
                 ownerID: designComp.id
             )
         }
+        
+        // 1a. Normalize the graph. Now that all vertices are in their final, correct
+        // positions, the graph can be cleaned up to merge points and remove redundancy.
+        schematicGraph.normalize(around: Set(schematicGraph.vertices.keys))
 
         // 2. Build the Symbol nodes.
         let symbolNodes: [SymbolNode] = designComponents.compactMap { designComp in
@@ -68,8 +85,6 @@ final class ProjectManager {
             
             let resolvedProperties = designComp.displayedProperties
             
-            // THE FIX: Call TextResolver with the new, correct signature.
-            // We now pass the specific arrays of definitions, overrides, and instances.
             let resolvedTexts = TextResolver.resolve(
                 definitions: symbolDefinition.textDefinitions,
                 overrides: designComp.instance.symbolInstance.textOverrides,
@@ -79,8 +94,6 @@ final class ProjectManager {
                 properties: resolvedProperties
             )
             
-            // This SymbolNode initializer is now correct because `resolvedTexts`
-            // is the correct `[CircuitText.Resolved]` type.
             return SymbolNode(
                 id: designComp.id,
                 instance: designComp.instance.symbolInstance,
@@ -90,11 +103,11 @@ final class ProjectManager {
             )
         }
 
-        // 3. Build the Graph node. (Unchanged)
+        // 3. Build the Graph node.
         let graphNode = SchematicGraphNode(graph: schematicGraph)
         graphNode.syncChildNodesFromModel()
 
-        // 4. Update the single source of truth for the canvas. (Unchanged)
+        // 4. Update the single source of truth for the canvas.
         let newNodeIDs = Set(symbolNodes.map(\.id) + [graphNode.id])
         let currentNodeIDs = Set(self.canvasNodes.map(\.id))
         

@@ -25,8 +25,9 @@ struct CircuitProApp: App {
                                        modelContext: ModelContainerManager.shared.container.mainContext))
                     .focusedSceneValue(\.activeDocumentID, id)
                     .onReceive(doc.objectWillChange) { _ in
-                                   doc.scheduleAutosave()
-                               }
+                        print("Observable works")
+                        doc.scheduleAutosave()
+                    }
                     .onDisappear { DocumentRegistry.shared.close(id: id) }
             }
         }

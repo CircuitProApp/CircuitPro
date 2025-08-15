@@ -57,7 +57,16 @@ struct SchematicCanvasView: View {
             SchematicToolbarView(selectedSchematicTool: $selectedTool)
                 .padding(16)
         }
-        .onAppear(perform: projectManager.rebuildCanvasNodes)
+        .onAppear {
+            projectManager.rebuildCanvasNodes()
+            // Connect the graph's change handler to the persistence logic.
+            // This ensures that whenever a wire is added, deleted, or moved,
+            // the changes are saved back to the document model.
+            projectManager.schematicGraph.onModelDidChange = {
+                projectManager.persistSchematicGraph()
+                document.scheduleAutosave()
+            }
+        }
         .onChange(of: projectManager.designComponents) {
              // When the underlying data model changes, just tell the manager to rebuild.
             projectManager.rebuildCanvasNodes()
@@ -123,4 +132,3 @@ struct SchematicCanvasView: View {
         return true
     }
 }
-
