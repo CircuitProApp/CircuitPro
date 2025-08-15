@@ -140,20 +140,7 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
             .onHover { self.isHovering = $0 }
             
             // 8.2. User-provided handle view
-            HStack {
-                handle
-                Button {
-                    self.isCollapsed.toggle()
-                } label: {
-                    Image(systemName: CircuitProSymbols.Workspace.toggleUtilityArea)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 13, height: 13)
-                        .fontWeight(.light)
-                }
-                .buttonStyle(.borderless)
-            }
-            .padding(.horizontal, 12.5)
+            handle
         }
         .frame(height: handleHeight)
         .background(.ultraThinMaterial)

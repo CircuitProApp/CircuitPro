@@ -48,17 +48,15 @@ struct SymbolCanvasView: View {
                 ],
                 snapProvider: CircuitProSnapProvider()
             )
+            .onCanvasChange { context in
+                canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
+            }
             .overlay(alignment: .leading) {
                 SymbolDesignToolbarView()
                     .padding(10)
             }
         } handle: {
-            HStack {
-                SnappingControlView()
-                Spacer()
-                GridSpacingControlView()
-                ZoomControlView()
-            }
+            CanvasStatusBarView(isCollapsed: $isCollapsed, configuration: .fixedGrid)
         } secondary: {
             Text("WIP")
         }

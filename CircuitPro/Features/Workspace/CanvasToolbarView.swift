@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A generic toolbar driven by an array of `CanvasTool` instances.
-struct ToolbarView: View {
+struct CanvasToolbarView: View {
 
     // MARK: - Properties
     

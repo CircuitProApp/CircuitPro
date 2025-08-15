@@ -11,7 +11,7 @@ struct SymbolDesignToolbarView: View {
 
     var body: some View {
         @Bindable var manager = componentDesignManager.symbolEditor
-        ToolbarView(
+        CanvasToolbarView(
             tools: CanvasToolRegistry.symbolDesignTools,
             selectedTool: $manager.selectedTool.unwrapping(withDefault: CursorTool()),
             dividerBefore: { $0 is PinTool },

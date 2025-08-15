@@ -11,7 +11,7 @@ struct SchematicToolbarView: View {
     @Binding var selectedSchematicTool: CanvasTool
 
     var body: some View {
-        ToolbarView(
+        CanvasToolbarView(
             tools: CanvasToolRegistry.schematicTools,
             selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool()),
             dividerAfter: { $0 is CursorTool }

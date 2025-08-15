@@ -51,11 +51,7 @@ struct EditorView: View {
                 }
 
             } handle: {
-                StatusBarView(
-                    canvasManager: selectedCanvasManager,
-                    editorType: selectedEditor
-                )
-           
+                CanvasStatusBarView(isCollapsed: $showUtilityArea)
             } secondary: {
                 UtilityAreaView()
             }
