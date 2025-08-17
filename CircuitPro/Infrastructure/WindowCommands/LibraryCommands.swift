@@ -6,22 +6,16 @@
 //
 
 import SwiftUI
+import SwiftDataPacks
 
 struct LibraryCommands: Commands {
+    @PackManager private var packManager
     var body: some Commands {
         CommandGroup(after: .toolbar) {
             Button("Component Library") {
                  LibraryPanelManager.toggle()
             }
             .keyboardShortcut("l", modifiers: [.command, .shift])
-
-            #if DEBUG
-            Divider()
-
-            Button("Export Populated App Library...") {
-                DeveloperTools.exportAndSavePopulatedLibrary()
-            }
-            #endif
         }
     }
 }

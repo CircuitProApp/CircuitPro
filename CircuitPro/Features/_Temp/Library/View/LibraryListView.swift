@@ -69,7 +69,7 @@ struct LibraryListView: View {
                         }
                     }
                 }
-                .frame(width: 272)
+                
                 
                 
                 
@@ -79,8 +79,6 @@ struct LibraryListView: View {
         } else {
             Text("No Matches")
                 .foregroundStyle(.secondary)
-                .frame(width: 272)
-                .frame(maxHeight: .infinity)
         }
         
     }

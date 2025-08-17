@@ -16,6 +16,7 @@ struct CircuitProApp: App {
             .commands {
                 CircuitProCommands()
             }
+     
         
         WindowGroup(for: DocumentID.self) { $docID in
             if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {

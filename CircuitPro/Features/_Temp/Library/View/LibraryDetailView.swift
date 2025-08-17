@@ -25,7 +25,7 @@ struct LibraryDetailView: View {
             } else {
                 // If nothing is selected, show the placeholder text.
                 Text("Nothing Selected")
-                    .font(.title)
+                    .font(.title2)
                     .foregroundStyle(.secondary)
             }
         }

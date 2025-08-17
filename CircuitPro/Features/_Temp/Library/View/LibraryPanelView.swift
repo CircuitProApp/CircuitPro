@@ -43,7 +43,20 @@ struct LibraryPanelView: View {
             HStack(spacing: 0) {
                 // Using List with a selection binding is the standard SwiftUI way to create a selectable list.
                 // It's lazy and handles row highlighting automatically.
-                LibraryListView(filteredComponents: filteredComponents, selectedComponentID: $selectedComponentID)
+                Group {
+                    switch selectedMode {
+                    case .all:
+                        LibraryListView(filteredComponents: filteredComponents, selectedComponentID: $selectedComponentID)
+                        
+                    case .user:
+                        Text("Jello")
+                    case .packs:
+                        PacksView()
+                    }
+                }
+                .frame(width: 272)
+                .frame(maxHeight: .infinity)
+          
                 Divider()
                 
                 // This is the detail view. It now dynamically updates based on the selection.
