@@ -12,7 +12,6 @@ import SwiftData
 @Observable
 final class ProjectManager {
 
-    let modelContext: ModelContext
     var project: CircuitProject
     var selectedDesign: CircuitDesign?
     var selectedComponentIDs: Set<UUID> = []
@@ -22,12 +21,10 @@ final class ProjectManager {
 
     init(
         project: CircuitProject,
-        selectedDesign: CircuitDesign? = nil,
-        modelContext: ModelContext
+        selectedDesign: CircuitDesign? = nil
     ) {
         self.project        = project
         self.selectedDesign = selectedDesign
-        self.modelContext   = modelContext
     }
 
     // --- Convenience properties are unchanged ---
@@ -37,18 +34,19 @@ final class ProjectManager {
     }
 
     var designComponents: [DesignComponent] {
-        let uuids = Set(componentInstances.map(\.componentUUID))
-        guard !uuids.isEmpty else { return [] }
-
-        let request = FetchDescriptor<Component>(predicate: #Predicate { uuids.contains($0.uuid) })
-        let defs = (try? modelContext.fetch(request)) ?? []
-
-        let dict = Dictionary(uniqueKeysWithValues: defs.map { ($0.uuid, $0) })
-
-        return componentInstances.compactMap { inst in
-            guard let def = dict[inst.componentUUID] else { return nil }
-            return DesignComponent(definition: def, instance: inst)
-        }
+//        let uuids = Set(componentInstances.map(\.componentUUID))
+//        guard !uuids.isEmpty else { return [] }
+//
+//        let request = FetchDescriptor<Component>(predicate: #Predicate { uuids.contains($0.uuid) })
+//        let defs = (try? modelContext.fetch(request)) ?? []
+//
+//        let dict = Dictionary(uniqueKeysWithValues: defs.map { ($0.uuid, $0) })
+//
+//        return componentInstances.compactMap { inst in
+//            guard let def = dict[inst.componentUUID] else { return nil }
+//            return DesignComponent(definition: def, instance: inst)
+//        }
+        return []
     }
     
     /// Persists the current state of the schematic graph back to the design model.

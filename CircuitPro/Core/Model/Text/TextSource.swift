@@ -14,11 +14,11 @@ enum TextSource: Codable, Hashable {
     case `static`(String)
     
     /// The text is dynamic and derived from a component property.
-    case dynamic(DynamicProperty)
+    case dynamic(DynamicComponentProperty)
 }
 
 /// Specifies which dynamic property of a component should be displayed.
-enum DynamicProperty: Codable, Hashable {
+enum DynamicComponentProperty: Codable, Hashable {
     /// The component's unique referenceDesignatorIndex designator (e.g., "R1", "C2").
     case reference
     case componentName

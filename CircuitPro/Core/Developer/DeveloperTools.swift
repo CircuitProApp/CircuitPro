@@ -105,7 +105,7 @@ private extension DeveloperTools {
     static func createEmptySwiftDataStore(at url: URL, models: [any PersistentModel.Type]) throws {
         let schema = Schema(models)
         let config = ModelConfiguration(url: url)
-        _ = try ModelContainer(for: schema, configurations: config)
+//        _ = try ModelContainer(for: schema, configurations: config)
     }
     
     static func vacuumInto(from source: URL, to dest: URL) throws {

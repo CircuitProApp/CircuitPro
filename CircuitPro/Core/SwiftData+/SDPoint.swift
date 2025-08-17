@@ -4,6 +4,7 @@
 //
 //  Created by Giorgi Tchelidze on 4/14/25.
 //
+
 import SwiftUI
 
 struct SDPoint: Codable {

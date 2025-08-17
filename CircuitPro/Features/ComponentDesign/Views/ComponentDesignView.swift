@@ -6,14 +6,14 @@
 //
 
 import SwiftUI
+import SwiftDataPacks
 
 struct ComponentDesignView: View {
 
     @Environment(\.dismissWindow)
     private var dismissWindow
 
-    @Environment(\.modelContext)
-    private var modelContext
+    @UserContext private var userContext
 
     @State private var componentDesignManager = ComponentDesignManager()
 
@@ -21,7 +21,6 @@ struct ComponentDesignView: View {
     @State private var symbolCanvasManager = CanvasManager()
     @State private var footprintCanvasManager = CanvasManager()
 
-    // ... other state properties remain the same ...
     @State private var showError = false
     @State private var showWarning = false
     @State private var messages = [String]()
@@ -30,7 +29,6 @@ struct ComponentDesignView: View {
 
 
     var body: some View {
-        // --- THIS ENTIRE VIEW BODY REMAINS UNCHANGED ---
         Group {
             if didCreateComponent {
                 ComponentDesignSuccessView(
@@ -102,7 +100,6 @@ struct ComponentDesignView: View {
     }
 
     private func createComponent() {
-        // --- Validation logic remains the same ---
         if !componentDesignManager.validateForCreation() {
             let errorMessages = componentDesignManager.validationSummary.errors.values
                 .flatMap { $0 }
@@ -203,7 +200,7 @@ struct ComponentDesignView: View {
         )
 
         newComponent.symbol = newSymbol
-        modelContext.insert(newComponent)
+        userContext.insert(newComponent)
         didCreateComponent = true
     }
     

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		5E2704182DF5F410008B26BC /* AboutWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 5E2704172DF5F410008B26BC /* AboutWindow */; };
 		5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */; };
+		C77B0ECA2E522D9700A0227D /* SwiftDataPacks in Frameworks */ = {isa = PBXBuildFile; productRef = C77B0EC92E522D9700A0227D /* SwiftDataPacks */; };
 		C7A321B82E4E68470002FD0E /* Resolvable in Frameworks */ = {isa = PBXBuildFile; productRef = C7A321B72E4E68470002FD0E /* Resolvable */; };
 /* End PBXBuildFile section */
 
@@ -32,6 +33,7 @@
 				5E2704182DF5F410008B26BC /* AboutWindow in Frameworks */,
 				5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */,
 				C7A321B82E4E68470002FD0E /* Resolvable in Frameworks */,
+				C77B0ECA2E522D9700A0227D /* SwiftDataPacks in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,6 +79,7 @@
 				5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */,
 				5E2704172DF5F410008B26BC /* AboutWindow */,
 				C7A321B72E4E68470002FD0E /* Resolvable */,
+				C77B0EC92E522D9700A0227D /* SwiftDataPacks */,
 			);
 			productName = Electron;
 			productReference = 5E5AB35A2D9C60330069B623 /* CircuitPro.app */;
@@ -111,6 +114,7 @@
 				5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */,
 				5E2704162DF5F410008B26BC /* XCRemoteSwiftPackageReference "AboutWindow" */,
 				C7A321B62E4E68470002FD0E /* XCRemoteSwiftPackageReference "Resolvable" */,
+				C77B0EC82E522D9700A0227D /* XCRemoteSwiftPackageReference "SwiftDataPacks" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5E5AB35B2D9C60330069B623 /* Products */;
@@ -377,6 +381,14 @@
 				kind = branch;
 			};
 		};
+		C77B0EC82E522D9700A0227D /* XCRemoteSwiftPackageReference "SwiftDataPacks" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CircuitProApp/SwiftDataPacks";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		C7A321B62E4E68470002FD0E /* XCRemoteSwiftPackageReference "Resolvable" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/CircuitProApp/Resolvable";
@@ -397,6 +409,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */;
 			productName = WelcomeWindow;
+		};
+		C77B0EC92E522D9700A0227D /* SwiftDataPacks */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C77B0EC82E522D9700A0227D /* XCRemoteSwiftPackageReference "SwiftDataPacks" */;
+			productName = SwiftDataPacks;
 		};
 		C7A321B72E4E68470002FD0E /* Resolvable */ = {
 			isa = XCSwiftPackageProductDependency;

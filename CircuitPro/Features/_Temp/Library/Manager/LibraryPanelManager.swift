@@ -7,7 +7,7 @@
 //
 
 import SwiftUI
-
+import SwiftDataPacks
 
 class LibraryPanelManager {
     private static var libraryPanel: NSPanel?
@@ -43,7 +43,7 @@ class LibraryPanelManager {
 
         
         let rootView = LibraryPanelView()
-                .modelContainer(ModelContainerManager.shared.container)
+            .packContainer(for: [Component.self, Symbol.self, Footprint.self])
         
         let hostingController = NSHostingController(rootView: rootView)
         panel.contentViewController = hostingController

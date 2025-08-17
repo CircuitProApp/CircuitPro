@@ -6,23 +6,22 @@
 //
 
 import SwiftUI
-import SwiftData
+import SwiftDataPacks
 
 @main
 struct CircuitProApp: App {
+    
     var body: some Scene {
         WelcomeWindowScene()
             .commands {
                 CircuitProCommands()
             }
-
+        
         WindowGroup(for: DocumentID.self) { $docID in
             if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {
                 WorkspaceView(document: doc)
-                    .modelContainer(ModelContainerManager.shared.container)
-                    .environment(\.projectManager,
-                        ProjectManager(project: doc.model,
-                                       modelContext: ModelContainerManager.shared.container.mainContext))
+                    .packContainer(for: [Component.self, Symbol.self, Footprint.self])
+                    .environment(\.projectManager, ProjectManager(project: doc.model))
                     .focusedSceneValue(\.activeDocumentID, id)
                     .onReceive(doc.objectWillChange) { _ in
                         print("Observable works")
@@ -35,13 +34,16 @@ struct CircuitProApp: App {
         .windowToolbarStyle(.unifiedCompact)
         .restorationBehavior(.disabled)
         .defaultLaunchBehavior(.suppressed)
-
+        
         Window("Component Design", id: "ComponentDesignWindow") {
             ComponentDesignView()
                 .frame(minWidth: 800, minHeight: 600)
-                .modelContainer(ModelContainerManager.shared.container)
+                .packContainer(for: [Component.self, Symbol.self, Footprint.self])
+            
         }
-
+        
+        
         AboutWindowScene()
     }
 }
+

@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
+import SwiftDataPacks
 
 struct LibraryListView: View {
     
-    
-    @Environment(\.modelContext) private var modelContext
+    @UserContext private var userContext
     
     var filteredComponents: [Component] = []
     @Binding var selectedComponentID: UUID?
@@ -38,13 +38,13 @@ struct LibraryListView: View {
                                     ComponentListRowView(component: component, category: category, selectedComponentID: $selectedComponentID)
                                         .padding(.horizontal, 6)
                                         .contentShape(.rect)
-                                        #if DEBUG
+#if DEBUG
                                         .contextMenu {
                                             Button("Delete") {
-                                                modelContext.delete(component)
+                                                userContext.delete(component)
                                             }
                                         }
-                                        #endif
+#endif
                                     
                                     
                                     
@@ -116,7 +116,7 @@ struct ComponentListRowView: View {
         .padding(4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
-        .draggableIfPresent(TransferableComponent(component: component), onDragInitiated: LibraryPanelManager.hide)
+        .draggable(TransferableComponent(component: component), onDragInitiated: LibraryPanelManager.hide)
         .background(isSelected ? Color.blue : Color.clear)
         .clipShape(.rect(cornerRadius: 8))
         .onTapGesture {

@@ -1,5 +1,5 @@
 //
-//  DraggableWithCallbackModifier.swift
+//  View+draggable.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 8/12/25.
@@ -9,7 +9,7 @@ import SwiftUI
 
 extension View {
     @ViewBuilder
-    func draggableIfPresent<T: DraggableTransferable>( // Constrained to our new protocol
+    func draggable<T: DraggableTransferable>(
         _ item: T?,
         onDragInitiated: (() -> Void)? = nil
     ) -> some View {

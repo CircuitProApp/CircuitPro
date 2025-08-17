@@ -13,6 +13,9 @@ struct WorkspaceView: View {
     @Environment(\.projectManager)
     private var projectManager
     
+    @Query private var components: [Component]
+
+    
     var document: CircuitProjectFileDocument
     
     @State private var showInspector: Bool = false
@@ -84,32 +87,35 @@ struct WorkspaceView: View {
         .frame(minWidth: 800, minHeight: 600)
         .inspector(isPresented: $showInspector) {
             InspectorView()
-            .inspectorColumnWidth(min: 260, ideal: 260, max: 1000)
+            .inspectorColumnWidth(min: 200, ideal: 260, max: 1000)
         }
         .onAppear {
             if projectManager.project.designs.isNotEmpty {
                 projectManager.selectedDesign = projectManager.project.designs.first!
+            }
+            for component in components {
+                print(component.name)
             }
         }
         
         
         .onAppear {
 #if !DEBUG
-            Task {
-                do {
-                    if let newVersion = try await LibraryUpdater.checkForUpdates() {
-                        alertTitle = "Library Updated"
-                        // The new, more accurate message:
-                        alertMessage = "The component library has been successfully updated to version \(newVersion) and is ready to use."
-                        showingUpdateAlert = true
-                    }
-                } catch {
-                    // If an error occurred, show an error alert
-                    alertTitle = "Update Failed"
-                    alertMessage = "Could not update the component library. Please check your internet connection and try again later. Error: \(error.localizedDescription)"
-                    showingUpdateAlert = true
-                }
-            }
+//            Task {
+//                do {
+//                    if let newVersion = try await LibraryUpdater.checkForUpdates() {
+//                        alertTitle = "Library Updated"
+//                        // The new, more accurate message:
+//                        alertMessage = "The component library has been successfully updated to version \(newVersion) and is ready to use."
+//                        showingUpdateAlert = true
+//                    }
+//                } catch {
+//                    // If an error occurred, show an error alert
+//                    alertTitle = "Update Failed"
+//                    alertMessage = "Could not update the component library. Please check your internet connection and try again later. Error: \(error.localizedDescription)"
+//                    showingUpdateAlert = true
+//                }
+//            }
 #endif
         }
         .alert(isPresented: $showingUpdateAlert) {

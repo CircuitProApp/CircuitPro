@@ -1,5 +1,5 @@
 {
-  "originHash" : "a9e250fda5bff1e25b6cafa00bd924d157fa358c6b58aa1afb09c5e3ba34349d",
+  "originHash" : "4d7ef784113fc47cf8294a3072c80c9a97b1b4eccbbd2e3fe5a147e58d8108e6",
   "pins" : [
     {
       "identity" : "aboutwindow",
@@ -35,6 +35,15 @@
       "state" : {
         "revision" : "0687f71944021d616d34d922343dcef086855920",
         "version" : "600.0.1"
+      }
+    },
+    {
+      "identity" : "swiftdatapacks",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/CircuitProApp/SwiftDataPacks",
+      "state" : {
+        "branch" : "main",
+        "revision" : "94f4a7607995122cfeea595aaa4bb959dd644ab2"
       }
     },
     {

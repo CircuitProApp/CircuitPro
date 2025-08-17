@@ -91,44 +91,44 @@ struct SchematicCanvasView: View {
     
     /// Handles dropping a new component onto the canvas from a library.
     private func handleComponentDrop(pasteboard: NSPasteboard, location: CGPoint) -> Bool {
-        guard let data = pasteboard.data(forType: .transferableComponent),
-              let transferable = try? JSONDecoder().decode(TransferableComponent.self, from: data) else {
-            return false
-        }
-        
-        let fetchDescriptor = FetchDescriptor<Component>(predicate: #Predicate { $0.uuid == transferable.componentUUID })
-        guard let componentDefinition = (try? projectManager.modelContext.fetch(fetchDescriptor))?.first,
-              let symbolDefinition = componentDefinition.symbol else {
-            return false
-        }
-        
-        let instances = projectManager.componentInstances
-        let nextRefIndex = (instances.filter { $0.componentUUID == componentDefinition.uuid }.map(\.referenceDesignatorIndex).max() ?? 0) + 1
-        
-        let newSymbolInstance = SymbolInstance(
-            symbolUUID: symbolDefinition.uuid,
-            position: location,
-            cardinalRotation: .east
-        )
-        let newComponentInstance = ComponentInstance(
-            componentUUID: componentDefinition.uuid,
-            propertyInstances: [],
-            symbolInstance: newSymbolInstance,
-            footprintInstance: nil,
-            reference: nextRefIndex
-        )
-        
-        projectManager.selectedDesign?.componentInstances.append(newComponentInstance)
-        
-        // Sync the graph model for the new component.
-        projectManager.schematicGraph.syncPins(
-            for: newSymbolInstance,
-            of: symbolDefinition,
-            ownerID: newComponentInstance.id
-        )
-        
-        document.scheduleAutosave()
-        
+//        guard let data = pasteboard.data(forType: .transferableComponent),
+//              let transferable = try? JSONDecoder().decode(TransferableComponent.self, from: data) else {
+//            return false
+//        }
+//        
+//        let fetchDescriptor = FetchDescriptor<Component>(predicate: #Predicate { $0.uuid == transferable.componentUUID })
+//        guard let componentDefinition = (try? projectManager.modelContext.fetch(fetchDescriptor))?.first,
+//              let symbolDefinition = componentDefinition.symbol else {
+//            return false
+//        }
+//        
+//        let instances = projectManager.componentInstances
+//        let nextRefIndex = (instances.filter { $0.componentUUID == componentDefinition.uuid }.map(\.referenceDesignatorIndex).max() ?? 0) + 1
+//        
+//        let newSymbolInstance = SymbolInstance(
+//            symbolUUID: symbolDefinition.uuid,
+//            position: location,
+//            cardinalRotation: .east
+//        )
+//        let newComponentInstance = ComponentInstance(
+//            componentUUID: componentDefinition.uuid,
+//            propertyInstances: [],
+//            symbolInstance: newSymbolInstance,
+//            footprintInstance: nil,
+//            reference: nextRefIndex
+//        )
+//        
+//        projectManager.selectedDesign?.componentInstances.append(newComponentInstance)
+//        
+//        // Sync the graph model for the new component.
+//        projectManager.schematicGraph.syncPins(
+//            for: newSymbolInstance,
+//            of: symbolDefinition,
+//            ownerID: newComponentInstance.id
+//        )
+//        
+//        document.scheduleAutosave()
+//        
         return true
     }
 }
