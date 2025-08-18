@@ -10,16 +10,19 @@ import SwiftDataPacks
 
 struct AllComponentsView: View {
     
+    @Environment(LibraryManager.self) private var manager
     @UserContext private var userContext
     
-    var filteredComponents: [Component] = []
-    @Binding var selectedComponentID: UUID?
+    @Query private var allComponents: [Component]
     
-    init(filteredComponents: [Component], selectedComponentID: Binding<UUID?>) {
-        self.filteredComponents = filteredComponents
-        self._selectedComponentID = selectedComponentID
-        
-        
+    @State private var selectedComponentID: UUID?
+    
+    private var filteredComponents: [Component] {
+        if manager.searchText.isEmpty {
+            return allComponents
+        } else {
+            return allComponents.filter { $0.name.localizedCaseInsensitiveContains(manager.searchText) }
+        }
     }
     
     var body: some View {
@@ -35,7 +38,6 @@ struct AllComponentsView: View {
                                 ForEach(componentsInCategory) { component in
                                     ComponentListRowView(component: component, selectedComponentID: $selectedComponentID)
                                         .padding(.horizontal, 6)
-                                        .contentShape(.rect)
 #if DEBUG
                                         .contextMenu {
                                             Button("Delete") {

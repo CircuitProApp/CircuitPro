@@ -10,44 +10,27 @@ import SwiftData
 
 struct LibraryPanelView: View {
     
-    @State private var searchText: String = ""
-    
-    // This state variable will store the ID of the selected component.
-    // It's optional because nothing is selected at first.
     @State private var selectedComponentID: UUID?
     
     @State private var selectedMode: LibraryMode = .all
     
-    // Kept the @Query as you requested.
-    @Query private var components: [Component]
-    
-    // Filters components based on search text. This remains the same.
-    private var filteredComponents: [Component] {
-        if searchText.isEmpty {
-            return components
-        } else {
-            return components.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-        }
-    }
-    
     // A computed property to easily find the full Component object from the selected ID.
     @State private var selectedComponent: Component?
     
+    @State private var libraryManager: LibraryManager = LibraryManager()
+    
     var body: some View {
+        @Bindable var bindableManager = libraryManager
         VStack(alignment: .leading, spacing: 0) {
-            LibrarySearchView(searchText: $searchText)
+            LibrarySearchView(searchText: $bindableManager.searchText)
             Divider()
             LibraryModeView(selectedMode: $selectedMode)
             Divider()
-            
             HStack(spacing: 0) {
-                // Using List with a selection binding is the standard SwiftUI way to create a selectable list.
-                // It's lazy and handles row highlighting automatically.
                 Group {
                     switch selectedMode {
                     case .all:
-                        AllComponentsView(filteredComponents: filteredComponents, selectedComponentID: $selectedComponentID)
-                        
+                        AllComponentsView()
                     case .user:
                         UserComponentsView()
                             .filterContainer(for: .mainStore)
@@ -57,9 +40,7 @@ struct LibraryPanelView: View {
                 }
                 .frame(width: 272)
                 .frame(maxHeight: .infinity)
-          
                 Divider()
-                
                 Group {
                     switch selectedMode {
                     case .all, .user:
@@ -69,13 +50,11 @@ struct LibraryPanelView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-    
-                
-   
             }
         }
         .frame(minWidth: 682, minHeight: 373)
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 10))
+        .environment(libraryManager)
     }
 }
