@@ -95,7 +95,7 @@ struct ComponentDesignStageContainerView: View {
             HStack {
                 Spacer()
                     .frame(width: ComponentDesignConstants.sidebarWidth)
-                ComponentDetailView()
+                ComponentDetailsView()
                 Spacer()
                     .frame(width: ComponentDesignConstants.sidebarWidth)
             }

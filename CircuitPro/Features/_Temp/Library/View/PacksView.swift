@@ -11,8 +11,8 @@ import SwiftDataPacks
 struct PacksView: View {
     
     @PackManager private var packManager
+
     var body: some View {
-        
         if packManager.installedPacks.isEmpty {
             Text("No packs installed.")
         } else {
@@ -23,6 +23,5 @@ struct PacksView: View {
             }
             .scrollContentBackground(.hidden)
         }
-        
     }
 }

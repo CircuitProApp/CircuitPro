@@ -38,14 +38,15 @@ enum LibraryMode: Displayable {
 struct LibraryModeView: View {
     @Binding var selectedMode: LibraryMode
     var body: some View {
-        HStack(spacing: 15) {
+        HStack(spacing: 8) {
             ForEach(LibraryMode.allCases) { mode in
                 Button {
                     selectedMode = mode
                 } label: {
                     Image(systemName: mode.icon)
                         .font(.title3)
-                        .scaledToFit()
+                        .frame(width: 32, height: 32)
+                        .contentShape(.rect())
                         .foregroundStyle(selectedMode == mode ? .blue : .secondary)
                         .symbolVariant(selectedMode == mode ? .fill : .none)
                 }
@@ -53,6 +54,5 @@ struct LibraryModeView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(7.5)
     }
 }

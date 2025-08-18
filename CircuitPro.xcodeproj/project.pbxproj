@@ -17,9 +17,24 @@
 		5E5AB35A2D9C60330069B623 /* CircuitPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CircuitPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C7DCAF062E5329E4000D2C17 /* Exceptions for "CircuitPro" folder in "CircuitPro" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				App/Info.plist,
+				Core/Model/Wire/ConnectionCreationBehavior.md,
+				Core/Model/Wire/ConnectionMovementBehavior.md,
+			);
+			target = 5E5AB3592D9C60330069B623 /* CircuitPro */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		5E5AB35C2D9C60330069B623 /* CircuitPro */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C7DCAF062E5329E4000D2C17 /* Exceptions for "CircuitPro" folder in "CircuitPro" target */,
+			);
 			path = CircuitPro;
 			sourceTree = "<group>";
 		};

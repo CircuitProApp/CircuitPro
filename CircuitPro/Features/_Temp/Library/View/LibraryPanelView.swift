@@ -19,7 +19,7 @@ struct LibraryPanelView: View {
     @State private var selectedMode: LibraryMode = .all
     
     // Kept the @Query as you requested.
-    private var components: [Component] = []
+    @Query private var components: [Component]
     
     // Filters components based on search text. This remains the same.
     private var filteredComponents: [Component] {
@@ -46,10 +46,11 @@ struct LibraryPanelView: View {
                 Group {
                     switch selectedMode {
                     case .all:
-                        LibraryListView(filteredComponents: filteredComponents, selectedComponentID: $selectedComponentID)
+                        AllComponentsView(filteredComponents: filteredComponents, selectedComponentID: $selectedComponentID)
                         
                     case .user:
-                        Text("Jello")
+                        UserComponentsView()
+                            .filterContainer(for: .mainStore)
                     case .packs:
                         PacksView()
                     }
@@ -59,8 +60,18 @@ struct LibraryPanelView: View {
           
                 Divider()
                 
-                // This is the detail view. It now dynamically updates based on the selection.
-               LibraryDetailView(selectedComponent: $selectedComponent)
+                Group {
+                    switch selectedMode {
+                    case .all, .user:
+                       ComponentDetailView(selectedComponent: $selectedComponent)
+                    case .packs:
+                        Text("Pack detail view goes here")
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+    
+                
+   
             }
         }
         .frame(minWidth: 682, minHeight: 373)

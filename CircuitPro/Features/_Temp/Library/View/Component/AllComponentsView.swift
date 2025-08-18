@@ -1,5 +1,5 @@
 //
-//  LibraryListView.swift
+//  AllComponentsView.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 8/11/25.
@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftDataPacks
 
-struct LibraryListView: View {
+struct AllComponentsView: View {
     
     @UserContext private var userContext
     
@@ -22,8 +22,6 @@ struct LibraryListView: View {
         
     }
     
-    
-    
     var body: some View {
         if filteredComponents.isNotEmpty {
             ScrollView {
@@ -35,7 +33,7 @@ struct LibraryListView: View {
                         if !componentsInCategory.isEmpty {
                             Section {
                                 ForEach(componentsInCategory) { component in
-                                    ComponentListRowView(component: component, category: category, selectedComponentID: $selectedComponentID)
+                                    ComponentListRowView(component: component, selectedComponentID: $selectedComponentID)
                                         .padding(.horizontal, 6)
                                         .contentShape(.rect)
 #if DEBUG
@@ -45,81 +43,23 @@ struct LibraryListView: View {
                                             }
                                         }
 #endif
-                                    
-                                    
-                                    
                                 }
                             } header: {
-                                
                                 Text(category.label)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(2.5)
                                     .background(.ultraThinMaterial)
-                                
-                                
-                                
-                                
+                                 
                             }
-                            
-                            
-                            
-                            
                         }
                     }
                 }
-                
-                
-                
-                
-                
             }
-            
         } else {
             Text("No Matches")
                 .foregroundStyle(.secondary)
         }
-        
-    }
-}
-
-
-struct ComponentListRowView: View {
-    
-    var component: Component
-    var category: ComponentCategory
-    @Binding var selectedComponentID: UUID?
-    
-    private var isSelected: Bool {
-        selectedComponentID == component.uuid
-    }
-    
-    var body: some View {
-        HStack {
-            Text(component.referenceDesignatorPrefix)
-            
-                .frame(width: 32, height: 32)
-                .background(category.color ?? .accentColor)
-                .clipShape(.rect(cornerRadius: 5))
-                .font(.subheadline)
-                .fontDesign(.rounded)
-                .foregroundStyle(.white)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-            Text(component.name)
-                .foregroundStyle(isSelected ? .white : .primary)
-        }
-        
-        .padding(4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(.rect)
-        .draggable(TransferableComponent(component: component), onDragInitiated: LibraryPanelManager.hide)
-        .background(isSelected ? Color.blue : Color.clear)
-        .clipShape(.rect(cornerRadius: 8))
-        .onTapGesture {
-            selectedComponentID = component.uuid
-        }
-        .preventWindowMove()
     }
 }

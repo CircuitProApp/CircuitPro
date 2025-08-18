@@ -1,5 +1,5 @@
 //
-//  ComponentDetailView.swift
+//  ComponentDetailsView.swift
 //  Circuit Pro
 //
 //  Created by Giorgi Tchelidze on 4/28/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ComponentDetailView: View {
+struct ComponentDetailsView: View {
 
     @Environment(ComponentDesignManager.self) private var componentDesignManager
 

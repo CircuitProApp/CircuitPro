@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import SwiftDataPacks
 
 private struct ProjectManagerKey: EnvironmentKey {
     static let defaultValue: ProjectManager = ProjectManager(

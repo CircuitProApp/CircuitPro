@@ -6,10 +6,8 @@
 //
 
 import SwiftUI
-import SwiftDataPacks
 
 struct LibraryCommands: Commands {
-    @PackManager private var packManager
     var body: some Commands {
         CommandGroup(after: .toolbar) {
             Button("Component Library") {

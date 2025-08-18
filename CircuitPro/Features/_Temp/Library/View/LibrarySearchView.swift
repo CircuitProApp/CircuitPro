@@ -6,16 +6,14 @@
 //
 
 import SwiftUI
+import AppKit
 import SwiftDataPacks
 
 struct LibrarySearchView: View {
     
-//    @PackManager private var packManager
+    @PackManager private var packManager
     
     @Binding var searchText: String
-    @State private var isExporterPresented: Bool = false
-    @State private var documentToExport: PackDirectoryDocument?
-    
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -28,6 +26,7 @@ struct LibrarySearchView: View {
                 .focused($isFocused)
                 .onAppear { isFocused = true }
             Spacer(minLength: 0)
+            
             if searchText.isNotEmpty {
                 Button {
                     searchText = ""
@@ -38,36 +37,50 @@ struct LibrarySearchView: View {
                         .font(.title3)
                 }
                 .buttonStyle(.plain)
-                
             }
-//            Button {
-//                do {
-//                    let (doc, _) = try packManager.exportMainStoreAsPack(title: "Base", version: 1)
-//                    
-//                    self.documentToExport = doc
-//                    self.isExporterPresented = true
-//                } catch {
-//                    print("Export failed: \(error.localizedDescription)")
-//                }
-//            } label: {
-//                Text("E")
-//            }
-
+            
+            Button("E") {
+                exportWithSavePanel()
+            }
+            Button("I") {
+                importPack()
+            }
         }
         .padding(13)
         .font(.title2)
-//        .fileExporter(
-//            isPresented: $isExporterPresented,
-//            document: documentToExport,
-//            contentType: .folder,
-//            defaultFilename: "Base"
-//        ) { result in
-//            switch result {
-//            case .success(let url):
-//                print("Saved to \(url)")
-//            case .failure(let error):
-//                print("Save failed: \(error.localizedDescription)")
-//            }
-//        }
+    }
+    
+    private func importPack() {
+        let openPanel = NSOpenPanel()
+        openPanel.title = "Import Pack"
+        openPanel.canChooseDirectories = true
+        
+        if openPanel.runModal() == .OK, let url = openPanel.url {
+            packManager.installPack(from: url)
+        }
+    }
+    
+    private func exportWithSavePanel() {
+        do {
+            let (doc, _) = try packManager.exportMainStoreAsPack(title: "Base", version: 1)
+
+            let savePanel = NSSavePanel()
+            savePanel.title = "Export Pack"
+            savePanel.nameFieldStringValue = "Base"
+            savePanel.canCreateDirectories = true
+            savePanel.allowedContentTypes = [.folder]
+
+            if savePanel.runModal() == .OK, let url = savePanel.url {
+                do {
+                    let wrapper = try doc.asFileWrapper()
+                    try wrapper.write(to: url, options: .atomic, originalContentsURL: nil)
+                    print("Saved to \(url)")
+                } catch {
+                    print("Save failed: \(error.localizedDescription)")
+                }
+            }
+        } catch {
+            print("Export failed: \(error.localizedDescription)")
+        }
     }
 }

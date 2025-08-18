@@ -1,5 +1,5 @@
 //
-//  LibraryDetailView.swift
+//  ComponentDetailView.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 8/18/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct LibraryDetailView: View {
+struct ComponentDetailView: View {
     
     @Binding var selectedComponent: Component?
     var body: some View {
@@ -29,6 +29,6 @@ struct LibraryDetailView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    
     }
 }

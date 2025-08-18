@@ -40,9 +40,7 @@ struct CircuitProApp: App {
             ComponentDesignView()
                 .frame(minWidth: 800, minHeight: 600)
                 .packContainer(for: [Component.self, Symbol.self, Footprint.self])
-            
         }
-        
         
         AboutWindowScene()
     }
