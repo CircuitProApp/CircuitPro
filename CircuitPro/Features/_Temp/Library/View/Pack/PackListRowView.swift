@@ -25,15 +25,11 @@ struct PackListRowView: View {
                 .frame(width: 32, height: 32)
                 .font(.title)
             Text(pack.metadata.title)
-                .font(.headline)
-            
             Spacer()
             Text("v" + pack.metadata.version.description)
                 .foregroundStyle(.secondary)
         }
         .padding(4)
-        
-        
         .background(isSelected ? Color.blue : Color.clear)
         .contentShape(.rect())
         .clipShape(.rect(cornerRadius: 8))

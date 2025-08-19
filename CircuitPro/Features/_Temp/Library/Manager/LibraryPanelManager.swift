@@ -21,11 +21,19 @@ class LibraryPanelManager {
     public static func show(onDismiss: @escaping () -> Void) {
         guard libraryPanel == nil else { return }
 
-        // Store the dismiss handler to be called later.
         self.onDismiss = onDismiss
-        
+
+        let initialSize = NSSize(width: 600, height: 400) // pick a reasonable default
+        let screenFrame = NSScreen.main?.frame ?? .zero
+        let initialRect = NSRect(
+            x: (screenFrame.width - initialSize.width) / 2,
+            y: (screenFrame.height - initialSize.height) / 2,
+            width: initialSize.width,
+            height: initialSize.height
+        )
+
         let panel = KeyActivatingPanel(
-            contentRect: .zero,
+            contentRect: initialRect,
             styleMask: [.borderless, .fullSizeContentView, .resizable],
             backing: .buffered,
             defer: false
@@ -41,10 +49,9 @@ class LibraryPanelManager {
         panel.backgroundColor = .clear
         panel.hasShadow = true
 
-        
         let rootView = LibraryPanelView()
             .packContainer(for: [Component.self, Symbol.self, Footprint.self])
-        
+
         let hostingController = NSHostingController(rootView: rootView)
         panel.contentViewController = hostingController
 
@@ -55,9 +62,11 @@ class LibraryPanelManager {
         ) { _ in
             panel.close()
         }
-        
+
+        // Make sure it's centered after layout is known
         panel.center()
         panel.makeKeyAndOrderFront(nil)
+
         self.libraryPanel = panel
     }
 

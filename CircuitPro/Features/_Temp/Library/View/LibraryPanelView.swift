@@ -53,7 +53,7 @@ struct LibraryPanelView: View {
             }
         }
         .frame(minWidth: 682, minHeight: 373)
-        .background(.thinMaterial)
+        .background(.regularMaterial)
         .clipShape(.rect(cornerRadius: 10))
         .environment(libraryManager)
     }
