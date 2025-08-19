@@ -35,24 +35,18 @@ public struct GroupedList<Content: View, ID: Hashable>: View {
 
     public var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading,
-                       spacing: 0,
-                       pinnedViews: [.sectionHeaders]) {
+            LazyVStack(
+                spacing: 0,
+                pinnedViews: [.sectionHeaders]
+            ) {
                 ForEach(sections: content) { section in
                     Section {
                         VStack(spacing: configuration.listRowSpacing) {
                             ForEach(subviews: section.content) { subview in
-                                let id: ID? = {
-                                    if let erased = subview.containerValues[keyPath: \.listIDErased],
-                                       let typed = erased as? ID {
-                                        return typed
-                                    }
-                                    if let fallback = subview.id as? ID {
-                                        return fallback
-                                    }
-                                    return nil
-                                }()
-                                if let id {
+                                // Only wrap rows that explicitly opted into selection AND provided an ID.
+                                if subview.containerValues[keyPath: \.listRowSelectable],
+                                   let erased = subview.containerValues[keyPath: \.listIDErased],
+                                   let id = erased as? ID {
                                     SelectableRow(
                                         row: subview,
                                         id: id,

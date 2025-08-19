@@ -43,7 +43,6 @@ struct RemotePackListRowView: View {
             if isDownloading {
                 ProgressView()
                     .progressViewStyle(.circular)
-                    .frame(width: 90) // Reserve space to prevent layout shift
             } else {
                 Button {
                     onDownload()
@@ -51,11 +50,9 @@ struct RemotePackListRowView: View {
                     Image(systemName: "arrow.down")
                         .symbolVariant(.circle)
                         .foregroundStyle(.blue)
-                        .frame(width: 90)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 8)
     }
 }

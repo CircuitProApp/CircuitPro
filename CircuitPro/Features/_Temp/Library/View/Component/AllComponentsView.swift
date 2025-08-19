@@ -15,7 +15,7 @@ struct AllComponentsView: View {
     
     @Query private var allComponents: [Component]
     
-    @State private var selectedComponentID: UUID?
+    @State private var selectedComponent: Component?
     
     private var filteredComponents: [Component] {
         if manager.searchText.isEmpty {
@@ -27,7 +27,7 @@ struct AllComponentsView: View {
     
     var body: some View {
         if filteredComponents.isNotEmpty {
-            GroupedList {
+            GroupedList(selection: $selectedComponent) {
                 ForEach(ComponentCategory.allCases) { category in
                     // Filter the components for the current category.
                     let componentsInCategory = filteredComponents.filter { $0.category == category }
@@ -35,7 +35,8 @@ struct AllComponentsView: View {
                     if !componentsInCategory.isEmpty {
                         Section {
                             ForEach(componentsInCategory) { component in
-                                ComponentListRowView(component: component, selectedComponentID: $selectedComponentID)
+                                ComponentListRowView(component: component)
+                                    .listID(component)
                             }
                         } header: {
                             Text(category.label)
@@ -46,10 +47,12 @@ struct AllComponentsView: View {
                     }
                 }
             }
-            .groupedListConfiguration { configuration in
-                configuration.isHudListStyle = true
-                configuration.listHeaderPadding = .init(top: 2, leading: 8, bottom: 2, trailing: 8)
-                configuration.listPadding = .all(7.5)
+            .listConfiguration { configuration in
+                configuration.headerStyle = .hud
+                configuration.headerPadding = .init(top: 2, leading: 8, bottom: 2, trailing: 8)
+                configuration.listPadding = .all(8)
+                configuration.listRowPadding = .all(4)
+                configuration.selectionCornerRadius = 8
       
             }
         } else {

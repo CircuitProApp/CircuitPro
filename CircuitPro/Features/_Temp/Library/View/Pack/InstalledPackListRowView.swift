@@ -54,6 +54,5 @@ struct InstalledPackListRowView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 8)
     }
 }

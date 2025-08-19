@@ -36,7 +36,9 @@ public struct PlainList<Content: View, ID: Hashable>: View {
         ScrollView {
             LazyVStack(spacing: configuration.listRowSpacing) {
                 ForEach(subviews: content) { subview in
-                    if let erased = subview.containerValues[keyPath: \.listIDErased],
+                    // Only wrap rows that explicitly opted into selection AND provided an ID.
+                    if subview.containerValues[keyPath: \.listRowSelectable],
+                       let erased = subview.containerValues[keyPath: \.listIDErased],
                        let id = erased as? ID {
                         SelectableRow(
                             row: subview,
@@ -44,7 +46,7 @@ public struct PlainList<Content: View, ID: Hashable>: View {
                             mode: mode,
                             orderedIDs: $orderedIDs,
                             anchor: $anchor
-                        )                      
+                        )
                     } else {
                         subview
                     }

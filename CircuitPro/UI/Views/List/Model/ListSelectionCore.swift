@@ -7,10 +7,14 @@
 
 import SwiftUI
 
-// MARK: - ID plumbing (type-erased container value + ergonomic writer)
+// MARK: - ID plumbing (type-erased container value + explicit opt-in flag)
 
 private struct ListIDErasedKey: ContainerValueKey {
     static var defaultValue: AnyHashable? { nil }
+}
+
+private struct ListRowSelectableKey: ContainerValueKey {
+    static var defaultValue: Bool { false } // default: not selectable
 }
 
 extension ContainerValues {
@@ -18,12 +22,29 @@ extension ContainerValues {
         get { self[ListIDErasedKey.self] }
         set { self[ListIDErasedKey.self] = newValue }
     }
+    var listRowSelectable: Bool {
+        get { self[ListRowSelectableKey.self] }
+        set { self[ListRowSelectableKey.self] = newValue }
+    }
 }
 
 extension View {
     /// Attach a strongly-typed row identity used by PlainList/GroupedList selection and range-collection.
+    /// Also explicitly opt the row into selection.
     func listID<ID: Hashable>(_ id: ID) -> some View {
         containerValue(\.listIDErased, AnyHashable(id))
+            .containerValue(\.listRowSelectable, true)
+    }
+
+    /// Explicitly enable/disable row selectability (useful with fallback ID strategies).
+    func listSelectable(_ isSelectable: Bool) -> some View {
+        containerValue(\.listRowSelectable, isSelectable)
+    }
+
+    /// Explicitly clear any inherited ID and opt-out of selection at this subtree.
+    func clearListID() -> some View {
+        containerValue(\.listIDErased, nil)
+            .containerValue(\.listRowSelectable, false)
     }
 }
 

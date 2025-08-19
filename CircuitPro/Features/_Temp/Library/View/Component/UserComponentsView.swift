@@ -16,7 +16,7 @@ struct UserComponentsView: View {
     
     @Query private var userComponents: [Component]
     
-    @State private var selectedComponentID: UUID?
+    @State private var selectedComponent: Component?
     
     private var filteredComponents: [Component] {
         if manager.searchText.isEmpty {
@@ -28,38 +28,41 @@ struct UserComponentsView: View {
     
     var body: some View {
         if filteredComponents.isNotEmpty {
-            ScrollView {
-                LazyVStack(alignment: .leading, pinnedViews: .sectionHeaders) {
-                    ForEach(ComponentCategory.allCases) { category in
-                        // Filter the components for the current category.
-                        let componentsInCategory = filteredComponents.filter { $0.category == category }
-                        
-                        if !componentsInCategory.isEmpty {
-                            Section {
-                                ForEach(componentsInCategory) { component in
-                                    ComponentListRowView(component: component, selectedComponentID: $selectedComponentID)
-                                        .padding(.horizontal, 6)
-#if DEBUG
-                                        .contextMenu {
-                                            Button("Delete") {
-                                                userContext.delete(component)
-                                            }
+            GroupedList(selection: $selectedComponent) {
+                ForEach(ComponentCategory.allCases) { category in
+                    // Filter the components for the current category.
+                    let componentsInCategory = filteredComponents.filter { $0.category == category }
+                    
+                    if !componentsInCategory.isEmpty {
+                        Section {
+                            ForEach(componentsInCategory) { component in
+                                ComponentListRowView(component: component)
+                                    .listID(component)
+                                    .contextMenu {
+                                        Button("Delete Component") {
+                                            userContext.delete(component)
                                         }
-#endif
-                                }
-                            } header: {
-                                Text(category.label)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(2.5)
-                                    .background(.ultraThinMaterial)
-                                 
+                                    }
                             }
+                        } header: {
+                            Text(category.label)
+                                .font(.caption)
+                                .fontWeight(.light)
+                                .foregroundStyle(.secondary)
+                            
                         }
                     }
                 }
             }
+            .listConfiguration { configuration in
+                configuration.headerStyle = .hud
+                configuration.headerPadding = .init(top: 2, leading: 8, bottom: 2, trailing: 8)
+                configuration.listPadding = .all(8)
+                configuration.listRowPadding = .all(4)
+                configuration.selectionCornerRadius = 8
+      
+            }
+            
         } else {
             Text("No Matches")
                 .foregroundStyle(.secondary)

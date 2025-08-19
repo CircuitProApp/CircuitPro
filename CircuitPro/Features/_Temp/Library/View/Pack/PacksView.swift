@@ -45,14 +45,25 @@ struct PacksView: View {
                                     }
                                 }
                             )
-                            .groupedListTag(pack)
+                            .listID(pack)
+                            .contextMenu {
+                                Button {
+                                    packManager.removePack(id: pack.id)
+                                } label: {
+                                    Text("Delete Pack")
+                                }
+                            }
+                       
                         }
                     }
                 } header: {
                     Text("Installed")
+                        .font(.caption)
+                        .fontWeight(.light)
+                        .foregroundStyle(.secondary)
                 }
       
-                Section("Available to Download") {
+                Section {
                     switch libraryManager.loadState {
                     case .idle, .loading:
                         ProgressView()
@@ -76,21 +87,30 @@ struct PacksView: View {
                                         }
                                     }
                                 )
-                                .groupedListTag(pack)
+                                .listID(pack)
+                              
                             }
                         }
                     }
+                } header: {
+                    Text("Available to Download")
+                        .font(.caption)
+                        .fontWeight(.light)
+                        .foregroundStyle(.secondary)
+                    
                 }
         }
-        .groupedListConfiguration{ configuration in
-            configuration.isHudListStyle = true
+        .listConfiguration { configuration in
+            configuration.headerStyle = .hud
+            configuration.headerPadding = .init(top: 2, leading: 8, bottom: 2, trailing: 8)
+            configuration.listPadding = .all(8)
+            configuration.listRowPadding = .all(4)
+            configuration.selectionCornerRadius = 8
+  
         }
         .task {
             await libraryManager.fetchAvailablePacks(localPacks: packManager.installedPacks)
         }
-
-        // **FIXED:** Use onChange to react to changes in the installed packs list.
-        // This is the correct way to handle the state update after a pack is added or removed.
         .onChange(of: packManager.installedPacks) { _, newLocalPacks in
             libraryManager.resync(with: newLocalPacks)
         }
