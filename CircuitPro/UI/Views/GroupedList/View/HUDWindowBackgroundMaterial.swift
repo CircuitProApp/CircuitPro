@@ -13,6 +13,7 @@ struct HUDWindowBackgroundMaterial: NSViewRepresentable {
         let v = NSVisualEffectView()
         v.state = .active
         v.material = .hudWindow
+        v.isEmphasized = true
         v.blendingMode = .behindWindow
         return v
     }

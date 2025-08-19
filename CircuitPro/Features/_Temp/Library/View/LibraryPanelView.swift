@@ -53,7 +53,9 @@ struct LibraryPanelView: View {
             }
         }
         .frame(minWidth: 682, minHeight: 373)
-        .background(.regularMaterial)
+        .background {
+            HUDWindowBackgroundMaterial()
+        }
         .clipShape(.rect(cornerRadius: 10))
         .environment(libraryManager)
     }

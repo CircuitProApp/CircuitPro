@@ -51,15 +51,17 @@ public struct GroupedList<Content: View>: View {
                                 Divider()
                             }
                             section.header
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(configuration.listHeaderPadding)
+                                .background {
+                                    if configuration.isHudListStyle {
+                                        HUDWindowBackgroundMaterial()
+                                    }
+                                }
                             Divider()
                         }
-                        .background(activeSectionID == section.id ? configuration.activeHeaderBackgroundColor : AnyShapeStyle(Color.clear))
-                        .background {
-                            if configuration.isHudListStyle {
-                                HUDWindowBackgroundMaterial()
-                            }
-                        }
+                        .background(activeSectionID == section.id && !configuration.isHudListStyle ? configuration.activeHeaderBackgroundColor : AnyShapeStyle(Color.clear))
+
                         .onGeometryChange(for: CGRect.self) { proxy in
                             proxy.frame(in: .scrollView(axis: .vertical))
                         } action: { frame in

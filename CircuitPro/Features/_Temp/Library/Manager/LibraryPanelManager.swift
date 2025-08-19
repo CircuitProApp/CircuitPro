@@ -34,7 +34,7 @@ class LibraryPanelManager {
 
         let panel = KeyActivatingPanel(
             contentRect: initialRect,
-            styleMask: [.borderless, .fullSizeContentView, .resizable],
+            styleMask: [.hudWindow, .resizable],
             backing: .buffered,
             defer: false
         )

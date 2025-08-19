@@ -13,12 +13,12 @@ struct PacksView: View {
     @Environment(LibraryManager.self) private var libraryManager
     @PackManager private var packManager
     
+    @State private var selectedPack: AnyHashable?
+    
     var body: some View {
         
         @Bindable var libraryManager = libraryManager
-        ScrollView {
-            LazyVStack {
-                // --- INSTALLED PACKS SECTION (ALWAYS VISIBLE) ---
+        GroupedList(selection: $selectedPack) {
                 Section {
                     if packManager.installedPacks.isEmpty {
                         HStack {
@@ -45,20 +45,13 @@ struct PacksView: View {
                                     }
                                 }
                             )
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button("Remove", role: .destructive) {
-                                    // Just perform the action. The .onChange modifier will handle the sync.
-                                    packManager.removePack(id: pack.id)
-                                }
-                            }
+                            .groupedListTag(pack)
                         }
                     }
                 } header: {
                     Text("Installed")
                 }
       
-                
-                // --- AVAILABLE TO DOWNLOAD SECTION (STATE-DRIVEN) ---
                 Section("Available to Download") {
                     switch libraryManager.loadState {
                     case .idle, .loading:
@@ -83,15 +76,19 @@ struct PacksView: View {
                                         }
                                     }
                                 )
+                                .groupedListTag(pack)
                             }
                         }
                     }
                 }
-            }
+        }
+        .groupedListConfiguration{ configuration in
+            configuration.isHudListStyle = true
         }
         .task {
             await libraryManager.fetchAvailablePacks(localPacks: packManager.installedPacks)
         }
+
         // **FIXED:** Use onChange to react to changes in the installed packs list.
         // This is the correct way to handle the state update after a pack is added or removed.
         .onChange(of: packManager.installedPacks) { _, newLocalPacks in
