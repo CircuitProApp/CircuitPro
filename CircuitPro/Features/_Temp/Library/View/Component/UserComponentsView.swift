@@ -46,9 +46,7 @@ struct UserComponentsView: View {
                             }
                         } header: {
                             Text(category.label)
-                                .font(.caption)
-                                .fontWeight(.light)
-                                .foregroundStyle(.secondary)
+                                .listHeaderStyle()
                             
                         }
                     }

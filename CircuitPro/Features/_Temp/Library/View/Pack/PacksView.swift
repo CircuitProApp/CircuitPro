@@ -94,9 +94,7 @@ struct PacksView: View {
                     }
                 } header: {
                     Text("Available to Download")
-                        .font(.caption)
-                        .fontWeight(.light)
-                        .foregroundStyle(.secondary)
+                        .listHeaderStyle()
                     
                 }
         }
