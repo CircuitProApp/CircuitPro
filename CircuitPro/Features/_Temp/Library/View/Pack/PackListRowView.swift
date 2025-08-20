@@ -9,12 +9,11 @@ import SwiftUI
 import SwiftDataPacks
 
 struct PackListRowView: View {
+    
+    @Environment(LibraryManager.self)
+    private var libraryManager
     // The pack to display, which can be either installed or remote.
     let pack: AnyPack
-    
-    // Bindings to track selection and download/update state across the list.
-    @Binding var selectedPack: AnyPack?
-    @Binding var activeDownloadID: UUID?
     
     // State flags and action closures provided by the parent view.
     var isUpdateAvailable: Bool
@@ -23,11 +22,11 @@ struct PackListRowView: View {
     
     // Computed properties to determine the row's current state.
     private var isSelected: Bool {
-        selectedPack == pack
+        libraryManager.selectedPack == pack
     }
     
     private var isProcessing: Bool {
-        activeDownloadID == pack.id
+        libraryManager.remotePackProvider.activeDownloadID == pack.id
     }
     
     var body: some View {

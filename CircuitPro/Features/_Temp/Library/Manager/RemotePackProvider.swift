@@ -25,7 +25,7 @@ class RemotePackProvider {
     var availableUpdates: [UUID: RemotePack] = [:]
     var activeDownloadID: UUID?
     
-    private var allRemotePacks: [RemotePack] = []
+    var allRemotePacks: [RemotePack] = []
 
     // MARK: - Core Logic
 

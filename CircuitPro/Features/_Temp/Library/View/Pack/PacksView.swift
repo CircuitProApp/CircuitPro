@@ -15,6 +15,22 @@ struct PacksView: View {
 
     @PackManager private var packManager
     
+    private var filteredInstalledPacks: [InstalledPack] {
+        if libraryManager.searchText.isEmpty {
+            return packManager.installedPacks
+        } else {
+            return packManager.installedPacks.filter { $0.metadata.title.localizedCaseInsensitiveContains(libraryManager.searchText) }
+        }
+    }
+    
+    private var filteredAvailablePacks: [RemotePack] {
+        if libraryManager.searchText.isEmpty {
+            return libraryManager.remotePackProvider.allRemotePacks
+        } else {
+            return libraryManager.remotePackProvider.allRemotePacks.filter { $0.title.localizedCaseInsensitiveContains(libraryManager.searchText) }
+        }
+    }
+    
     var body: some View {
         @Bindable var libraryManager = libraryManager
         VStack(spacing: 0) {
@@ -88,14 +104,12 @@ struct PacksView: View {
             if packManager.installedPacks.isEmpty {
                 emptyView("No packs installed")
             } else {
-                ForEach(packManager.installedPacks) { pack in
+                ForEach(filteredInstalledPacks) { pack in
                     let packEnum = AnyPack.installed(pack)
                     let updateInfo = libraryManager.remotePackProvider.availableUpdates[pack.id]
                     
                     PackListRowView(
                         pack: packEnum,
-                        selectedPack: $libraryManager.selectedPack,
-                        activeDownloadID: $libraryManager.remotePackProvider.activeDownloadID,
                         isUpdateAvailable: updateInfo != nil,
                         onUpdate: {
                             if let update = updateInfo {
@@ -137,13 +151,11 @@ struct PacksView: View {
                 if availablePacks.isEmpty {
                     emptyView("All available packs are installed")
                 } else {
-                    ForEach(availablePacks) { pack in
+                    ForEach(filteredAvailablePacks) { pack in
                         let packEnum = AnyPack.remote(pack)
                         
                         PackListRowView(
                             pack: packEnum,
-                            selectedPack: $libraryManager.selectedPack,
-                            activeDownloadID: $libraryManager.remotePackProvider.activeDownloadID,
                             isUpdateAvailable: false,
                             onDownload: {
                                 Task {

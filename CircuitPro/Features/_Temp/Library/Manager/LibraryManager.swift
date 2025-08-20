@@ -16,7 +16,9 @@ class LibraryManager {
     
     var searchText: String = ""
     
-    var selectedMode: LibraryMode = .all
+    var selectedMode: LibraryMode = .all {
+        willSet { selectedComponent = nil }
+    }
     
     var selectedPack: AnyPack?
     

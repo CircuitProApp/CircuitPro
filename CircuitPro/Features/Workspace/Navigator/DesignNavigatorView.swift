@@ -55,7 +55,7 @@ public struct DesignNavigatorView: View {
                 if projectManager.project.designs.isEmpty {
                     Button("Create a Design") {
                         document.addNewDesign(undoManager: undoManager)
-                        projectManager.selectedDesign = projectManager.project.designs.first!
+//                        projectManager.selectedDesign = projectManager.project.designs.first!
                     }
                 }
             }
