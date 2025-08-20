@@ -11,6 +11,7 @@ struct ListConfiguration {
     var listPadding: EdgeInsets = .init()
     
     var listRowSpacing: CGFloat = 0
+    var listRowHeight: CGFloat?
     var listRowPadding: EdgeInsets = .init()
 
     var headerStyle: ListHeaderStyle = .regular

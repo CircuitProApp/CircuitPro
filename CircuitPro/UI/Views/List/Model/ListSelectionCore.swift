@@ -160,6 +160,7 @@ struct SelectableRow<ID: Hashable, Row: View>: View {
     private func decoratedRow(isSelected: Bool) -> some View {
         row
             .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: configuration.listRowHeight)
             .padding(configuration.listRowPadding)
             .background(isSelected ? configuration.selectionBackgroundColor : .clear)
             .foregroundStyle(isSelected ? configuration.selectionForegroundColor : .primary)

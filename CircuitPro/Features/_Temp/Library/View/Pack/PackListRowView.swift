@@ -44,11 +44,11 @@ struct PackListRowView: View {
             VStack(alignment: .leading) {
                 Text(pack.title)
                     .font(.headline)
-                if case .remote = pack {
-                    Text("Version \(pack.version)")
-                        .font(.subheadline)
-                        .foregroundStyle(isSelected ? .white.opacity(0.8) : .secondary)
-                }
+                
+                Text("Version \(pack.version)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                
             }
             
             Spacer()
@@ -72,14 +72,15 @@ struct PackListRowView: View {
             switch pack {
             case .installed:
                 if isUpdateAvailable {
-                    Button("Update", action: onUpdate)
-                        .buttonStyle(.borderedProminent)
-                        .tint(.green)
-                } else {
-                    Text("v\(pack.version)")
-                        .font(.subheadline)
-                        .foregroundStyle(isSelected ? .white.opacity(0.8) : .secondary)
-                        .animation(nil, value: UUID()) // Prevent animation during state changes
+                    Button(action: onUpdate) {
+                        Label("Update", systemImage: "arrow.down")
+                            .symbolVariant(.circle)
+                            .labelStyle(.iconOnly)
+                            .imageScale(.large)
+                            .font(.title3)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(isSelected ? .white : .blue)
                 }
             case .remote:
                 Button(action: onDownload) {
