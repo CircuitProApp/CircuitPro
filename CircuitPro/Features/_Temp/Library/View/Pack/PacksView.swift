@@ -13,90 +13,94 @@ struct PacksView: View {
     @Environment(LibraryManager.self) private var libraryManager
     @PackManager private var packManager
     
-    @State private var selectedPack: AnyHashable?
+    @State private var selectedPack: AnyPack?
     
     var body: some View {
         
         @Bindable var libraryManager = libraryManager
         GroupedList(selection: $selectedPack) {
-                Section {
-                    if packManager.installedPacks.isEmpty {
-                        HStack {
-                            Spacer()
-                            Text("No packs installed")
-                                .foregroundStyle(.secondary)
-                                .font(.callout)
-                            Spacer()
+            Section {
+                if packManager.installedPacks.isEmpty {
+                    HStack {
+                        Spacer()
+                        Text("No packs installed")
+                            .foregroundStyle(.secondary)
+                            .font(.callout)
+                        Spacer()
+                    }
+                    .frame(height: 70)
+                } else {
+                    ForEach(packManager.installedPacks) { pack in
+                        let packEnum = AnyPack.installed(pack)
+                        let updateInfo = libraryManager.availableUpdates[pack.id]
+                        
+                        PackListRowView(
+                            pack: packEnum,
+                            selectedPack: $selectedPack,
+                            activeDownloadID: $libraryManager.activeDownloadID,
+                            isUpdateAvailable: updateInfo != nil,
+                            onUpdate: {
+                                if let update = updateInfo {
+                                    Task {
+                                        await libraryManager.updateExistingPack(pack: update, packManager: packManager)
+                                    }
+                                }
+                            },
+                            onDownload: {}
+                        )
+                        .listID(packEnum)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                packManager.removePack(id: pack.id)
+                            } label: {
+                                Text("Delete Pack")
+                            }
                         }
-                        .frame(height: 70)
+                    }
+                }
+            } header: {
+                Text("Installed")
+                    .listHeaderStyle()
+            }
+            
+            Section {
+                switch libraryManager.loadState {
+                case .idle, .loading:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    
+                case .failed(let error):
+                    ContentUnavailableView("Load Failed", systemImage: "wifi.exclamationmark", description: Text(error.localizedDescription))
+                    
+                case .loaded(let availablePacks):
+                    if availablePacks.isEmpty {
+                        Text("All available packs are installed.")
+                            .foregroundStyle(.secondary)
+                            .padding()
                     } else {
-                        ForEach(packManager.installedPacks) { pack in
-                            let updateInfo = libraryManager.availableUpdates[pack.id]
+                        ForEach(availablePacks) { pack in
+                            let packEnum = AnyPack.remote(pack)
                             
-                            InstalledPackListRowView(
-                                pack: pack,
-                                isUpdateAvailable: updateInfo != nil,
+                            PackListRowView(
+                                pack: packEnum,
+                                selectedPack: $selectedPack,
                                 activeDownloadID: $libraryManager.activeDownloadID,
-                                onUpdate: {
-                                    if let update = updateInfo {
-                                        Task {
-                                            await libraryManager.downloadAndInstall(pack: update, packManager: packManager)
-                                        }
+                                isUpdateAvailable: false,
+                                onUpdate: {},
+                                onDownload: {
+                                    Task {
+                                        await libraryManager.installNewPack(pack: pack, packManager: packManager)
                                     }
                                 }
                             )
-                            .listID(pack)
-                            .contextMenu {
-                                Button {
-                                    packManager.removePack(id: pack.id)
-                                } label: {
-                                    Text("Delete Pack")
-                                }
-                            }
-                       
+                            .listID(packEnum)
                         }
                     }
-                } header: {
-                    Text("Installed")
-                        .font(.caption)
-                        .fontWeight(.light)
-                        .foregroundStyle(.secondary)
                 }
-      
-                Section {
-                    switch libraryManager.loadState {
-                    case .idle, .loading:
-                        ProgressView()
-                            .frame(maxWidth: .infinity, alignment: .center)
-                        
-                    case .failed(let error):
-                        ContentUnavailableView("Load Failed", systemImage: "wifi.exclamationmark", description: Text(error.localizedDescription))
-                        
-                    case .loaded(let availablePacks):
-                        if availablePacks.isEmpty {
-                            Text("All available packs are installed.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(availablePacks) { pack in
-                                RemotePackListRowView(
-                                    pack: pack,
-                                    downloadingPackID: $libraryManager.activeDownloadID,
-                                    onDownload: {
-                                        Task {
-                                            await libraryManager.downloadAndInstall(pack: pack, packManager: packManager)
-                                        }
-                                    }
-                                )
-                                .listID(pack)
-                              
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Available to Download")
-                        .listHeaderStyle()
-                    
-                }
+            } header: {
+                Text("Available to Download")
+                    .listHeaderStyle()
+            }
         }
         .listConfiguration { configuration in
             configuration.headerStyle = .hud
@@ -104,7 +108,6 @@ struct PacksView: View {
             configuration.listPadding = .all(8)
             configuration.listRowPadding = .all(4)
             configuration.selectionCornerRadius = 8
-  
         }
         .task {
             await libraryManager.fetchAvailablePacks(localPacks: packManager.installedPacks)
