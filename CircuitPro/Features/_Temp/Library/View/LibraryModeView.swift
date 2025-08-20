@@ -33,6 +33,17 @@ enum LibraryMode: Displayable {
             return "shippingbox"
         }
     }
+    
+    var searchPlaceholder: String {
+        switch self {
+        case .all:
+            return "All Components"
+        case .user:
+            return "User Components"
+        case .packs:
+            return "Packs"
+        }
+    }
 }
 
 struct LibraryModeView: View {

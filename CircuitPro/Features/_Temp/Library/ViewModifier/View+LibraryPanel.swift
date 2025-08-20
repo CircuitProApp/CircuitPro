@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-extension Text {
+extension View {
     func listHeaderStyle() -> some View {
         self
             .font(.caption)

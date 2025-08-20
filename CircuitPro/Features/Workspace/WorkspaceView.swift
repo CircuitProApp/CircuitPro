@@ -74,20 +74,23 @@ struct WorkspaceView: View {
                         }
                         .help("Send Feedback")
                     }
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            self.showInspector.toggle()
-                        } label: {
-                            Image(systemName: CircuitProSymbols.Workspace.sidebarTrailing)
-                                .imageScale(.large)
-                        }
-                    }
+                   
                 }
         }
         .frame(minWidth: 800, minHeight: 600)
         .inspector(isPresented: $showInspector) {
             InspectorView()
             .inspectorColumnWidth(min: 200, ideal: 260, max: 1000)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        self.showInspector.toggle()
+                    } label: {
+                        Image(systemName: CircuitProSymbols.Workspace.sidebarTrailing)
+                            .imageScale(.large)
+                    }
+                }
+            }
         }
         .onAppear {
             if projectManager.project.designs.isNotEmpty {
@@ -97,8 +100,6 @@ struct WorkspaceView: View {
                 print(component.name)
             }
         }
-        
-        
         .onAppear {
 #if !DEBUG
 //            Task {

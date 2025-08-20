@@ -18,8 +18,8 @@ struct PackListRowView: View {
     
     // State flags and action closures provided by the parent view.
     var isUpdateAvailable: Bool
-    var onUpdate: () -> Void
-    var onDownload: () -> Void
+    var onUpdate: () -> Void = { }
+    var onDownload: () -> Void = { }
     
     // Computed properties to determine the row's current state.
     private var isSelected: Bool {

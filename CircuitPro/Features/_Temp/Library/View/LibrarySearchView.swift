@@ -11,6 +11,9 @@ import SwiftDataPacks
 
 struct LibrarySearchView: View {
     
+    @Environment(LibraryManager.self)
+    private var libraryManager
+    
     @PackManager private var packManager
     
     @Binding var searchText: String
@@ -20,8 +23,9 @@ struct LibrarySearchView: View {
         HStack(spacing: 13) {
             Image(systemName: "line.3.horizontal.decrease.circle")
                 .foregroundColor(.secondary)
+                .font(.title2)
             
-            TextField("Search Components", text: $searchText)
+            TextField(libraryManager.selectedMode.searchPlaceholder, text: $searchText)
                 .textFieldStyle(.plain)
                 .focused($isFocused)
                 .onAppear { isFocused = true }
@@ -42,12 +46,15 @@ struct LibrarySearchView: View {
             Button("E") {
                 exportWithSavePanel()
             }
+            .font(.title2)
             Button("I") {
                 importPack()
             }
+            .font(.title2)
         }
         .padding(13)
-        .font(.title2)
+        .font(.title)
+        .fontWeight(.light)
     }
     
     private func importPack() {

@@ -9,12 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct LibraryPanelView: View {
-    
-    @State private var selectedComponentID: UUID?
-    
-    @State private var selectedMode: LibraryMode = .all
-    
-    // A computed property to easily find the full Component object from the selected ID.
+
     @State private var selectedComponent: Component?
     
     @State private var libraryManager: LibraryManager = LibraryManager()
@@ -24,11 +19,11 @@ struct LibraryPanelView: View {
         VStack(alignment: .leading, spacing: 0) {
             LibrarySearchView(searchText: $bindableManager.searchText)
             Divider()
-            LibraryModeView(selectedMode: $selectedMode)
+            LibraryModeView(selectedMode: $bindableManager.selectedMode)
             Divider()
             HStack(spacing: 0) {
                 Group {
-                    switch selectedMode {
+                    switch libraryManager.selectedMode {
                     case .all:
                         AllComponentsView()
                     case .user:
@@ -42,7 +37,7 @@ struct LibraryPanelView: View {
                 .frame(maxHeight: .infinity)
                 Divider()
                 Group {
-                    switch selectedMode {
+                    switch libraryManager.selectedMode {
                     case .all, .user:
                        ComponentDetailView(selectedComponent: $selectedComponent)
                     case .packs:
