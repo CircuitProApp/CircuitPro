@@ -9,26 +9,27 @@ import SwiftUI
 
 struct ComponentDetailView: View {
     
-    @Binding var selectedComponent: Component?
+    @Environment(LibraryManager.self)
+    private var libraryManager
+    
     var body: some View {
-        VStack {
-            // Check if we have a selected component.
-            if let component = selectedComponent {
-                // If one is selected, display its name.
+        if let component = libraryManager.selectedComponent {
+            VStack(alignment: .leading) {
+                
                 Text(component.name)
-                    .font(.title)
-                    .foregroundStyle(.primary)
-                // You could add more details here later.
+                    .font(.title3)
+                    .fontWeight(.medium)
                 Text("Category: \(component.category.label)")
                     .font(.headline)
                     .foregroundStyle(.secondary)
-            } else {
-                // If nothing is selected, show the placeholder text.
-                Text("Nothing Selected")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
+                Spacer()
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+        } else {
+            Text("Nothing Selected")
+                .font(.title2)
+                .foregroundStyle(.secondary)
         }
-    
     }
 }

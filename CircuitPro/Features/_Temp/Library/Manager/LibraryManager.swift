@@ -18,4 +18,8 @@ class LibraryManager {
     
     var selectedMode: LibraryMode = .all
     
+    var selectedPack: AnyPack?
+    
+    var selectedComponent: Component?
+    
 }

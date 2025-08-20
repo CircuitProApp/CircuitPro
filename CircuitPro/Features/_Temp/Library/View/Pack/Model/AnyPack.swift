@@ -14,10 +14,10 @@ enum AnyPack: Identifiable, Hashable {
     
     var id: UUID {
         switch self {
-        case .installed(let pack):
-            return pack.id
-        case .remote(let pack):
-            return pack.id
+        case .installed(let installedPack):
+            return installedPack.id
+        case .remote(let remotePack):
+            return remotePack.id
         }
     }
     
@@ -37,5 +37,14 @@ enum AnyPack: Identifiable, Hashable {
         case .remote(let remotePack):
             return String(remotePack.version)
         }
-    }    
+    }
+    
+    var description: String {
+        switch self {
+        case .installed(let installedPack):
+            return "No description"
+        case .remote(let remotePack):
+            return remotePack.description
+        }
+    }
 }

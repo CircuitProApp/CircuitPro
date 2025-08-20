@@ -9,8 +9,6 @@ import SwiftUI
 import SwiftData
 
 struct LibraryPanelView: View {
-
-    @State private var selectedComponent: Component?
     
     @State private var libraryManager: LibraryManager = LibraryManager()
     
@@ -25,9 +23,9 @@ struct LibraryPanelView: View {
                 Group {
                     switch libraryManager.selectedMode {
                     case .all:
-                        AllComponentsView()
+                        ComponentListView()
                     case .user:
-                        UserComponentsView()
+                        ComponentListView()
                             .filterContainer(for: .mainStore)
                     case .packs:
                         PacksView()
@@ -39,9 +37,9 @@ struct LibraryPanelView: View {
                 Group {
                     switch libraryManager.selectedMode {
                     case .all, .user:
-                       ComponentDetailView(selectedComponent: $selectedComponent)
+                        ComponentDetailView()
                     case .packs:
-                        Text("Pack detail view goes here")
+                        PackDetailView()
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -1,5 +1,5 @@
 //
-//  UserComponentsView.swift
+//  ComponentListView.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 8/18/25.
@@ -8,27 +8,27 @@
 import SwiftUI
 import SwiftDataPacks
 
-struct UserComponentsView: View {
+struct ComponentListView: View {
     
-    @Environment(LibraryManager.self) private var manager
+    @Environment(LibraryManager.self)
+    private var libraryManager
     
     @UserContext private var userContext
     
     @Query private var userComponents: [Component]
     
-    @State private var selectedComponent: Component?
-    
     private var filteredComponents: [Component] {
-        if manager.searchText.isEmpty {
+        if libraryManager.searchText.isEmpty {
             return userComponents
         } else {
-            return userComponents.filter { $0.name.localizedCaseInsensitiveContains(manager.searchText) }
+            return userComponents.filter { $0.name.localizedCaseInsensitiveContains(libraryManager.searchText) }
         }
     }
     
     var body: some View {
+        @Bindable var libraryManager = libraryManager
         if filteredComponents.isNotEmpty {
-            GroupedList(selection: $selectedComponent) {
+            GroupedList(selection: $libraryManager.selectedComponent) {
                 ForEach(ComponentCategory.allCases) { category in
                     // Filter the components for the current category.
                     let componentsInCategory = filteredComponents.filter { $0.category == category }
@@ -36,7 +36,7 @@ struct UserComponentsView: View {
                     if !componentsInCategory.isEmpty {
                         Section {
                             ForEach(componentsInCategory) { component in
-                                ComponentListRowView(component: component, isSelected: selectedComponent == component)
+                                ComponentListRowView(component: component, isSelected: libraryManager.selectedComponent == component)
                                     .listID(component)
                                     .contextMenu {
                                         Button("Delete Component") {

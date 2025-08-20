@@ -15,13 +15,12 @@ struct PacksView: View {
 
     @PackManager private var packManager
     
-    @State private var selectedPack: AnyPack?
-    
     var body: some View {
+        @Bindable var libraryManager = libraryManager
         VStack(spacing: 0) {
-            GroupedList(selection: $selectedPack) {
-                installedPacks()
-                availablePacks()
+            GroupedList(selection: $libraryManager.selectedPack) {
+                installedPacksSection()
+                availablePacksSection()
             }
             .listConfiguration { configuration in
                 configuration.headerStyle = .hud
@@ -83,7 +82,7 @@ struct PacksView: View {
     }
     
     @ViewBuilder
-    private func installedPacks() -> some View {
+    private func installedPacksSection() -> some View {
         @Bindable var libraryManager = libraryManager
         Section {
             if packManager.installedPacks.isEmpty {
@@ -95,7 +94,7 @@ struct PacksView: View {
                     
                     PackListRowView(
                         pack: packEnum,
-                        selectedPack: $selectedPack,
+                        selectedPack: $libraryManager.selectedPack,
                         activeDownloadID: $libraryManager.remotePackProvider.activeDownloadID,
                         isUpdateAvailable: updateInfo != nil,
                         onUpdate: {
@@ -123,7 +122,7 @@ struct PacksView: View {
     }
         
     @ViewBuilder
-    private func availablePacks() -> some View {
+    private func availablePacksSection() -> some View {
         @Bindable var libraryManager = libraryManager
         Section {
             switch libraryManager.remotePackProvider.loadState {
@@ -143,7 +142,7 @@ struct PacksView: View {
                         
                         PackListRowView(
                             pack: packEnum,
-                            selectedPack: $selectedPack,
+                            selectedPack: $libraryManager.selectedPack,
                             activeDownloadID: $libraryManager.remotePackProvider.activeDownloadID,
                             isUpdateAvailable: false,
                             onDownload: {
