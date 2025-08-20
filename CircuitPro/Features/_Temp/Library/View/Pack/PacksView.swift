@@ -74,9 +74,14 @@ struct PacksView: View {
                     
                 case .loaded(let availablePacks):
                     if availablePacks.isEmpty {
-                        Text("All available packs are installed.")
-                            .foregroundStyle(.secondary)
-                            .padding()
+                        HStack {
+                            Spacer()
+                            Text("All available packs are installed")
+                                .foregroundStyle(.secondary)
+                                .font(.callout)
+                            Spacer()
+                        }
+                        .frame(height: 70)
                     } else {
                         ForEach(availablePacks) { pack in
                             let packEnum = AnyPack.remote(pack)

@@ -31,31 +31,24 @@ struct PackListRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 8) {
-            // The main icon, which varies slightly for installed vs. remote packs.
+        HStack(spacing: 4) {
             Image(systemName: "shippingbox.fill")
                 .font(.title2)
                 .imageScale(.large)
                 .symbolVariant(.fill)
                 .foregroundStyle(isSelected ? .white : .brown)
-                .frame(width: 32)
+                .frame(width: 32, height: 32)
 
-            // The title and version information.
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(pack.title)
-                    .font(.headline)
-                
                 Text("Version \(pack.version)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 
             }
-            
             Spacer()
-            
-            // The trailing action view, which shows the most relevant state.
             trailingActionView
-                .frame(width: 32) // Reserve space to prevent layout shifts.
+                .frame(width: 32, height: 32)
         }
         .contentShape(.rect)
         .foregroundStyle(isSelected ? .white : .primary)
@@ -76,7 +69,6 @@ struct PackListRowView: View {
                         Label("Update", systemImage: "arrow.down")
                             .symbolVariant(.circle)
                             .labelStyle(.iconOnly)
-                            .imageScale(.large)
                             .font(.title3)
                     }
                     .buttonStyle(.plain)
@@ -87,8 +79,7 @@ struct PackListRowView: View {
                     Label("Download", systemImage: "arrow.down")
                         .symbolVariant(.circle)
                         .labelStyle(.iconOnly)
-                        .imageScale(.large)
-                        .font(.title3)
+                        .font(.title2)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(isSelected ? .white : .blue)
