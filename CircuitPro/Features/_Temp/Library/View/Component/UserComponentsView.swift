@@ -36,7 +36,7 @@ struct UserComponentsView: View {
                     if !componentsInCategory.isEmpty {
                         Section {
                             ForEach(componentsInCategory) { component in
-                                ComponentListRowView(component: component)
+                                ComponentListRowView(component: component, isSelected: selectedComponent == component)
                                     .listID(component)
                                     .contextMenu {
                                         Button("Delete Component") {

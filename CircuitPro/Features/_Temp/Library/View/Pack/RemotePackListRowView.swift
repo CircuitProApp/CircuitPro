@@ -39,20 +39,23 @@ struct RemotePackListRowView: View {
             }
             
             Spacer()
-            
-            if isDownloading {
-                ProgressView()
-                    .progressViewStyle(.circular)
-            } else {
-                Button {
-                    onDownload()
-                } label: {
-                    Image(systemName: "arrow.down")
-                        .symbolVariant(.circle)
-                        .foregroundStyle(.blue)
+            Group {
+                if isDownloading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                } else {
+                    Button {
+                        onDownload()
+                    } label: {
+                        Image(systemName: "arrow.down")
+                            .symbolVariant(.circle)
+                            .foregroundStyle(.blue)
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
+            .frame(width: 30)
         }
     }
 }

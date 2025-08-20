@@ -10,6 +10,7 @@ import SwiftUI
 struct ComponentListRowView: View {
     
     var component: Component
+    var isSelected: Bool
     
     var body: some View {
         HStack {
@@ -24,6 +25,7 @@ struct ComponentListRowView: View {
                 .lineLimit(1)
 
             Text(component.name)
+                .foregroundStyle(isSelected ? .white : .primary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
