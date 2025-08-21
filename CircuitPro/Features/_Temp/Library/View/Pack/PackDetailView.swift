@@ -15,16 +15,17 @@ struct PackDetailView: View {
     var body: some View {
         if libraryManager.selectedPack != nil {
             VStack(alignment: .leading) {
-                HStack {
+                HStack(spacing: 4) {
                     Text(libraryManager.selectedPack?.title ?? "Unknown Pack")
                         .font(.title3)
                         .fontWeight(.medium)
-                    Text(libraryManager.selectedPack?.version ?? "Unknown Version")
+                    Text("v" + (libraryManager.selectedPack?.version ?? "Unknown Version"))
                         .font(.headline)
                         .foregroundStyle(.secondary)
                     Spacer()
                 }
-                Text("v" + (libraryManager.selectedPack?.description ?? "Unknown Description"))
+                Text(libraryManager.selectedPack?.description ?? "Unknown Description")
+                    .font(.callout)
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .leading)

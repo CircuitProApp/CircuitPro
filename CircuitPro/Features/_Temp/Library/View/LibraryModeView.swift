@@ -49,7 +49,7 @@ enum LibraryMode: Displayable {
 struct LibraryModeView: View {
     @Binding var selectedMode: LibraryMode
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 4) {
             ForEach(LibraryMode.allCases) { mode in
                 Button {
                     selectedMode = mode

@@ -22,10 +22,19 @@ class RemotePackProvider {
     
     var loadState: LoadState = .idle
     var isRefreshing: Bool = false
+    var lastRefreshed: Date?
     var availableUpdates: [UUID: RemotePack] = [:]
     var activeDownloadID: UUID?
     
     var allRemotePacks: [RemotePack] = []
+
+    private let userDefaults: UserDefaults
+    private let lastRefreshedDateKey = "RemotePackProvider.lastRefreshed"
+
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+        self.lastRefreshed = userDefaults.object(forKey: lastRefreshedDateKey) as? Date
+    }
 
     // MARK: - Core Logic
 
@@ -49,6 +58,11 @@ class RemotePackProvider {
             let remotePacks = try JSONDecoder().decode([RemotePack].self, from: data)
             self.allRemotePacks = remotePacks
             processPacks(local: localPacks)
+            
+            // On success, update the property and save to UserDefaults
+            self.lastRefreshed = .now
+            userDefaults.set(self.lastRefreshed, forKey: lastRefreshedDateKey)
+
         } catch {
             self.loadState = .failed(error)
         }

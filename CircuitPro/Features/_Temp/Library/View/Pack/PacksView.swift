@@ -12,8 +12,16 @@ struct PacksView: View {
     
     @Environment(LibraryManager.self)
     private var libraryManager
-
+    
     @PackManager private var packManager
+    
+    private static let lastCheckedDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        formatter.doesRelativeDateFormatting = true
+        return formatter
+    }()
     
     private var filteredInstalledPacks: [InstalledPack] {
         if libraryManager.searchText.isEmpty {
@@ -60,6 +68,16 @@ struct PacksView: View {
     @ViewBuilder
     private func actionFooter() -> some View {
         HStack {
+            if libraryManager.remotePackProvider.isRefreshing {
+                Text("Checking for updates...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if let lastRefreshed = libraryManager.remotePackProvider.lastRefreshed {
+                Text("Last checked: \(Self.lastCheckedDateFormatter.string(from: lastRefreshed))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            
             Spacer()
             
             if libraryManager.remotePackProvider.isRefreshing {
@@ -84,7 +102,7 @@ struct PacksView: View {
             HUDWindowBackgroundMaterial()
         }
     }
-
+    
     @ViewBuilder
     private func emptyView(_ title: String) -> some View {
         HStack {
@@ -134,7 +152,7 @@ struct PacksView: View {
                 .listHeaderStyle()
         }
     }
-        
+    
     @ViewBuilder
     private func availablePacksSection() -> some View {
         @Bindable var libraryManager = libraryManager

@@ -15,13 +15,13 @@ struct ComponentDetailView: View {
     var body: some View {
         if let component = libraryManager.selectedComponent {
             VStack(alignment: .leading) {
-                
-                Text(component.name)
-                    .font(.title3)
-                    .fontWeight(.medium)
-                Text("Category: \(component.category.label)")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text(component.name)
+                        .font(.title3)
+                        .fontWeight(.medium)
+                   
+                }
+               
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
