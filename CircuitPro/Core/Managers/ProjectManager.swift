@@ -7,7 +7,7 @@
 
 import SwiftUI
 import Observation
-import SwiftData
+import SwiftDataPacks
 
 @Observable
 final class ProjectManager {
@@ -33,20 +33,24 @@ final class ProjectManager {
         set { selectedDesign?.componentInstances = newValue }
     }
 
-    var designComponents: [DesignComponent] {
-//        let uuids = Set(componentInstances.map(\.componentUUID))
-//        guard !uuids.isEmpty else { return [] }
-//
-//        let request = FetchDescriptor<Component>(predicate: #Predicate { uuids.contains($0.uuid) })
-//        let defs = (try? modelContext.fetch(request)) ?? []
-//
-//        let dict = Dictionary(uniqueKeysWithValues: defs.map { ($0.uuid, $0) })
-//
-//        return componentInstances.compactMap { inst in
-//            guard let def = dict[inst.componentUUID] else { return nil }
-//            return DesignComponent(definition: def, instance: inst)
-//        }
-        return []
+    // THIS IS THE KEY CHANGE: from a property to a method.
+    @MainActor func designComponents(using packManager: SwiftDataPackManager) -> [DesignComponent] {
+        let uuids = Set(componentInstances.map(\.componentUUID))
+        guard !uuids.isEmpty else { return [] }
+
+        // Use a temporary context from the main container to fetch definitions
+        // from the user's library AND all installed packs.
+        let fullLibraryContext = ModelContext(packManager.mainContainer)
+        
+        let request = FetchDescriptor<Component>(predicate: #Predicate { uuids.contains($0.uuid) })
+        let defs = (try? fullLibraryContext.fetch(request)) ?? []
+
+        let dict = Dictionary(uniqueKeysWithValues: defs.map { ($0.uuid, $0) })
+        
+        return componentInstances.compactMap { inst in
+            guard let def = dict[inst.componentUUID] else { return nil }
+            return DesignComponent(definition: def, instance: inst)
+        }
     }
     
     /// Persists the current state of the schematic graph back to the design model.
@@ -55,16 +59,18 @@ final class ProjectManager {
         selectedDesign?.wires = schematicGraph.toWires()
     }
     
-    func rebuildCanvasNodes() {
-        // 0. Load persisted wire data. This builds the graph structure but with
-        // pin vertices at placeholder locations.
+    // This method now accepts the packManager to do its work.
+    @MainActor func rebuildCanvasNodes(with packManager: SwiftDataPackManager) {
+        // 0. Load persisted wire data.
         if let wires = selectedDesign?.wires {
             schematicGraph.build(from: wires)
         }
 
-        // 1. Sync pin vertices. This finds the loaded pin vertices (by their ownership IDs)
-        // and moves them to their correct, calculated positions.
-        for designComp in designComponents {
+        // Get the design components using the provided manager.
+        let currentDesignComponents = self.designComponents(using: packManager)
+
+        // 1. Sync pin vertices.
+        for designComp in currentDesignComponents {
             guard let symbolDefinition = designComp.definition.symbol else { continue }
             schematicGraph.syncPins(
                 for: designComp.instance.symbolInstance,
@@ -73,12 +79,11 @@ final class ProjectManager {
             )
         }
         
-        // 1a. Normalize the graph. Now that all vertices are in their final, correct
-        // positions, the graph can be cleaned up to merge points and remove redundancy.
+        // 1a. Normalize the graph.
         schematicGraph.normalize(around: Set(schematicGraph.vertices.keys))
 
         // 2. Build the Symbol nodes.
-        let symbolNodes: [SymbolNode] = designComponents.compactMap { designComp in
+        let symbolNodes: [SymbolNode] = currentDesignComponents.compactMap { designComp in
             guard let symbolDefinition = designComp.definition.symbol else { return nil }
             
             let resolvedProperties = designComp.displayedProperties

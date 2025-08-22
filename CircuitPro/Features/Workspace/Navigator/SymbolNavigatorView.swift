@@ -6,50 +6,57 @@
 //
 
 import SwiftUI
-import SwiftData
+import SwiftDataPacks // Import this to use @PackManager
 
 struct SymbolNavigatorView: View {
 
     @Environment(\.projectManager)
     private var projectManager
 
-    @Query private var components: [Component]
-
+    // 1. Get the PackManager from the environment.
+    @PackManager private var packManager
+    
+    // This @Query is likely no longer needed as component definitions are
+    // fetched through the projectManager and packManager.
+    // @Query private var components: [Component]
 
     var document: CircuitProjectFileDocument
 
-    // 1. Delete logic, deferred to avoid exclusivity violations
+    // 3. Update the delete logic. It can now access `packManager` from the view's properties.
     private func performDelete(on designComponent: DesignComponent, selected: inout Set<UUID>) {
-        // 1.1 Determine what to remove at the model level
-        let instancesToRemove: [ComponentInstance]
+        let idsToRemove: Set<UUID>
 
         let isMultiSelect = selected.contains(designComponent.id) && selected.count > 1
 
         if isMultiSelect {
-            instancesToRemove = projectManager.designComponents
-                .filter { selected.contains($0.id) }
-                .map(\.instance)
+            // To handle multi-delete, we need to resolve all design components
+            // using the packManager, filter by the selection, and get their instance IDs.
+            let allDesignComponents = projectManager.designComponents(using: packManager)
+            idsToRemove = Set(allDesignComponents.filter { selected.contains($0.id) }.map(\.instance.id))
             selected.removeAll()
         } else {
-            instancesToRemove = [designComponent.instance]
+            // For a single delete, we just need the instance ID of the target component.
+            idsToRemove = [designComponent.instance.id]
             selected.remove(designComponent.id)
         }
 
-        // 1.2 Remove from the selected design
-        if let _ = projectManager.selectedDesign?.componentInstances {
-            projectManager.selectedDesign?.componentInstances.removeAll { inst in
-                instancesToRemove.contains(where: { $0.id == inst.id })
-            }
-        }
-
-        // 1.3 Persist change
+        // Remove the component instances from the project's source of truth.
+        // This change will be automatically detected by SchematicCanvasView's .onChange,
+        // which will then trigger a canvas rebuild.
+        projectManager.selectedDesign?.componentInstances.removeAll { idsToRemove.contains($0.id) }
+        
+        // Persist the change to the document.
         document.scheduleAutosave()
     }
 
     var body: some View {
         @Bindable var bindableProjectManager = projectManager
 
-        if projectManager.designComponents.isEmpty {
+        // 2. Fetch the design components here, inside the body.
+        // The view will automatically re-render when the underlying data changes.
+        let designComponents = projectManager.designComponents(using: packManager)
+
+        if designComponents.isEmpty {
             VStack {
                 Text("No Symbols")
                     .font(.callout)
@@ -58,7 +65,7 @@ struct SymbolNavigatorView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List(
-                projectManager.designComponents,
+                designComponents, // Use the locally fetched components
                 id: \.id,
                 selection: $bindableProjectManager.selectedComponentIDs
             ) { designComponent in

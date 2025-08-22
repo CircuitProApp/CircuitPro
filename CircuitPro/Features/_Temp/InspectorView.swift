@@ -6,21 +6,27 @@
 //
 
 import SwiftUI
+import SwiftDataPacks // Import this to use @PackManager
 
 struct InspectorView: View {
     
     @Environment(\.projectManager)
     private var projectManager
     
+    // 1. Get the PackManager from the environment.
+    @PackManager private var packManager
+    
     var body: some View {
+        // 2. Fetch the design components here, inside the body.
+        let designComponents = projectManager.designComponents(using: packManager)
+
         VStack(alignment: .leading, spacing: 10) {
             Text("Test Controls").font(.headline)
             
-            // This list provides the buttons to trigger the override action.
-            ForEach(projectManager.designComponents, id: \.self) { component in
+            // 3. Use the locally fetched `designComponents`.
+            ForEach(designComponents, id: \.self) { component in
                 Button("Override '\(component.definition.name)' Resistance to 100Ω") {
                     // 1. Find the first property that is based on a definition.
-                    //    We only want to test overriding definitions, not ad-hoc instance properties.
                     guard var propertyToEdit = component.displayedProperties.first(where: {
                         if case .definition = $0.source { return true }
                         return false
@@ -30,16 +36,10 @@ struct InspectorView: View {
                     }
                     
                     // 2. Modify the value on our local copy.
-                    //    `propertyToEdit` is a struct, so it's a mutable copy.
                     propertyToEdit.value = .single(100.0)
                     
                     // 3. Call the save method on the DesignComponent.
-                    //    This is the core of the test. This method will find or create
-                    //    the Property.Override on the ComponentInstance.
                     component.save(editedProperty: propertyToEdit)
-                    
-                    // Since ComponentInstance is @Observable, this change will
-                    // automatically trigger an update in the view below.
                 }
             }
             
@@ -47,16 +47,14 @@ struct InspectorView: View {
             
             Text("Live Property Values").font(.headline)
 
-            // This list displays the live, resolved values so we can see the result.
             ScrollView {
                 VStack(alignment: .leading) {
-                    ForEach(projectManager.designComponents, id: \.self) { component in
+                    // 4. Use the locally fetched `designComponents` here as well.
+                    ForEach(designComponents, id: \.self) { component in
                         Text(component.definition.name)
                             .font(.subheadline.bold())
                             .padding(.top)
                         
-                        // We iterate through the *same* `displayedProperties` computed property.
-                        // When the button is pressed, this list will automatically update.
                         ForEach(component.displayedProperties, id: \.self) { property in
                             HStack {
                                 Text(property.key.label)
