@@ -14,7 +14,7 @@ final class ProjectManager {
 
     var project: CircuitProject
     var selectedDesign: CircuitDesign?
-    var selectedComponentIDs: Set<UUID> = []
+    var selectedNodeIDs: Set<UUID> = []
     var canvasNodes: [BaseNode] = []
     var selectedNetIDs: Set<UUID> = []
     var schematicGraph = WireGraph()

@@ -16,7 +16,7 @@ struct FootprintPropertiesView: View {
         @Bindable var manager = componentDesignManager.footprintEditor
         
         ScrollView {
-            if let element = manager.singleSelectedElement {
+            if let element = manager.singleSelectedNode {
                 if let padNode = element as? PadNode {
                     @Bindable var padNode = padNode
                     

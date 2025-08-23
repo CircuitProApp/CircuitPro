@@ -29,7 +29,7 @@ struct SchematicCanvasView: View {
         CanvasView(
             viewport: $canvasManager.viewport,
             nodes: $bindableProjectManager.canvasNodes,
-            selection: $bindableProjectManager.selectedComponentIDs,
+            selection: $bindableProjectManager.selectedNodeIDs,
             tool: $selectedTool.unwrapping(withDefault: defaultTool),
             environment: canvasManager.environment,
             renderLayers: [

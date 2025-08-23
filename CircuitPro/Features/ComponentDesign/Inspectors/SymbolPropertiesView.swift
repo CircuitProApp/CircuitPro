@@ -17,18 +17,18 @@ struct SymbolPropertiesView: View {
     
         VStack {
             ScrollView {
-                if let element = manager.singleSelectedElement {
-                    if let pinNode = element as? PinNode {
+                if let node = manager.singleSelectedNode {
+                    if let pinNode = node as? PinNode {
                         @Bindable var pinNode = pinNode
 
                         PinPropertiesView(pin: $pinNode.pin)
                         
-                    } else if let primitiveNode = element as? PrimitiveNode {
+                    } else if let primitiveNode = node as? PrimitiveNode {
                         @Bindable var primitiveNode = primitiveNode
                         
                         PrimitivePropertiesView(primitive: $primitiveNode.primitive)
 
-                    } else if let textNode = element as? TextNode {
+                    } else if let textNode = node as? TextNode {
                         @Bindable var textNode = textNode
                         
                         TextPropertiesView(textModel: $textNode.textModel, editor: manager)

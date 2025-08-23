@@ -6,68 +6,83 @@
 //
 
 import SwiftUI
-import SwiftDataPacks // Import this to use @PackManager
+import SwiftDataPacks // Required to use @PackManager
 
 struct InspectorView: View {
     
     @Environment(\.projectManager)
     private var projectManager
     
-    // 1. Get the PackManager from the environment.
+    // 1. Get the PackManager from the environment to fetch component definitions.
     @PackManager private var packManager
     
+    /// A computed property that attempts to find the selected node.
+    private var singleSelectedNode: BaseNode? {
+        guard projectManager.selectedNodeIDs.count == 1,
+              let selectedID = projectManager.selectedNodeIDs.first else {
+            return nil
+        }
+        return projectManager.canvasNodes.findNode(with: selectedID)
+    }
+
+    /// A computed property that finds both the symbol node AND its corresponding DesignComponent.
+    /// This is the key piece of logic that connects the canvas selection to the data model.
+    @MainActor private var selectedComponentContext: (component: DesignComponent, node: SymbolNode)? {
+        // Ensure the selected node is a SymbolNode
+        guard let symbolNode = singleSelectedNode as? SymbolNode else {
+            return nil
+        }
+        
+        // Use the project manager to get the list of all design components
+        let components = projectManager.designComponents(using: packManager)
+        
+        // Find the specific component that matches our selected node's ID
+        if let component = components.first(where: { $0.id == symbolNode.id }) {
+            return (component, symbolNode)
+        }
+        
+        return nil
+    }
+    
     var body: some View {
-        // 2. Fetch the design components here, inside the body.
-        let designComponents = projectManager.designComponents(using: packManager)
+        @Bindable var manager = projectManager
 
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Test Controls").font(.headline)
-            
-            // 3. Use the locally fetched `designComponents`.
-            ForEach(designComponents, id: \.self) { component in
-                Button("Override '\(component.definition.name)' Resistance to 100Ω") {
-                    // 1. Find the first property that is based on a definition.
-                    guard var propertyToEdit = component.displayedProperties.first(where: {
-                        if case .definition = $0.source { return true }
-                        return false
-                    }) else {
-                        print("No definition-based property found to override.")
-                        return
-                    }
-                    
-                    // 2. Modify the value on our local copy.
-                    propertyToEdit.value = .single(100.0)
-                    
-                    // 3. Call the save method on the DesignComponent.
-                    component.save(editedProperty: propertyToEdit)
-                }
-            }
-            
-            Divider().padding(.vertical)
-            
-            Text("Live Property Values").font(.headline)
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Inspector")
+                .font(.headline)
+                .padding([.top, .leading, .trailing])
+                .padding(.bottom, 8)
 
-            ScrollView {
-                VStack(alignment: .leading) {
-                    // 4. Use the locally fetched `designComponents` here as well.
-                    ForEach(designComponents, id: \.self) { component in
-                        Text(component.definition.name)
-                            .font(.subheadline.bold())
-                            .padding(.top)
-                        
-                        ForEach(component.displayedProperties, id: \.self) { property in
-                            HStack {
-                                Text(property.key.label)
-                                Spacer()
-                                Text(property.value.description)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.leading)
-                        }
+            Divider()
+
+            // 2. Check for the rich context object first.
+            if let context = selectedComponentContext {
+                ScrollView {
+                    VStack(alignment: .leading) {
+                        // Pass both the component and the node to the inspector view.
+                        SymbolNodeInspectorView(
+                            component: context.component,
+                            symbolNode: context.node
+                        )
                     }
+                    .padding()
                 }
+            } else if singleSelectedNode != nil {
+                // 3. Handle cases where an item is selected, but it's not a component
+                //    (e.g., a wire or a net label).
+                Text("Properties for this element type are not yet implemented.")
+                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // 4. Handle no selection or multiple selection.
+                VStack {
+                    Spacer()
+                    Text(manager.selectedNodeIDs.isEmpty ? "No Selection" : "Multiple Items Selected")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
             }
         }
-        .padding()
     }
 }

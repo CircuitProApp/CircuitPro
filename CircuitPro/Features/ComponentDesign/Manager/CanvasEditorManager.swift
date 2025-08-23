@@ -20,7 +20,7 @@ final class CanvasEditorManager {
     
     var selectedElementIDs: Set<UUID> = []
     
-    var singleSelectedElement: BaseNode? {
+    var singleSelectedNode: BaseNode? {
         guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else {
             return nil
         }

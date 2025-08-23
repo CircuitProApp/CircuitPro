@@ -50,10 +50,10 @@ struct NetNavigatorView: View {
                 }
                 
                 // Preserve any selected symbols (non-edges)
-                let currentSymbolSelection = projectManager.selectedComponentIDs.filter { projectManager.schematicGraph.edges[$0] == nil }
+                let currentSymbolSelection = projectManager.selectedNodeIDs.filter { projectManager.schematicGraph.edges[$0] == nil }
                 
                 // Set the main selection to be the selected symbols plus the edges from the selected nets
-                projectManager.selectedComponentIDs = currentSymbolSelection.union(allEdgesOfSelectedNets)
+                projectManager.selectedNodeIDs = currentSymbolSelection.union(allEdgesOfSelectedNets)
             }
         }
     }

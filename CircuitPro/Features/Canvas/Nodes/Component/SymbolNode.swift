@@ -12,11 +12,16 @@ import AppKit
 /// This is a container node that doesn't draw any geometry itself. Instead, it acts as a
 /// parent for `PinNode`, `PrimitiveNode`, and `AnchoredTextNode` children. Its transform
 /// is applied to all its children automatically by the scene graph.
+@Observable
 final class SymbolNode: BaseNode {
 
     // MARK: - Properties
 
-    let instance: SymbolInstance
+    var instance: SymbolInstance {
+        didSet {
+            onNeedsRedraw?()
+        }
+    }
     let symbol: Symbol
     weak var graph: WireGraph?
 

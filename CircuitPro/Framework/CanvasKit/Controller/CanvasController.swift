@@ -171,3 +171,41 @@ final class CanvasController {
         return nil
     }
 }
+
+// In a new file like `BaseNode+Extensions.swift`
+
+import Foundation
+
+extension Collection where Element == BaseNode {
+    /// Recursively finds the first node in the collection or its descendants that has the specified ID.
+    ///
+    /// - Parameter id: The `UUID` of the node to find.
+    /// - Returns: The `BaseNode` if found; otherwise, `nil`.
+    func findNode(with id: UUID) -> BaseNode? {
+        for node in self {
+            if let found = findNodeRecursive(with: id, in: node) {
+                return found
+            }
+        }
+        return nil
+    }
+
+    /// The recursive helper function that performs the depth-first search.
+    private func findNodeRecursive(with id: UUID, in node: BaseNode) -> BaseNode? {
+        if node.id == id {
+            return node
+        }
+        
+        // Search through the children of the current node.
+        // This assumes `BaseNode` has a `children` property as implied by CanvasController.
+        for child in node.children {
+            if let childNode = child as? BaseNode {
+                if let found = findNodeRecursive(with: id, in: childNode) {
+                    return found
+                }
+            }
+        }
+        
+        return nil
+    }
+}

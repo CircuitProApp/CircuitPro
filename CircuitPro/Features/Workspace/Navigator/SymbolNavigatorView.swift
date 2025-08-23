@@ -67,7 +67,7 @@ struct SymbolNavigatorView: View {
             List(
                 designComponents, // Use the locally fetched components
                 id: \.id,
-                selection: $bindableProjectManager.selectedComponentIDs
+                selection: $bindableProjectManager.selectedNodeIDs
             ) { designComponent in
                 HStack {
                     Text(designComponent.definition.name)
@@ -80,12 +80,12 @@ struct SymbolNavigatorView: View {
                 .frame(height: 14)
                 .listRowSeparator(.hidden)
                 .contextMenu {
-                    let multi = bindableProjectManager.selectedComponentIDs.contains(designComponent.id) && bindableProjectManager.selectedComponentIDs.count > 1
+                    let multi = bindableProjectManager.selectedNodeIDs.contains(designComponent.id) && bindableProjectManager.selectedNodeIDs.count > 1
                     Button(role: .destructive) {
-                        performDelete(on: designComponent, selected: &bindableProjectManager.selectedComponentIDs)
+                        performDelete(on: designComponent, selected: &bindableProjectManager.selectedNodeIDs)
                     } label: {
                         Text(multi
-                             ? "Delete Selected (\(bindableProjectManager.selectedComponentIDs.count))"
+                             ? "Delete Selected (\(bindableProjectManager.selectedNodeIDs.count))"
                              : "Delete")
                     }
                 }
