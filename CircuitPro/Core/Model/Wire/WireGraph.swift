@@ -336,10 +336,26 @@ class WireGraph { // swiftlint:disable:this type_body_length
             guard let vertex = vertices[vertexID], case .pin = vertex.ownership else { continue }
 
             let isOffAxis = (adjacency[vertexID] ?? []).contains { edgeID in
-                guard let edge = state.selectedEdges.first(where: { $0.id == edgeID }),
-                      let originalPos = state.originalVertexPositions[vertexID] else { return false }
-                let otherEndID = edge.start == vertexID ? edge.end : edge.start
-                guard let otherEndOrigPos = state.originalVertexPositions[otherEndID] else { return false }
+                // An off-axis pull on a selected pin can only be caused by a selected edge.
+                // This part of the logic is correct.
+                guard state.selectedEdges.contains(where: { $0.id == edgeID }) else { return false }
+                
+                
+                guard let edge = self.edges[edgeID] else { return false }
+                let otherEndID = (edge.start == vertexID) ? edge.end : edge.start
+
+                // If the other end of this wire is ALSO part of the primary selection group,
+                // then the entire segment is moving together. It cannot cause a detachment.
+                if state.verticesToMove.contains(otherEndID) {
+                    return false
+                }
+
+                // If we reach here, it means a selected edge is pulling on the pin, but the
+                // other end of that edge is a stationary anchor. In this case, we check the
+                // geometry to see if an L-bend needs to be created. This original logic is correct
+                // for that specific scenario.
+                guard let originalPos = state.originalVertexPositions[vertexID],
+                      let otherEndOrigPos = state.originalVertexPositions[otherEndID] else { return false }
 
                 let wasHorizontal = abs(originalPos.y - otherEndOrigPos.y) < 1e-6
                 return (wasHorizontal && abs(delta.y) > 1e-6) || (!wasHorizontal && abs(delta.x) > 1e-6)
