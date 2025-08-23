@@ -59,6 +59,39 @@ final class ProjectManager {
         selectedDesign?.wires = schematicGraph.toWires()
     }
     
+    @MainActor
+    func updateProperty(for component: DesignComponent, with editedProperty: Property.Resolved, using packManager: SwiftDataPackManager) {
+        // We can only update properties that originate from a library definition,
+        // as they are the only ones with overrides.
+        guard case .definition(let definitionID) = editedProperty.source else {
+            // You could handle updates to instance-specific properties differently here if needed.
+            print("This property is an instance-specific property and cannot be updated this way.")
+            return
+        }
+
+        // Find the original state of the property before the edit. This is crucial
+        // for comparing what actually changed.
+        guard let originalProperty = component.displayedProperties.first(where: { $0.id == editedProperty.id }) else {
+            // This should not happen if the UI is consistent.
+            print("Could not find the original property to compare against.")
+            return
+        }
+
+        // 1. Check if the main value changed and update the model if it did.
+        if originalProperty.value != editedProperty.value {
+            component.instance.update(definitionID: definitionID, value: editedProperty.value)
+        }
+
+        // 2. Check if the unit's prefix changed and update the model if it did.
+        if originalProperty.unit.prefix != editedProperty.unit.prefix {
+            component.instance.update(definitionID: definitionID, prefix: editedProperty.unit.prefix)
+        }
+        
+        // 3. Rebuild the canvas nodes to reflect the change.
+        // This ensures things like resolved text fields (e.g., "{Value}") are updated visually.
+        rebuildCanvasNodes(with: packManager)
+    }
+    
     // This method now accepts the packManager to do its work.
     @MainActor func rebuildCanvasNodes(with packManager: SwiftDataPackManager) {
         // 0. Load persisted wire data.

@@ -28,9 +28,4 @@ struct DesignComponent: Identifiable, Hashable {
             instances: instance.propertyInstances
         )
     }
-    
-    /// When the UI makes an edit, it can call this simple method.
-    func save(editedProperty: Property.Resolved) {
-        instance.update(with: editedProperty)
-    }
 }

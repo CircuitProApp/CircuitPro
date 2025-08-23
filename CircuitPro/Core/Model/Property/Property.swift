@@ -12,9 +12,12 @@ import SwiftUI
 struct Property {
    
     var key: PropertyKey
+    
+    @Overridable var value: PropertyValue
+    
+    @Overridable(\Unit.prefix, as: SIPrefix.self)
     var unit: Unit
+    
     var warnsOnEdit: Bool = false
     
-  
-    @Overridable var value: PropertyValue
 }

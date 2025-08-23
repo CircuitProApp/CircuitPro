@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-enum SIPrefix: String, CaseIterable, Codable {
+enum SIPrefix: String, CaseIterable, Codable, Identifiable {
     case pico  = "p"
     case nano  = "n"
     case micro = "μ"
@@ -17,6 +17,8 @@ enum SIPrefix: String, CaseIterable, Codable {
     case giga  = "G"
 
     var symbol: String { rawValue }
+    
+    var id: String { rawValue }
 
     var name: String {
         switch self {

@@ -46,9 +46,8 @@ final class ComponentDesignManager {
             return Property.Definition( // <-- Updated to use macro-generated type
                 id: draft.id,
                 key: key,
-                unit: draft.unit,
-                warnsOnEdit: draft.warnsOnEdit,
-                value: draft.value // <-- Field name updated from 'defaultValue'
+                value: draft.value, unit: draft.unit,
+                warnsOnEdit: draft.warnsOnEdit // <-- Field name updated from 'defaultValue'
             )
         }
     }
