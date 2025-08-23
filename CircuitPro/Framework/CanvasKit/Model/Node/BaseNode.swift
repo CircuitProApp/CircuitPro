@@ -83,6 +83,11 @@ class BaseNode: CanvasNode {
     static func == (lhs: BaseNode, rhs: BaseNode) -> Bool {
         return lhs.id == rhs.id
     }
+    
+    func makeHaloPath(context: RenderContext) -> CGPath? {
+        // Default implementation returns nil. Subclasses will override.
+        return nil
+    }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)

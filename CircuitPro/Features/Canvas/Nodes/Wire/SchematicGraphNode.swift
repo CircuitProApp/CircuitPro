@@ -88,38 +88,69 @@ final class SchematicGraphNode: BaseNode {
         return foundNodes
     }
     
-    override func makeHaloPath() -> CGPath? {
-        // This method will be called by the renderer. The renderer's context provides
-        // the full set of highlighted node IDs.
+    override func makeHaloPath(context: RenderContext) -> CGPath? {
+        // 1. Create a set of our child node IDs for efficient lookup.
+        let childNodeIDs = Set(self.children.map { $0.id })
+
+        // 2. Find which of our children are in the highlighted set from the context.
+        let highlightedChildIDs = context.highlightedNodeIDs.intersection(childNodeIDs)
         
-        // We find which of our children are currently highlighted.
-        let highlightedChildren = self.children.filter { child in
-            // Assume you will have access to the context's highlighted IDs.
-            // For now, let's conceptualize this. The renderer will manage this state.
-            // Let's pretend we have a way to check: child.isHighlighted
-            // The actual implementation will be in the renderer logic later.
-            // Let's build the path logic for now.
-            return true // For demonstration. The real check happens in the renderer.
-        }
-        
-        // This logic will be moved to the renderer or a similar context-aware place.
-        // For now, let's just make a composite path of ALL children for demonstration.
-        
+        guard !highlightedChildIDs.isEmpty else { return nil }
+
+        // 3. Create a single path containing the center-lines of all selected wires.
         let compositePath = CGMutablePath()
 
-        // Iterate over ALL children to build a composite halo.
-        // In the real implementation, you'd filter this list by selected children.
-        for child in self.children {
-            guard let wireNode = child as? WireNode,
-                  let childHalo = wireNode.makeHaloPath() else {
+        for childID in highlightedChildIDs {
+            // We only care about WireNodes for this operation.
+            guard let wireNode = self.children.first(where: { $0.id == childID }) as? WireNode,
+                  let edge = graph.edges[wireNode.edgeID],
+                  let startVertex = graph.vertices[edge.start],
+                  let endVertex = graph.vertices[edge.end] else {
                 continue
             }
             
-            // The child's halo is in its own coordinate space (world for a wire).
-            // Since the wire node's transform is identity, no extra transform is needed here.
-            compositePath.addPath(childHalo)
+            // Add the basic line segment to our composite path.
+            compositePath.move(to: startVertex.point)
+            compositePath.addLine(to: endVertex.point)
+        }
+
+        // 4. If we built a path, stroke the *entire composite path* at once.
+        // This is the crucial step that creates a single, clean, unified halo.
+        if !compositePath.isEmpty {
+            return compositePath.copy(strokingWithWidth: 5.0, lineCap: .round, lineJoin: .round, miterLimit: 0)
         }
         
-        return compositePath.isEmpty ? nil : compositePath
+        return nil
+    }
+}
+
+extension SchematicGraphNode {
+    /// Generates a single, unified halo path for all of its children that are currently selected.
+    /// This creates a clean, continuous highlight for a selected wire run.
+    func makeHaloPathForSelectedWires(context: RenderContext) -> CGPath? {
+        // 1. Find which of our children are `WireNode`s and are also in the set of highlighted nodes.
+        let selectedWires = self.children.compactMap { child -> WireNode? in
+            guard context.highlightedNodeIDs.contains(child.id) else { return nil }
+            return child as? WireNode
+        }
+        
+        guard !selectedWires.isEmpty else { return nil }
+
+        // 2. Create a single path containing the center-lines of all selected wire segments.
+        let compositePath = CGMutablePath()
+
+        for wireNode in selectedWires {
+            // It is safe to unwrap here because a WireNode must have a valid edge to exist.
+            let edge = graph.edges[wireNode.edgeID]!
+            let startVertex = graph.vertices[edge.start]!
+            let endVertex = graph.vertices[edge.end]!
+            
+            compositePath.move(to: startVertex.point)
+            compositePath.addLine(to: endVertex.point)
+        }
+
+        // 3. Stroke the entire composite path at once. The result is a new path
+        // that outlines the stroke, which should be filled.
+        return compositePath.copy(strokingWithWidth: 5.0, lineCap: .round, lineJoin: .round, miterLimit: 0)
     }
 }

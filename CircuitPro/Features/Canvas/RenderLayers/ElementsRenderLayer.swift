@@ -91,34 +91,73 @@ final class ElementsRenderLayer: RenderLayer {
     /// Collects and transforms all "halo" drawing primitives for highlighted nodes, grouped by layer.
     private func gatherHaloPrimitives(from context: RenderContext, allNodes: [BaseNode]) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
-
         let highlightedNodes = context.highlightedNodeIDs.compactMap { id in
             allNodes.first { $0.id == id }
         }
+        
+        // This set will track nodes handled by the unified wire halo logic.
+        var handledNodeIDs = Set<UUID>()
+
+        // --- PHASE 1: Generate Unified Halos for Wires ---
+        
+        // Find all unique SchematicGraphNode parents that contain selected wires.
+        let parentGraphs = Set(highlightedNodes.compactMap { ($0 as? WireNode)?.parent as? SchematicGraphNode })
+        
+        for graphNode in parentGraphs {
+            // Ask the graph node to generate a single, pre-stroked halo path.
+            if let unifiedHaloPath = graphNode.makeHaloPathForSelectedWires(context: context) {
+                
+                let haloColor = NSColor.controlAccentColor.cgColor.copy(alpha: 0.4) ?? NSColor.controlAccentColor.cgColor
+                
+                // CORRECT: The unified path is an outline that should be FILLED.
+                let haloPrimitive = DrawingPrimitive.fill(path: unifiedHaloPath, color: haloColor)
+                
+                primitivesByLayer[nil, default: []].append(haloPrimitive)
+                
+                // Mark all selected children of this graph as handled to prevent double-drawing.
+                for child in graphNode.children where context.highlightedNodeIDs.contains(child.id) {
+                    handledNodeIDs.insert(child.id)
+                }
+            }
+        }
+
+        // --- PHASE 2: Generate Individual Halos for All Other Nodes (The Original Way) ---
 
         for node in highlightedNodes {
+            // If this node was a wire handled in Phase 1, skip it.
+            if handledNodeIDs.contains(node.id) {
+                continue
+            }
+            
+            // This is the original logic for all other selectable nodes.
+            // It calls the node's own `makeHaloPath` method, which might be on BaseNode or an override.
             guard let haloPath = node.makeHaloPath() else { continue }
             
             let haloColor = resolveColor(for: node, in: context)
-            
             let transparentHaloColor = haloColor.copy(alpha: 0.4) ?? haloColor
             
+            // CORRECT: Other nodes return a simple path that should be STROKED.
+            // This restores the original behavior.
             let haloPrimitive = DrawingPrimitive.stroke(
                 path: haloPath,
                 color: transparentHaloColor,
-                lineWidth: 5.0, // This is in world coordinates now, which is likely too thick.
-                lineCap: .round, lineJoin: .round, miterLimit: 10, lineDash: nil
+                lineWidth: 5.0, // Using the original line width.
+                lineCap: .round,
+                lineJoin: .round,
+                miterLimit: 10,
+                lineDash: nil
             )
-            
+                
             var transform = node.worldTransform
             let worldPrimitive = haloPrimitive.applying(transform: &transform)
             
             let layerId = (node as? Layerable)?.layerId
             primitivesByLayer[layerId, default: []].append(worldPrimitive)
         }
+        
         return primitivesByLayer
     }
-
+    
     /// Renders a list of already-transformed primitives onto a target CALayer.
     private func render(primitives: [DrawingPrimitive], onto parentLayer: CALayer) {
         for primitive in primitives {
