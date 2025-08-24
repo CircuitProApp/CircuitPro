@@ -3,8 +3,14 @@
 import SwiftUI
 
 struct EditablePropertyView: View {
+    
     /// The resolved property to display and edit.
     let property: Property.Resolved
+    
+    /// The current visibility state on the canvas.
+    let isVisible: Bool
+    /// A callback to trigger when the user clicks the eye icon.
+    let onToggleVisibility: () -> Void
     
     /// A callback to execute when the user commits a change.
     let onSave: (Property.Resolved) -> Void
@@ -17,6 +23,13 @@ struct EditablePropertyView: View {
 
     var body: some View {
         HStack {
+            
+            Button(action: onToggleVisibility) {
+                        Image(systemName: isVisible ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(isVisible ? .accentColor : .primary)
+                    }
+                    .buttonStyle(.plain)
+            
             Text(property.key.label)
                 // Highlight overridden properties to give the user a visual cue.
                 .foregroundColor(property.isOverridden ? .accentColor : .primary)

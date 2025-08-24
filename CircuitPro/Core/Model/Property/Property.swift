@@ -19,5 +19,4 @@ struct Property {
     var unit: Unit
     
     var warnsOnEdit: Bool = false
-    
 }

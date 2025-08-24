@@ -26,6 +26,8 @@ final class SymbolNode: BaseNode {
     weak var graph: WireGraph?
 
     override var isSelectable: Bool { true }
+    
+    let resolvedTexts: [CircuitText.Resolved]
 
     // MARK: - Overridden Scene Graph Properties
 
@@ -52,6 +54,9 @@ final class SymbolNode: BaseNode {
         self.instance = instance
         self.symbol = symbol
         self.graph = graph
+        
+        self.resolvedTexts = resolvedTexts
+        
         super.init(id: id)
 
         // Primitive and Pin creation is unchanged.
