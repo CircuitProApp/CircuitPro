@@ -10,14 +10,14 @@ import SwiftData
 import Foundation
 
 @Model
-class Symbol {
+class SymbolDefinition {
 
     @Attribute(.unique)
     var uuid: UUID
     @Attribute(.unique)
     var name: String
 
-    var component: Component?
+    var component: ComponentDefinition?
     var primitives: [AnyCanvasPrimitive]
     var pins: [Pin]
     
@@ -26,7 +26,7 @@ class Symbol {
     init(
         uuid: UUID = UUID(),
         name: String,
-        component: Component? = nil,
+        component: ComponentDefinition? = nil,
         primitives: [AnyCanvasPrimitive] = [],
         pins: [Pin] = [],
         textDefinitions: [CircuitText.Definition] = []

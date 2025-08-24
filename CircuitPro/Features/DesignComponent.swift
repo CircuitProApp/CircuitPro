@@ -10,7 +10,7 @@ import SwiftUI
 struct DesignComponent: Identifiable, Hashable {
 
     // SwiftData model
-    let definition: Component
+    let definition: ComponentDefinition
 
     // NSDocument model
     let instance: ComponentInstance

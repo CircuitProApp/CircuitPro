@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ComponentListRowView: View {
     
-    var component: Component
+    var component: ComponentDefinition
     var isSelected: Bool
     
     var body: some View {

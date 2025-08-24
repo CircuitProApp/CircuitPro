@@ -20,7 +20,7 @@ struct CircuitProApp: App {
         WindowGroup(for: DocumentID.self) { $docID in
             if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {
                 WorkspaceView(document: doc)
-                    .packContainer(for: [Component.self, Symbol.self, Footprint.self])
+                    .packContainer(for: [ComponentDefinition.self, SymbolDefinition.self, FootprintDefinition.self])
                     .environment(\.projectManager, ProjectManager(project: doc.model))
                     .focusedSceneValue(\.activeDocumentID, id)
                     .onReceive(doc.objectWillChange) { _ in
@@ -37,7 +37,7 @@ struct CircuitProApp: App {
         Window("Component Design", id: "ComponentDesignWindow") {
             ComponentDesignView()
                 .frame(minWidth: 800, minHeight: 600)
-                .packContainer(for: [Component.self, Symbol.self, Footprint.self])
+                .packContainer(for: [ComponentDefinition.self, SymbolDefinition.self, FootprintDefinition.self])
         }
         
         AboutWindowScene()

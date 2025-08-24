@@ -15,9 +15,9 @@ struct ComponentListView: View {
     
     @UserContext private var userContext
     
-    @Query private var userComponents: [Component]
+    @Query private var userComponents: [ComponentDefinition]
     
-    private var filteredComponents: [Component] {
+    private var filteredComponents: [ComponentDefinition] {
         if libraryManager.searchText.isEmpty {
             return userComponents
         } else {

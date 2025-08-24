@@ -42,7 +42,7 @@ final class ProjectManager {
         // from the user's library AND all installed packs.
         let fullLibraryContext = ModelContext(packManager.mainContainer)
         
-        let request = FetchDescriptor<Component>(predicate: #Predicate { uuids.contains($0.uuid) })
+        let request = FetchDescriptor<ComponentDefinition>(predicate: #Predicate { uuids.contains($0.uuid) })
         let defs = (try? fullLibraryContext.fetch(request)) ?? []
 
         let dict = Dictionary(uniqueKeysWithValues: defs.map { ($0.uuid, $0) })
@@ -158,6 +158,22 @@ final class ProjectManager {
         }
         
         // Finally, explicitly rebuild the canvas to reflect the changes.
+        rebuildCanvasNodes(with: packManager)
+    }
+    
+    @MainActor
+    func updateReferenceDesignator(for component: DesignComponent, newIndex: Int, using packManager: SwiftDataPackManager) {
+        // 1. Find the component instance in the project's array.
+        guard let instanceIndex = self.componentInstances.firstIndex(where: { $0.id == component.id }) else {
+            print("Error: Could not find component instance to update.")
+            return
+        }
+        
+        // 2. Update the model's value.
+        self.componentInstances[instanceIndex].referenceDesignatorIndex = newIndex
+        
+        // 3. Rebuild the canvas nodes to reflect the change visually.
+        // This is crucial for updating the text on the symbol.
         rebuildCanvasNodes(with: packManager)
     }
         

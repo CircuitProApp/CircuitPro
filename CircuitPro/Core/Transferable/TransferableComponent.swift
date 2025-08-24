@@ -8,7 +8,7 @@ struct TransferableComponent: DraggableTransferable {
     let componentUUID: UUID
     let symbolUUID: UUID
     
-    init?(component: Component) {
+    init?(component: ComponentDefinition) {
         guard let symbol = component.symbol else { return nil }
         componentUUID = component.uuid
         symbolUUID    = symbol.uuid

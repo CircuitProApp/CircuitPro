@@ -29,9 +29,9 @@ struct PadPropertiesView: View {
                 .font(.title3.weight(.semibold))
 
             InspectorSection("Identity and Type") {
-                InspectorRow("Number") {
+                InspectorRow("Number", style: .leading) {
                     InspectorNumericField(value: $pad.number)
-                    Color.clear
+      
                 }
 
                 InspectorRow("Pad Type") {
@@ -103,10 +103,10 @@ struct PadPropertiesView: View {
                     .controlSize(.small)
                 }
                 if pad.isCircle {
-                    InspectorRow("Radius") {
+                    InspectorRow("Radius", style: .leading) {
                         InspectorNumericField(value: $pad.radius, displayMultiplier: 0.1, unit: "mm")
                             .environment(\.focusRingColor, isTooLarge ? .red : .clear)
-                        Color.clear
+                    
                     }
                 } else {
                     InspectorRow("Dimensions") {

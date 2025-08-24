@@ -22,6 +22,6 @@ class LibraryManager {
     
     var selectedPack: AnyPack?
     
-    var selectedComponent: Component?
+    var selectedComponent: ComponentDefinition?
     
 }

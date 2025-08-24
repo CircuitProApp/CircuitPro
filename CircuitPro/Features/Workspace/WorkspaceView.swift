@@ -13,7 +13,7 @@ struct WorkspaceView: View {
     @Environment(\.projectManager)
     private var projectManager
     
-    @Query private var components: [Component]
+    @Query private var components: [ComponentDefinition]
 
     
     var document: CircuitProjectFileDocument

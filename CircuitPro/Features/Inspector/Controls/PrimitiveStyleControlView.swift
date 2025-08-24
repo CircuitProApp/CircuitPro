@@ -51,7 +51,7 @@ struct PrimitiveStyleControlView<T: CanvasPrimitive>: View {
     var body: some View {
         InspectorSection("Style") {
             // This control is disabled if the shape is fillable AND filled.
-            InspectorRow("Stroke") {
+            InspectorRow("Stroke", style: .leading) {
                 InspectorNumericField(
                     title: "W",
                     value: $object.strokeWidth,
@@ -60,7 +60,7 @@ struct PrimitiveStyleControlView<T: CanvasPrimitive>: View {
                     unit: "mm"
                 )
                 .disabled(isFillable && object.filled)
-                Color.clear
+               
             }
             
             // The "Filled" toggle only appears for fillable shapes like rectangles and circles.

@@ -50,7 +50,7 @@ class LibraryPanelManager {
         panel.hasShadow = true
 
         let rootView = LibraryPanelView()
-            .packContainer(for: [Component.self, Symbol.self, Footprint.self])
+            .packContainer(for: [ComponentDefinition.self, SymbolDefinition.self, FootprintDefinition.self])
 
         let hostingController = NSHostingController(rootView: rootView)
         panel.contentViewController = hostingController

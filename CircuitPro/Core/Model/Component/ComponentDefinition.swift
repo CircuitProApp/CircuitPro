@@ -9,7 +9,7 @@ import SwiftData
 import Foundation
 
 @Model
-class Component {
+class ComponentDefinition {
 
     @Attribute(.unique)
     var uuid: UUID
@@ -20,10 +20,10 @@ class Component {
     @Attribute(.unique)
     var referenceDesignatorPrefix: String
 
-    @Relationship(deleteRule: .cascade, inverse: \Symbol.component)
-    var symbol: Symbol?
+    @Relationship(deleteRule: .cascade, inverse: \SymbolDefinition.component)
+    var symbol: SymbolDefinition?
 
-    var footprints: [Footprint]
+    var footprints: [FootprintDefinition]
     var category: ComponentCategory
     var propertyDefinitions: [Property.Definition]
 
@@ -31,8 +31,8 @@ class Component {
         uuid: UUID = UUID(),
         name: String,
         referenceDesignatorPrefix: String,
-        symbol: Symbol? = nil,
-        footprints: [Footprint] = [],
+        symbol: SymbolDefinition? = nil,
+        footprints: [FootprintDefinition] = [],
         category: ComponentCategory,
         propertyDefinitions: [Property.Definition] = []
     ) {

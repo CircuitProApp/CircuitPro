@@ -99,7 +99,7 @@ struct SchematicCanvasView: View {
          }
          
          // Create a fetch descriptor to find the component definition by its unique ID.
-         var fetchDescriptor = FetchDescriptor<Component>(predicate: #Predicate { $0.uuid == transferable.componentUUID })
+         var fetchDescriptor = FetchDescriptor<ComponentDefinition>(predicate: #Predicate { $0.uuid == transferable.componentUUID })
          
          fetchDescriptor.relationshipKeyPathsForPrefetching = [\.symbol]
          

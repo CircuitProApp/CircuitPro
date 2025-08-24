@@ -968,7 +968,7 @@ class WireGraph { // swiftlint:disable:this type_body_length
     /// calculated positions based on the symbol's instance transform and pin definition.
     func syncPins(
         for symbolInstance: SymbolInstance,
-        of symbolDefinition: Symbol,
+        of symbolDefinition: SymbolDefinition,
         ownerID: UUID
     ) {
         for pinDef in symbolDefinition.pins {

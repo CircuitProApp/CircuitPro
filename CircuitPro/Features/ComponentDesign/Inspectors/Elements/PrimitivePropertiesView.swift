@@ -88,9 +88,9 @@ struct CirclePropertiesView: View {
                 )
                 
           
-                InspectorRow("Radius") {
+                InspectorRow("Radius", style: .leading) {
                     InspectorNumericField(value: $circle.shape.radius, unit: "mm")
-                    Color.clear
+                    
                 }
              
                 RotationControlView(object: $circle)

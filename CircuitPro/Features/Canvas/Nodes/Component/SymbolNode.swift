@@ -22,7 +22,7 @@ final class SymbolNode: BaseNode {
             onNeedsRedraw?()
         }
     }
-    let symbol: Symbol
+    let symbol: SymbolDefinition
     weak var graph: WireGraph?
 
     override var isSelectable: Bool { true }
@@ -50,7 +50,7 @@ final class SymbolNode: BaseNode {
     // MARK: - Initialization
 
     // CHANGED: The initializer now takes an array of the new `CircuitText.Resolved` model.
-    init(id: UUID, instance: SymbolInstance, symbol: Symbol, resolvedTexts: [CircuitText.Resolved], graph: WireGraph? = nil) {
+    init(id: UUID, instance: SymbolInstance, symbol: SymbolDefinition, resolvedTexts: [CircuitText.Resolved], graph: WireGraph? = nil) {
         self.instance = instance
         self.symbol = symbol
         self.graph = graph

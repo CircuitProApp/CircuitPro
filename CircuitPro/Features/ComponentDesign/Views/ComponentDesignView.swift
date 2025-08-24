@@ -182,7 +182,7 @@ struct ComponentDesignView: View {
         
         guard let category = componentDesignManager.selectedCategory else { return }
 
-        let newComponent = Component(
+        let newComponent = ComponentDefinition(
             name: componentDesignManager.componentName,
             referenceDesignatorPrefix: componentDesignManager.referenceDesignatorPrefix,
             symbol: nil,
@@ -191,7 +191,7 @@ struct ComponentDesignView: View {
             propertyDefinitions: componentDesignManager.componentProperties
         )
 
-        let newSymbol = Symbol(
+        let newSymbol = SymbolDefinition(
             name: componentDesignManager.componentName,
             component: newComponent,
             primitives: primitives,
