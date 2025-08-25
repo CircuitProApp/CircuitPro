@@ -32,7 +32,7 @@ struct SymbolNodeAppearanceView: View {
                             .listID(int)
                     }
                 }
-                .background(.white)
+                .background(Color(nsColor: .controlBackgroundColor))
                 .clipAndStroke(with: .rect(cornerRadius: 5))
                 .listConfiguration { configuraion in
                     configuraion.listRowPadding = .horizontal(5, vertical: 2.5)
