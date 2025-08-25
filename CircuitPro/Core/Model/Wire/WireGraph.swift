@@ -402,26 +402,30 @@ class WireGraph { // swiftlint:disable:this type_body_length
                 let wasHorizontal = abs(anchorOrigPos.y - junctionOrigPos.y) < 1e-6
                 
                 // Logic to handle UNSELECTED pins being pulled off-axis by the drag
-                if var anchorVertex = vertices[anchorID], case .pin = anchorVertex.ownership {
+                if var anchorVertex = vertices[anchorID], case .pin(let originalOwnerID, let originalPinID) = anchorVertex.ownership { // <-- CAPTURE the IDs here
                     let isOffAxisPull = (wasHorizontal && abs(junctionNewPos.y - anchorOrigPos.y) > 1e-6) || (!wasHorizontal && abs(junctionNewPos.x - anchorOrigPos.x) > 1e-6)
+                    
                     if isOffAxisPull {
                         // This creates the L-bend for the unselected pin
                         updatedAnchorPos = wasHorizontal ? CGPoint(x: anchorOrigPos.x, y: junctionNewPos.y) : CGPoint(x: junctionNewPos.x, y: anchorOrigPos.y)
                         
-                        // Detach the pin only if it hasn't been already
+                        // Detach the original vertex only if it hasn't been already (this check is good)
                         if case .pin = anchorVertex.ownership {
+                            // 1. Change the currently moving vertex to be a detached, free-floating point.
                             anchorVertex.ownership = .detachedPin
                             vertices[anchorID] = anchorVertex
-                            // ... (code to add the new static pin vertex) ...
-                            let newStaticPin = addVertex(at: anchorOrigPos, ownership: .pin(ownerID: UUID(), pinID: UUID()))
-                            if case .pin(let owner, let pin) = vertices[anchorID]!.ownership {
-                                 vertices[newStaticPin.id]?.ownership = .pin(ownerID: owner, pinID: pin)
-                            }
+                            
+                            // 2. Create the new static pin vertex USING THE ORIGINAL, CAPTURED IDs.
+                            let newStaticPin = addVertex(at: anchorOrigPos, ownership: .pin(ownerID: originalOwnerID, pinID: originalPinID))
+                            
+                            // 3. Keep track of this new vertex so it can be normalized later.
                             self.dragState?.newVertices.insert(newStaticPin.id)
+                            
+                            // 4. Connect the now-detached corner vertex to the new static pin vertex.
                             addEdge(from: anchorID, to: newStaticPin.id)
                         }
                     } else {
-                        // The pin is a rigid anchor, do not move it.
+                        // The pin is a rigid anchor, do not move it. This is correct.
                         continue
                     }
                 } else {
