@@ -7,9 +7,32 @@
 
 import SwiftUI
 
+enum InspectorNumericFieldLabelStyle {
+    case regular
+    case prominent
+    
+    var font: Font {
+        switch self {
+        case .regular:
+            return .caption
+        case .prominent:
+            return .subheadline
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .regular:
+            return .secondary
+        case .prominent:
+            return .secondary.mix(with: .primary, by: 0.5)
+        }
+    }
+}
+
 struct InspectorNumericField<T: NumericType>: View {
 
-    var title: String?
+    var label: String?
     @Binding var value: T
     
     var placeholder: String = ""
@@ -21,14 +44,16 @@ struct InspectorNumericField<T: NumericType>: View {
     var suffix: String?
     var unit: String?
     
+    var labelStyle: InspectorNumericFieldLabelStyle = .regular
+    
     var alignment: VerticalAlignment = .lastTextBaseline
     
     var body: some View {
         HStack(spacing: 5) { // This HStack defaults to .center alignment
-            if let title {
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            if let label {
+                Text(label)
+                    .font(labelStyle.font)
+                    .foregroundColor(labelStyle.color)
             }
             
             // Group the field and its unit into a new HStack for special alignment

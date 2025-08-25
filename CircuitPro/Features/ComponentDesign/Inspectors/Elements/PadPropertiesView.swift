@@ -46,7 +46,7 @@ struct PadPropertiesView: View {
 
                 InspectorRow("Drill Diameter") {
                     InspectorNumericField(
-                        title: "Ø",
+                        label: "Ø",
                         value: Binding(
                             get: { pad.drillDiameter ?? 0.0 },
                             set: { pad.drillDiameter = $0 }
@@ -110,8 +110,8 @@ struct PadPropertiesView: View {
                     }
                 } else {
                     InspectorRow("Dimensions") {
-                        InspectorNumericField(title: "W", value: $pad.width, displayMultiplier: 0.1, unit: "mm")
-                        InspectorNumericField(title: "H", value: $pad.height, displayMultiplier: 0.1, unit: "mm")
+                        InspectorNumericField(label: "W", value: $pad.width, displayMultiplier: 0.1, unit: "mm")
+                        InspectorNumericField(label: "H", value: $pad.height, displayMultiplier: 0.1, unit: "mm")
                         
                     }
                     .environment(\.focusRingColor, isTooLarge ? .red : .clear)

@@ -46,7 +46,7 @@ struct TextPropertiesView: View {
 //                        .inspectorField()
 //                }
 //                InspectorRow("Size") {
-//                    InspectorNumericField(title: "Size", value: .constant(textModel.font.pointSize))
+//                    InspectorNumericField(label: "Size", value: .constant(textModel.font.pointSize))
 //                }
             }
         }

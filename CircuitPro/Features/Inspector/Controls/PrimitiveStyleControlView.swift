@@ -53,7 +53,7 @@ struct PrimitiveStyleControlView<T: CanvasPrimitive>: View {
             // This control is disabled if the shape is fillable AND filled.
             InspectorRow("Stroke", style: .leading) {
                 InspectorNumericField(
-                    title: "W",
+                    label: "W",
                     value: $object.strokeWidth,
                     range: 0...100,
                     displayMultiplier: 0.1,

@@ -57,8 +57,8 @@ struct RectanglePropertiesView: View {
                 
                 InspectorRow("Size") {
                   
-                    InspectorNumericField(title: "W", value: $rectangle.shape.size.width, unit: "mm")
-                    InspectorNumericField(title: "H", value: $rectangle.shape.size.height, unit: "mm")
+                    InspectorNumericField(label: "W", value: $rectangle.shape.size.width, unit: "mm")
+                    InspectorNumericField(label: "H", value: $rectangle.shape.size.height, unit: "mm")
                     
             
                 }

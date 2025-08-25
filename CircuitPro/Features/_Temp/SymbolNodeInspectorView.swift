@@ -13,38 +13,16 @@ struct SymbolNodeInspectorView: View {
     let component: DesignComponent
     @Bindable var symbolNode: SymbolNode
     
-    private var referenceDesignatorBinding: Binding<String> {
+    private var referenceDesignatorBinding: Binding<Int> {
         Binding(
             get: {
-                // The getter is simple: just return the current computed string.
-                return component.referenceDesignator
+                return component.instance.referenceDesignatorIndex
             },
             set: { newValue in
-                // The setter contains the parsing and update logic.
-                
-                // a. Get the prefix (e.g., "R", "C") from the component definition.
-                let prefix = component.definition.referenceDesignatorPrefix
-                
-                // b. Guard against bad input: ensure the new value starts with the correct prefix.
-                guard newValue.hasPrefix(prefix) else {
-                    // If the user deletes or changes the prefix, we reject the edit for now.
-                    // The TextField will snap back to the previous valid value.
-                    return
-                }
-                
-                // c. Extract the number part of the string.
-                let indexString = newValue.dropFirst(prefix.count)
-                
-                // d. Try to convert the number part to an Integer.
-                guard let newIndex = Int(indexString) else {
-                    // The part after the prefix is not a valid number. Reject the edit.
-                    return
-                }
-                
-                // e. Call the dedicated update method on the project manager.
+
                 projectManager.updateReferenceDesignator(
                     for: component,
-                    newIndex: newIndex,
+                    newIndex: newValue,
                     using: packManager
                 )
             }
@@ -61,11 +39,8 @@ struct SymbolNodeInspectorView: View {
                 
             }
             InspectorSection("Identity") {
-                InspectorRow("Reference Designator", style: .leading) {
-                    TextField(component.definition.referenceDesignatorPrefix + "?", text: referenceDesignatorBinding)
-                        .inspectorField()
-                    
-                    
+                InspectorRow("Refdes", style: .leading) {
+                    InspectorNumericField(label: component.definition.referenceDesignatorPrefix, value: referenceDesignatorBinding, placeholder: "?", labelStyle: .prominent)
                 }
             }
             
