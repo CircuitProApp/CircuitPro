@@ -16,6 +16,8 @@ struct InspectorView: View {
     // 1. Get the PackManager from the environment to fetch component definitions.
     @PackManager private var packManager
     
+    @State private var selectedTab: InspectorTab = .attributes
+    
     /// A computed property that attempts to find the selected node.
     private var singleSelectedNode: BaseNode? {
         guard projectManager.selectedNodeIDs.count == 1,
@@ -24,7 +26,7 @@ struct InspectorView: View {
         }
         return projectManager.canvasNodes.findNode(with: selectedID)
     }
-
+    
     /// A computed property that finds both the symbol node AND its corresponding DesignComponent.
     /// This is the key piece of logic that connects the canvas selection to the data model.
     @MainActor private var selectedComponentContext: (component: DesignComponent, node: SymbolNode)? {
@@ -46,27 +48,16 @@ struct InspectorView: View {
     
     var body: some View {
         @Bindable var manager = projectManager
-
+        
         VStack(alignment: .leading, spacing: 0) {
-            Text("Inspector")
-                .font(.headline)
-                .padding([.top, .leading, .trailing])
-                .padding(.bottom, 8)
-
-            Divider()
-
+            
             // 2. Check for the rich context object first.
             if let context = selectedComponentContext {
-                ScrollView {
-                    VStack(alignment: .leading) {
-                        // Pass both the component and the node to the inspector view.
-                        SymbolNodeInspectorView(
-                            component: context.component,
-                            symbolNode: context.node
-                        )
-                    }
-                    .padding()
-                }
+                SymbolNodeInspectorHostView(
+                    component: context.component,
+                    symbolNode: context.node,
+                    selectedTab: $selectedTab // Pass the binding for tab selection
+                )
             } else if singleSelectedNode != nil {
                 // 3. Handle cases where an item is selected, but it's not a component
                 //    (e.g., a wire or a net label).

@@ -12,10 +12,7 @@ struct WorkspaceView: View {
     
     @Environment(\.projectManager)
     private var projectManager
-    
-    @Query private var components: [ComponentDefinition]
 
-    
     var document: CircuitProjectFileDocument
     
     @State private var showInspector: Bool = false
@@ -23,18 +20,13 @@ struct WorkspaceView: View {
     @State private var isShowingLibrary: Bool = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     
-    @State private var showingUpdateAlert = false
-    @State private var alertTitle = ""
-    @State private var alertMessage = ""
-    
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             NavigatorView(document: document)
                 .toolbar(removing: .sidebarToggle)
-                .navigationSplitViewColumnWidth(min: 240, ideal: 240, max: 1000)
-            
+                .navigationSplitViewColumnWidth(min: 240, ideal: 240, max: 320)
                 .toolbar {
-                    ToolbarItem(placement: .automatic   ) {
+                    ToolbarItem(placement: .automatic) {
                         Button {
                             withAnimation {
                                 if self.columnVisibility == .detailOnly {
@@ -96,14 +88,7 @@ struct WorkspaceView: View {
             if projectManager.project.designs.isNotEmpty {
                 projectManager.selectedDesign = projectManager.project.designs.first!
             }
-            for component in components {
-                print(component.name)
-            }
         }
-        .alert(isPresented: $showingUpdateAlert) {
-            Alert(title: Text(alertTitle), message: Text(alertMessage), dismissButton: .default(Text("OK")))
-        }
-        
     }
 }
 

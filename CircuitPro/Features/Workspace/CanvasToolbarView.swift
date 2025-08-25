@@ -37,12 +37,8 @@ struct CanvasToolbarView: View {
             .scrollIndicators(.never)
         }
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(.gray.opacity(0.3), lineWidth: 1)
-        )
-        .buttonStyle(.borderless)
+        .clipAndStroke(with: .rect(cornerRadius: 10))
+        .buttonStyle(.plain)
     }
 
     private var toolbarContent: some View {

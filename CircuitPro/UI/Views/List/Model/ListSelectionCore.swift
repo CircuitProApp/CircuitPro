@@ -162,7 +162,10 @@ struct SelectableRow<ID: Hashable, Row: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: configuration.listRowHeight)
             .padding(configuration.listRowPadding)
-            .background(isSelected ? configuration.selectionBackgroundColor : .clear)
+            .background {
+                RoundedRectangle(cornerRadius: configuration.selectionCornerRadius)
+                    .foregroundStyle(isSelected ? configuration.selectionBackgroundColor : .clear)
+            }
             .foregroundStyle(isSelected ? configuration.selectionForegroundColor : .primary)
             .clipShape(.rect(cornerRadius: configuration.selectionCornerRadius))
     }

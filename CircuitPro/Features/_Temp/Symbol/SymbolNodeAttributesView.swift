@@ -1,46 +1,47 @@
-// In SymbolNodeInspectorView.swift
+//
+//  SymbolNodeAttributesView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 8/25/25.
+//
 
 import SwiftUI
 import SwiftDataPacks
 
-struct SymbolNodeInspectorView: View {
-    
-    @Environment(\.projectManager)
-    private var projectManager
-    
+struct SymbolNodeAttributesView: View {
+    @Environment(\.projectManager) private var projectManager
     @PackManager private var packManager
     
     let component: DesignComponent
     @Bindable var symbolNode: SymbolNode
     
+    
+    // (Your referenceDesignatorBinding as it was)
     private var referenceDesignatorBinding: Binding<Int> {
         Binding(
-            get: {
-                return component.instance.referenceDesignatorIndex
-            },
+            get: { component.instance.referenceDesignatorIndex },
             set: { newValue in
-
                 projectManager.updateReferenceDesignator(
-                    for: component,
-                    newIndex: newValue,
-                    using: packManager
+                    for: component, newIndex: newValue, using: packManager
                 )
             }
         )
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading) {
-                Text(component.referenceDesignator)
-                    .font(.headline)
-                Text(component.definition.name)
-                    .foregroundColor(.secondary)
-                
-            }
+        VStack(spacing: 15) {
             InspectorSection("Identity") {
+                InspectorRow("Name") {
+                    Text(component.definition.name)
+                        .foregroundStyle(.secondary)
+                }
                 InspectorRow("Refdes", style: .leading) {
-                    InspectorNumericField(label: component.definition.referenceDesignatorPrefix, value: referenceDesignatorBinding, placeholder: "?", labelStyle: .prominent)
+                    InspectorNumericField(
+                        label: component.definition.referenceDesignatorPrefix,
+                        value: referenceDesignatorBinding,
+                        placeholder: "?",
+                        labelStyle: .prominent
+                    )
                 }
             }
             
@@ -54,16 +55,9 @@ struct SymbolNodeInspectorView: View {
             }
             
             InspectorSection("Properties") {
-                // This ForEach block is now corrected
                 ForEach(component.displayedProperties, id: \.self) { property in
-                    
-                    let (isVisible, onToggleVisibility) = calculateVisibility(for: property)
-                    
-                    // Now we create the view once, with the correct state.
                     EditablePropertyView(
                         property: property,
-                        isVisible: isVisible,
-                        onToggleVisibility: onToggleVisibility,
                         onSave: { updatedProperty in
                             projectManager.updateProperty(
                                 for: component,
@@ -75,7 +69,6 @@ struct SymbolNodeInspectorView: View {
                 }
             }
         }
-        .environment(\.inspectorLabelColumnWidth, 60)
     }
     
     /// A helper function to determine the visibility state and action for a given property.

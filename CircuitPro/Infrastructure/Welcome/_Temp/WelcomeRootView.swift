@@ -32,7 +32,7 @@ struct WelcomeRootView: View {
                         .font(.system(size: 16))
                         .padding(.vertical, 8)
                         .padding(.horizontal, 32)
-                        .background(.gray.opacity(0.1))
+                        .background(.gray.mix(with: .white, by: 0.9))
                         .clipShape(.capsule)
                       
                 }
@@ -44,7 +44,7 @@ struct WelcomeRootView: View {
                         .font(.system(size: 16))
                         .padding(.vertical, 8)
                         .padding(.horizontal, 32)
-                        .background(.gray.opacity(0.1))
+                        .background(.gray.mix(with: .white, by: 0.9))
                         .clipShape(.capsule)
                     
                 }

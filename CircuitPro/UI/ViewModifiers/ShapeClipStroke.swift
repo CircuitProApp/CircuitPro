@@ -1,5 +1,5 @@
 //
-//  ViewModifiers.swift
+//  ShapeClipStroke.swift
 //  Circuit Pro
 //
 //  Created by Giorgi Tchelidze on 4/17/25.
@@ -26,7 +26,7 @@ struct ShapeClipStroke<S: InsettableShape>: ViewModifier {
 extension View {
     func clipAndStroke<S: InsettableShape>(
         with shape: S,
-        strokeColor: Color = .gray.opacity(0.3),
+        strokeColor: Color = .gray.mix(with: .white, by: 0.7),
         lineWidth: CGFloat = 1
     ) -> some View {
         self.modifier(ShapeClipStroke(shape: shape, strokeColor: strokeColor, lineWidth: lineWidth))
