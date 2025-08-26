@@ -113,8 +113,8 @@ final class WireTool: CanvasTool {
             return .horizontal
         }
 
-        // Check if the partIdentifier contains a LineOrientation.
-        if let orientation = hitTarget.partIdentifier as? LineOrientation {
+        // Check if the partIdentifier contains a EdgeOrientation.
+        if let orientation = hitTarget.partIdentifier as? EdgeOrientation {
             // We hit a wire! Start drawing perpendicular to it.
             return orientation == .horizontal ? .vertical : .horizontal
         }

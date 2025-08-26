@@ -31,7 +31,7 @@ public extension GraphState {
 
     @discardableResult
     internal mutating func addEdge(from a: UUID, to b: UUID) -> GraphEdge? {
-        guard vertices[a] != nil, vertices[b] != nil else { return nil }
+        guard vertices[a] != nil, vertices[b] != nil, a != b else { return nil }
         let already = adjacency[a]?.contains(where: { id in
             guard let e = edges[id] else { return false }
             return (e.start == a && e.end == b) || (e.start == b && e.end == a)

@@ -26,12 +26,17 @@ final class GraphEngine {
         let tctx = TransactionContext(grid: grid)
         let epicenter = transaction.apply(to: &dirty, context: tctx)
 
-        // Compute neighborhood for rules
+        if transaction is MetadataOnlyTransaction {
+            let delta = GraphState.computeDelta(from: initial, to: dirty, tol: grid.epsilon)
+            currentState = dirty
+            onChange?(delta, dirty)
+            return delta
+        }
+
         let aabb = RectUtils.aabb(around: epicenter, in: dirty, padding: grid.step)
         let rctx = ResolutionContext(epicenter: epicenter, grid: grid, neighborhood: aabb, policy: policy)
 
         let final = ruleset.resolve(state: dirty, context: rctx)
-
         let delta = GraphState.computeDelta(from: initial, to: final, tol: grid.epsilon)
         currentState = final
         onChange?(delta, final)

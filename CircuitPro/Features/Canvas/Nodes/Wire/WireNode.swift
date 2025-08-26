@@ -8,7 +8,7 @@ final class WireNode: BaseNode {
 
     override var isSelectable: Bool { true }
 
-    var orientation: LineOrientation {
+    var orientation: EdgeOrientation {
         guard let edge = graph.edges[edgeID],
               let startV = graph.vertices[edge.start],
               let endV = graph.vertices[edge.end] else {
