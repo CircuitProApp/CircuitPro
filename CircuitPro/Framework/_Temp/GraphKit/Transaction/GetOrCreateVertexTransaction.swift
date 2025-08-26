@@ -13,7 +13,7 @@ struct GetOrCreateVertexTransaction: GraphTransaction {
     private(set) var createdID: GraphVertex.ID?
 
     mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<GraphVertex.ID> {
-        let tol = context.tol
+        let tol = context.tolerance
         if let v = state.findVertex(at: point, tol: tol) {
             createdID = v.id
             return [v.id]

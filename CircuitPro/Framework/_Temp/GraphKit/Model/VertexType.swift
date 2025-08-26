@@ -8,7 +8,7 @@
 import Foundation
 
 /// The type of vertex that was hit.
-public enum VertexType {
+enum VertexType {
     /// An endpoint of a wire.
     case endpoint
     /// A corner in a wire.

@@ -21,7 +21,7 @@ struct MoveVertexTransaction: GraphTransaction {
         // Skip tiny moves within tolerance
         let dx = v.point.x - target.x
         let dy = v.point.y - target.y
-        if (dx*dx + dy*dy).squareRoot() <= context.tol { return [] }
+        if (dx*dx + dy*dy).squareRoot() <= context.tolerance { return [] }
 
         v.point = target
         state.vertices[id] = v

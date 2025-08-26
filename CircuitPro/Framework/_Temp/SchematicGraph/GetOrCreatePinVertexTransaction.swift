@@ -13,7 +13,7 @@ struct GetOrCreatePinVertexTransaction: GraphTransaction {
     private(set) var vertexID: GraphVertex.ID?
 
     mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<GraphVertex.ID> {
-        let tol = context.tol
+        let tol = context.tolerance
 
         // Try existing vertex at the point
         if let v = state.findVertex(at: point, tol: tol) {

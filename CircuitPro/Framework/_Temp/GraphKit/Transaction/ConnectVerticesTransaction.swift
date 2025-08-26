@@ -14,7 +14,7 @@ struct ConnectVerticesTransaction: GraphTransaction {
     let strategy: Strategy
 
     func apply(to state: inout GraphState, context: TransactionContext) -> Set<UUID> {
-        let tol = context.tol
+        let tol = context.tolerance
         guard let a = state.vertices[startID], let b = state.vertices[endID] else { return [] }
         var affected: Set<UUID> = [a.id, b.id]
 

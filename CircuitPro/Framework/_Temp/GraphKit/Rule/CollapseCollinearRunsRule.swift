@@ -45,7 +45,7 @@ struct CollapseCollinearRunsRule: GraphRule {
             if len <= tol { continue }
             let dir = CGVector(dx: dx/len, dy: dy/len)
 
-            // Deduplicate directions by angle (within tol)
+            // Deduplicate directions by angle (within tolerance)
             if !out.contains(where: { approxSameDir($0, dir, tol: tol) }) {
                 out.append(dir)
             }

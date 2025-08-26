@@ -5,8 +5,6 @@
 //  Created by Giorgi Tchelidze on 8/26/25.
 //
 
-
-// RectUtils.swift
 import Foundation
 import CoreGraphics
 

@@ -7,10 +7,6 @@
 
 import Foundation
 
-public protocol GraphTransaction {
+protocol GraphTransaction {
     mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<UUID>
-    
-  
 }
-
-public protocol MetadataOnlyTransaction {}

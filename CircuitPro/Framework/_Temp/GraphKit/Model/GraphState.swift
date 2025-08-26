@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
+
 /// A pure, value-type snapshot of the graph's topology, geometry, and semantic data.
 /// This struct has no behavior; it is simply the "source of truth" at a moment in time.
-public struct GraphState {
+struct GraphState {
     // --- Topological & Geometric State ---
     var vertices: [GraphVertex.ID: GraphVertex]
     var edges: [GraphEdge.ID: GraphEdge]
@@ -20,9 +21,9 @@ public struct GraphState {
     }
 }
 
-public extension GraphState {
+extension GraphState {
     @discardableResult
-    internal mutating func addVertex(at point: CGPoint, groupID: UUID? = nil) -> GraphVertex {
+    mutating func addVertex(at point: CGPoint, groupID: UUID? = nil) -> GraphVertex {
         let v = GraphVertex(id: UUID(), point: point, groupID: groupID)
         vertices[v.id] = v
         adjacency[v.id] = []
@@ -30,7 +31,7 @@ public extension GraphState {
     }
 
     @discardableResult
-    internal mutating func addEdge(from a: UUID, to b: UUID) -> GraphEdge? {
+    mutating func addEdge(from a: UUID, to b: UUID) -> GraphEdge? {
         guard vertices[a] != nil, vertices[b] != nil, a != b else { return nil }
         let already = adjacency[a]?.contains(where: { id in
             guard let e = edges[id] else { return false }
@@ -58,11 +59,11 @@ public extension GraphState {
         vertices.removeValue(forKey: id)
     }
 
-    internal func findVertex(at point: CGPoint, tol: CGFloat) -> GraphVertex? {
+    func findVertex(at point: CGPoint, tol: CGFloat) -> GraphVertex? {
         vertices.values.first { abs($0.point.x - point.x) < tol && abs($0.point.y - point.y) < tol }
     }
 
-    internal func findEdge(at point: CGPoint, tol: CGFloat) -> GraphEdge? {
+    func findEdge(at point: CGPoint, tol: CGFloat) -> GraphEdge? {
         for e in edges.values {
             guard let p1 = vertices[e.start]?.point, let p2 = vertices[e.end]?.point else { continue }
             if isPoint(point, onSegmentBetween: p1, p2: p2, tol: tol) { return e }
@@ -84,7 +85,7 @@ public extension GraphState {
     }
 
     @discardableResult
-    internal mutating func connectStraight(from a: GraphVertex, to b: GraphVertex, tol: CGFloat) -> Set<UUID> {
+    mutating func connectStraight(from a: GraphVertex, to b: GraphVertex, tol: CGFloat) -> Set<UUID> {
         var affected: Set<UUID> = [a.id, b.id]
         var onPath: [GraphVertex] = [a, b]
         let others = vertices.values.filter {

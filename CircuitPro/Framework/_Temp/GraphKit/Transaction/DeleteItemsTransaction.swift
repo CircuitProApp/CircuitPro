@@ -21,7 +21,7 @@ struct DeleteItemsTransaction: GraphTransaction {
         }
         for id in items {
             if let v = state.vertices[id] {
-                for nid in neighborsCollinear(of: v, state: state, tol: context.tol) {
+                for nid in neighborsCollinear(of: v, state: state, tol: context.tolerance) {
                     verticesToCheck.insert(nid)
                 }
                 state.removeVertex(id)

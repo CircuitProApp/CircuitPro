@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 8/26/25.
 //
 
-
 /// A protocol that defines a complete "physics engine" for a graph.
 /// It encapsulates all the rules, constraints, and normalization logic.
 protocol GraphRuleset {
