@@ -110,3 +110,69 @@ extension GraphState {
         return d
     }
 }
+
+extension GraphState {
+    func neighbors(of id: UUID) -> [UUID] {
+        guard let eids = adjacency[id] else { return [] }
+        var out: [UUID] = []
+        for eid in eids {
+            guard let e = edges[eid] else { continue }
+            out.append(e.start == id ? e.end : e.start)
+        }
+        return out
+    }
+
+    func component(from start: UUID) -> (vertices: Set<UUID>, edges: Set<UUID>) {
+        guard vertices[start] != nil else { return ([], []) }
+        var vset: Set<UUID> = [start]
+        var eset: Set<UUID> = []
+        var stack: [UUID] = [start]
+        while let cur = stack.popLast() {
+            for eid in adjacency[cur] ?? [] where !eset.contains(eid) {
+                eset.insert(eid)
+                guard let e = edges[eid] else { continue }
+                let other = (e.start == cur) ? e.end : e.start
+                if !vset.contains(other) {
+                    vset.insert(other)
+                    stack.append(other)
+                }
+            }
+        }
+        return (vset, eset)
+    }
+}
+
+extension GraphState {
+    @discardableResult
+    mutating func splitEdge(_ edgeID: UUID, at point: CGPoint, ownership: VertexOwnership) -> WireVertex.ID? {
+        guard let e = edges[edgeID] else { return nil }
+        let startID = e.start, endID = e.end
+        let originalNetID = vertices[startID]?.netID
+        removeEdge(edgeID)
+        let newV = addVertex(at: point, ownership: ownership, netID: originalNetID)
+        _ = addEdge(from: startID, to: newV.id)
+        _ = addEdge(from: newV.id, to: endID)
+        return newV.id
+    }
+}
+
+extension GraphState {
+    // Returns affected vertex IDs (including endpoints and any intermediate vertices)
+    @discardableResult
+    mutating func connectStraight(from a: WireVertex, to b: WireVertex) -> Set<UUID> {
+        var affected: Set<UUID> = [a.id, b.id]
+        var onPath: [WireVertex] = [a, b]
+        let others = vertices.values.filter {
+            $0.id != a.id && $0.id != b.id &&
+            isPoint($0.point, onSegmentBetween: a.point, p2: b.point)
+        }
+        for v in others { affected.insert(v.id) }
+        onPath.append(contentsOf: others)
+        if abs(a.point.x - b.point.x) < 1e-6 { onPath.sort { $0.point.y < $1.point.y } }
+        else { onPath.sort { $0.point.x < $1.point.x } }
+        for i in 0..<(onPath.count - 1) {
+            _ = addEdge(from: onPath[i].id, to: onPath[i+1].id)
+        }
+        return affected
+    }
+}

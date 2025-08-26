@@ -5,10 +5,9 @@
 //  Created by Giorgi Tchelidze on 8/26/25.
 //
 
-
 import Foundation
-// Set a net's name (pure metadata change)
-struct SetNetNameTransaction: GraphTransaction {
+
+struct SetNetNameTransaction: GraphTransaction, MetadataOnlyTransaction {
     let netID: UUID
     let name: String
 

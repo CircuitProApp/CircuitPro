@@ -7,6 +7,9 @@
 
 import Foundation
 
-protocol GraphTransaction {
-    mutating func apply(to state: inout GraphState) -> Set<WireVertex.ID>
+public protocol GraphTransaction {
+    // Existing mutating apply stays for now
+    mutating func apply(to state: inout GraphState) -> Set<UUID>
 }
+
+public protocol MetadataOnlyTransaction {}

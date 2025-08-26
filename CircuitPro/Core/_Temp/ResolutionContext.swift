@@ -5,9 +5,12 @@
 //  Created by Giorgi Tchelidze on 8/26/25.
 //
 
+import Foundation
 
 /// A context object passed to a ruleset, providing information about the initial change.
-struct ResolutionContext {
-    /// The set of vertex IDs that were directly moved or created by the user's transaction.
-    let epicenter: Set<WireVertex.ID>
+public struct ResolutionContext {
+    public let epicenter: Set<UUID>
+    public let grid: GridPolicy
+    public let neighborhood: CGRect  // AABB grown around epicenter
 }
+

@@ -1,45 +1,49 @@
-//
-//  GraphEngine.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/26/25.
-//
-
+// GraphEngine.swift
 import SwiftUI
+import CoreGraphics
 
 @Observable
 final class GraphEngine {
     var currentState: GraphState
     private let ruleset: GraphRuleset
+    let grid: GridPolicy
 
     var onChange: ((GraphDelta, GraphState) -> Void)?
 
-    init(initialState: GraphState, ruleset: GraphRuleset) {
+    init(initialState: GraphState, ruleset: GraphRuleset, grid: GridPolicy) {
         self.currentState = initialState
         self.ruleset = ruleset
+        self.grid = grid
     }
 
     @discardableResult
     func execute<T: GraphTransaction>(transaction: inout T) -> GraphDelta {
-        let initialState = self.currentState
+        let initial = currentState
+        var dirty = initial
+        let epicenter = transaction.apply(to: &dirty)
 
-        var dirtyState = initialState
-        let epicenter = transaction.apply(to: &dirtyState)
+        // Skip resolve for metadata-only edits
+        if transaction is MetadataOnlyTransaction {
+            let delta = GraphState.computeDelta(from: initial, to: dirty)
+            currentState = dirty
+            onChange?(delta, dirty)
+            return delta
+        }
 
-        let context = ResolutionContext(epicenter: epicenter)
-        let finalState = ruleset.resolve(state: dirtyState, context: context)
+        // Compute neighborhood AABB around epicenter (pad by one grid step)
+        let aabb = RectUtils.aabb(around: epicenter, in: dirty, padding: grid.step)
+        let ctx = ResolutionContext(epicenter: epicenter, grid: grid, neighborhood: aabb)
 
-        let delta = GraphState.computeDelta(from: initialState, to: finalState)
-        self.currentState = finalState
-        onChange?(delta, finalState)   // notify observers
+        let final = ruleset.resolve(state: dirty, context: ctx)
+
+        let delta = GraphState.computeDelta(from: initial, to: final)
+        currentState = final
+        onChange?(delta, final)
         return delta
     }
 }
 
-// MARK: - Engine utility for non-normalizing state pushes during drag
-
 extension GraphEngine {
-    // Push a new state without invoking the ruleset (used by updateDrag)
     func replaceState(_ newState: GraphState) {
         let delta = GraphState.computeDelta(from: currentState, to: newState)
         currentState = newState

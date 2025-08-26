@@ -32,12 +32,12 @@ final class WireGraph {
 
     // MARK: - Init
     init() {
-        engine = GraphEngine(initialState: .empty, ruleset: OrthogonalWireRuleset())
+        let grid = ManhattanGrid(step: 1) // pick your grid spacing
+        engine = GraphEngine(initialState: .empty, ruleset: OrthogonalWireRuleset(), grid: grid)
         engine.onChange = { [weak self] _, _ in
             self?.onModelDidChange?()
         }
     }
-
     // MARK: - Net Definition (unchanged)
     struct Net: Identifiable, Hashable, Equatable {
         let id: UUID
