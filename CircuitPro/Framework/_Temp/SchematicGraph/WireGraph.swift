@@ -20,6 +20,7 @@ final class WireGraph {
 
     // Domain metadata: schematic ownership (pins, detached pins, free)
     private(set) var ownership: [UUID: VertexOwnership] = [:]
+    private var lastPosition: [UUID: CGPoint] = [:]
 
     // MARK: - UI-only drag state (no normalization during drag)
     private struct DragState {
@@ -35,32 +36,66 @@ final class WireGraph {
 
     // MARK: - Init
     init() {
-        // Build policy without capturing self
-        let lookupBox = OwnershipLookupBox()
-        let policy = WireVertexPolicy(box: lookupBox)
+          // Build policy without capturing self
+          let lookupBox = OwnershipLookupBox()
+          let policy = WireVertexPolicy(box: lookupBox)
 
-        // Create engine as a stored property
-        let grid = ManhattanGrid(step: 1)
-        self.engine = GraphEngine(
-            initialState: .empty,
-            ruleset: OrthogonalWireRuleset(),
-            grid: grid,
-            policy: policy
-        )
+          let grid = ManhattanGrid(step: 1)
+          self.engine = GraphEngine(
+              initialState: .empty,
+              ruleset: OrthogonalWireRuleset(),
+              grid: grid,
+              policy: policy
+          )
 
-        // Now that self is fully initialized, connect the lookup
-        lookupBox.lookup = { [weak self] vid in self?.ownership[vid] }
+          lookupBox.lookup = { [weak self] vid in self?.ownership[vid] }
 
-        // Observe engine changes to keep ownership map in sync
-        engine.onChange = { [weak self] delta, _ in
-            guard let self = self else { return }
-            for id in delta.deletedVertices { self.ownership.removeValue(forKey: id) }
-            for id in delta.createdVertices where self.ownership[id] == nil {
-                self.ownership[id] = .free
-            }
-            self.onModelDidChange?()
-        }
-    }
+          // Seed lastPosition
+          for (vid, v) in engine.currentState.vertices { lastPosition[vid] = v.point }
+
+          engine.onChange = { [weak self] delta, final in
+              guard let self = self else { return }
+              let tol = self.engine.grid.epsilon
+
+              // 1) Remap ownership for deleted pin vertices to the surviving coincident vertex
+              for vid in delta.deletedVertices {
+                  if let own = self.ownership[vid], let oldPos = self.lastPosition[vid] {
+                      // Find a surviving vertex at the same location
+                      if let survivor = final.vertices.values.first(where: { p in
+                          abs(p.point.x - oldPos.x) < tol && abs(p.point.y - oldPos.y) < tol
+                      }) {
+                          // Transfer pin ownership to survivor
+                          self.ownership[survivor.id] = own
+                      }
+                      // Drop old mapping
+                      self.ownership.removeValue(forKey: vid)
+                  }
+                  // Clean up lastPosition for deleted IDs
+                  self.lastPosition.removeValue(forKey: vid)
+              }
+
+              // 2) Update last-known positions for moved/created vertices
+              for (vid, (_, to)) in delta.movedVertices {
+                  self.lastPosition[vid] = to
+              }
+              for vid in delta.createdVertices {
+                  if let v = final.vertices[vid] {
+                      self.lastPosition[vid] = v.point
+                  }
+                  // Default new vertices to .free if not already set by domain logic
+                  if self.ownership[vid] == nil {
+                      self.ownership[vid] = .free
+                  }
+              }
+
+              // 3) Clean up lastPosition entries for any lingering IDs that no longer exist
+              for vid in delta.deletedVertices {
+                  self.lastPosition.removeValue(forKey: vid)
+              }
+
+              self.onModelDidChange?()
+          }
+      }
 
     // MARK: - Net Definition (unchanged)
     struct Net: Identifiable, Hashable, Equatable {
@@ -451,8 +486,10 @@ final class WireGraph {
             let absPos = CGPoint(x: symbolInstance.position.x + rotated.x, y: symbolInstance.position.y + rotated.y)
 
             if let existingID = findVertex(ownedBy: ownerID, pinID: pinDef.id) {
+                // Move and reassert ownership so the policy sees a protected vertex
                 var tx = MoveVertexTransaction(id: existingID, newPoint: absPos)
                 _ = engine.execute(transaction: &tx)
+                ownership[existingID] = .pin(ownerID: ownerID, pinID: pinDef.id)
             } else {
                 _ = getOrCreatePinVertex(at: absPos, ownerID: ownerID, pinID: pinDef.id)
             }

@@ -69,7 +69,19 @@ struct SchematicCanvasView: View {
             }
         }
         .onChange(of: projectManager.componentInstances) {
-            projectManager.rebuildCanvasNodes(with: packManager)
+            // Move existing pin vertices to their new absolute positions; do NOT rebuild.
+            let comps = projectManager.designComponents(using: packManager)
+            for comp in comps {
+                guard let symbolDef = comp.definition.symbol else { continue }
+                projectManager.schematicGraph.syncPins(
+                    for: comp.instance.symbolInstance,
+                    of: symbolDef,
+                    ownerID: comp.id
+                )
+            }
+            // Persist if you want autosave on drags:
+            projectManager.persistSchematicGraph()
+            document.scheduleAutosave()
         }
         .onChange(of: projectManager.canvasNodes) {
             syncProjectManagerFromNodes()
