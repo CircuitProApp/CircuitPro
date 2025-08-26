@@ -23,7 +23,7 @@ struct SplitAtIntermediateVerticesRule: GraphRule {
             if !edgeRect.intersects(context.neighborhood) { continue }
 
             // Collect all intermediate vertices on this edge (excluding endpoints)
-            var mids: [WireVertex] = []
+            var mids: [GraphVertex] = []
             mids.reserveCapacity(2)
 
             for v in verts where v.id != e.start && v.id != e.end {

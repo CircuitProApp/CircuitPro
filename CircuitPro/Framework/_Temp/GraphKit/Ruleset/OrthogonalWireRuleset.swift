@@ -16,7 +16,7 @@ public struct OrthogonalWireRuleset: GraphRuleset {
             SplitAtIntermediateVerticesRule(),
             CollapseCollinearRunsRule(),
             RemoveOrphanFreeVerticesRule(),
-            UnifyNetsRule()
+            UnifyGroupsRule()
         ]
     }
 

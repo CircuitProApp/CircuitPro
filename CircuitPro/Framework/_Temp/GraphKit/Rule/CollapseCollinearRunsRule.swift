@@ -32,8 +32,8 @@ struct CollapseCollinearRunsRule: GraphRule {
         guard let startV = state.vertices[start] else { return }
 
         // Collect all vertices reachable via collinear edges in this orientation
-        var run: [WireVertex] = []
-        var stack: [WireVertex] = [startV]
+        var run: [GraphVertex] = []
+        var stack: [GraphVertex] = [startV]
         var seen: Set<UUID> = [startV.id]
 
         while let v = stack.popLast() {
@@ -90,9 +90,9 @@ struct CollapseCollinearRunsRule: GraphRule {
         }
     }
 
-    private func collinearNeighbors(of v: WireVertex, horizontal: Bool, tol: CGFloat, state: GraphState) -> [WireVertex] {
+    private func collinearNeighbors(of v: GraphVertex, horizontal: Bool, tol: CGFloat, state: GraphState) -> [GraphVertex] {
         guard let eids = state.adjacency[v.id] else { return [] }
-        var out: [WireVertex] = []
+        var out: [GraphVertex] = []
         for eid in eids {
             guard let e = state.edges[eid] else { continue }
             let nid = (e.start == v.id) ? e.end : e.start

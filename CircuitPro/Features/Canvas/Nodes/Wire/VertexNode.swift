@@ -3,7 +3,7 @@ import Observation
 
 @Observable
 final class VertexNode: BaseNode {
-    let vertexID: WireVertex.ID
+    let vertexID: GraphVertex.ID
     let graph: WireGraph
     var isInDebugMode: Bool = true
 
@@ -24,7 +24,7 @@ final class VertexNode: BaseNode {
         }
     }
 
-    init(vertexID: WireVertex.ID, graph: WireGraph) {
+    init(vertexID: GraphVertex.ID, graph: WireGraph) {
         self.vertexID = vertexID
         self.graph = graph
         super.init(id: vertexID)

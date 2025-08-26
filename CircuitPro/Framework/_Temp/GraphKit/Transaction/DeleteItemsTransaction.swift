@@ -30,7 +30,7 @@ struct DeleteItemsTransaction: GraphTransaction {
         return verticesToCheck
     }
 
-    private func neighborsCollinear(of v: WireVertex, state: GraphState, tol: CGFloat) -> [UUID] {
+    private func neighborsCollinear(of v: GraphVertex, state: GraphState, tol: CGFloat) -> [UUID] {
         return state.neighbors(of: v.id).filter { nid in
             guard let n = state.vertices[nid] else { return false }
             return abs(n.point.x - v.point.x) < tol || abs(n.point.y - v.point.y) < tol

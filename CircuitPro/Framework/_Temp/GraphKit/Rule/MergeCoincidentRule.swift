@@ -13,7 +13,7 @@ struct MergeCoincidentRule: GraphRule {
         let tol = context.grid.epsilon
 
         var processed: Set<UUID> = []
-        var buckets: [String: [WireVertex]] = [:]
+        var buckets: [String: [GraphVertex]] = [:]
         for v in state.vertices.values {
             let key = bucketKey(v.point, tol: tol)
             buckets[key, default: []].append(v)

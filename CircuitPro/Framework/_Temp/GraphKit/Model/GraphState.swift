@@ -12,37 +12,37 @@ public struct GraphState {
     // --- Topological & Geometric State ---
     // CORRECTED: Properties are now 'var' to allow mutation on a *copy* of the state.
     // The struct itself remains a value type, ensuring state changes are explicit.
-    var vertices: [WireVertex.ID: WireVertex]
-    var edges: [WireEdge.ID: WireEdge]
-    var adjacency: [WireVertex.ID: Set<WireEdge.ID>]
+    var vertices: [GraphVertex.ID: GraphVertex]
+    var edges: [GraphEdge.ID: GraphEdge]
+    var adjacency: [GraphVertex.ID: Set<GraphEdge.ID>]
 
     // --- Semantic State ---
-    var netNames: [UUID: String]
+    var groupNames: [UUID: String]
 
     /// Creates an empty graph state.
     static var empty: GraphState {
-        GraphState(vertices: [:], edges: [:], adjacency: [:], netNames: [:])
+        GraphState(vertices: [:], edges: [:], adjacency: [:], groupNames: [:])
     }
 }
 
 public extension GraphState {
     @discardableResult
-    internal mutating func addVertex(at point: CGPoint, ownership: VertexOwnership, netID: UUID? = nil) -> WireVertex {
-        let v = WireVertex(id: UUID(), point: point, ownership: ownership, netID: netID)
+    internal mutating func addVertex(at point: CGPoint, ownership: VertexOwnership, netID: UUID? = nil) -> GraphVertex {
+        let v = GraphVertex(id: UUID(), point: point, ownership: ownership, groupID: netID)
         vertices[v.id] = v
         adjacency[v.id] = []
         return v
     }
 
     @discardableResult
-    internal mutating func addEdge(from a: UUID, to b: UUID) -> WireEdge? {
+    internal mutating func addEdge(from a: UUID, to b: UUID) -> GraphEdge? {
         guard vertices[a] != nil, vertices[b] != nil else { return nil }
         let already = adjacency[a]?.contains(where: { id in
             guard let e = edges[id] else { return false }
             return (e.start == a && e.end == b) || (e.start == b && e.end == a)
         }) ?? false
         if already { return nil }
-        let e = WireEdge(id: UUID(), start: a, end: b)
+        let e = GraphEdge(id: UUID(), start: a, end: b)
         edges[e.id] = e
         adjacency[a, default: []].insert(e.id)
         adjacency[b, default: []].insert(e.id)
@@ -63,11 +63,11 @@ public extension GraphState {
         vertices.removeValue(forKey: id)
     }
 
-    internal func findVertex(at point: CGPoint, tol: CGFloat) -> WireVertex? {
+    internal func findVertex(at point: CGPoint, tol: CGFloat) -> GraphVertex? {
         vertices.values.first { abs($0.point.x - point.x) < tol && abs($0.point.y - point.y) < tol }
     }
 
-    internal func findEdge(at point: CGPoint, tol: CGFloat) -> WireEdge? {
+    internal func findEdge(at point: CGPoint, tol: CGFloat) -> GraphEdge? {
         for e in edges.values {
             guard let p1 = vertices[e.start]?.point, let p2 = vertices[e.end]?.point else { continue }
             if isPoint(point, onSegmentBetween: p1, p2: p2, tol: tol) { return e }
@@ -85,9 +85,9 @@ public extension GraphState {
     }
 
     @discardableResult
-    internal mutating func connectStraight(from a: WireVertex, to b: WireVertex, tol: CGFloat) -> Set<UUID> {
+    internal mutating func connectStraight(from a: GraphVertex, to b: GraphVertex, tol: CGFloat) -> Set<UUID> {
         var affected: Set<UUID> = [a.id, b.id]
-        var onPath: [WireVertex] = [a, b]
+        var onPath: [GraphVertex] = [a, b]
         let others = vertices.values.filter {
             $0.id != a.id && $0.id != b.id &&
             isPoint($0.point, onSegmentBetween: a.point, p2: b.point, tol: tol)
@@ -121,7 +121,7 @@ extension GraphState {
                 d.movedVertices[id] = (o.point, n.point)
             }
             if o.ownership != n.ownership { d.changedOwnership[id] = (o.ownership, n.ownership) }
-            if o.netID != n.netID { d.changedNetIDs[id] = (o.netID, n.netID) }
+            if o.groupID != n.groupID { d.changedGroupIDs[id] = (o.groupID, n.groupID) }
         }
 
         let oldEdges = Set(old.edges.keys), newEdges = Set(new.edges.keys)
@@ -164,10 +164,10 @@ extension GraphState {
 
 extension GraphState {
     @discardableResult
-    mutating func splitEdge(_ edgeID: UUID, at point: CGPoint, ownership: VertexOwnership) -> WireVertex.ID? {
+    mutating func splitEdge(_ edgeID: UUID, at point: CGPoint, ownership: VertexOwnership) -> GraphVertex.ID? {
         guard let e = edges[edgeID] else { return nil }
         let startID = e.start, endID = e.end
-        let originalNetID = vertices[startID]?.netID
+        let originalNetID = vertices[startID]?.groupID
         removeEdge(edgeID)
         let newV = addVertex(at: point, ownership: ownership, netID: originalNetID)
         _ = addEdge(from: startID, to: newV.id)

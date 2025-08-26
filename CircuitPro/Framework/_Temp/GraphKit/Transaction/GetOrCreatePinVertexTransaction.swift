@@ -6,9 +6,9 @@ struct GetOrCreatePinVertexTransaction: GraphTransaction {
     let point: CGPoint
     let ownerID: UUID
     let pinID: UUID
-    private(set) var vertexID: WireVertex.ID?
+    private(set) var vertexID: GraphVertex.ID?
 
-    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<WireVertex.ID> {
+    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<GraphVertex.ID> {
         let tol = context.tol
         let ownership: VertexOwnership = .pin(ownerID: ownerID, pinID: pinID)
 

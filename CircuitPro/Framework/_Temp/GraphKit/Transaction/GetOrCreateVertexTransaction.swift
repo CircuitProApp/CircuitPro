@@ -10,9 +10,9 @@ import CoreGraphics
 
 struct GetOrCreateVertexTransaction: GraphTransaction {
     let point: CGPoint
-    private(set) var createdID: WireVertex.ID?
+    private(set) var createdID: GraphVertex.ID?
 
-    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<WireVertex.ID> {
+    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<GraphVertex.ID> {
         let tol = context.tol
         if let v = state.findVertex(at: point, tol: tol) {
             createdID = v.id

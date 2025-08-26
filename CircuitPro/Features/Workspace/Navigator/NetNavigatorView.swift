@@ -42,8 +42,8 @@ struct NetNavigatorView: View {
 //            .environment(\.defaultMinListRowHeight, 14)
 //            .onChange(of: bindableProjectManager.selectedNetIDs) { _, newSelection in
 //                // Get all edges for the selected nets
-//                let allEdgesOfSelectedNets = newSelection.flatMap { netID -> [UUID] in
-//                    if let vertexInNet = projectManager.schematicGraph.vertices.values.first(where: { $0.netID == netID }) {
+//                let allEdgesOfSelectedNets = newSelection.flatMap { groupID -> [UUID] in
+//                    if let vertexInNet = projectManager.schematicGraph.vertices.values.first(where: { $0.groupID == groupID }) {
 //                        let (_, edgeIDs) = projectManager.schematicGraph.net(startingFrom: vertexInNet.id)
 //                        return Array(edgeIDs)
 //                    }

@@ -14,14 +14,14 @@ final class WireGraph {
     public let engine: GraphEngine
 
     // Read-only convenience accessors to current state
-    public var vertices: [WireVertex.ID: WireVertex] { engine.currentState.vertices }
-    public var edges: [WireEdge.ID: WireEdge] { engine.currentState.edges }
-    public var adjacency: [WireVertex.ID: Set<WireEdge.ID>] { engine.currentState.adjacency }
+    public var vertices: [GraphVertex.ID: GraphVertex] { engine.currentState.vertices }
+    public var edges: [GraphEdge.ID: GraphEdge] { engine.currentState.edges }
+    public var adjacency: [GraphVertex.ID: Set<GraphEdge.ID>] { engine.currentState.adjacency }
 
     // MARK: - UI-only drag state (will be moved to transactions later)
     private struct DragState {
         let originalVertexPositions: [UUID: CGPoint]
-        let selectedEdges: [WireEdge]
+        let selectedEdges: [GraphEdge]
         let verticesToMove: Set<UUID>
         var newVertices: Set<UUID> = []
     }
@@ -60,29 +60,29 @@ final class WireGraph {
             return
         }
 
-        var newVertices: [WireVertex.ID: WireVertex] = [:]
-        var newEdges: [WireEdge.ID: WireEdge] = [:]
-        var newAdjacency: [WireVertex.ID: Set<WireEdge.ID>] = [:]
+        var newVertices: [GraphVertex.ID: GraphVertex] = [:]
+        var newEdges: [GraphEdge.ID: GraphEdge] = [:]
+        var newAdjacency: [GraphVertex.ID: Set<GraphEdge.ID>] = [:]
         var newNetNames: [UUID: String] = [:]
-        var attachmentMap: [AttachmentPoint: WireVertex.ID] = [:]
+        var attachmentMap: [AttachmentPoint: GraphVertex.ID] = [:]
 
-        func addVertex(at point: CGPoint, ownership: VertexOwnership) -> WireVertex {
-            let v = WireVertex(id: UUID(), point: point, ownership: ownership, netID: nil)
+        func addVertex(at point: CGPoint, ownership: VertexOwnership) -> GraphVertex {
+            let v = GraphVertex(id: UUID(), point: point, ownership: ownership, groupID: nil)
             newVertices[v.id] = v
             newAdjacency[v.id] = []
             return v
         }
 
-        func addEdge(from a: WireVertex.ID, to b: WireVertex.ID) {
-            let e = WireEdge(id: UUID(), start: a, end: b)
+        func addEdge(from a: GraphVertex.ID, to b: GraphVertex.ID) {
+            let e = GraphEdge(id: UUID(), start: a, end: b)
             newEdges[e.id] = e
             newAdjacency[a, default: []].insert(e.id)
             newAdjacency[b, default: []].insert(e.id)
         }
 
-        func getVertexID(for point: AttachmentPoint, netID: UUID) -> WireVertex.ID {
+        func getVertexID(for point: AttachmentPoint, netID: UUID) -> GraphVertex.ID {
             if let existingID = attachmentMap[point] { return existingID }
-            let v: WireVertex
+            let v: GraphVertex
             switch point {
             case .free(let pt):
                 v = addVertex(at: pt, ownership: .free)
@@ -90,7 +90,7 @@ final class WireGraph {
                 // Create at zero; syncPins will position later
                 v = addVertex(at: .zero, ownership: .pin(ownerID: owner, pinID: pin))
             }
-            newVertices[v.id]?.netID = netID
+            newVertices[v.id]?.groupID = netID
             attachmentMap[point] = v.id
             return v.id
         }
@@ -103,7 +103,7 @@ final class WireGraph {
             }
         }
 
-        let newState = GraphState(vertices: newVertices, edges: newEdges, adjacency: newAdjacency, netNames: newNetNames)
+        let newState = GraphState(vertices: newVertices, edges: newEdges, adjacency: newAdjacency, groupNames: newNetNames)
         engine.replaceState(newState)
     }
 
@@ -115,7 +115,7 @@ final class WireGraph {
         for vID in s.vertices.keys where !processed.contains(vID) {
             let (compV, compE) = net(startingFrom: vID, in: s)
             processed.formUnion(compV)
-            guard !compE.isEmpty, let netID = s.vertices[vID]?.netID else { continue }
+            guard !compE.isEmpty, let netID = s.vertices[vID]?.groupID else { continue }
 
             let segments: [WireSegment] = compE.compactMap { eid in
                 guard let e = s.edges[eid],
@@ -132,7 +132,7 @@ final class WireGraph {
         return wires
     }
 
-    private func attachmentPoint(for v: WireVertex) -> AttachmentPoint? {
+    private func attachmentPoint(for v: GraphVertex) -> AttachmentPoint? {
         switch v.ownership {
         case .free, .detachedPin: return .free(point: v.point)
         case .pin(let ownerID, let pinID): return .pin(componentInstanceID: ownerID, pinID: pinID)
@@ -142,7 +142,7 @@ final class WireGraph {
     // MARK: - Public API (transactions-first)
 
     public func setName(_ name: String, for netID: UUID) {
-        var tx = SetNetNameTransaction(netID: netID, name: name)
+        var tx = SetGroupNameTransaction(netID: netID, name: name)
         _ = engine.execute(transaction: &tx)
     }
 
@@ -151,14 +151,14 @@ final class WireGraph {
         _ = engine.execute(transaction: &tx)
     }
 
-    func getOrCreateVertex(at point: CGPoint) -> WireVertex.ID {
+    func getOrCreateVertex(at point: CGPoint) -> GraphVertex.ID {
         var tx = GetOrCreateVertexTransaction(point: point)
         _ = engine.execute(transaction: &tx)
         precondition(tx.createdID != nil, "GetOrCreateVertexTransaction must yield an ID")
         return tx.createdID!
     }
 
-    func getOrCreatePinVertex(at point: CGPoint, ownerID: UUID, pinID: UUID) -> WireVertex.ID {
+    func getOrCreatePinVertex(at point: CGPoint, ownerID: UUID, pinID: UUID) -> GraphVertex.ID {
         var tx = GetOrCreatePinVertexTransaction(point: point, ownerID: ownerID, pinID: pinID)
         _ = engine.execute(transaction: &tx)
         precondition(tx.vertexID != nil, "GetOrCreatePinVertexTransaction must yield an ID")
@@ -382,7 +382,7 @@ final class WireGraph {
     }
 
     // Neighbor search helper for drag propagation
-    private func findNeighbor(of vertexID: UUID, in state: GraphState, where predicate: (UUID, WireEdge) -> Bool) -> WireVertex? {
+    private func findNeighbor(of vertexID: UUID, in state: GraphState, where predicate: (UUID, GraphEdge) -> Bool) -> GraphVertex? {
         guard let edgeIDs = state.adjacency[vertexID] else { return nil }
         for eid in edgeIDs {
             guard let e = state.edges[eid] else { continue }
@@ -393,7 +393,7 @@ final class WireGraph {
     }
 
     // Convenience: find a vertex by pin ownership in current state
-    func findVertex(ownedBy ownerID: UUID, pinID: UUID) -> WireVertex.ID? {
+    func findVertex(ownedBy ownerID: UUID, pinID: UUID) -> GraphVertex.ID? {
         for v in engine.currentState.vertices.values {
             if case .pin(let o, let p) = v.ownership, o == ownerID, p == pinID { return v.id }
         }

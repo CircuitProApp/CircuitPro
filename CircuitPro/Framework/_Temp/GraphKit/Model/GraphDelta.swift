@@ -7,6 +7,8 @@
 
 import Foundation
 
+typealias GroupID = UUID
+
 struct GraphDelta {
     var createdVertices: Set<UUID> = []
     var deletedVertices: Set<UUID> = []
@@ -16,5 +18,5 @@ struct GraphDelta {
     var deletedEdges: Set<UUID> = []
 
     var changedOwnership: [UUID: (from: VertexOwnership, to: VertexOwnership)] = [:]
-    var changedNetIDs: [UUID: (from: UUID?, to: UUID?)] = [:]
+    var changedGroupIDs: [UUID: (from: UUID?, to: UUID?)] = [:]
 }
