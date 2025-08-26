@@ -19,11 +19,11 @@ struct GetOrCreateVertexTransaction: GraphTransaction {
             return [v.id]
         }
         if let e = state.findEdge(at: point, tol: tol),
-           let id = state.splitEdge(e.id, at: point, ownership: .free) {
+           let id = state.splitEdge(e.id, at: point) {
             createdID = id
             return [id]
         }
-        let v = state.addVertex(at: point, ownership: .free)
+        let v = state.addVertex(at: point)
         createdID = v.id
         return [v.id]
     }

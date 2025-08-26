@@ -11,7 +11,7 @@ struct CollapseCollinearRunsRule: GraphRule {
             for nid in state.neighbors(of: id) { seeds.insert(nid) }
         }
 
-        // Optionally scope to neighborhood AABB to keep this local
+        // Scope to neighborhood AABB to keep this local
         let scopedSeeds: [UUID] = seeds.compactMap { id in
             guard let p = state.vertices[id]?.point else { return nil }
             return context.neighborhood.contains(p) ? id : nil
@@ -19,16 +19,17 @@ struct CollapseCollinearRunsRule: GraphRule {
 
         for id in scopedSeeds {
             guard let center = state.vertices[id] else { continue }
-            guard case .free = center.ownership else { continue }
+            // Skip runs starting on protected vertices (e.g., pins), defer to policy
+            if context.policy?.isProtected(center, state: state) ?? false { continue }
 
-            processRun(start: id, horizontal: true, tol: tol, state: &state)
+            processRun(start: id, horizontal: true, tol: tol, policy: context.policy, state: &state)
             if state.vertices[id] != nil {
-                processRun(start: id, horizontal: false, tol: tol, state: &state)
+                processRun(start: id, horizontal: false, tol: tol, policy: context.policy, state: &state)
             }
         }
     }
 
-    private func processRun(start: UUID, horizontal: Bool, tol: CGFloat, state: inout GraphState) {
+    private func processRun(start: UUID, horizontal: Bool, tol: CGFloat, policy: VertexPolicy?, state: inout GraphState) {
         guard let startV = state.vertices[start] else { return }
 
         // Collect all vertices reachable via collinear edges in this orientation
@@ -48,7 +49,10 @@ struct CollapseCollinearRunsRule: GraphRule {
         // Decide which vertices to keep
         var keep: Set<UUID> = []
         for v in run {
-            if case .pin = v.ownership { keep.insert(v.id); continue }
+            if policy?.isProtected(v, state: state) ?? false {
+                keep.insert(v.id)
+                continue
+            }
             let degree = state.adjacency[v.id]?.count ?? 0
             let collinearDegree = collinearNeighbors(of: v, horizontal: horizontal, tol: tol, state: state).count
             if degree > collinearDegree { keep.insert(v.id) } // branching or corner
@@ -77,7 +81,7 @@ struct CollapseCollinearRunsRule: GraphRule {
             }
         }
 
-        // Remove removable vertices
+        // Remove removable vertices (never remove protected because they're in 'keep')
         for v in run where !keep.contains(v.id) {
             state.removeVertex(v.id)
         }

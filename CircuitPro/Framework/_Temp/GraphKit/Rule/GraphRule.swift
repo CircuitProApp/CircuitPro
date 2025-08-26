@@ -5,8 +5,7 @@
 //  Created by Giorgi Tchelidze on 8/26/25.
 //
 
-
-public protocol GraphRule {
+protocol GraphRule {
     // Mutates only within its intended neighborhood
     func apply(state: inout GraphState, context: ResolutionContext)
 }

@@ -18,7 +18,10 @@ final class WireGraph {
     public var edges: [GraphEdge.ID: GraphEdge] { engine.currentState.edges }
     public var adjacency: [GraphVertex.ID: Set<GraphEdge.ID>] { engine.currentState.adjacency }
 
-    // MARK: - UI-only drag state (will be moved to transactions later)
+    // Domain metadata: schematic ownership (pins, detached pins, free)
+    private(set) var ownership: [UUID: VertexOwnership] = [:]
+
+    // MARK: - UI-only drag state (no normalization during drag)
     private struct DragState {
         let originalVertexPositions: [UUID: CGPoint]
         let selectedEdges: [GraphEdge]
@@ -32,12 +35,33 @@ final class WireGraph {
 
     // MARK: - Init
     init() {
-        let grid = ManhattanGrid(step: 1) // pick your grid spacing
-        engine = GraphEngine(initialState: .empty, ruleset: OrthogonalWireRuleset(), grid: grid)
-        engine.onChange = { [weak self] _, _ in
-            self?.onModelDidChange?()
+        // Build policy without capturing self
+        let lookupBox = OwnershipLookupBox()
+        let policy = WireVertexPolicy(box: lookupBox)
+
+        // Create engine as a stored property
+        let grid = ManhattanGrid(step: 1)
+        self.engine = GraphEngine(
+            initialState: .empty,
+            ruleset: OrthogonalWireRuleset(),
+            grid: grid,
+            policy: policy
+        )
+
+        // Now that self is fully initialized, connect the lookup
+        lookupBox.lookup = { [weak self] vid in self?.ownership[vid] }
+
+        // Observe engine changes to keep ownership map in sync
+        engine.onChange = { [weak self] delta, _ in
+            guard let self = self else { return }
+            for id in delta.deletedVertices { self.ownership.removeValue(forKey: id) }
+            for id in delta.createdVertices where self.ownership[id] == nil {
+                self.ownership[id] = .free
+            }
+            self.onModelDidChange?()
         }
     }
+
     // MARK: - Net Definition (unchanged)
     struct Net: Identifiable, Hashable, Equatable {
         let id: UUID
@@ -53,23 +77,26 @@ final class WireGraph {
 
     // MARK: - Persistence
 
-    // Build a new GraphState from wires and replace engine state in one go (no incremental ruleset resolution needed here)
+    // Build a new GraphState from wires and replace engine state in one go
     public func build(from wires: [Wire]) {
         if wires.isEmpty {
             engine.replaceState(.empty)
+            ownership = [:]
             return
         }
 
         var newVertices: [GraphVertex.ID: GraphVertex] = [:]
         var newEdges: [GraphEdge.ID: GraphEdge] = [:]
         var newAdjacency: [GraphVertex.ID: Set<GraphEdge.ID>] = [:]
-        var newNetNames: [UUID: String] = [:]
+        var newGroupNames: [UUID: String] = [:]
         var attachmentMap: [AttachmentPoint: GraphVertex.ID] = [:]
+        var newOwnership: [UUID: VertexOwnership] = [:]
 
-        func addVertex(at point: CGPoint, ownership: VertexOwnership) -> GraphVertex {
-            let v = GraphVertex(id: UUID(), point: point, ownership: ownership, groupID: nil)
+        func addVertex(at point: CGPoint, own: VertexOwnership) -> GraphVertex {
+            let v = GraphVertex(id: UUID(), point: point, groupID: nil)
             newVertices[v.id] = v
             newAdjacency[v.id] = []
+            newOwnership[v.id] = own
             return v
         }
 
@@ -80,31 +107,33 @@ final class WireGraph {
             newAdjacency[b, default: []].insert(e.id)
         }
 
-        func getVertexID(for point: AttachmentPoint, netID: UUID) -> GraphVertex.ID {
+        func getVertexID(for point: AttachmentPoint, groupID: UUID) -> GraphVertex.ID {
             if let existingID = attachmentMap[point] { return existingID }
             let v: GraphVertex
             switch point {
             case .free(let pt):
-                v = addVertex(at: pt, ownership: .free)
+                v = addVertex(at: pt, own: .free)
             case .pin(let owner, let pin):
                 // Create at zero; syncPins will position later
-                v = addVertex(at: .zero, ownership: .pin(ownerID: owner, pinID: pin))
+                v = addVertex(at: .zero, own: .pin(ownerID: owner, pinID: pin))
             }
-            newVertices[v.id]?.groupID = netID
+            newVertices[v.id]?.groupID = groupID
             attachmentMap[point] = v.id
             return v.id
         }
 
         for wire in wires {
             for seg in wire.segments {
-                let a = getVertexID(for: seg.start, netID: wire.id)
-                let b = getVertexID(for: seg.end, netID: wire.id)
+                let a = getVertexID(for: seg.start, groupID: wire.id)
+                let b = getVertexID(for: seg.end, groupID: wire.id)
                 if a != b { addEdge(from: a, to: b) }
             }
         }
 
-        let newState = GraphState(vertices: newVertices, edges: newEdges, adjacency: newAdjacency, groupNames: newNetNames)
+        let newState = GraphState(vertices: newVertices, edges: newEdges, adjacency: newAdjacency, groupNames: newGroupNames)
         engine.replaceState(newState)
+        // Overwrite ownership map with reconstructed values
+        ownership = newOwnership
     }
 
     public func toWires() -> [Wire] {
@@ -115,7 +144,7 @@ final class WireGraph {
         for vID in s.vertices.keys where !processed.contains(vID) {
             let (compV, compE) = net(startingFrom: vID, in: s)
             processed.formUnion(compV)
-            guard !compE.isEmpty, let netID = s.vertices[vID]?.groupID else { continue }
+            guard !compE.isEmpty, let groupID = s.vertices[vID]?.groupID else { continue }
 
             let segments: [WireSegment] = compE.compactMap { eid in
                 guard let e = s.edges[eid],
@@ -126,14 +155,14 @@ final class WireGraph {
                 return WireSegment(start: ap, end: bp)
             }
             if !segments.isEmpty {
-                wires.append(Wire(id: netID, segments: segments))
+                wires.append(Wire(id: groupID, segments: segments))
             }
         }
         return wires
     }
 
     private func attachmentPoint(for v: GraphVertex) -> AttachmentPoint? {
-        switch v.ownership {
+        switch ownership[v.id] ?? .free {
         case .free, .detachedPin: return .free(point: v.point)
         case .pin(let ownerID, let pinID): return .pin(componentInstanceID: ownerID, pinID: pinID)
         }
@@ -147,8 +176,18 @@ final class WireGraph {
     }
 
     public func releasePins(for ownerID: UUID) {
-        var tx = ReleasePinsTransaction(ownerID: ownerID)
-        _ = engine.execute(transaction: &tx)
+        // Domain-only change: update ownership map and trigger a localized resolve
+        var epicenter: Set<UUID> = []
+        for (vid, own) in ownership {
+            if case .pin(let o, _) = own, o == ownerID {
+                ownership[vid] = .free
+                epicenter.insert(vid)
+            }
+        }
+        if !epicenter.isEmpty {
+            var tx = LoadStateTransaction(newState: engine.currentState, epicenter: epicenter)
+            _ = engine.execute(transaction: &tx)
+        }
     }
 
     func getOrCreateVertex(at point: CGPoint) -> GraphVertex.ID {
@@ -158,22 +197,31 @@ final class WireGraph {
         return tx.createdID!
     }
 
+    @discardableResult
     func getOrCreatePinVertex(at point: CGPoint, ownerID: UUID, pinID: UUID) -> GraphVertex.ID {
-        var tx = GetOrCreatePinVertexTransaction(point: point, ownerID: ownerID, pinID: pinID)
+        var tx = GetOrCreateVertexTransaction(point: point)
         _ = engine.execute(transaction: &tx)
-        precondition(tx.vertexID != nil, "GetOrCreatePinVertexTransaction must yield an ID")
-        return tx.vertexID!
+        precondition(tx.createdID != nil, "GetOrCreateVertexTransaction must yield an ID")
+        let vid = tx.createdID!
+        ownership[vid] = .pin(ownerID: ownerID, pinID: pinID)
+        return vid
     }
 
-    func connect(from startID: UUID, to endID: UUID, preferring strategy: WireConnectionStrategy = .horizontalThenVertical) {
-        let s: ConnectVerticesTransaction.Strategy = (strategy == .horizontalThenVertical) ? .hThenV : .vThenH
-        var tx = ConnectVerticesTransaction(startID: startID, endID: endID, strategy: s)
+    func connect(from startPoint: CGPoint,
+                 to endPoint: CGPoint,
+                 preferring strategy: WireConnectionStrategy = .horizontalThenVertical) {
+        let s: ConnectVerticesTransaction.Strategy =
+            (strategy == .horizontalThenVertical) ? .hThenV : .vThenH
+        var tx = ConnectPointsTransaction(start: startPoint, end: endPoint, strategy: s)
         _ = engine.execute(transaction: &tx)
     }
-    
-    func connect(from startPoint: CGPoint, to endPoint: CGPoint, preferring strategy: WireConnectionStrategy = .horizontalThenVertical) {
-        let s: ConnectVerticesTransaction.Strategy = (strategy == .horizontalThenVertical) ? .hThenV : .vThenH
-        var tx = ConnectPointsTransaction(start: startPoint, end: endPoint, strategy: s)
+
+    func connect(from startID: UUID,
+                 to endID: UUID,
+                 preferring strategy: WireConnectionStrategy = .horizontalThenVertical) {
+        let s: ConnectVerticesTransaction.Strategy =
+            (strategy == .horizontalThenVertical) ? .hThenV : .vThenH
+        var tx = ConnectVerticesTransaction(startID: startID, endID: endID, strategy: s)
         _ = engine.execute(transaction: &tx)
     }
 
@@ -188,9 +236,10 @@ final class WireGraph {
         let s = engine.currentState
 
         // 1) Pins of selected symbols
-        let symbolPinVertexIDs = s.vertices.values
-            .filter { if case .pin(let ownerID, _) = $0.ownership { return selectedIDs.contains(ownerID) } else { return false } }
-            .map { $0.id }
+        let symbolPinVertexIDs = s.vertices.keys.filter { vid in
+            if case .pin(let ownerID, _) = ownership[vid] { return selectedIDs.contains(ownerID) }
+            return false
+        }
 
         // 2) Selected edges
         let selectedEdges = s.edges.values.filter { selectedIDs.contains($0.id) }
@@ -199,8 +248,7 @@ final class WireGraph {
         let movableEdgeVertexIDs = selectedEdges
             .flatMap { [$0.start, $0.end] }
             .filter { vid in
-                guard let v = s.vertices[vid] else { return false }
-                if case .pin = v.ownership { return false }
+                if case .pin = ownership[vid] { return false }
                 return true
             }
 
@@ -222,10 +270,11 @@ final class WireGraph {
     public func updateDrag(by delta: CGPoint) {
         guard var ds = dragState else { return }
         var s = engine.currentState
+        let tol = engine.grid.epsilon
 
         // 1) Pre-process: detaching selected pins that are pulled off-axis
         for vertexID in ds.verticesToMove {
-            guard let v = s.vertices[vertexID], case .pin = v.ownership else { continue }
+            guard case .pin = ownership[vertexID] else { continue }
 
             let isOffAxis = (s.adjacency[vertexID] ?? []).contains { edgeID in
                 guard ds.selectedEdges.contains(where: { $0.id == edgeID }) else { return false }
@@ -234,20 +283,20 @@ final class WireGraph {
                 if ds.verticesToMove.contains(otherEndID) { return false }
                 guard let orig = ds.originalVertexPositions[vertexID],
                       let otherOrig = ds.originalVertexPositions[otherEndID] else { return false }
-                let wasHorizontal = abs(orig.y - otherOrig.y) < 1e-6
-                return (wasHorizontal && abs(delta.y) > 1e-6) || (!wasHorizontal && abs(delta.x) > 1e-6)
+                let wasHorizontal = abs(orig.y - otherOrig.y) < tol
+                return (wasHorizontal && abs(delta.y) > tol) || (!wasHorizontal && abs(delta.x) > tol)
             }
 
             if isOffAxis {
-                let pinOwnership = v.ownership
-                let pinPoint = v.point
-                s.vertices[vertexID]?.ownership = .detachedPin
-                let newStatic = s.addVertex(at: pinPoint, ownership: pinOwnership)
+                let pinOwnership = ownership[vertexID] ?? .free
+                let pinPoint = s.vertices[vertexID]?.point ?? .zero
+                ownership[vertexID] = .detachedPin
+                let newStatic = s.addVertex(at: pinPoint, groupID: s.vertices[vertexID]?.groupID)
                 ds.newVertices.insert(newStatic.id)
+                ownership[newStatic.id] = pinOwnership
                 _ = s.addEdge(from: vertexID, to: newStatic.id)
             }
         }
-        self.dragState = ds
 
         // 2) Initial displaced positions for the moving set
         var newPositions: [UUID: CGPoint] = [:]
@@ -259,17 +308,17 @@ final class WireGraph {
 
         // 3) L-bend for detached pins
         for vertexID in ds.verticesToMove {
-            if let v = s.vertices[vertexID], v.ownership == .detachedPin {
+            if ownership[vertexID] == .detachedPin {
                 guard let staticPinNeighbor = findNeighbor(of: vertexID, in: s, where: { nID, _ in
-                          if case .pin = s.vertices[nID]?.ownership { return newPositions[nID] == nil } else { return false }
+                          if case .pin = self.ownership[nID] { return newPositions[nID] == nil } else { return false }
                       }),
                       let movingNeighbor = findNeighbor(of: vertexID, in: s, where: { nID, e in
                           return newPositions[nID] != nil && ds.selectedEdges.contains { $0.id == e.id }
-                      }) else { continue }
-                let origV = ds.originalVertexPositions[vertexID]!
-                let origM = ds.originalVertexPositions[movingNeighbor.id]!
-                let newM = newPositions[movingNeighbor.id]!
-                let wasHorizontal = abs(origV.y - origM.y) < 1e-6
+                      }),
+                      let origV = ds.originalVertexPositions[vertexID],
+                      let origM = ds.originalVertexPositions[movingNeighbor.id],
+                      let newM = newPositions[movingNeighbor.id] else { continue }
+                let wasHorizontal = abs(origV.y - origM.y) < tol
                 newPositions[vertexID] = wasHorizontal
                     ? CGPoint(x: staticPinNeighbor.point.x, y: newM.y)
                     : CGPoint(x: newM.x, y: staticPinNeighbor.point.y)
@@ -293,22 +342,21 @@ final class WireGraph {
 
                 guard let anchorOrigPos = ds.originalVertexPositions[anchorID] else { continue }
                 var updatedAnchorPos = newPositions[anchorID] ?? anchorOrigPos
-                let wasHorizontal = abs(anchorOrigPos.y - junctionOrigPos.y) < 1e-6
+                let wasHorizontal = abs(anchorOrigPos.y - junctionOrigPos.y) < tol
 
-                if var anchorVertex = s.vertices[anchorID], case .pin(let owner, let pin) = anchorVertex.ownership {
-                    let isOffAxisPull = (wasHorizontal && abs(junctionNewPos.y - anchorOrigPos.y) > 1e-6)
-                        || (!wasHorizontal && abs(junctionNewPos.x - anchorOrigPos.x) > 1e-6)
+                if case .pin(let owner, let pin) = ownership[anchorID] {
+                    let isOffAxisPull = (wasHorizontal && abs(junctionNewPos.y - anchorOrigPos.y) > tol)
+                        || (!wasHorizontal && abs(junctionNewPos.x - anchorOrigPos.x) > tol)
                     if isOffAxisPull {
                         updatedAnchorPos = wasHorizontal
                             ? CGPoint(x: anchorOrigPos.x, y: junctionNewPos.y)
                             : CGPoint(x: junctionNewPos.x, y: anchorOrigPos.y)
-                        if case .pin = anchorVertex.ownership {
-                            anchorVertex.ownership = .detachedPin
-                            s.vertices[anchorID] = anchorVertex
-                            let newStaticPin = s.addVertex(at: anchorOrigPos, ownership: .pin(ownerID: owner, pinID: pin))
-                            self.dragState?.newVertices.insert(newStaticPin.id)
-                            _ = s.addEdge(from: anchorID, to: newStaticPin.id)
-                        }
+
+                        ownership[anchorID] = .detachedPin
+                        let newStaticPin = s.addVertex(at: anchorOrigPos, groupID: s.vertices[anchorID]?.groupID)
+                        ds.newVertices.insert(newStaticPin.id)
+                        ownership[newStaticPin.id] = .pin(ownerID: owner, pinID: pin)
+                        _ = s.addEdge(from: anchorID, to: newStaticPin.id)
                     } else {
                         continue
                     }
@@ -335,25 +383,20 @@ final class WireGraph {
         }
 
         engine.replaceState(s) // push updated geometry without ruleset cleanup
+        self.dragState = ds
     }
 
     public func endDrag() {
         guard let ds = dragState else { return }
-        var s = engine.currentState
 
-        // Convert temporary detached pins back to free vertices
-        for (id, v) in s.vertices {
-            if case .detachedPin = v.ownership {
-                var vv = v
-                vv.ownership = .free
-                s.vertices[id] = vv
-            }
+        // Convert temporary detached pins back to free vertices (domain metadata only)
+        for (vid, own) in ownership where own == .detachedPin {
+            ownership[vid] = .free
         }
 
         // Normalize around the affected region via ruleset.
-        // Fix: turn keys into a Set before union.
         let epicenter = Set(ds.originalVertexPositions.keys).union(ds.newVertices)
-        var tx = LoadStateTransaction(newState: s, epicenter: epicenter)
+        var tx = LoadStateTransaction(newState: engine.currentState, epicenter: epicenter)
         _ = engine.execute(transaction: &tx)
 
         self.dragState = nil
@@ -392,10 +435,10 @@ final class WireGraph {
         return nil
     }
 
-    // Convenience: find a vertex by pin ownership in current state
+    // Convenience: find a vertex by pin ownership
     func findVertex(ownedBy ownerID: UUID, pinID: UUID) -> GraphVertex.ID? {
-        for v in engine.currentState.vertices.values {
-            if case .pin(let o, let p) = v.ownership, o == ownerID, p == pinID { return v.id }
+        for (vid, own) in ownership {
+            if case .pin(let o, let p) = own, o == ownerID, p == pinID { return vid }
         }
         return nil
     }
@@ -411,8 +454,7 @@ final class WireGraph {
                 var tx = MoveVertexTransaction(id: existingID, newPoint: absPos)
                 _ = engine.execute(transaction: &tx)
             } else {
-                var tx = GetOrCreatePinVertexTransaction(point: absPos, ownerID: ownerID, pinID: pinDef.id)
-                _ = engine.execute(transaction: &tx)
+                _ = getOrCreatePinVertex(at: absPos, ownerID: ownerID, pinID: pinDef.id)
             }
         }
     }

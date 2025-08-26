@@ -37,7 +37,7 @@ struct MergeCoincidentRule: GraphRule {
                 }
                 guard group.count > 1 else { continue }
 
-                let survivor = group.first(where: { if case .pin = $0.ownership { return true } else { return false } }) ?? group[0]
+                let survivor = context.policy?.preferSurvivor(group, state: state) ?? group[0]
                 processed.insert(survivor.id)
 
                 for victim in group where victim.id != survivor.id {

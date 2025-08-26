@@ -7,13 +7,15 @@ final class GraphEngine {
     var currentState: GraphState
     private let ruleset: GraphRuleset
     let grid: GridPolicy
+    private let policy: VertexPolicy?
 
     var onChange: ((GraphDelta, GraphState) -> Void)?
 
-    init(initialState: GraphState, ruleset: GraphRuleset, grid: GridPolicy) {
+    init(initialState: GraphState, ruleset: GraphRuleset, grid: GridPolicy, policy: VertexPolicy? = nil) {
         self.currentState = initialState
         self.ruleset = ruleset
         self.grid = grid
+        self.policy = policy
     }
     
     @discardableResult
@@ -26,7 +28,7 @@ final class GraphEngine {
 
         // Compute neighborhood for rules
         let aabb = RectUtils.aabb(around: epicenter, in: dirty, padding: grid.step)
-        let rctx = ResolutionContext(epicenter: epicenter, grid: grid, neighborhood: aabb)
+        let rctx = ResolutionContext(epicenter: epicenter, grid: grid, neighborhood: aabb, policy: policy)
 
         let final = ruleset.resolve(state: dirty, context: rctx)
 

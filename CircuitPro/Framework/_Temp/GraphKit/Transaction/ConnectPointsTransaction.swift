@@ -28,7 +28,7 @@ struct ConnectPointsTransaction: GraphTransaction {
                 ? CGPoint(x: b.point.x, y: a.point.y)
                 : CGPoint(x: a.point.x, y: b.point.y)
             let cornerID = state.findVertex(at: corner, tol: tol)?.id
-                ?? state.addVertex(at: corner, ownership: .free).id
+                ?? state.addVertex(at: corner).id
             if let c = state.vertices[cornerID] {
                 affected.insert(cornerID)
                 affected.formUnion(state.connectStraight(from: a, to: c, tol: tol))
@@ -41,9 +41,9 @@ struct ConnectPointsTransaction: GraphTransaction {
     private func getOrCreateVertex(at point: CGPoint, state: inout GraphState, tol: CGFloat) -> UUID {
         if let v = state.findVertex(at: point, tol: tol) { return v.id }
         if let e = state.findEdge(at: point, tol: tol) {
-            return state.splitEdge(e.id, at: point, ownership: .free)
-                ?? state.addVertex(at: point, ownership: .free).id
+            return state.splitEdge(e.id, at: point)
+                ?? state.addVertex(at: point).id
         }
-        return state.addVertex(at: point, ownership: .free).id
+        return state.addVertex(at: point).id
     }
 }

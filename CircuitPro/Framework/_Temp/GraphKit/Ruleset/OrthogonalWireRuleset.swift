@@ -7,10 +7,10 @@
 
 import Foundation
 
-public struct OrthogonalWireRuleset: GraphRuleset {
-    private let rules: [GraphRule]
+struct OrthogonalWireRuleset: GraphRuleset {
+    let rules: [GraphRule]
 
-    public init() {
+    init() {
         self.rules = [
             MergeCoincidentRule(),
             SplitAtIntermediateVerticesRule(),
@@ -20,7 +20,7 @@ public struct OrthogonalWireRuleset: GraphRuleset {
         ]
     }
 
-    public func resolve(state: GraphState, context: ResolutionContext) -> GraphState {
+    func resolve(state: GraphState, context: ResolutionContext) -> GraphState {
         var s = state
         for rule in rules { rule.apply(state: &s, context: context) }
         return s

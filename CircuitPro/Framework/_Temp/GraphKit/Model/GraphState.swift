@@ -27,8 +27,8 @@ public struct GraphState {
 
 public extension GraphState {
     @discardableResult
-    internal mutating func addVertex(at point: CGPoint, ownership: VertexOwnership, netID: UUID? = nil) -> GraphVertex {
-        let v = GraphVertex(id: UUID(), point: point, ownership: ownership, groupID: netID)
+    internal mutating func addVertex(at point: CGPoint, groupID: UUID? = nil) -> GraphVertex {
+        let v = GraphVertex(id: UUID(), point: point, groupID: groupID)
         vertices[v.id] = v
         adjacency[v.id] = []
         return v
@@ -120,7 +120,6 @@ extension GraphState {
             if hypot(o.point.x - n.point.x, o.point.y - n.point.y) > tol {
                 d.movedVertices[id] = (o.point, n.point)
             }
-            if o.ownership != n.ownership { d.changedOwnership[id] = (o.ownership, n.ownership) }
             if o.groupID != n.groupID { d.changedGroupIDs[id] = (o.groupID, n.groupID) }
         }
 
@@ -164,12 +163,12 @@ extension GraphState {
 
 extension GraphState {
     @discardableResult
-    mutating func splitEdge(_ edgeID: UUID, at point: CGPoint, ownership: VertexOwnership) -> GraphVertex.ID? {
+    mutating func splitEdge(_ edgeID: UUID, at point: CGPoint) -> GraphVertex.ID? {
         guard let e = edges[edgeID] else { return nil }
         let startID = e.start, endID = e.end
-        let originalNetID = vertices[startID]?.groupID
+        let originalGroupID = vertices[startID]?.groupID
         removeEdge(edgeID)
-        let newV = addVertex(at: point, ownership: ownership, netID: originalNetID)
+        let newV = addVertex(at: point, groupID: originalGroupID)
         _ = addEdge(from: startID, to: newV.id)
         _ = addEdge(from: newV.id, to: endID)
         return newV.id

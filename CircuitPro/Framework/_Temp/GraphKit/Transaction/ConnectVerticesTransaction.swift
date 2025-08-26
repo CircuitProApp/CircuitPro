@@ -25,7 +25,7 @@ struct ConnectVerticesTransaction: GraphTransaction {
                 ? CGPoint(x: b.point.x, y: a.point.y)
                 : CGPoint(x: a.point.x, y: b.point.y)
             let cornerID = state.findVertex(at: corner, tol: tol)?.id
-                ?? state.addVertex(at: corner, ownership: .free).id
+                ?? state.addVertex(at: corner).id
             if let c = state.vertices[cornerID] {
                 affected.insert(cornerID)
                 affected.formUnion(state.connectStraight(from: a, to: c, tol: tol))

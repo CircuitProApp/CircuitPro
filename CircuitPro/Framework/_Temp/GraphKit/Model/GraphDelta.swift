@@ -17,6 +17,5 @@ struct GraphDelta {
     var createdEdges: Set<UUID> = []
     var deletedEdges: Set<UUID> = []
 
-    var changedOwnership: [UUID: (from: VertexOwnership, to: VertexOwnership)] = [:]
     var changedGroupIDs: [UUID: (from: UUID?, to: UUID?)] = [:]
 }
