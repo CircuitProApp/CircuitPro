@@ -22,8 +22,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				App/Info.plist,
-				Core/_Temp/Wire/ConnectionCreationBehavior.md,
-				Core/_Temp/Wire/ConnectionMovementBehavior.md,
 			);
 			target = 5E5AB3592D9C60330069B623 /* CircuitPro */;
 		};

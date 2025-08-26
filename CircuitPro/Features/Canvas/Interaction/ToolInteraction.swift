@@ -30,25 +30,18 @@ struct ToolInteraction: CanvasInteraction {
         // --- THE CORRECT ORCHESTRATION LOGIC ---
 
         if let request = newNode as? WireRequestNode {
-            // Find the one-and-only SchematicGraphNode in the scene.
             guard let schematicGraphNode = controller.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode else {
                 assertionFailure("A wire connection was requested, but no SchematicGraphNode exists in the scene.")
                 return true
             }
 
-            // Perform the model mutation.
+            // Single composite operation prevents orphan vertex cleanup from deleting endpoints mid-flow.
             let graph = schematicGraphNode.graph
-            let startID = graph.getOrCreateVertex(at: request.from)
-            let endID = graph.getOrCreateVertex(at: request.to)
-            graph.connect(from: startID, to: endID, preferring: request.strategy)
-          
-            // Update the visuals.
-            schematicGraphNode.syncChildNodesFromModel()
-            // *** THIS IS THE FIX ***
-            // The interaction's job is done. It reports to its manager (the controller)
-            // that a persistent model was changed. It knows nothing about the document.
-            controller.onModelDidChange?()
+            graph.connect(from: request.from, to: request.to, preferring: request.strategy)
 
+            schematicGraphNode.syncChildNodesFromModel()
+            controller.onModelDidChange?()
+            return true
         } else {
             // Handle standard nodes.
             controller.sceneRoot.addChild(newNode)
