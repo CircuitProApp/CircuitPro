@@ -21,6 +21,8 @@ final class WireGraph {
     // Domain metadata: schematic ownership (pins, detached pins, free)
     private(set) var ownership: [UUID: VertexOwnership] = [:]
     private var lastPosition: [UUID: CGPoint] = [:]
+    
+    private(set) var groupLabels: [UUID: String] = [:]
 
     // MARK: - UI-only drag state (no normalization during drag)
     private struct DragState {
@@ -43,7 +45,7 @@ final class WireGraph {
           let grid = ManhattanGrid(step: 1)
           self.engine = GraphEngine(
               initialState: .empty,
-              ruleset: OrthogonalWireRuleset(),
+              ruleset: OrthogonalGraphRuleset(),
               grid: grid,
               policy: policy
           )
@@ -165,7 +167,7 @@ final class WireGraph {
             }
         }
 
-        let newState = GraphState(vertices: newVertices, edges: newEdges, adjacency: newAdjacency, groupNames: newGroupNames)
+        let newState = GraphState(vertices: newVertices, edges: newEdges, adjacency: newAdjacency)
         engine.replaceState(newState)
         // Overwrite ownership map with reconstructed values
         ownership = newOwnership
@@ -195,6 +197,15 @@ final class WireGraph {
         }
         return wires
     }
+    
+    public func setGroupLabel(_ label: String, for groupID: UUID) {
+        var tx = SetGroupLabelTransaction(
+            groupID: groupID,
+            label: label,
+            assign: { [weak self] gid, value in self?.groupLabels[gid] = value }
+        )
+        _ = engine.execute(transaction: &tx) // metadata-only; rules skipped
+    }
 
     private func attachmentPoint(for v: GraphVertex) -> AttachmentPoint? {
         switch ownership[v.id] ?? .free {
@@ -204,11 +215,6 @@ final class WireGraph {
     }
 
     // MARK: - Public API (transactions-first)
-
-    public func setName(_ name: String, for netID: UUID) {
-        var tx = SetGroupNameTransaction(netID: netID, name: name)
-        _ = engine.execute(transaction: &tx)
-    }
 
     public func releasePins(for ownerID: UUID) {
         // Domain-only change: update ownership map and trigger a localized resolve

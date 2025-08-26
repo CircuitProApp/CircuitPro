@@ -1,5 +1,5 @@
 //
-//  OrthogonalWireRuleset.swift
+//  OrthogonalGraphRuleset.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 8/26/25.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct OrthogonalWireRuleset: GraphRuleset {
+struct OrthogonalGraphRuleset: GraphRuleset {
     let rules: [GraphRule]
 
     init() {

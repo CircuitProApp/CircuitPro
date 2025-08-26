@@ -10,18 +10,13 @@ import SwiftUI
 /// This struct has no behavior; it is simply the "source of truth" at a moment in time.
 public struct GraphState {
     // --- Topological & Geometric State ---
-    // CORRECTED: Properties are now 'var' to allow mutation on a *copy* of the state.
-    // The struct itself remains a value type, ensuring state changes are explicit.
     var vertices: [GraphVertex.ID: GraphVertex]
     var edges: [GraphEdge.ID: GraphEdge]
     var adjacency: [GraphVertex.ID: Set<GraphEdge.ID>]
 
-    // --- Semantic State ---
-    var groupNames: [UUID: String]
-
     /// Creates an empty graph state.
     static var empty: GraphState {
-        GraphState(vertices: [:], edges: [:], adjacency: [:], groupNames: [:])
+        GraphState(vertices: [:], edges: [:], adjacency: [:])
     }
 }
 
