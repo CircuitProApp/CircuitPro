@@ -1,10 +1,5 @@
-//
-//  GetOrCreatePinVertexTransaction.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 8/26/25.
-//
-
+// GetOrCreatePinVertexTransaction.swift
+import CoreGraphics
 import Foundation
 
 struct GetOrCreatePinVertexTransaction: GraphTransaction {
@@ -13,10 +8,11 @@ struct GetOrCreatePinVertexTransaction: GraphTransaction {
     let pinID: UUID
     private(set) var vertexID: WireVertex.ID?
 
-    mutating func apply(to state: inout GraphState) -> Set<WireVertex.ID> {
+    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<WireVertex.ID> {
+        let tol = context.tol
         let ownership: VertexOwnership = .pin(ownerID: ownerID, pinID: pinID)
 
-        if let v = state.findVertex(at: point) {
+        if let v = state.findVertex(at: point, tol: tol) {
             var vv = v
             vv.ownership = ownership
             state.vertices[vv.id] = vv
@@ -24,7 +20,7 @@ struct GetOrCreatePinVertexTransaction: GraphTransaction {
             return [vv.id]
         }
 
-        if let e = state.findEdge(at: point) {
+        if let e = state.findEdge(at: point, tol: tol) {
             if let id = state.splitEdge(e.id, at: point, ownership: ownership) {
                 vertexID = id
                 return [id]
@@ -37,5 +33,4 @@ struct GetOrCreatePinVertexTransaction: GraphTransaction {
         vertexID = v.id
         return [v.id]
     }
-
 }

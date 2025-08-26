@@ -11,7 +11,7 @@ struct SetNetNameTransaction: GraphTransaction, MetadataOnlyTransaction {
     let netID: UUID
     let name: String
 
-    mutating func apply(to state: inout GraphState) -> Set<UUID> {
+    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<UUID> {
         state.netNames[netID] = name
         return []
     }

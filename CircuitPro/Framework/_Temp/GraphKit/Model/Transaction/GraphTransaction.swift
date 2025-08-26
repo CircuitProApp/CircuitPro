@@ -8,8 +8,9 @@
 import Foundation
 
 public protocol GraphTransaction {
-    // Existing mutating apply stays for now
-    mutating func apply(to state: inout GraphState) -> Set<UUID>
+    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<UUID>
+    
+  
 }
 
 public protocol MetadataOnlyTransaction {}

@@ -13,7 +13,7 @@ struct LoadStateTransaction: GraphTransaction {
     let newState: GraphState
     let epicenter: Set<UUID>
 
-    mutating func apply(to state: inout GraphState) -> Set<UUID> {
+    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<UUID> {
         state = newState
         return epicenter
     }

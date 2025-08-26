@@ -12,26 +12,20 @@ struct GetOrCreateVertexTransaction: GraphTransaction {
     let point: CGPoint
     private(set) var createdID: WireVertex.ID?
 
-    mutating func apply(to state: inout GraphState) -> Set<WireVertex.ID> {
-        if let v = state.findVertex(at: point) {
+    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<WireVertex.ID> {
+        let tol = context.tol
+        if let v = state.findVertex(at: point, tol: tol) {
             createdID = v.id
             return [v.id]
         }
-
-        if let e = state.findEdge(at: point) {
-            if let id = state.splitEdge(e.id, at: point, ownership: .free) {
-                createdID = id
-                return [id]
-            } else {
-                return []
-            }
+        if let e = state.findEdge(at: point, tol: tol),
+           let id = state.splitEdge(e.id, at: point, ownership: .free) {
+            createdID = id
+            return [id]
         }
-
         let v = state.addVertex(at: point, ownership: .free)
         createdID = v.id
         return [v.id]
     }
-
 }
-
 

@@ -13,36 +13,34 @@ struct ConnectPointsTransaction: GraphTransaction {
     let end: CGPoint
     let strategy: ConnectVerticesTransaction.Strategy
 
-    mutating func apply(to state: inout GraphState) -> Set<UUID> {
-        let aID = getOrCreateVertex(at: start, state: &state)
-        let bID = getOrCreateVertex(at: end, state: &state)
+    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<UUID> {
+        let tol = context.tol
+        let aID = getOrCreateVertex(at: start, state: &state, tol: tol)
+        let bID = getOrCreateVertex(at: end, state: &state, tol: tol)
         guard let a = state.vertices[aID], let b = state.vertices[bID] else { return [] }
 
         var affected: Set<UUID> = [aID, bID]
 
-        if a.point.x == b.point.x || a.point.y == b.point.y {
-            affected.formUnion(state.connectStraight(from: a, to: b))
+        if abs(a.point.x - b.point.x) < tol || abs(a.point.y - b.point.y) < tol {
+            affected.formUnion(state.connectStraight(from: a, to: b, tol: tol))
         } else {
             let corner = (strategy == .hThenV)
                 ? CGPoint(x: b.point.x, y: a.point.y)
                 : CGPoint(x: a.point.x, y: b.point.y)
-            let cornerID = state.findVertex(at: corner)?.id
+            let cornerID = state.findVertex(at: corner, tol: tol)?.id
                 ?? state.addVertex(at: corner, ownership: .free).id
             if let c = state.vertices[cornerID] {
                 affected.insert(cornerID)
-                affected.formUnion(state.connectStraight(from: a, to: c))
-                affected.formUnion(state.connectStraight(from: c, to: b))
+                affected.formUnion(state.connectStraight(from: a, to: c, tol: tol))
+                affected.formUnion(state.connectStraight(from: c, to: b, tol: tol))
             }
         }
-
         return affected
     }
 
-    // — Helpers —
-
-    private func getOrCreateVertex(at point: CGPoint, state: inout GraphState) -> UUID {
-        if let v = state.findVertex(at: point) { return v.id }
-        if let e = state.findEdge(at: point) {
+    private func getOrCreateVertex(at point: CGPoint, state: inout GraphState, tol: CGFloat) -> UUID {
+        if let v = state.findVertex(at: point, tol: tol) { return v.id }
+        if let e = state.findEdge(at: point, tol: tol) {
             return state.splitEdge(e.id, at: point, ownership: .free)
                 ?? state.addVertex(at: point, ownership: .free).id
         }

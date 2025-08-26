@@ -11,7 +11,7 @@ import Foundation
 struct ReleasePinsTransaction: GraphTransaction {
     let ownerID: UUID
 
-    mutating func apply(to state: inout GraphState) -> Set<UUID> {
+    mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<UUID> {
         var epicenter: Set<UUID> = []
         for (id, v) in state.vertices {
             if case .pin(let o, _) = v.ownership, o == ownerID {
