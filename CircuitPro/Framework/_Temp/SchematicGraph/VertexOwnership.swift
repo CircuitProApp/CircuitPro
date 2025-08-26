@@ -10,6 +10,6 @@ import Foundation
 enum VertexOwnership: Hashable {
     case free
     case pin(ownerID: UUID, pinID: UUID)
-    case detachedPin // Temporarily marks a vertex that was a pin but is now being dragged
+    case detachedPin
 }
 
