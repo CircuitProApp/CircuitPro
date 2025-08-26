@@ -24,23 +24,23 @@ struct MergeCoincidentRule: GraphRule {
             var remaining = bucketVerts
             while let v = remaining.popLast() {
                 if processed.contains(v.id) { continue }
-                var group = [v]
+                var cluster = [v]
                 var i = 0
                 while i < remaining.count {
                     let u = remaining[i]
                     if hypot(v.point.x - u.point.x, v.point.y - u.point.y) < tol {
-                        group.append(u)
+                        cluster.append(u)
                         remaining.remove(at: i)
                     } else {
                         i += 1
                     }
                 }
-                guard group.count > 1 else { continue }
+                guard cluster.count > 1 else { continue }
 
-                let survivor = context.policy?.preferSurvivor(group, state: state) ?? group[0]
+                let survivor = context.policy?.preferSurvivor(cluster, state: state) ?? cluster[0]
                 processed.insert(survivor.id)
 
-                for victim in group where victim.id != survivor.id {
+                for victim in cluster where victim.id != survivor.id {
                     rewireEdges(from: victim.id, to: survivor.id, state: &state)
                     state.removeVertex(victim.id)
                     processed.insert(victim.id)

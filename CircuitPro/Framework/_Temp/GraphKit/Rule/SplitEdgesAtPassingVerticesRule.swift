@@ -1,7 +1,7 @@
 import Foundation
 import CoreGraphics
 
-struct SplitAtIntermediateVerticesRule: GraphRule {
+struct SplitEdgesAtPassingVerticesRule: GraphRule {
     func apply(state: inout GraphState, context: ResolutionContext) {
         let tol = context.grid.epsilon
 

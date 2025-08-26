@@ -23,8 +23,8 @@ struct GraphState {
 
 extension GraphState {
     @discardableResult
-    mutating func addVertex(at point: CGPoint, groupID: UUID? = nil) -> GraphVertex {
-        let v = GraphVertex(id: UUID(), point: point, groupID: groupID)
+    mutating func addVertex(at point: CGPoint, clusterID: UUID? = nil) -> GraphVertex {
+        let v = GraphVertex(id: UUID(), point: point, clusterID: clusterID)
         vertices[v.id] = v
         adjacency[v.id] = []
         return v
@@ -121,7 +121,7 @@ extension GraphState {
             if hypot(o.point.x - n.point.x, o.point.y - n.point.y) > tol {
                 d.movedVertices[id] = (o.point, n.point)
             }
-            if o.groupID != n.groupID { d.changedGroupIDs[id] = (o.groupID, n.groupID) }
+            if o.clusterID != n.clusterID { d.changedClusterIDs[id] = (o.clusterID, n.clusterID) }
         }
 
         let oldEdges = Set(old.edges.keys), newEdges = Set(new.edges.keys)
@@ -167,9 +167,9 @@ extension GraphState {
     mutating func splitEdge(_ edgeID: UUID, at point: CGPoint) -> GraphVertex.ID? {
         guard let e = edges[edgeID] else { return nil }
         let startID = e.start, endID = e.end
-        let originalGroupID = vertices[startID]?.groupID
+        let originalGroupID = vertices[startID]?.clusterID
         removeEdge(edgeID)
-        let newV = addVertex(at: point, groupID: originalGroupID)
+        let newV = addVertex(at: point, clusterID: originalGroupID)
         _ = addEdge(from: startID, to: newV.id)
         _ = addEdge(from: newV.id, to: endID)
         return newV.id

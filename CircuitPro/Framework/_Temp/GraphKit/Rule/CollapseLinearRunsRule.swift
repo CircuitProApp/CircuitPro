@@ -1,7 +1,7 @@
 import Foundation
 import CoreGraphics
 
-struct CollapseCollinearRunsRule: GraphRule {
+struct CollapseLinearRunsRule: GraphRule {
     func apply(state: inout GraphState, context: ResolutionContext) {
         let tol = context.grid.epsilon
 

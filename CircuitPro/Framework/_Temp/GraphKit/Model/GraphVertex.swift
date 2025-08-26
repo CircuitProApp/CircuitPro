@@ -10,5 +10,5 @@ import SwiftUI
 struct GraphVertex: Identifiable, Hashable, Equatable {
     let id: UUID
     var point: CGPoint
-    var groupID: UUID?
+    var clusterID: UUID?
 }

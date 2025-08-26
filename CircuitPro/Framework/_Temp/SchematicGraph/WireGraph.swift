@@ -130,7 +130,7 @@ final class WireGraph {
         var newOwnership: [UUID: VertexOwnership] = [:]
 
         func addVertex(at point: CGPoint, own: VertexOwnership) -> GraphVertex {
-            let v = GraphVertex(id: UUID(), point: point, groupID: nil)
+            let v = GraphVertex(id: UUID(), point: point, clusterID: nil)
             newVertices[v.id] = v
             newAdjacency[v.id] = []
             newOwnership[v.id] = own
@@ -154,7 +154,7 @@ final class WireGraph {
                 // Create at zero; syncPins will position later
                 v = addVertex(at: .zero, own: .pin(ownerID: owner, pinID: pin))
             }
-            newVertices[v.id]?.groupID = groupID
+            newVertices[v.id]?.clusterID = groupID
             attachmentMap[point] = v.id
             return v.id
         }
@@ -181,7 +181,7 @@ final class WireGraph {
         for vID in s.vertices.keys where !processed.contains(vID) {
             let (compV, compE) = net(startingFrom: vID, in: s)
             processed.formUnion(compV)
-            guard !compE.isEmpty, let groupID = s.vertices[vID]?.groupID else { continue }
+            guard !compE.isEmpty, let groupID = s.vertices[vID]?.clusterID else { continue }
 
             let segments: [WireSegment] = compE.compactMap { eid in
                 guard let e = s.edges[eid],
@@ -341,7 +341,7 @@ final class WireGraph {
                 let pinOwnership = ownership[vertexID] ?? .free
                 let pinPoint = s.vertices[vertexID]?.point ?? .zero
                 ownership[vertexID] = .detachedPin
-                let newStatic = s.addVertex(at: pinPoint, groupID: s.vertices[vertexID]?.groupID)
+                let newStatic = s.addVertex(at: pinPoint, clusterID: s.vertices[vertexID]?.clusterID)
                 ds.newVertices.insert(newStatic.id)
                 ownership[newStatic.id] = pinOwnership
                 _ = s.addEdge(from: vertexID, to: newStatic.id)
@@ -403,7 +403,7 @@ final class WireGraph {
                             : CGPoint(x: junctionNewPos.x, y: anchorOrigPos.y)
 
                         ownership[anchorID] = .detachedPin
-                        let newStaticPin = s.addVertex(at: anchorOrigPos, groupID: s.vertices[anchorID]?.groupID)
+                        let newStaticPin = s.addVertex(at: anchorOrigPos, clusterID: s.vertices[anchorID]?.clusterID)
                         ds.newVertices.insert(newStaticPin.id)
                         ownership[newStaticPin.id] = .pin(ownerID: owner, pinID: pin)
                         _ = s.addEdge(from: anchorID, to: newStaticPin.id)

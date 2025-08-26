@@ -1,5 +1,5 @@
 //
-//  RemoveOrphanFreeVerticesRule.swift
+//  RemoveIsolatedFreeVerticesRule.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 8/26/25.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct RemoveOrphanFreeVerticesRule: GraphRule {
+struct RemoveIsolatedFreeVerticesRule: GraphRule {
     func apply(state: inout GraphState, context: ResolutionContext) {
         var seeds = context.epicenter
         for id in context.epicenter { for nid in state.neighbors(of: id) { seeds.insert(nid) } }

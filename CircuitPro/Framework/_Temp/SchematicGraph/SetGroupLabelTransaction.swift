@@ -18,7 +18,7 @@ struct SetGroupLabelTransaction: GraphTransaction, MetadataOnlyTransaction {
         // Return all vertex IDs in this group as an epicenter if the UI wants to
         // scope updates. Rules will be skipped due to MetadataOnlyTransaction.
         let seeds = state.vertices.compactMap { (vid, v) in
-            v.groupID == groupID ? vid : nil
+            v.clusterID == groupID ? vid : nil
         }
         return Set(seeds)
     }

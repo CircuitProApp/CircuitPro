@@ -13,10 +13,10 @@ struct OrthogonalGraphRuleset: GraphRuleset {
     init() {
         self.rules = [
             MergeCoincidentRule(),
-            SplitAtIntermediateVerticesRule(),
-            CollapseCollinearRunsRule(),
-            RemoveOrphanFreeVerticesRule(),
-            UnifyGroupsRule()
+            SplitEdgesAtPassingVerticesRule(),
+            CollapseLinearRunsRule(),
+            RemoveIsolatedFreeVerticesRule(),
+            AssignClusterIDsRule()
         ]
     }
 
