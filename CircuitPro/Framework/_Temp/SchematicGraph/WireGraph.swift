@@ -251,9 +251,18 @@ final class WireGraph {
     func connect(from startPoint: CGPoint,
                  to endPoint: CGPoint,
                  preferring strategy: WireConnectionStrategy = .horizontalThenVertical) {
-        let s: ConnectVerticesTransaction.Strategy =
-            (strategy == .horizontalThenVertical) ? .hThenV : .vThenH
-        var tx = ConnectPointsTransaction(start: startPoint, end: endPoint, strategy: s)
+        // Resolve endpoints into vertices
+        var txA = GetOrCreateVertexTransaction(point: startPoint)
+        _ = engine.execute(transaction: &txA)
+        guard let aID = txA.createdID else { return }
+
+        var txB = GetOrCreateVertexTransaction(point: endPoint)
+        _ = engine.execute(transaction: &txB)
+        guard let bID = txB.createdID else { return }
+
+        // Connect IDs
+        let s: ConnectVerticesTransaction.Strategy = (strategy == .horizontalThenVertical) ? .hThenV : .vThenH
+        var tx = ConnectVerticesTransaction(startID: aID, endID: bID, strategy: s)
         _ = engine.execute(transaction: &tx)
     }
 

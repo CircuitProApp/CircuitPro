@@ -38,16 +38,13 @@ struct SplitAtIntermediateVerticesRule: GraphRule {
             }
             guard !mids.isEmpty else { continue }
 
-            // Sort mids along the segment
-            if abs(p1.x - p2.x) < tol {
-                // vertical: sort by y
-                mids.sort { $0.point.y < $1.point.y }
-            } else if abs(p1.y - p2.y) < tol {
-                // horizontal: sort by x
-                mids.sort { $0.point.x < $1.point.x }
-            } else {
-                // Non-orthogonal edge should not exist; skip
-                continue
+            // Sort mids along the segment by param t
+            let (dx, dy) = (p2.x - p1.x, p2.y - p1.y)
+            let len2 = max(dx*dx + dy*dy, tol*tol)
+            mids.sort { lhs, rhs in
+                let tL = ((lhs.point.x - p1.x) * dx + (lhs.point.y - p1.y) * dy) / len2
+                let tR = ((rhs.point.x - p1.x) * dx + (rhs.point.y - p1.y) * dy) / len2
+                return tL < tR
             }
 
             // Rebuild as chain: start -> mids... -> end

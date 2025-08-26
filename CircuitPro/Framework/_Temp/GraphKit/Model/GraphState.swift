@@ -70,13 +70,17 @@ public extension GraphState {
         return nil
     }
 
-    func isPoint(_ p: CGPoint, onSegmentBetween p1: CGPoint, p2: CGPoint, tol: CGFloat) -> Bool {
-        let minX = min(p1.x, p2.x) - tol, maxX = max(p1.x, p2.x) + tol
-        let minY = min(p1.y, p2.y) - tol, maxY = max(p1.y, p2.y) + tol
-        guard p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY else { return false }
-        if abs(p1.y - p2.y) < tol { return abs(p.y - p1.y) < tol }
-        if abs(p1.x - p2.x) < tol { return abs(p.x - p1.x) < tol }
-        return false
+    func isPoint(_ p: CGPoint, onSegmentBetween a: CGPoint, p2 b: CGPoint, tol: CGFloat) -> Bool {
+        let dx = b.x - a.x, dy = b.y - a.y
+        let len2 = dx*dx + dy*dy
+        if len2 == 0 { return hypot(p.x - a.x, p.y - a.y) <= tol }
+        // Perpendicular distance from P to line AB
+        let cross = (p.x - a.x) * dy - (p.y - a.y) * dx
+        if abs(cross) > tol * sqrt(len2) { return false }
+        // Within segment extents (dot product parameterization)
+        let dot = (p.x - a.x) * dx + (p.y - a.y) * dy
+        if dot < -tol || dot > len2 + tol { return false }
+        return true
     }
 
     @discardableResult
@@ -90,14 +94,15 @@ public extension GraphState {
         for v in others { affected.insert(v.id) }
         onPath.append(contentsOf: others)
 
-        if abs(a.point.x - b.point.x) < tol {
-            onPath.sort { $0.point.y < $1.point.y } // vertical
-        } else {
-            onPath.sort { $0.point.x < $1.point.x } // horizontal
+        // Sort by param t along AB
+        let dx = b.point.x - a.point.x, dy = b.point.y - a.point.y
+        let len2 = max(dx*dx + dy*dy, tol*tol)
+        onPath.sort { v1, v2 in
+            let t1 = ((v1.point.x - a.point.x) * dx + (v1.point.y - a.point.y) * dy) / len2
+            let t2 = ((v2.point.x - a.point.x) * dx + (v2.point.y - a.point.y) * dy) / len2
+            return t1 < t2
         }
-        for i in 0..<(onPath.count - 1) {
-            _ = addEdge(from: onPath[i].id, to: onPath[i+1].id)
-        }
+        for i in 0..<(onPath.count - 1) { _ = addEdge(from: onPath[i].id, to: onPath[i+1].id) }
         return affected
     }
 }
