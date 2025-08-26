@@ -14,5 +14,3 @@ public protocol GridPolicy {
     func isHorizontal(_ a: CGPoint, _ b: CGPoint) -> Bool
     func isVertical(_ a: CGPoint, _ b: CGPoint) -> Bool
 }
-
-

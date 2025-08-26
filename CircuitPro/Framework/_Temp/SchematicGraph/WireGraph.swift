@@ -25,13 +25,7 @@ final class WireGraph {
     private(set) var groupLabels: [UUID: String] = [:]
 
     // MARK: - UI-only drag state (no normalization during drag)
-    private struct DragState {
-        let originalVertexPositions: [UUID: CGPoint]
-        let selectedEdges: [GraphEdge]
-        let verticesToMove: Set<UUID>
-        var newVertices: Set<UUID> = []
-    }
-    private var dragState: DragState?
+    private var dragHandler: DragHandler?
 
     // Called whenever engine publishes a change
     var onModelDidChange: (() -> Void)?
@@ -283,174 +277,40 @@ final class WireGraph {
     // MARK: - Drag Lifecycle (Phase 1: keep here, no normalization during drag)
 
     public func beginDrag(selectedIDs: Set<UUID>) -> Bool {
-        let s = engine.currentState
-
-        // 1) Pins of selected symbols
-        let symbolPinVertexIDs = s.vertices.keys.filter { vid in
-            if case .pin(let ownerID, _) = ownership[vid] { return selectedIDs.contains(ownerID) }
-            return false
-        }
-
-        // 2) Selected edges
-        let selectedEdges = s.edges.values.filter { selectedIDs.contains($0.id) }
-
-        // 3) Movable vertices from those edges, excluding pins
-        let movableEdgeVertexIDs = selectedEdges
-            .flatMap { [$0.start, $0.end] }
-            .filter { vid in
-                if case .pin = ownership[vid] { return false }
-                return true
-            }
-
-        let allMovable = Set(symbolPinVertexIDs).union(movableEdgeVertexIDs)
-        guard !allMovable.isEmpty else {
-            dragState = nil
-            return false
-        }
-
-        dragState = DragState(
-            originalVertexPositions: s.vertices.mapValues { $0.point },
-            selectedEdges: selectedEdges,
-            verticesToMove: allMovable
+        // Build and configure handler with a frozen snapshot
+        let handler = DragHandler(
+            state: engine.currentState,
+            grid: engine.grid,
+            lookup: { [weak self] vid in self?.ownership[vid] },
+            assign: { [weak self] vid, own in self?.ownership[vid] = own }
         )
-        return true
+        let ok = handler.begin(selectedIDs: selectedIDs)
+        if ok {
+            self.dragHandler = handler
+        } else {
+            self.dragHandler = nil
+        }
+        return ok
     }
 
-    // During drag we directly replace engine state (skip ruleset) so we don't normalize continuously.
     public func updateDrag(by delta: CGPoint) {
-        guard var ds = dragState else { return }
-        var s = engine.currentState
-        let tol = engine.grid.epsilon
-
-        // 1) Pre-process: detaching selected pins that are pulled off-axis
-        for vertexID in ds.verticesToMove {
-            guard case .pin = ownership[vertexID] else { continue }
-
-            let isOffAxis = (s.adjacency[vertexID] ?? []).contains { edgeID in
-                guard ds.selectedEdges.contains(where: { $0.id == edgeID }) else { return false }
-                guard let e = s.edges[edgeID] else { return false }
-                let otherEndID = (e.start == vertexID) ? e.end : e.start
-                if ds.verticesToMove.contains(otherEndID) { return false }
-                guard let orig = ds.originalVertexPositions[vertexID],
-                      let otherOrig = ds.originalVertexPositions[otherEndID] else { return false }
-                let wasHorizontal = abs(orig.y - otherOrig.y) < tol
-                return (wasHorizontal && abs(delta.y) > tol) || (!wasHorizontal && abs(delta.x) > tol)
-            }
-
-            if isOffAxis {
-                let pinOwnership = ownership[vertexID] ?? .free
-                let pinPoint = s.vertices[vertexID]?.point ?? .zero
-                ownership[vertexID] = .detachedPin
-                let newStatic = s.addVertex(at: pinPoint, clusterID: s.vertices[vertexID]?.clusterID)
-                ds.newVertices.insert(newStatic.id)
-                ownership[newStatic.id] = pinOwnership
-                _ = s.addEdge(from: vertexID, to: newStatic.id)
-            }
-        }
-
-        // 2) Initial displaced positions for the moving set
-        var newPositions: [UUID: CGPoint] = [:]
-        for id in ds.verticesToMove {
-            if let origin = ds.originalVertexPositions[id] {
-                newPositions[id] = CGPoint(x: origin.x + delta.x, y: origin.y + delta.y)
-            }
-        }
-
-        // 3) L-bend for detached pins
-        for vertexID in ds.verticesToMove {
-            if ownership[vertexID] == .detachedPin {
-                guard let staticPinNeighbor = findNeighbor(of: vertexID, in: s, where: { nID, _ in
-                          if case .pin = self.ownership[nID] { return newPositions[nID] == nil } else { return false }
-                      }),
-                      let movingNeighbor = findNeighbor(of: vertexID, in: s, where: { nID, e in
-                          return newPositions[nID] != nil && ds.selectedEdges.contains { $0.id == e.id }
-                      }),
-                      let origV = ds.originalVertexPositions[vertexID],
-                      let origM = ds.originalVertexPositions[movingNeighbor.id],
-                      let newM = newPositions[movingNeighbor.id] else { continue }
-                let wasHorizontal = abs(origV.y - origM.y) < tol
-                newPositions[vertexID] = wasHorizontal
-                    ? CGPoint(x: staticPinNeighbor.point.x, y: newM.y)
-                    : CGPoint(x: newM.x, y: staticPinNeighbor.point.y)
-            }
-        }
-
-        // 4) Propagate axis constraints via BFS from the moving set
-        var queue = Array(ds.verticesToMove)
-        var queued = ds.verticesToMove
-        var head = 0
-
-        while head < queue.count {
-            let junctionID = queue[head]; head += 1
-            guard let junctionNewPos = newPositions[junctionID],
-                  let junctionOrigPos = ds.originalVertexPositions[junctionID] else { continue }
-
-            for edgeID in s.adjacency[junctionID] ?? [] {
-                guard let e = s.edges[edgeID] else { continue }
-                let anchorID = (e.start == junctionID) ? e.end : e.start
-                if ds.verticesToMove.contains(anchorID) { continue }
-
-                guard let anchorOrigPos = ds.originalVertexPositions[anchorID] else { continue }
-                var updatedAnchorPos = newPositions[anchorID] ?? anchorOrigPos
-                let wasHorizontal = abs(anchorOrigPos.y - junctionOrigPos.y) < tol
-
-                if case .pin(let owner, let pin) = ownership[anchorID] {
-                    let isOffAxisPull = (wasHorizontal && abs(junctionNewPos.y - anchorOrigPos.y) > tol)
-                        || (!wasHorizontal && abs(junctionNewPos.x - anchorOrigPos.x) > tol)
-                    if isOffAxisPull {
-                        updatedAnchorPos = wasHorizontal
-                            ? CGPoint(x: anchorOrigPos.x, y: junctionNewPos.y)
-                            : CGPoint(x: junctionNewPos.x, y: anchorOrigPos.y)
-
-                        ownership[anchorID] = .detachedPin
-                        let newStaticPin = s.addVertex(at: anchorOrigPos, clusterID: s.vertices[anchorID]?.clusterID)
-                        ds.newVertices.insert(newStaticPin.id)
-                        ownership[newStaticPin.id] = .pin(ownerID: owner, pinID: pin)
-                        _ = s.addEdge(from: anchorID, to: newStaticPin.id)
-                    } else {
-                        continue
-                    }
-                } else {
-                    if wasHorizontal { updatedAnchorPos.y = junctionNewPos.y }
-                    else { updatedAnchorPos.x = junctionNewPos.x }
-                }
-
-                if newPositions[anchorID] != updatedAnchorPos {
-                    newPositions[anchorID] = updatedAnchorPos
-                    if !queued.contains(anchorID) {
-                        queue.append(anchorID)
-                        queued.insert(anchorID)
-                    }
-                }
-            }
-        }
-
-        // 5) Apply positions atomically (no normalization)
-        for (id, pos) in newPositions {
-            if s.vertices[id]?.point != pos {
-                s.vertices[id]?.point = pos
-            }
-        }
-
-        engine.replaceState(s) // push updated geometry without ruleset cleanup
-        self.dragState = ds
+        guard let handler = dragHandler else { return }
+        let nextState = handler.update(by: delta)
+        // Push updated geometry without ruleset normalization
+        engine.replaceState(nextState)
     }
 
     public func endDrag() {
-        guard let ds = dragState else { return }
+        guard var handler = dragHandler else { return }
+        let result = handler.end()
 
-        // Convert temporary detached pins back to free vertices (domain metadata only)
-        for (vid, own) in ownership where own == .detachedPin {
-            ownership[vid] = .free
-        }
-
-        // Normalize around the affected region via ruleset.
-        let epicenter = Set(ds.originalVertexPositions.keys).union(ds.newVertices)
-        var tx = LoadStateTransaction(newState: engine.currentState, epicenter: epicenter)
+        // Normalize around the affected region via ruleset
+        var tx = LoadStateTransaction(newState: result.finalState, epicenter: result.epicenter)
         _ = engine.execute(transaction: &tx)
 
-        self.dragState = nil
+        self.dragHandler = nil
     }
+
 
     // MARK: - Discovery utilities
 
