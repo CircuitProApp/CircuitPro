@@ -37,7 +37,7 @@ struct InspectorUnitColumn: View {
                     .frame(maxWidth: .infinity)
                     .padding(2.5)
                     .background(Color.secondary.opacity(0.1))
-                    .clipShape(.rect(cornerRadius: 5))
+                    .clipShape(.rect(cornerRadius: 2.5))
             } else {
                 Menu {
                     ForEach(allowedBaseUnits, id: \.rawValue) { base in

@@ -96,7 +96,6 @@ struct SymbolNodeAttributesView: View {
                         TableColumn("Key") { $property in
                             Text(property.key.label)
                         }
-                       
                  
                         TableColumn("Value") { $property in
                             InspectorValueColumn(property: $property)

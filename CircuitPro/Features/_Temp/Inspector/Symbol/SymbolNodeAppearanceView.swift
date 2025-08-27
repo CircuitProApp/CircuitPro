@@ -27,9 +27,19 @@ struct SymbolNodeAppearanceView: View {
                             .listID(int)
                     }
                     Divider()
-                    ForEach(0...10, id: \.description) { int in
-                        Text(int.description)
-                            .listID(int)
+                    ForEach(component.displayedProperties) { property in
+                        HStack {
+                            Text(property.key.label)
+                            Spacer()
+                            Button {
+                                
+                            } label: {
+                                Image(systemName: "eye")
+                            }
+                            .buttonStyle(.plain)
+
+                        }
+                            .listID(property)
                     }
                 }
                 .background(Color(nsColor: .controlBackgroundColor))
