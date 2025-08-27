@@ -49,6 +49,7 @@ public struct PlainList<Content: View, ID: Hashable>: View {
                         )
                     } else {
                         subview
+                            .padding(configuration.listRowPadding)
                     }
                 }
             }

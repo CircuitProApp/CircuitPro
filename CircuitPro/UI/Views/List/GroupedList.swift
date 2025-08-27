@@ -56,6 +56,7 @@ public struct GroupedList<Content: View, ID: Hashable>: View {
                                     )
                                 } else {
                                     subview
+                                        .padding(configuration.listRowPadding)
                                 }
                             }
                         }

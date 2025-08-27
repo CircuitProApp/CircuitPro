@@ -109,10 +109,6 @@ struct SymbolNodeAttributesView: View {
                     .font(.caption)
                     .tableStyle(.bordered)
                     .border(.regularMaterial)
-                    .onGeometryChange(for: CGSize.self, of: \.size) { newSize in
-                        viewFrame = newSize
-                        print("New view size: \(newSize)")
-                    }
 
                     Divider()
                     HStack(spacing: 4) {

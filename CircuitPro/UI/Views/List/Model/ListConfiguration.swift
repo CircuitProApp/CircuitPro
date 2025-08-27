@@ -17,8 +17,6 @@ struct ListConfiguration {
     var headerStyle: ListHeaderStyle = .regular
     var headerPadding: EdgeInsets = .init()
     var activeHeaderBackgroundStyle: AnyShapeStyle = AnyShapeStyle(.ultraThinMaterial)
-    
-
 
     var selectionCornerRadius: CGFloat = 0
     var selectionBackgroundColor: Color = .blue
