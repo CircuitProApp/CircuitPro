@@ -58,6 +58,7 @@ struct InspectorView: View {
                     symbolNode: context.node,
                     selectedTab: $selectedTab // Pass the binding for tab selection
                 )
+
             } else if singleSelectedNode != nil {
                 // 3. Handle cases where an item is selected, but it's not a component
                 //    (e.g., a wire or a net label).

@@ -28,12 +28,14 @@ struct SymbolNodeInspectorHostView: View {
                     switch selectedTab {
                     case .attributes:
                         SymbolNodeAttributesView(component: component, symbolNode: symbolNode)
+                            .frame(maxWidth: .infinity)
                     case .appearance:
                         SymbolNodeAppearanceView(component: component, symbolNode: symbolNode)
                     }
                 }
+                .frame(maxWidth: .infinity)
             }
-            .contentMargins(5)
+            .contentMargins([.vertical, .leading], 5, for: .scrollContent)
         }
     }
     

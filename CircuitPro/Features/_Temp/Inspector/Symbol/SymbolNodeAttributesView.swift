@@ -15,6 +15,9 @@ struct SymbolNodeAttributesView: View {
     let component: DesignComponent
     @Bindable var symbolNode: SymbolNode
     
+    @State private var selectedProperty: Property.Resolved.ID?
+    
+    @State private var viewFrame: CGSize = .zero
     
     // (Your referenceDesignatorBinding as it was)
     private var referenceDesignatorBinding: Binding<Int> {
@@ -27,6 +30,38 @@ struct SymbolNodeAttributesView: View {
             }
         )
     }
+    
+    private var propertiesBinding: Binding<[Property.Resolved]> {
+        Binding(
+            get: {
+                // GET: Simply return the computed properties of the current component.
+                // If the component is gone, return an empty array.
+                return component.displayedProperties
+            },
+            set: { newPropertiesArray in
+                // SET: This is where we call the ProjectManager.
+                let currentComponent = component
+                
+                // Find which property actually changed.
+                for (index, newProperty) in newPropertiesArray.enumerated() {
+                    let oldProperty = currentComponent.displayedProperties[index]
+                    
+                    // If a property is different from its old version...
+                    if newProperty != oldProperty {
+                        // ...call the existing, correct method on the ProjectManager.
+                        projectManager.updateProperty(
+                            for: currentComponent,
+                            with: newProperty,
+                            using: packManager
+                        )
+                        // We found the change, so we can stop looking.
+                        break
+                    }
+                }
+            }
+        )
+    }
+
     
     var body: some View {
         VStack(spacing: 15) {
@@ -45,6 +80,7 @@ struct SymbolNodeAttributesView: View {
                 }
             }
             
+            
             InspectorSection("Transform") {
                 PointControlView(
                     title: "Position",
@@ -55,22 +91,69 @@ struct SymbolNodeAttributesView: View {
             }
             
             InspectorSection("Properties") {
-                ForEach(component.displayedProperties, id: \.self) { property in
-                    EditablePropertyView(
-                        property: property,
-                        onSave: { updatedProperty in
-                            projectManager.updateProperty(
-                                for: component,
-                                with: updatedProperty,
-                                using: packManager
-                            )
+                VStack(spacing: 0) {
+                    Table(propertiesBinding, selection: $selectedProperty) {
+                        TableColumn("Key") { $property in
+                            Text(property.key.label)
                         }
-                    )
+                       
+                 
+                        TableColumn("Value") { $property in
+                            InspectorValueColumn(property: $property)
+                        }
+                  
+                        TableColumn("Unit") { $property in
+                            InspectorUnitColumn(property: $property)
+                        }
+                
+                    }
+                    .font(.caption)
+                    .tableStyle(.bordered)
+                    .border(.regularMaterial)
+                    .onGeometryChange(for: CGSize.self, of: \.size) { newSize in
+                        viewFrame = newSize
+                        print("New view size: \(newSize)")
+                    }
+
+                    Divider()
+                    HStack(spacing: 4) {
+                        Button {
+                            
+                        } label: {
+                            Image(systemName: "plus")
+                                .frame(width: 24, height: 24)
+                                .contentShape(.rect)
+                        }
+                        Divider()
+                        Button {
+                            
+                        } label: {
+                            Image(systemName: "minus")
+                                .frame(width: 24, height: 24)
+                                .contentShape(.rect)
+                        }
+                        .disabled(selectedProperty == nil)
+                        Divider()
+                        Button {
+                            
+                        } label: {
+                            Image(systemName: "pencil")
+                                .frame(width: 24, height: 24)
+                                .contentShape(.rect)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 4)
+                    .frame(height: 24)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(nsColor: .controlBackgroundColor))
                 }
+                .frame(height: 220)
+                .clipAndStroke(with: .rect(cornerRadius: 8))
             }
         }
     }
-    
+
     /// A helper function to determine the visibility state and action for a given property.
     /// This keeps the body of the ForEach clean.
     private func calculateVisibility(for property: Property.Resolved) -> (isVisible: Bool, onToggle: () -> Void) {
