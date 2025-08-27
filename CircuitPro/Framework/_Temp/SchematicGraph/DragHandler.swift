@@ -14,7 +14,7 @@ import CoreGraphics
 /// - Produces a final epicenter for a localized resolve at endDrag.
 final class DragHandler {
     private(set) var workingState: GraphState
-    private let grid: GridPolicy
+    private let geometry: GeometryPolicy
     private let lookup: (UUID) -> VertexOwnership?
     private let assign: (UUID, VertexOwnership) -> Void
 
@@ -28,11 +28,11 @@ final class DragHandler {
     private var newVertices: Set<UUID> = []
 
     init(state: GraphState,
-         grid: GridPolicy,
+         geometry: GeometryPolicy,
          lookup: @escaping (UUID) -> VertexOwnership?,
          assign: @escaping (UUID, VertexOwnership) -> Void) {
         self.workingState = state
-        self.grid = grid
+        self.geometry = geometry
         self.lookup = lookup
         self.assign = assign
     }
@@ -70,7 +70,7 @@ final class DragHandler {
     /// Returns the updated working GraphState so the caller can replace engine state.
     func update(by delta: CGPoint) -> GraphState {
         var s = workingState
-        let tol = grid.epsilon
+        let tol = geometry.epsilon
 
         // 1) Pre-process: detaching selected pins that are pulled off-axis
         for vertexID in verticesToMove {

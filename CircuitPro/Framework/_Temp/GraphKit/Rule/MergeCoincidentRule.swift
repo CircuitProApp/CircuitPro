@@ -10,7 +10,7 @@ import CoreGraphics
 
 struct MergeCoincidentRule: GraphRule {
     func apply(state: inout GraphState, context: ResolutionContext) {
-        let tol = context.grid.epsilon
+        let tol = context.geometry.epsilon
 
         var processed: Set<UUID> = []
         var buckets: [String: [GraphVertex]] = [:]

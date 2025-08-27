@@ -3,7 +3,7 @@ import CoreGraphics
 
 struct CollapseLinearRunsRule: GraphRule {
     func apply(state: inout GraphState, context: ResolutionContext) {
-        let tol = context.grid.epsilon
+        let tol = context.geometry.epsilon
 
         // Seed set: epicenter + 1-hop neighbors to catch survivors of merges
         var seeds = context.epicenter

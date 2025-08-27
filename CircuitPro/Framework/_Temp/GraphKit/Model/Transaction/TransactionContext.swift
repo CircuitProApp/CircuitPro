@@ -8,6 +8,6 @@
 import CoreGraphics
 
 struct TransactionContext {
-    let grid: GridPolicy
-    var tolerance: CGFloat { grid.epsilon }
+    let geometry: GeometryPolicy
+    var tolerance: CGFloat { geometry.epsilon }
 }

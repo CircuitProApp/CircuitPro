@@ -10,7 +10,7 @@ import Foundation
 /// A context object passed to a ruleset, providing information about the initial change.
 struct ResolutionContext {
     let epicenter: Set<UUID>
-    let grid: GridPolicy
+    let geometry: GeometryPolicy
     let neighborhood: CGRect
     let policy: VertexPolicy?   // new
 }

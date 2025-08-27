@@ -36,11 +36,11 @@ final class WireGraph {
           let lookupBox = OwnershipLookupBox()
           let policy = WireVertexPolicy(box: lookupBox)
 
-          let grid = ManhattanGrid(step: 1)
+          let geometry = ManhattanGeometry(step: 1)
           self.engine = GraphEngine(
               initialState: .empty,
               ruleset: OrthogonalGraphRuleset(),
-              grid: grid,
+              geometry: geometry,
               policy: policy
           )
 
@@ -51,7 +51,7 @@ final class WireGraph {
 
           engine.onChange = { [weak self] delta, final in
               guard let self = self else { return }
-              let tol = self.engine.grid.epsilon
+              let tol = self.engine.geometry.epsilon
 
               // 1) Remap ownership for deleted pin vertices to the surviving coincident vertex
               for vid in delta.deletedVertices {
@@ -280,7 +280,7 @@ final class WireGraph {
         // Build and configure handler with a frozen snapshot
         let handler = DragHandler(
             state: engine.currentState,
-            grid: engine.grid,
+            geometry: engine.geometry,
             lookup: { [weak self] vid in self?.ownership[vid] },
             assign: { [weak self] vid, own in self?.ownership[vid] = own }
         )

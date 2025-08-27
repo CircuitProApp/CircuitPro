@@ -17,7 +17,7 @@ struct MoveVertexTransaction: GraphTransaction {
     mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<UUID> {
         guard var v = state.vertices[id] else { return [] }
 
-        let target = snapToGrid ? context.grid.snap(newPoint) : newPoint
+        let target = snapToGrid ? context.geometry.snap(newPoint) : newPoint
         // Skip tiny moves within tolerance
         let dx = v.point.x - target.x
         let dy = v.point.y - target.y

@@ -3,7 +3,7 @@ import CoreGraphics
 
 struct SplitEdgesAtPassingVerticesRule: GraphRule {
     func apply(state: inout GraphState, context: ResolutionContext) {
-        let tol = context.grid.epsilon
+        let tol = context.geometry.epsilon
 
         // Snapshot edges and vertices first to avoid concurrent mutation issues
         let edges = Array(state.edges.values)
