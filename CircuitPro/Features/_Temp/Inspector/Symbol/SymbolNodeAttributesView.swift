@@ -150,7 +150,7 @@ struct SymbolNodeAttributesView: View {
         }
         
         let isCurrentlyVisible = symbolNode.resolvedTexts.contains { resolvedText in
-            resolvedText.isVisible && resolvedText.contentSource == .property(definitionID: propertyDefID)
+            resolvedText.isVisible && resolvedText.contentSource == .componentProperty(definitionID: propertyDefID)
         }
         
         let toggleAction = {

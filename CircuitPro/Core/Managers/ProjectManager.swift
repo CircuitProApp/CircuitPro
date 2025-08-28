@@ -105,7 +105,7 @@ final class ProjectManager {
             print("Error: Visibility can only be toggled for definition-based properties.")
             return
         }
-        let source = TextSource.property(definitionID: propertyDefID)
+        let source = TextSource.componentProperty(definitionID: propertyDefID)
         toggleDynamicTextVisibility(for: component, source: source, using: packManager)
     }
     
@@ -153,17 +153,19 @@ final class ProjectManager {
         self.schematicGraph = newGraph
 
         let currentDesignComponents = self.designComponents(using: packManager)
+        
         let symbolNodes: [SymbolNode] = currentDesignComponents.compactMap { designComp in
             guard let symbolDefinition = designComp.definition.symbol else { return nil }
-            let resolvedProperties = designComp.displayedProperties
+            
+            // --- THE PAYOFF ---
+            // The call to `resolve` is now incredibly clean. We just pass the `designComp` itself.
             let resolvedTexts = TextResolver.resolve(
                 definitions: symbolDefinition.textDefinitions,
                 overrides: designComp.instance.symbolInstance.textOverrides,
                 instances: designComp.instance.symbolInstance.textInstances,
-                componentName: designComp.definition.name,
-                reference: designComp.referenceDesignator,
-                properties: resolvedProperties
+                for: designComp // Pass the whole smart component.
             )
+            
             return SymbolNode(
                 id: designComp.id,
                 instance: designComp.instance.symbolInstance,

@@ -7,19 +7,14 @@
 
 import SwiftUI
 
+@dynamicMemberLookup
 struct DesignComponent: Identifiable, Hashable {
 
-    // SwiftData model
+    // The sources of truth
     let definition: ComponentDefinition
-
-    // NSDocument model
     let instance: ComponentInstance
 
     var id: UUID { instance.id }
-
-    var referenceDesignator: String {
-        definition.referenceDesignatorPrefix + instance.referenceDesignatorIndex.description
-    }
 
     var displayedProperties: [Property.Resolved] {
         return Property.Resolver.resolve(
@@ -27,5 +22,27 @@ struct DesignComponent: Identifiable, Hashable {
             overrides: instance.propertyOverrides,
             instances: instance.propertyInstances
         )
+    }
+    
+    /// Provides type-safe access to component attributes using the generated `AttributeSource`.
+    /// This allows for clean, safe syntax like `component[.name]`.
+    subscript(source: ComponentDefinition.AttributeSource) -> String {
+        // It simply delegates to the dynamic member subscript using the underlying string key.
+        return self[dynamicMember: source.key]
+    }
+    
+    /// Provides dynamic access to component attributes via string keys.
+    /// This is the engine that powers both `@dynamicMemberLookup` and the type-safe subscript.
+    subscript(dynamicMember key: String) -> String {
+        if key == "referenceDesignator" {
+            return "\(definition.referenceDesignatorPrefix)\(instance.referenceDesignatorIndex)"
+        }
+        
+        let mirror = Mirror(reflecting: definition)
+        if let propertyValue = mirror.descendant(key) {
+            return String(describing: propertyValue)
+        }
+        
+        return "n/a"
     }
 }

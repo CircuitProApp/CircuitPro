@@ -7,10 +7,9 @@
 
 import Foundation
 
-/// Describes the origin of an anchored text's content.
+/// Describes a data source for a text element by specifying a path to a property
+/// within a `ComponentDefinition`, making it decoupled and extensible.
 enum TextSource: Codable, Hashable {
-    /// The component's unique referenceDesignatorIndex designator (e.g., "R1", "C2").
-    case reference
-    case componentName
-    case property(definitionID: UUID)
+    case componentAttribute(ComponentDefinition.AttributeSource)
+    case componentProperty(definitionID: UUID)
 }

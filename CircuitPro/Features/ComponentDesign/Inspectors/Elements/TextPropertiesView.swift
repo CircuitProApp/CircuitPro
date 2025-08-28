@@ -44,15 +44,14 @@ struct TextPropertiesView: View {
     }
     
     /// Provides the correct view for editing the text's content,
-    /// depending on whether it has a semantic source or is just static text.
+    /// depending on whether it has a semantic source.
     @ViewBuilder
     private var contentSection: some View {
         let source = editor.textSourceMap[textModel.id]
 
         InspectorSection("Content") {
-            // If the text has a source, it's derived from component data.
-            // Describe the source and don't allow direct text editing.
             if let source = source {
+                // If the text has a source, it's derived from component data.
                 let description = description(for: source)
                 InspectorRow("Source") {
                     Text(description)
@@ -60,32 +59,28 @@ struct TextPropertiesView: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             } else {
-                // If there's no source, it's static text. Allow direct editing.
+                // This branch is now only for truly static text that might be
+                // part of a symbol but isn't linked to data.
                 InspectorRow("Text") {
                     TextField("Static Text", text: $textModel.text)
                         .inspectorField()
                 }
             }
             
-            // --- MODIFIED ---
-            // If the source is a property, show the display option toggles.
-            // The pattern match is now simpler.
-            if let source, case .property = source {
+            // This logic is still correct. Display options are only relevant for component properties.
+            if let source, case .componentProperty = source {
                 if let optionsBinding = editor.bindingForDisplayOptions(with: textModel.id, componentData: componentData) {
                     
                     Text("Display Options").font(.caption).foregroundColor(.secondary)
                     
                     InspectorRow("Show Key") {
-                        Toggle("Show Key", isOn: optionsBinding.showKey)
-                            .labelsHidden()
+                        Toggle("Show Key", isOn: optionsBinding.showKey).labelsHidden()
                     }
                     InspectorRow("Show Value") {
-                        Toggle("Show Value", isOn: optionsBinding.showValue)
-                            .labelsHidden()
+                        Toggle("Show Value", isOn: optionsBinding.showValue).labelsHidden()
                     }
                     InspectorRow("Show Unit") {
-                        Toggle("Show Unit", isOn: optionsBinding.showUnit)
-                            .labelsHidden()
+                        Toggle("Show Unit", isOn: optionsBinding.showUnit).labelsHidden()
                     }
                 }
             }
@@ -94,12 +89,22 @@ struct TextPropertiesView: View {
     
     /// Generates a human-readable description for a given semantic `TextSource`.
     private func description(for source: TextSource) -> String {
+        // --- MODIFIED: The switch statement now handles the new enum cases. ---
         switch source {
-        case .componentName:
-            return "Component Name"
-        case .reference:
-            return "Reference Designator"
-        case .property(let defID):
+        case .componentAttribute(let attributeSource):
+            // Use the string key from the type-safe source to provide a display name.
+            switch attributeSource {
+            case .name:
+                return "Component Name"
+            case .referenceDesignatorPrefix:
+                return "Reference Designator"
+            default:
+                // This makes the UI robust for any future attributes you add.
+                return attributeSource.key.capitalized
+            }
+            
+        case .componentProperty(let defID):
+            // This logic is unchanged but now correctly separated.
             return componentDesignManager.componentProperties.first { $0.id == defID }?.key.label ?? "Property"
         }
     }

@@ -48,18 +48,23 @@ final class ComponentDesignManager {
     }
 
     /// A computed property providing a list of available semantic text sources.
-    /// This now uses the simplified `TextSource` enum.
+    /// This now generates key-based sources for maximum flexibility.
     var availableTextSources: [(displayName: String, source: TextSource)] {
         var sources: [(String, TextSource)] = []
         
+        // --- MODIFIED: Generate key-based sources ---
+        // These keys correspond to the properties on the `ComponentDefinition` model.
         if !componentName.isEmpty {
-            sources.append(("Name", .componentName))
+            sources.append(("Name", .componentAttribute(.name)))
         }
         if !referenceDesignatorPrefix.isEmpty {
-            sources.append(("Reference", .reference))
+            // Note: We use the prefix key. The full refdes is computed later.
+            sources.append(("Reference", .componentAttribute(.referenceDesignatorPrefix)))
         }
+        
+        // This part uses the more specific .componentProperty case.
         for propDef in componentProperties {
-            sources.append((propDef.key.label, .property(definitionID: propDef.id)))
+            sources.append((propDef.key.label, .componentProperty(definitionID: propDef.id)))
         }
         
         return sources

@@ -1,16 +1,17 @@
 import Foundation
 
 struct TextResolver {
+    
+    /// The main resolution function that converts abstract text templates into displayable, resolved text models.
     static func resolve(
         definitions: [CircuitText.Definition],
         overrides: [CircuitText.Override],
         instances: [CircuitText.Instance],
-        componentName: String,
-        reference: String,
-        properties: [Property.Resolved]
+        // The entire context is now passed in this single, smart object.
+        for component: DesignComponent
     ) -> [CircuitText.Resolved] {
 
-        // 1. Use the macro's resolver to get the final resolved templates.
+        // 1. Use the macro's resolver to get the final combined template settings.
         let resolvedTemplates = CircuitText.Resolver.resolve(
             definitions: definitions,
             overrides: overrides,
@@ -19,22 +20,39 @@ struct TextResolver {
         
         // 2. Post-process the templates to generate the final string content.
         return resolvedTemplates.compactMap { resolved -> CircuitText.Resolved? in
-            // First, filter out any text that has been explicitly hidden.
             guard resolved.isVisible else { return nil }
             
-            // Create a mutable copy to update its `text` property.
             var finalResolved = resolved
             
-            // With the new TextSource model, every source is dynamic. We simply
-            // resolve its content and assign it to the `text` property.
-            finalResolved.text = resolved.contentSource.resolveString(
-                with: resolved.displayOptions,
-                componentName: componentName,
-                reference: reference,
-                properties: properties
-            )
-
-            // Return the updated struct with the final text content.
+            // --- THIS IS THE CORRECTED LOGIC ---
+            // It now correctly handles the final, type-safe TextSource enum.
+            switch resolved.contentSource {
+                
+            case .componentAttribute(let attributeSource):
+                // We access the string key from the safe `AttributeSource` struct
+                // and use the component's dynamic member lookup.
+                finalResolved.text = component[dynamicMember: attributeSource.key]
+                
+            case .componentProperty(let definitionID):
+                // This logic correctly uses the component's displayedProperties.
+                guard let prop = component.displayedProperties.first(where: { $0.id == definitionID }) else {
+                    finalResolved.text = "n/a"
+                    break
+                }
+                
+                var parts: [String] = []
+                if resolved.displayOptions.showKey, !prop.key.label.isEmpty {
+                    parts.append("\(prop.key.label):")
+                }
+                if resolved.displayOptions.showValue {
+                    parts.append(prop.value.description)
+                }
+                if resolved.displayOptions.showUnit, !prop.unit.symbol.isEmpty {
+                    parts.append(prop.unit.symbol)
+                }
+                finalResolved.text = parts.joined(separator: " ")
+            }
+            
             return finalResolved
         }
     }

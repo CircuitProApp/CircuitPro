@@ -19,13 +19,13 @@ struct SymbolNodeAppearanceView: View {
         VStack(spacing: 5) {
             InspectorSection("Text Visibility") {
                 PlainList {
-                    textVisibilityListRow(label: "Name", source: .componentName)
-                    textVisibilityListRow(label: "Reference", source: .reference)
+                    textVisibilityListRow(label: "Name", source: .componentAttribute(.name))
+                    textVisibilityListRow(label: "Reference", source: .componentAttribute(.referenceDesignatorPrefix))
                     
                     if !component.displayedProperties.isEmpty { Divider() }
                     
                     ForEach(component.displayedProperties) { property in
-                        textVisibilityListRow(label: property.key.label, source: .property(definitionID: property.id))
+                        textVisibilityListRow(label: property.key.label, source: .componentProperty(definitionID: property.id))
                     }
                 }
                 .background(Color(nsColor: .controlBackgroundColor))
@@ -63,7 +63,7 @@ struct SymbolNodeAppearanceView: View {
     // MARK: - Helpers
     
     private func toggleVisibility(for source: TextSource) {
-         if case .property(let definitionID) = source,
+         if case .componentProperty(let definitionID) = source,
              let property = component.displayedProperties.first(where: { $0.id == definitionID }) {
             projectManager.togglePropertyVisibility(for: component, property: property, using: packManager)
         } else {
