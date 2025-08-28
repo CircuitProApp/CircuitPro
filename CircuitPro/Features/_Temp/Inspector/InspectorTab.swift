@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum InspectorTab: Displayable {
+enum InspectorTab: SidebarTab {
     case attributes
     case appearance
 

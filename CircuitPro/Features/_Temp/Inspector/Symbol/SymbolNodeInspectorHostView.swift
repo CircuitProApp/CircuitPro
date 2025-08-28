@@ -20,51 +20,14 @@ struct SymbolNodeInspectorHostView: View {
     private let availableTabs: [InspectorTab] = [.attributes, .appearance]
     
     var body: some View {
-        VStack(spacing: 0) {
-           inspectorTab
-            
-            ScrollView {
-                VStack(spacing: 0) {
-                    switch selectedTab {
-                    case .attributes:
-                        SymbolNodeAttributesView(component: component, symbolNode: symbolNode)
-                            .frame(maxWidth: .infinity)
-                    case .appearance:
-                        SymbolNodeAppearanceView(component: component, symbolNode: symbolNode)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .contentMargins([.vertical, .leading], 5, for: .scrollContent)
-        }
-    }
-    
-    
-    private var inspectorTab: some View {
-        Group {
-            if availableTabs.count > 1 {
-                Divider().foregroundStyle(.quaternary)
-                HStack(spacing: 17) {
-                    ForEach(InspectorTab.allCases) { tab in
-                        Button {
-                            selectedTab = tab
-                        } label: {
-                            Image(systemName: tab.icon)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 13, height: 13)
-                                .foregroundStyle(selectedTab == tab ? .blue : .secondary)
-                                .symbolVariant(selectedTab == tab ? .fill : .none)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 28)
-                .foregroundStyle(.secondary)
-                
-                Divider().foregroundStyle(.quaternary)
+        SidebarView(selectedTab: $selectedTab, availableTabs: availableTabs) {
+            switch selectedTab {
+            case .attributes:
+                SymbolNodeAttributesView(component: component, symbolNode: symbolNode)
+            case .appearance:
+                SymbolNodeAppearanceView(component: component, symbolNode: symbolNode)
             }
         }
+        .contentMargins([.vertical, .leading], 5, for: .scrollContent)
     }
 }
