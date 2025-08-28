@@ -16,7 +16,7 @@ struct SymbolNodeAppearanceView: View {
     @Bindable var symbolNode: SymbolNode
     
     var body: some View {
-        VStack(spacing: 15) {
+        VStack(spacing: 5) {
             InspectorSection("Text Visibility") {
                 PlainList {
                     textVisibilityListRow(

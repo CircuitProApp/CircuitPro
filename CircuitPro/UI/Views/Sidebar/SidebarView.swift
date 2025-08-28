@@ -17,7 +17,7 @@ struct SidebarView<T: SidebarTab, Content: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             SidebarTabView(selectedTab: $selectedTab, availableTabs: availableTabs)
-            ScrollView { content }
+            content
         }
     }
 }

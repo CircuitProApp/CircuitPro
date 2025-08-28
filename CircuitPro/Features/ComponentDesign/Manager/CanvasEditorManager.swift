@@ -130,7 +130,7 @@ extension CanvasEditorManager {
         let textModel = TextModel(
             id: newElementID,
             text: resolvedText.isEmpty ? displayName : resolvedText,
-            position: centerPoint, anchor: .bottomLeft
+            position: centerPoint, anchor: .bottomLeading
         )
         
         // Create a new TextNode from the model and add it to the canvas.

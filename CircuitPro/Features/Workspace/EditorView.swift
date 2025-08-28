@@ -51,7 +51,7 @@ struct EditorView: View {
                 }
 
             } handle: {
-                CanvasStatusBarView(isCollapsed: $showUtilityArea)
+                CanvasStatusBarView(isCollapsed: $showUtilityArea, configuration: selectedEditor == .schematic ? .fixedGrid : .default)
             } secondary: {
                 UtilityAreaView()
             }

@@ -16,6 +16,7 @@ class TextNode: BaseNode {
 
     var textModel: TextModel {
         didSet {
+            parent?.onNeedsRedraw?()
             onNeedsRedraw?()
         }
     }
@@ -58,23 +59,23 @@ class TextNode: BaseNode {
 
          // Determine the target X coordinate based on the anchor.
          switch textModel.anchor {
-         case .topLeft, .middleLeading, .bottomLeft:
+         case .topLeading, .leading, .bottomLeading:
              targetX = bounds.minX
-         case .topCenter, .middleCenter, .bottomCenter:
+         case .top, .center, .bottom:
              targetX = bounds.midX
-         case .topRight, .middleTrailing, .bottomRight:
+         case .topTrailing, .trailing, .bottomTrailing:
              targetX = bounds.maxX
          }
 
          // Determine the target Y coordinate based on the anchor.
          switch textModel.anchor {
-         case .topLeft, .topCenter, .topRight:
+         case .topLeading, .top, .topTrailing:
              // NOTE: In a Y-up coordinate system (like AppKit's views),
              // the maximum Y value is the top of the bounding box.
              targetY = bounds.maxY
-         case .middleLeading, .middleCenter, .middleTrailing:
+         case .leading, .center, .trailing:
              targetY = bounds.midY
-         case .bottomLeft, .bottomCenter, .bottomRight:
+         case .bottomLeading, .bottom, .bottomTrailing:
              targetY = bounds.minY
          }
          

@@ -64,7 +64,7 @@ struct SymbolNodeAttributesView: View {
 
     
     var body: some View {
-        VStack(spacing: 15) {
+        VStack(spacing: 5) {
             InspectorSection("Identity") {
                 InspectorRow("Name") {
                     Text(component.definition.name)
@@ -80,6 +80,7 @@ struct SymbolNodeAttributesView: View {
                 }
             }
             
+            Divider()
             
             InspectorSection("Transform") {
                 PointControlView(
@@ -89,7 +90,7 @@ struct SymbolNodeAttributesView: View {
                 
                 RotationControlView(object: $symbolNode.instance)
             }
-            
+            Divider()
             InspectorSection("Properties") {
                 VStack(spacing: 0) {
                     Table(propertiesBinding, selection: $selectedProperty) {

@@ -23,7 +23,7 @@ final class AnchoredTextNode: TextNode {
     
     private let contentSource: TextSource
     private let displayOptions: TextDisplayOptions
-
+    
     // MARK: - Initialization
 
     init(

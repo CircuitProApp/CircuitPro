@@ -1,0 +1,40 @@
+//
+//  AnchoredTextInspectorView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 8/28/25.
+//
+
+import SwiftUI
+
+struct AnchoredTextInspectorView: View {
+    
+    @Bindable var anchoredText: AnchoredTextNode
+    
+    @State private var selectedTab: InspectorTab = .attributes
+    
+    var availableTabs: [InspectorTab] = [.attributes]
+    
+    var body: some View {
+        SidebarView(selectedTab: $selectedTab, availableTabs: availableTabs) {
+            ScrollView {
+                VStack(spacing: 5) {
+                    InspectorSection("Transform") {
+                        PointControlView(
+                            title: "Position",
+                            point: $anchoredText.textModel.position
+                        )
+                        
+                        RotationControlView(object: $anchoredText.textModel)
+                        
+                    }
+                    Divider()
+                    InspectorSection("Text Options") {
+                        InspectorAnchorRow(textAnchor: $anchoredText.textModel.anchor)
+                    }
+                }
+                .padding(5)
+            }
+        }
+    }
+}

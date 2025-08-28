@@ -72,7 +72,7 @@ struct WorkspaceView: View {
         .frame(minWidth: 800, minHeight: 600)
         .inspector(isPresented: $showInspector) {
             InspectorView()
-            .inspectorColumnWidth(min: 260, ideal: 300, max: 1000)
+            .inspectorColumnWidth(min: 260, ideal: 300, max: 500)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {

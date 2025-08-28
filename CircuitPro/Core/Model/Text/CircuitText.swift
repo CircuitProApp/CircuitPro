@@ -36,7 +36,7 @@ struct CircuitText {
     @Overridable var color: SDColor = .init(color: .init(nsColor: .labelColor))
     
     /// The text's anchor point.
-    @Overridable var anchor: TextAnchor = .bottomLeft
+    @Overridable var anchor: TextAnchor = .bottomLeading
     
     /// The text alignment, stored as a custom Codable `SDAlignment` enum.
     @Overridable var alignment: SDAlignment = .center

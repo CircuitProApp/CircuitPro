@@ -13,9 +13,9 @@ struct AnchorPickerView: View {
     
     // Layout the anchors in a 2D array for the grid
     private let anchors: [[TextAnchor]] = [
-        [.topLeft, .topCenter, .topRight],
-        [.middleLeading, .middleCenter, .middleTrailing],
-        [.bottomLeft, .bottomCenter, .bottomRight]
+        [.topLeading, .top, .topTrailing],
+        [.leading, .center, .trailing],
+        [.bottomLeading, .bottom, .bottomTrailing]
     ]
     
     var body: some View {

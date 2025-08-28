@@ -21,13 +21,17 @@ struct SymbolNodeInspectorHostView: View {
     
     var body: some View {
         SidebarView(selectedTab: $selectedTab, availableTabs: availableTabs) {
-            switch selectedTab {
-            case .attributes:
-                SymbolNodeAttributesView(component: component, symbolNode: symbolNode)
-            case .appearance:
-                SymbolNodeAppearanceView(component: component, symbolNode: symbolNode)
+            ScrollView {
+                switch selectedTab {
+                case .attributes:
+                    SymbolNodeAttributesView(component: component, symbolNode: symbolNode)
+                        .padding(5)
+                case .appearance:
+                    SymbolNodeAppearanceView(component: component, symbolNode: symbolNode)
+                        .padding(5)
+                }
             }
         }
-        .contentMargins([.vertical, .leading], 5, for: .scrollContent)
+       
     }
 }

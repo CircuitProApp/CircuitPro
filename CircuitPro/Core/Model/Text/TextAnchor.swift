@@ -9,21 +9,21 @@ import SwiftUI
 
 // Enum to represent the 9 anchor points
 enum TextAnchor: Displayable {
-    case topLeft, topCenter, topRight
-    case middleLeading, middleCenter, middleTrailing
-    case bottomLeft, bottomCenter, bottomRight
+    case topLeading, top, topTrailing
+    case leading, center, trailing
+    case bottomLeading, bottom, bottomTrailing
     
     var label: String {
         switch self {
-        case .topLeft: return "Top Left"
-        case .topCenter: return "Top Center"
-        case .topRight: return "Top Right"
-        case .middleLeading: return "Middle Leading"
-        case .middleCenter: return "Middle Center"
-        case .middleTrailing: return "Middle Trailing"
-        case .bottomLeft: return "Bottom Left"
-        case .bottomCenter: return "Bottom Center"
-        case .bottomRight: return "Bottom Right"
+        case .topLeading: return "Top Leading"
+        case .top: return "Top"
+        case .topTrailing: return "Top Trailing"
+        case .leading: return "Leading"
+        case .center: return "Center"
+        case .trailing: return "Trailing"
+        case .bottomLeading: return "Bottom Leading"
+        case .bottom: return "Bottom"
+        case .bottomTrailing: return "Bottom Trailing"
         }
     }
 }

@@ -14,7 +14,7 @@ struct ProjectNavigatorView: View {
 
     var document: CircuitProjectFileDocument
 
-    enum SchematicNavigatorType: Displayable {
+    enum SchematicNavigatorTab: Displayable {
         case symbols
         case nets
         
@@ -28,37 +28,37 @@ struct ProjectNavigatorView: View {
         }
     }
 
-    @State private var schematicNavigatorView: SchematicNavigatorType = .symbols
+    @State private var selectedTab: SchematicNavigatorTab = .symbols
     
     @Namespace private var namespace
 
     var body: some View {
         @Bindable var bindableProjectManager = projectManager
 
-        Group {
+        VStack(spacing: 0) {
             DesignNavigatorView(document: document)
 
             Divider().foregroundStyle(.quaternary)
 
             VStack(spacing: 0) {
                 HStack(spacing: 2.5) {
-                    ForEach(SchematicNavigatorType.allCases, id: \.self) { tab in
+                    ForEach(SchematicNavigatorTab.allCases, id: \.self) { tab in
                         Button {
                             withAnimation(.smooth(duration: 0.3)) {
-                                schematicNavigatorView = tab
+                                selectedTab = tab
                             }
                         } label: {
                             Text(tab.label)
                                 .padding(.vertical, 2.5)
                                 .padding(.horizontal, 7.5)
                                 .background {
-                                    if schematicNavigatorView == tab {
+                                    if selectedTab == tab {
                                         RoundedRectangle(cornerRadius: 5)
                                             .fill(.blue)
                                             .matchedGeometryEffect(id: "selection-background", in: namespace)
                                     }
                                 }
-                                .foregroundStyle(schematicNavigatorView == tab ? .white : .secondary)
+                                .foregroundStyle(selectedTab == tab ? .white : .secondary)
                         }
                         .buttonStyle(.plain)
                     }
@@ -68,7 +68,7 @@ struct ProjectNavigatorView: View {
 
                 Divider().foregroundStyle(.quinary)
 
-                switch schematicNavigatorView {
+                switch selectedTab {
                 case .symbols:
                     SymbolNavigatorView(document: document)
                         .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .leading)))

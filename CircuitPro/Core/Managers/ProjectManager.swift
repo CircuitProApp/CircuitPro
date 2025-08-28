@@ -91,7 +91,7 @@ final class ProjectManager {
             // Find a reasonable default position for the new text.
             let existingTextPositions = component.instance.symbolInstance.textInstances.map(\.relativePosition)
             let lowestY = existingTextPositions.map(\.y).min() ?? -20
-            let newPosition = CGPoint(x: 0, y: lowestY - 12)
+            let newPosition = CGPoint(x: 0, y: lowestY - 10)
             
             // Create and add the new text instance.
             let newTextInstance = CircuitText.Instance(
@@ -102,7 +102,7 @@ final class ProjectManager {
                 definitionPosition: newPosition,
                 font: .init(font: .systemFont(ofSize: 12)),
                 color: .init(color: .black),
-                anchor: .middleLeading,
+                anchor: .leading,
                 alignment: .left,
                 cardinalRotation: .east,
                 isVisible: true

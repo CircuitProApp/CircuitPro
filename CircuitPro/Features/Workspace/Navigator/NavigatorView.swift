@@ -7,67 +7,13 @@
 
 import SwiftUI
 
-enum NavigatorViewTab: Displayable {
-
-    case projectNavigator
-    case directoryExplorer
-    case ruleChecks
-
-    var label: String {
-        switch self {
-        case .projectNavigator:
-            return "Project Navigator"
-        case .directoryExplorer:
-            return "Directory Explorer"
-        case .ruleChecks:
-            return "Rule Checks"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .projectNavigator:
-            return CircuitProSymbols.Workspace.projectNavigator
-        case .directoryExplorer:
-            return CircuitProSymbols.Workspace.directoryExplorer
-        case .ruleChecks:
-            return CircuitProSymbols.Workspace.ruleChecks
-        }
-    }
-}
-
 struct NavigatorView: View {
 
-    @State private var selectedTab: NavigatorViewTab = .projectNavigator
+    @State private var selectedTab: NavigatorTab = .projectNavigator
     var document: CircuitProjectFileDocument
 
     var body: some View {
-
-        VStack(spacing: 0) {
-            Divider().foregroundStyle(.quaternary)
-//
-//            HStack(spacing: 17) {
-//                ForEach(NavigatorViewTab.allCases.dropLast()) { tab in
-//                    Button {
-//                        selectedTab = tab
-//                    } label: {
-//                        Image(systemName: tab.icon)
-//                            .resizable()
-//                            .scaledToFit()
-//                            .frame(width: 13, height: 13)
-//                            .foregroundStyle(selectedTab == tab ? .blue : .secondary)
-//
-//                    }
-//                    .buttonStyle(.plain)
-//                    .help(tab.label)
-//                }
-//            }
-//            .frame(maxWidth: .infinity)
-//            .frame(height: 28)
-//            .foregroundStyle(.secondary)
-//
-//            Divider().foregroundStyle(.quaternary)
-
+        SidebarView(selectedTab: $selectedTab, availableTabs: [.projectNavigator]) {
             switch selectedTab {
             case .projectNavigator:
                 ProjectNavigatorView(document: document)
