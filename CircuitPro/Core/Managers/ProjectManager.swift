@@ -102,8 +102,8 @@ final class ProjectManager {
                 definitionPosition: newPosition,
                 font: .init(font: .systemFont(ofSize: 12)),
                 color: .init(color: .black),
-                anchor: .middleCenter,
-                alignment: .center,
+                anchor: .middleLeading,
+                alignment: .left,
                 cardinalRotation: .east,
                 isVisible: true
             )

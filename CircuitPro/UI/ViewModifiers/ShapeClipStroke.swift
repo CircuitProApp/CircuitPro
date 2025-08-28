@@ -15,7 +15,6 @@ struct ShapeClipStroke<IS: InsettableShape, SS: ShapeStyle>: ViewModifier {
     func body(content: Content) -> some View {
         content
             .clipShape(shape)
-            .containerShape(shape)
             .overlay {
                 shape
                     .stroke(strokeColor, lineWidth: lineWidth)

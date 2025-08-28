@@ -39,7 +39,10 @@ struct TextPropertiesView: View {
             InspectorSection("Appearance") {
                 InspectorRow("Alignment") {
                     AnchorPickerView(selectedAnchor: $textModel.anchor)
-//                        .inspectorField()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(textModel.anchor.label)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
 //                InspectorRow("Font") {
 //                    TextField("Font Name", text: .constant(textModel.font.fontName))

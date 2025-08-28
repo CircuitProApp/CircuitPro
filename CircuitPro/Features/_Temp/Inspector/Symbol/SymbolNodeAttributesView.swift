@@ -108,9 +108,8 @@ struct SymbolNodeAttributesView: View {
                     }
                     .font(.caption)
                     .tableStyle(.bordered)
-                    .border(.regularMaterial)
-
-                    Divider()
+                    .border(.white.blendMode(.destinationOut), width: 1)
+                    .compositingGroup()
                     HStack(spacing: 4) {
                         Button {
                             
