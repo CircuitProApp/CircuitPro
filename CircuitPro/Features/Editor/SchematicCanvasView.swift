@@ -10,26 +10,22 @@ import SwiftDataPacks
 
 struct SchematicCanvasView: View {
 
-    @Environment(\.projectManager)
-    private var projectManager
+    @BindableEnvironment(\.projectManager) private var projectManager
     
     // We will use this to perform data operations.
     @PackManager private var packManager
     
     var document: CircuitProjectFileDocument
-    @State var canvasManager = CanvasManager()
+    @Bindable var canvasManager = CanvasManager()
 
     @State private var selectedTool: CanvasTool = CursorTool()
     let defaultTool: CanvasTool = CursorTool()
     
     var body: some View {
-        @Bindable var bindableProjectManager = projectManager
-        @Bindable var canvasManager = self.canvasManager
-
         CanvasView(
             viewport: $canvasManager.viewport,
-            nodes: $bindableProjectManager.canvasNodes,
-            selection: $bindableProjectManager.selectedNodeIDs,
+            nodes: $projectManager.canvasNodes,
+            selection: $projectManager.selectedNodeIDs,
             tool: $selectedTool.unwrapping(withDefault: defaultTool),
             environment: canvasManager.environment,
             renderLayers: [

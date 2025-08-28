@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct LayoutView: View {
-    @Environment(\.projectManager)
+    @BindableEnvironment(\.projectManager)
     private var projectManager
     
     @State var canvasManager: CanvasManager = CanvasManager()
@@ -10,11 +10,10 @@ struct LayoutView: View {
     let defaultTool: CanvasTool = CursorTool()
     
     var body: some View {
-        @Bindable var bindableProjectManager = projectManager
         CanvasView(
             viewport: $canvasManager.viewport,
-            nodes: $bindableProjectManager.canvasNodes,
-            selection: $bindableProjectManager.selectedNodeIDs,
+            nodes: $projectManager.canvasNodes,
+            selection: $projectManager.selectedNodeIDs,
             tool: $selectedTool.unwrapping(withDefault: defaultTool),
             environment: canvasManager.environment,
             renderLayers: [

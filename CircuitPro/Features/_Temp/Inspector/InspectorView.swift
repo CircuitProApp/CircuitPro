@@ -10,8 +10,7 @@ import SwiftDataPacks // Required to use @PackManager
 
 struct InspectorView: View {
     
-    @Environment(\.projectManager)
-    private var projectManager
+    @BindableEnvironment(\.projectManager) private var projectManager
     
     // 1. Get the PackManager from the environment to fetch component definitions.
     @PackManager private var packManager
@@ -47,8 +46,6 @@ struct InspectorView: View {
     }
     
     var body: some View {
-        @Bindable var manager = projectManager
-        
         VStack(alignment: .leading, spacing: 0) {
             
             // 2. Check for the rich context object first.
@@ -74,7 +71,7 @@ struct InspectorView: View {
                 // 4. Handle no selection or multiple selection.
                 VStack {
                     Spacer()
-                    Text(manager.selectedNodeIDs.isEmpty ? "No Selection" : "Multiple Items Selected")
+                    Text(projectManager.selectedNodeIDs.isEmpty ? "No Selection" : "Multiple Items Selected")
                         .foregroundColor(.secondary)
                     Spacer()
                 }
