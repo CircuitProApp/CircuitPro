@@ -26,12 +26,8 @@ extension SymbolInstance {
                 // No override exists. We create a new one to capture the changes.
                 let newOverride = CircuitText.Override(
                     definitionID: definitionID,
-                    text: "",
                     relativePosition: editedText.relativePosition,
-                    // --- FIX: Add this parameter to the initializer call. ---
                     anchorPosition: editedText.anchorPosition,
-                    
-              
                     font: editedText.font,
                     color: editedText.color,
                     anchor: editedText.anchor,
@@ -77,7 +73,6 @@ extension SymbolInstance {
                 // We must be explicit and provide values for all properties.
                 let newOverride = CircuitText.Override(
                     definitionID: definitionID,
-                    text: "", // Unused, but required by the initializer.
                     isVisible: false // The sole purpose of this override.
                 )
                 self.textOverrides.append(newOverride)

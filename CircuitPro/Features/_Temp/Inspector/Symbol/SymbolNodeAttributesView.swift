@@ -19,7 +19,6 @@ struct SymbolNodeAttributesView: View {
     
     @State private var viewFrame: CGSize = .zero
     
-    // (Your referenceDesignatorBinding as it was)
     private var referenceDesignatorBinding: Binding<Int> {
         Binding(
             get: { component.instance.referenceDesignatorIndex },
@@ -34,27 +33,20 @@ struct SymbolNodeAttributesView: View {
     private var propertiesBinding: Binding<[Property.Resolved]> {
         Binding(
             get: {
-                // GET: Simply return the computed properties of the current component.
-                // If the component is gone, return an empty array.
                 return component.displayedProperties
             },
             set: { newPropertiesArray in
-                // SET: This is where we call the ProjectManager.
                 let currentComponent = component
                 
-                // Find which property actually changed.
                 for (index, newProperty) in newPropertiesArray.enumerated() {
                     let oldProperty = currentComponent.displayedProperties[index]
                     
-                    // If a property is different from its old version...
                     if newProperty != oldProperty {
-                        // ...call the existing, correct method on the ProjectManager.
                         projectManager.updateProperty(
                             for: currentComponent,
                             with: newProperty,
                             using: packManager
                         )
-                        // We found the change, so we can stop looking.
                         break
                     }
                 }
@@ -153,23 +145,14 @@ struct SymbolNodeAttributesView: View {
     /// This keeps the body of the ForEach clean.
     private func calculateVisibility(for property: Property.Resolved) -> (isVisible: Bool, onToggle: () -> Void) {
         
-        // 1. We must have a definition-based property to toggle its visibility.
         guard case .definition(let propertyDefID) = property.source else {
-            // This is an ad-hoc property. It cannot be toggled via dynamic text.
-            // Return a "disabled" state: not visible, and the toggle action does nothing.
             return (isVisible: false, onToggle: {})
         }
         
-        // 2. If it is a definition-based property, check if it's currently visible
-        // by looking at the authoritative list on the SymbolNode.
         let isCurrentlyVisible = symbolNode.resolvedTexts.contains { resolvedText in
-            if case .dynamic(.property(let textPropertyID)) = resolvedText.contentSource {
-                return textPropertyID == propertyDefID
-            }
-            return false
+            resolvedText.isVisible && resolvedText.contentSource == .property(definitionID: propertyDefID)
         }
         
-        // 3. Define the action to perform when the toggle button is pressed.
         let toggleAction = {
             projectManager.togglePropertyVisibility(
                 for: component,
@@ -177,7 +160,6 @@ struct SymbolNodeAttributesView: View {
             )
         }
         
-        // 4. Return the calculated state and the corresponding action.
         return (isVisible: isCurrentlyVisible, onToggle: toggleAction)
     }
 }

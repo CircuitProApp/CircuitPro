@@ -38,43 +38,39 @@ struct TextPropertiesView: View {
 
             InspectorSection("Appearance") {
                 InspectorAnchorRow(textAnchor: $textModel.anchor)
-//                InspectorRow("Font") {
-//                    TextField("Font Name", text: .constant(textModel.font.fontName))
-//                        .inspectorField()
-//                }
-//                InspectorRow("Size") {
-//                    InspectorNumericField(label: "Size", value: .constant(textModel.font.pointSize))
-//                }
             }
         }
         .padding(10)
     }
     
     /// Provides the correct view for editing the text's content,
-    /// depending on whether it is static or dynamically linked to a property.
+    /// depending on whether it has a semantic source or is just static text.
     @ViewBuilder
     private var contentSection: some View {
         let source = editor.textSourceMap[textModel.id]
 
         InspectorSection("Content") {
-            // This part is the same: Show the source description.
-            if let dynamicSource = source {
-                let description = description(for: dynamicSource)
+            // If the text has a source, it's derived from component data.
+            // Describe the source and don't allow direct text editing.
+            if let source = source {
+                let description = description(for: source)
                 InspectorRow("Source") {
                     Text(description)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             } else {
+                // If there's no source, it's static text. Allow direct editing.
                 InspectorRow("Text") {
                     TextField("Static Text", text: $textModel.text)
                         .inspectorField()
                 }
             }
             
+            // --- MODIFIED ---
             // If the source is a property, show the display option toggles.
-            if let source, case .dynamic(.property) = source {
-                // Get a binding to the display options from the manager.
+            // The pattern match is now simpler.
+            if let source, case .property = source {
                 if let optionsBinding = editor.bindingForDisplayOptions(with: textModel.id, componentData: componentData) {
                     
                     Text("Display Options").font(.caption).foregroundColor(.secondary)
@@ -96,16 +92,15 @@ struct TextPropertiesView: View {
         }
     }
     
+    /// Generates a human-readable description for a given semantic `TextSource`.
     private func description(for source: TextSource) -> String {
         switch source {
-        case .dynamic(.componentName):
+        case .componentName:
             return "Component Name"
-        case .dynamic(.reference):
+        case .reference:
             return "Reference Designator"
-        case .dynamic(.property(let defID)):
+        case .property(let defID):
             return componentDesignManager.componentProperties.first { $0.id == defID }?.key.label ?? "Property"
-        case .static(let txt):
-            return "Static: \(txt)"
         }
     }
 }

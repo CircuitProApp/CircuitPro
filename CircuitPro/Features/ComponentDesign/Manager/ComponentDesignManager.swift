@@ -26,9 +26,7 @@ final class ComponentDesignManager {
         didSet { refreshValidation() }
     }
 
-    /// The internal state for properties being edited in the UI.
-    /// This now uses the new `DraftProperty` model.
-    var draftProperties: [DraftProperty] = [DraftProperty(key: nil, value: .single(nil), unit: .init())] { // <-- Updated type and value
+    var draftProperties: [DraftProperty] = [DraftProperty(key: nil, value: .single(nil), unit: .init())] {
         didSet {
             let validProperties = componentProperties
             symbolEditor.synchronizeSymbolTextWithProperties(properties: validProperties)
@@ -37,30 +35,33 @@ final class ComponentDesignManager {
         }
     }
     
-    /// A computed property that returns only the valid, non-optional `Property.Definition`s.
-    /// This is the canonical data that should be used for saving the component.
-    var componentProperties: [Property.Definition] { // <-- Updated return type
+    var componentProperties: [Property.Definition] {
         draftProperties.compactMap { draft in
             guard let key = draft.key else { return nil }
-            // Creates the macro-generated `Property.Definition` struct.
-            return Property.Definition( // <-- Updated to use macro-generated type
+            return Property.Definition(
                 id: draft.id,
                 key: key,
                 value: draft.value, unit: draft.unit,
-                warnsOnEdit: draft.warnsOnEdit // <-- Field name updated from 'defaultValue'
+                warnsOnEdit: draft.warnsOnEdit
             )
         }
     }
 
-    /// A computed property providing a list of text sources.
-    /// No changes are needed here, as `Property.Definition` still has `key` and `id`.
+    /// A computed property providing a list of available semantic text sources.
+    /// This now uses the simplified `TextSource` enum.
     var availableTextSources: [(displayName: String, source: TextSource)] {
         var sources: [(String, TextSource)] = []
-        if !componentName.isEmpty { sources.append(("Name", .dynamic(.componentName))) }
-        if !referenceDesignatorPrefix.isEmpty { sources.append(("Reference", .dynamic(.reference))) }
-        for propDef in componentProperties {
-            sources.append((propDef.key.label, .dynamic(.property(definitionID: propDef.id))))
+        
+        if !componentName.isEmpty {
+            sources.append(("Name", .componentName))
         }
+        if !referenceDesignatorPrefix.isEmpty {
+            sources.append(("Reference", .reference))
+        }
+        for propDef in componentProperties {
+            sources.append((propDef.key.label, .property(definitionID: propDef.id)))
+        }
+        
         return sources
     }
 
@@ -88,8 +89,7 @@ final class ComponentDesignManager {
         componentName = ""
         referenceDesignatorPrefix = ""
         selectedCategory = nil
-        // Reset with the new `DraftProperty` struct
-        draftProperties = [DraftProperty(key: nil, value: .single(nil), unit: .init())] // <-- Updated type and value
+        draftProperties = [DraftProperty(key: nil, value: .single(nil), unit: .init())]
         
         symbolEditor.reset()
         footprintEditor.reset()

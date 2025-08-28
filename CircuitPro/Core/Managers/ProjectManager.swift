@@ -18,7 +18,6 @@ final class ProjectManager {
     var canvasNodes: [BaseNode] = []
     var selectedNetIDs: Set<UUID> = []
 
-    // The graph is now driven by the engine + ruleset via transactions.
     var schematicGraph = WireGraph()
 
     init(
@@ -29,13 +28,11 @@ final class ProjectManager {
         self.selectedDesign = selectedDesign
     }
 
-    // --- Convenience properties are unchanged ---
     var componentInstances: [ComponentInstance] {
         get { selectedDesign?.componentInstances ?? [] }
         set { selectedDesign?.componentInstances = newValue }
     }
 
-    // This method is already well-designed and needs no changes.
     @MainActor func designComponents(using packManager: SwiftDataPackManager) -> [DesignComponent] {
         let uuids = Set(componentInstances.map(\.componentUUID))
         guard !uuids.isEmpty else { return [] }
@@ -53,51 +50,40 @@ final class ProjectManager {
         }
     }
 
-    /// Persists the current state of the schematic graph back to the design model.
     func persistSchematicGraph() {
         guard selectedDesign != nil else { return }
         selectedDesign?.wires = schematicGraph.toWires()
     }
     
-    // --- NEW & REFACTORED VISIBILITY METHODS ---
 
     @MainActor
-    func toggleDynamicTextVisibility(for component: DesignComponent, source: DynamicComponentProperty, using packManager: SwiftDataPackManager) {
-        // Ensure the component's symbol definition exists.
+    func toggleDynamicTextVisibility(for component: DesignComponent, source: TextSource, using packManager: SwiftDataPackManager) {
         guard let symbol = component.definition.symbol else { return }
 
         // Case 1: The text is defined in the symbol definition. We toggle its visibility via an override.
-        if let textDefinition = symbol.textDefinitions.first(where: {
-            if case .dynamic(let dynamicSource) = $0.contentSource { return dynamicSource == source }
-            return false
-        }) {
+        if let textDefinition = symbol.textDefinitions.first(where: { $0.contentSource == source }) {
             if let overrideIndex = component.instance.symbolInstance.textOverrides.firstIndex(where: { $0.definitionID == textDefinition.id }) {
-                // If an override exists, toggle its isVisible flag.
                 let currentVisibility = component.instance.symbolInstance.textOverrides[overrideIndex].isVisible ?? true
                 component.instance.symbolInstance.textOverrides[overrideIndex].isVisible = !currentVisibility
             } else {
-                // If no override exists, create one to hide the text (since it's visible by default).
                 let newOverride = CircuitText.Override(definitionID: textDefinition.id, isVisible: false)
                 component.instance.symbolInstance.textOverrides.append(newOverride)
             }
-        // Case 2: The text exists as a user-added instance (not from the original definition). We remove it to hide it.
-        } else if let instanceIndex = component.instance.symbolInstance.textInstances.firstIndex(where: {
-            if case .dynamic(let dynamicSource) = $0.contentSource { return dynamicSource == source }
-            return false
-        }) {
-            component.instance.symbolInstance.textInstances.remove(at: instanceIndex)
+            
+        // Case 2: The text exists as a user-added instance. We toggle its visibility.
+        } else if let instanceIndex = component.instance.symbolInstance.textInstances.firstIndex(where: { $0.contentSource == source }) {
+            let currentVisibility = component.instance.symbolInstance.textInstances[instanceIndex].isVisible
+            component.instance.symbolInstance.textInstances[instanceIndex].isVisible = !currentVisibility
+            
         // Case 3: The text is not displayed at all. We create a new instance to show it.
         } else {
-            // Find a reasonable default position for the new text.
             let existingTextPositions = component.instance.symbolInstance.textInstances.map(\.relativePosition)
             let lowestY = existingTextPositions.map(\.y).min() ?? -20
             let newPosition = CGPoint(x: 0, y: lowestY - 10)
             
-            // Create and add the new text instance.
             let newTextInstance = CircuitText.Instance(
                 id: UUID(),
-                contentSource: .dynamic(source),
-                text: "", // The resolver will provide the actual string content.
+                contentSource: source,
                 relativePosition: newPosition,
                 anchorPosition: newPosition,
                 font: .init(font: .systemFont(ofSize: 12)),
@@ -110,33 +96,23 @@ final class ProjectManager {
             component.instance.symbolInstance.textInstances.append(newTextInstance)
         }
         
-        // Trigger a rebuild to reflect the changes on the canvas.
         rebuildCanvasNodes(with: packManager)
     }
 
     @MainActor
     func togglePropertyVisibility(for component: DesignComponent, property: Property.Resolved, using packManager: SwiftDataPackManager) {
-        // This method now serves as a convenience wrapper around the more generic toggle function.
         guard case .definition(let propertyDefID) = property.source else {
             print("Error: Visibility can only be toggled for definition-based properties.")
             return
         }
-        let source = DynamicComponentProperty.property(definitionID: propertyDefID)
+        let source = TextSource.property(definitionID: propertyDefID)
         toggleDynamicTextVisibility(for: component, source: source, using: packManager)
     }
-
-    // --- The following methods are unchanged ---
-
+    
     @MainActor
     func updateProperty(for component: DesignComponent, with editedProperty: Property.Resolved, using packManager: SwiftDataPackManager) {
-        guard case .definition(let definitionID) = editedProperty.source else {
-            print("This property is an instance-specific property and cannot be updated this way.")
-            return
-        }
-        guard let originalProperty = component.displayedProperties.first(where: { $0.id == editedProperty.id }) else {
-            print("Could not find the original property to compare against.")
-            return
-        }
+        guard case .definition(let definitionID) = editedProperty.source else { return }
+        guard let originalProperty = component.displayedProperties.first(where: { $0.id == editedProperty.id }) else { return }
         if originalProperty.value != editedProperty.value {
             component.instance.update(definitionID: definitionID, value: editedProperty.value)
         }
@@ -148,15 +124,11 @@ final class ProjectManager {
 
     @MainActor
     func updateReferenceDesignator(for component: DesignComponent, newIndex: Int, using packManager: SwiftDataPackManager) {
-        guard let instanceIndex = self.componentInstances.firstIndex(where: { $0.id == component.id }) else {
-            print("Error: Could not find component instance to update.")
-            return
-        }
+        guard let instanceIndex = self.componentInstances.firstIndex(where: { $0.id == component.id }) else { return }
         self.componentInstances[instanceIndex].referenceDesignatorIndex = newIndex
         rebuildCanvasNodes(with: packManager)
     }
 
-    /// Creates a new, fully initialized `WireGraph` from the current design state.
     @MainActor
     private func makeGraph(from design: CircuitDesign, using packManager: SwiftDataPackManager) -> WireGraph {
         let newGraph = WireGraph()
@@ -164,11 +136,7 @@ final class ProjectManager {
         let designComponents = self.designComponents(using: packManager)
         for comp in designComponents {
             guard let symbolDef = comp.definition.symbol else { continue }
-            newGraph.syncPins(
-                for: comp.instance.symbolInstance,
-                of: symbolDef,
-                ownerID: comp.id
-            )
+            newGraph.syncPins(for: comp.instance.symbolInstance, of: symbolDef, ownerID: comp.id)
         }
         return newGraph
     }
@@ -177,7 +145,7 @@ final class ProjectManager {
     func rebuildCanvasNodes(with packManager: SwiftDataPackManager) {
         guard let design = selectedDesign else {
             self.canvasNodes = []
-            self.schematicGraph = WireGraph() // Reset to empty
+            self.schematicGraph = WireGraph()
             return
         }
 

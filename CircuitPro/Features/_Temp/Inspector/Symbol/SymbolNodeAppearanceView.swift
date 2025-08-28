@@ -19,25 +19,13 @@ struct SymbolNodeAppearanceView: View {
         VStack(spacing: 5) {
             InspectorSection("Text Visibility") {
                 PlainList {
-                    textVisibilityListRow(
-                        label: "Name",
-                        source: .componentName
-                    )
+                    textVisibilityListRow(label: "Name", source: .componentName)
+                    textVisibilityListRow(label: "Reference", source: .reference)
                     
-                    textVisibilityListRow(
-                        label: "Reference",
-                        source: .reference
-                    )
-                    
-                    if !component.displayedProperties.isEmpty {
-                        Divider()
-                    }
+                    if !component.displayedProperties.isEmpty { Divider() }
                     
                     ForEach(component.displayedProperties) { property in
-                        textVisibilityListRow(
-                            label: property.key.label,
-                            source: .property(definitionID: property.id)
-                        )
+                        textVisibilityListRow(label: property.key.label, source: .property(definitionID: property.id))
                     }
                 }
                 .background(Color(nsColor: .controlBackgroundColor))
@@ -53,20 +41,16 @@ struct SymbolNodeAppearanceView: View {
     // MARK: - Row Builder
     
     @ViewBuilder
-    private func textVisibilityListRow(
-        label: String,
-        source: DynamicComponentProperty
-    ) -> some View {
+    private func textVisibilityListRow(label: String, source: TextSource) -> some View {
         let isVisible = isDynamicTextVisible(source)
         
         HStack {
-            Text(label)
-                .font(.callout)
+            Text(label).font(.callout)
             Spacer()
             Button {
                 toggleVisibility(for: source)
             } label: {
-                Image(systemName: CircuitProSymbols.Generic.eye)
+                Image(systemName: "eye")
                     .symbolVariant(isVisible ? .none : .slash)
                     .contentTransition(.symbolEffect(.replace))
                     .frame(width: 16, height: 16)
@@ -78,27 +62,18 @@ struct SymbolNodeAppearanceView: View {
 
     // MARK: - Helpers
     
-    private func toggleVisibility(for source: DynamicComponentProperty) {
-        switch source {
-        case .reference, .componentName:
+    private func toggleVisibility(for source: TextSource) {
+         if case .property(let definitionID) = source,
+             let property = component.displayedProperties.first(where: { $0.id == definitionID }) {
+            projectManager.togglePropertyVisibility(for: component, property: property, using: packManager)
+        } else {
             projectManager.toggleDynamicTextVisibility(for: component, source: source, using: packManager)
-        case .property(let definitionID):
-            if let property = component.displayedProperties.first(where: {
-                if case .definition(let id) = $0.source { return id == definitionID }
-                return false
-            }) {
-                projectManager.togglePropertyVisibility(for: component, property: property, using: packManager)
-            }
         }
     }
     
-    private func isDynamicTextVisible(_ source: DynamicComponentProperty) -> Bool {
+    private func isDynamicTextVisible(_ source: TextSource) -> Bool {
         symbolNode.resolvedTexts.contains { resolvedText in
-            guard resolvedText.isVisible,
-                  case .dynamic(let dynamicSource) = resolvedText.contentSource else {
-                return false
-            }
-            return dynamicSource == source
+            resolvedText.isVisible && resolvedText.contentSource == source
         }
     }
 }

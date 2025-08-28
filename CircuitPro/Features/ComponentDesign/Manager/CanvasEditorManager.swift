@@ -118,27 +118,26 @@ extension CanvasEditorManager {
         
         let newElementID = UUID()
         
-        // Add the source and default options to maps so resolveText can find them
+        // Add the source and default options to maps so resolveText can find them.
         textSourceMap[newElementID] = source
-        if case .dynamic = source {
+        // Only property-based text uses display options.
+        if case .property = source {
             textDisplayOptionsMap[newElementID] = .default
         }
         
         let resolvedText = resolveText(for: newElementID, source: source, componentData: componentData)
         
-        // Create a a new TextModel with the resolved data.
         let textModel = TextModel(
             id: newElementID,
             text: resolvedText.isEmpty ? displayName : resolvedText,
             position: centerPoint, anchor: .bottomLeading
         )
         
-        // Create a new TextNode from the model and add it to the canvas.
         let newNode = TextNode(textModel: textModel)
         canvasNodes.append(newNode)
     }
     
-    /// Iterates through all dynamic text on the canvas and ensures its displayed text is up-to-date with the latest component data.
+    /// Iterates through all text on the canvas and ensures its displayed string is up-to-date with the latest component data.
     func updateDynamicTextElements(componentData: (name: String, prefix: String, properties: [Property.Definition])) {
         for (elementID, source) in textSourceMap {
             guard let index = elementIndexMap[elementID],
@@ -148,8 +147,6 @@ extension CanvasEditorManager {
             
             let newText = resolveText(for: elementID, source: source, componentData: componentData)
             
-            // If the text has changed, update the text property on the node's model.
-            // Since TextModel is a struct, this correctly triggers observation.
             if textNode.textModel.text != newText {
                 textNode.textModel.text = newText
             }
@@ -159,8 +156,9 @@ extension CanvasEditorManager {
     /// Removes text elements from the canvas if their underlying property definition was deleted from the component.
     func synchronizeSymbolTextWithProperties(properties: [Property.Definition]) {
         let validPropertyIDs = Set(properties.map { $0.id })
+        
         let textElementsToRemove = textSourceMap.filter { (_, source) in
-            if case .dynamic(.property(let definitionID)) = source {
+            if case .property(let definitionID) = source {
                 return !validPropertyIDs.contains(definitionID)
             }
             return false
@@ -175,13 +173,11 @@ extension CanvasEditorManager {
     /// Gets the current display string for a given text element ID by resolving its source and applying display options.
     private func resolveText(for elementID: UUID, source: TextSource, componentData: (name: String, prefix: String, properties: [Property.Definition])) -> String {
         switch source {
-        case .static(let text):
-            return text
-        case .dynamic(.componentName):
+        case .componentName:
             return componentData.name
-        case .dynamic(.reference):
+        case .reference:
             return componentData.prefix
-        case .dynamic(.property(let definitionID)):
+        case .property(let definitionID):
             guard let prop = componentData.properties.first(where: { $0.id == definitionID }) else {
                 return "Invalid Property"
             }
@@ -208,7 +204,7 @@ extension CanvasEditorManager {
     
     /// Creates a `Binding` for a specific text element's display options.
     func bindingForDisplayOptions(with id: UUID, componentData: (name: String, prefix: String, properties: [Property.Definition])) -> Binding<TextDisplayOptions>? {
-        guard let source = textSourceMap[id], case .dynamic = source else {
+        guard let source = textSourceMap[id], case .property = source else {
             return nil
         }
         
@@ -223,22 +219,19 @@ extension CanvasEditorManager {
         )
     }
     
+    /// Removes a text element from the canvas by its source.
     func removeTextFromSymbol(source: TextSource) {
-        // Find all text element IDs that map to this source (should be at most one).
         let idsToRemove = textSourceMap.filter { $0.value == source }.map { $0.key }
         guard !idsToRemove.isEmpty else { return }
 
-        // Remove matching nodes from the canvas.
         canvasNodes.removeAll { node in
             idsToRemove.contains(node.id)
         }
 
-        // Clean up state maps and selection.
         for id in idsToRemove {
             textSourceMap.removeValue(forKey: id)
             textDisplayOptionsMap.removeValue(forKey: id)
             selectedElementIDs.remove(id)
         }
-        // canvasNodes didSet will update indices and prune any stragglers.
     }
 }

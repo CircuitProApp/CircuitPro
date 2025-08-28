@@ -8,15 +8,15 @@
 import SwiftUI
 import Resolvable
 
-@Resolvable
+@Resolvable(default: .overridable)
 struct CircuitText {
     // MARK: - Content Properties
     
     /// The source that defines the text's string content (e.g., static, dynamic).
-    var contentSource: TextSource = .static("")
+    @Identity var contentSource: TextSource
     
-    /// For instances, this provides the static text content. For definitions, this is unused.
-    @Overridable var text: String = ""
+    /// A placeholder for the final resolved string.
+    @Identity var text: String = ""
 
     /// Formatting options for dynamically generated text.
     var displayOptions: TextDisplayOptions = .default
@@ -24,26 +24,26 @@ struct CircuitText {
     // MARK: - Overridable Style & Position Properties
     
     /// The current position, which can be overridden.
-    @Overridable var relativePosition: CGPoint
+    var relativePosition: CGPoint
     
     /// The original position from the definition, used for drawing anchor lines. This is not overridable.
-    @Overridable var anchorPosition: CGPoint
+    var anchorPosition: CGPoint
     
     /// The font, stored as a custom Codable `SDFont` struct.
-    @Overridable var font: SDFont = .init(font: .systemFont(ofSize: 12))
+    var font: SDFont = .init(font: .systemFont(ofSize: 12))
     
     /// The color, stored using your `SDColor` struct.
-    @Overridable var color: SDColor = .init(color: .init(nsColor: .labelColor))
+    var color: SDColor = .init(color: .init(nsColor: .black))
     
     /// The text's anchor point.
-    @Overridable var anchor: TextAnchor = .bottomLeading
+    var anchor: TextAnchor = .bottomLeading
     
     /// The text alignment, stored as a custom Codable `SDAlignment` enum.
-    @Overridable var alignment: SDAlignment = .center
+    var alignment: SDAlignment = .center
     
     /// The rotation of the text.
-    @Overridable var cardinalRotation: CardinalRotation = .east
+    var cardinalRotation: CardinalRotation = .east
     
     /// The visibility of the text. Can be set to `false` in an override to hide it.
-    @Overridable var isVisible: Bool = true
+    var isVisible: Bool = true
 }
