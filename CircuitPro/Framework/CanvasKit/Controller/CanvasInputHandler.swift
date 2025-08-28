@@ -35,15 +35,14 @@ final class CanvasInputHandler {
     func mouseDown(_ event: NSEvent, in host: CanvasHostView) {
         let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
         
-        // Calculate both the raw coordinate and the final processed coordinate once.
         let rawPoint = host.convert(event.locationInWindow, from: nil)
         let processedPoint = process(point: rawPoint, context: context)
 
         for interaction in controller.interactions {
-            // Choose which point to send based on the interaction's preference.
             let pointToUse = interaction.wantsRawInput ? rawPoint : processedPoint
             
-            if interaction.mouseDown(at: pointToUse, context: context, controller: controller) {
+            // MODIFIED: Pass the `event` to the mouseDown method.
+            if interaction.mouseDown(with: event, at: pointToUse, context: context, controller: controller) {
                 controller.redraw()
                 return // Event consumed.
             }

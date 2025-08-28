@@ -8,10 +8,12 @@ extension SymbolInstance {
         switch editedText.source {
             
         case .definition(let definitionID):
-            // The user modified a text derived from a definition.
-            // We must create or update an override to store these changes.
             if let index = self.textOverrides.firstIndex(where: { $0.definitionID == definitionID }) {
                 // An override for this text already exists, so we update it.
+                
+                // --- FIX: Add this line to save the anchor position to the existing override. ---
+                self.textOverrides[index].anchorPosition = editedText.anchorPosition
+                
                 self.textOverrides[index].relativePosition = editedText.relativePosition
                 self.textOverrides[index].font = editedText.font
                 self.textOverrides[index].color = editedText.color
@@ -19,16 +21,17 @@ extension SymbolInstance {
                 self.textOverrides[index].alignment = editedText.alignment
                 self.textOverrides[index].cardinalRotation = editedText.cardinalRotation
                 self.textOverrides[index].isVisible = editedText.isVisible
-                // Per our design, we do not override the 'text' content itself for definitions.
-                // The 'text' property in the override remains unused in this scenario.
 
             } else {
                 // No override exists. We create a new one to capture the changes.
-                // We provide a value for every overridable property.
                 let newOverride = CircuitText.Override(
                     definitionID: definitionID,
-                    text: "", // Pass an empty string to satisfy the non-optional requirement.
+                    text: "",
                     relativePosition: editedText.relativePosition,
+                    // --- FIX: Add this parameter to the initializer call. ---
+                    anchorPosition: editedText.anchorPosition,
+                    
+              
                     font: editedText.font,
                     color: editedText.color,
                     anchor: editedText.anchor,
@@ -40,12 +43,12 @@ extension SymbolInstance {
             }
             
         case .instance(let instanceID):
-            // The user modified an instance-specific text. We update it directly.
+            // This part is correct.
             guard let index = self.textInstances.firstIndex(where: { $0.id == instanceID }) else { return }
             
             self.textInstances[index].text = editedText.text
             self.textInstances[index].relativePosition = editedText.relativePosition
-            self.textInstances[index].definitionPosition = editedText.definitionPosition
+            self.textInstances[index].anchorPosition = editedText.anchorPosition
             self.textInstances[index].font = editedText.font
             self.textInstances[index].color = editedText.color
             self.textInstances[index].anchor = editedText.anchor

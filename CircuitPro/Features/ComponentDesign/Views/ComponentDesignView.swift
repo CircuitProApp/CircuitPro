@@ -153,7 +153,7 @@ struct ComponentDesignView: View {
                 text: "", // Not used by definitions, but required by the init
                 displayOptions: displayOptions,
                 relativePosition: relativePosition,
-                definitionPosition: relativePosition, // For a new definition, these start identical
+                anchorPosition: relativePosition, // For a new definition, these start identical
                 font: textNode.textModel.font,
                 color: textNode.textModel.color,
                 anchor: textNode.textModel.anchor,

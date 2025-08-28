@@ -27,7 +27,7 @@ struct CircuitText {
     @Overridable var relativePosition: CGPoint
     
     /// The original position from the definition, used for drawing anchor lines. This is not overridable.
-    var definitionPosition: CGPoint
+    @Overridable var anchorPosition: CGPoint
     
     /// The font, stored as a custom Codable `SDFont` struct.
     @Overridable var font: SDFont = .init(font: .systemFont(ofSize: 12))

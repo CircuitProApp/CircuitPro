@@ -20,12 +20,15 @@ final class MarqueeInteraction: CanvasInteraction {
     
     var wantsRawInput: Bool { true }
 
-    func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
+    // MODIFIED: Updated method signature to accept NSEvent.
+    func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         guard controller.selectedTool is CursorTool else { return false }
 
         let tolerance = 5.0 / context.magnification
+        // This interaction starts only if the click was on an empty area.
         if context.sceneRoot.hitTest(point, tolerance: tolerance) == nil {
-            let isAdditive = NSApp.currentEvent?.modifierFlags.contains(.shift) ?? false
+            // MODIFIED: Use the passed-in event instead of the global NSApp.currentEvent.
+            let isAdditive = event.modifierFlags.contains(.shift)
             
             // Store the selection state at the beginning of the drag.
             let initialSelection = controller.selectedNodes

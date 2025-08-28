@@ -17,7 +17,7 @@ protocol CanvasInteraction {
     var wantsRawInput: Bool { get }
     /// Responds to a mouse down event.
     /// - Returns: `true` if the event was handled and should not be passed to other interactions, `false` otherwise.
-    func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool
+    func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool
     
     /// Responds to a mouse drag event.
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController)
@@ -30,7 +30,7 @@ protocol CanvasInteraction {
 
 extension CanvasInteraction {
     var wantsRawInput: Bool { false }
-    func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool { return false }
+    func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool { return false }
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) { }
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) { }
     func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool { return false }

@@ -99,7 +99,7 @@ final class ProjectManager {
                 contentSource: .dynamic(source),
                 text: "", // The resolver will provide the actual string content.
                 relativePosition: newPosition,
-                definitionPosition: newPosition,
+                anchorPosition: newPosition,
                 font: .init(font: .systemFont(ofSize: 12)),
                 color: .init(color: .black),
                 anchor: .leading,

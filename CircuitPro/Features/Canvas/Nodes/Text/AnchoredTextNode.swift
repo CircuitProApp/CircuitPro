@@ -12,7 +12,7 @@ final class AnchoredTextNode: TextNode {
     // MARK: - Anchor and Data Provenance
 
     /// The original, un-overridden position from the definition.
-    let definitionPosition: CGPoint
+    var anchorPosition: CGPoint
 
     /// A direct, unowned reference to the symbol instance that owns this text.
     /// This provides the link needed to persist changes back to the main data model.
@@ -32,7 +32,7 @@ final class AnchoredTextNode: TextNode {
     ) {
         self.ownerInstance = ownerInstance
         self.source = resolvedText.source
-        self.definitionPosition = resolvedText.definitionPosition
+        self.anchorPosition = resolvedText.anchorPosition
         self.contentSource = resolvedText.contentSource
         self.displayOptions = resolvedText.displayOptions
 
@@ -69,7 +69,7 @@ final class AnchoredTextNode: TextNode {
         var primitives = super.makeDrawingPrimitives()
 
         // 2. Convert the definition's anchor point to our local coordinate space.
-        let localAnchorPosition = self.convert(definitionPosition, from: parent)
+        let localAnchorPosition = self.convert(anchorPosition, from: parent)
         let adornmentColor = NSColor.systemGray.withAlphaComponent(0.8).cgColor
 
         // 3. Create and append the drawing primitive for the anchor crosshair.
@@ -103,7 +103,7 @@ extension AnchoredTextNode {
             text: textModel.text,
             displayOptions: self.displayOptions,
             relativePosition: textModel.position,
-            definitionPosition: self.definitionPosition,
+            anchorPosition: self.anchorPosition,
             font: textModel.font,
             color: textModel.color,
             anchor: textModel.anchor,

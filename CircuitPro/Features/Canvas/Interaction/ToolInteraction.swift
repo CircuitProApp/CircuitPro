@@ -4,9 +4,8 @@ import AppKit
 /// It acts as the orchestrator that translates tool intents into concrete model mutations.
 struct ToolInteraction: CanvasInteraction {
     
-    // CORRECT: No initializer or stored properties. It is fully generic.
-    
-    func mouseDown(at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
+    // MODIFIED: The method signature now matches the CanvasInteraction protocol.
+    func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         // This interaction is only interested in actions from drawing tools.
         guard let tool = controller.selectedTool, !(tool is CursorTool) else {
             return false
@@ -15,8 +14,9 @@ struct ToolInteraction: CanvasInteraction {
         let tolerance = 5.0 / context.magnification
         let hitTarget = context.sceneRoot.hitTest(point, tolerance: tolerance)
         
+        // MODIFIED: It's safer to get the click count from the passed-in event.
         let interactionContext = ToolInteractionContext(
-            clickCount: NSApp.currentEvent?.clickCount ?? 1,
+            clickCount: event.clickCount,
             hitTarget: hitTarget,
             renderContext: context
         )
@@ -24,10 +24,12 @@ struct ToolInteraction: CanvasInteraction {
         let result = tool.handleTap(at: point, context: interactionContext)
 
         guard case .newNode(let newNode) = result else {
-            return true
+            // If the tool handled the tap but didn't create a new node (e.g., the
+            // first click of a line tool), we should still consume the mouse event.
+            return result != .noResult
         }
 
-        // --- THE CORRECT ORCHESTRATION LOGIC ---
+        // --- Orchestration logic is unchanged ---
 
         if let request = newNode as? WireRequestNode {
             guard let schematicGraphNode = controller.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode else {
@@ -35,7 +37,6 @@ struct ToolInteraction: CanvasInteraction {
                 return true
             }
 
-            // Single composite operation prevents orphan vertex cleanup from deleting endpoints mid-flow.
             let graph = schematicGraphNode.graph
             graph.connect(from: request.from, to: request.to, preferring: request.strategy)
 
@@ -46,7 +47,6 @@ struct ToolInteraction: CanvasInteraction {
             // Handle standard nodes.
             controller.sceneRoot.addChild(newNode)
             controller.onNodesChanged?(controller.sceneRoot.children)
-            // A standard node was added, so we can also assume the model changed.
             controller.onModelDidChange?()
         }
         
