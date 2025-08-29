@@ -8,7 +8,7 @@ extension SymbolInstance {
         switch editedText.source {
             
         case .definition(let definitionID):
-            if let index = self.textOverrides.firstIndex(where: { $0.definitionID == definitionID }) {
+            if let index = self.textOverrides.firstIndex(where: { $0.definitionID == definitionID.id }) {
                 // An override for this text already exists, so we update it.
                 
                 // --- FIX: Add this line to save the anchor position to the existing override. ---
@@ -25,7 +25,7 @@ extension SymbolInstance {
             } else {
                 // No override exists. We create a new one to capture the changes.
                 let newOverride = CircuitText.Override(
-                    definitionID: definitionID,
+                    definitionID: definitionID.id,
                     relativePosition: editedText.relativePosition,
                     anchorPosition: editedText.anchorPosition,
                     font: editedText.font,
@@ -40,7 +40,7 @@ extension SymbolInstance {
             
         case .instance(let instanceID):
             // This part is correct.
-            guard let index = self.textInstances.firstIndex(where: { $0.id == instanceID }) else { return }
+            guard let index = self.textInstances.firstIndex(where: { $0.id == instanceID.id }) else { return }
             
             self.textInstances[index].text = editedText.text
             self.textInstances[index].relativePosition = editedText.relativePosition
@@ -65,14 +65,14 @@ extension SymbolInstance {
             
         case .definition(let definitionID):
             // "Removing" a definition-based text means hiding it via an override.
-            if let index = self.textOverrides.firstIndex(where: { $0.definitionID == definitionID }) {
+            if let index = self.textOverrides.firstIndex(where: { $0.definitionID == definitionID.id }) {
                 // An override already exists; just mark it as invisible.
                 self.textOverrides[index].isVisible = false
             } else {
                 // No override exists. Create a new one whose only purpose is to hide the text.
                 // We must be explicit and provide values for all properties.
                 let newOverride = CircuitText.Override(
-                    definitionID: definitionID,
+                    definitionID: definitionID.id,
                     isVisible: false // The sole purpose of this override.
                 )
                 self.textOverrides.append(newOverride)
@@ -80,7 +80,7 @@ extension SymbolInstance {
             
         case .instance(let instanceID):
             // Permanently delete instance-specific text.
-            self.textInstances.removeAll { $0.id == instanceID }
+            self.textInstances.removeAll { $0.id == instanceID.id }
         }
     }
 }

@@ -47,7 +47,7 @@ final class AnchoredTextNode: TextNode {
         case .definition(let definitionID):
             // Definition-based texts need a unique, stable ID per symbol instance.
             // We generate one by combining the instance's ID and the text's definition ID.
-            nodeID = Self.generateStableID(for: ownerInstance.id, with: definitionID)
+            nodeID = Self.generateStableID(for: ownerInstance.id, with: definitionID.id)
         case .instance:
             // Instance-specific texts already have a unique ID.
             nodeID = resolvedText.id

@@ -41,7 +41,7 @@ struct SymbolNodeAttributesView: View {
                 for (index, newProperty) in newPropertiesArray.enumerated() {
                     let oldProperty = currentComponent.displayedProperties[index]
                     
-                    if newProperty != oldProperty {
+                    if newProperty.id != oldProperty.id {
                         projectManager.updateProperty(
                             for: currentComponent,
                             with: newProperty,
@@ -150,7 +150,7 @@ struct SymbolNodeAttributesView: View {
         }
         
         let isCurrentlyVisible = symbolNode.resolvedTexts.contains { resolvedText in
-            resolvedText.isVisible && resolvedText.contentSource == .componentProperty(definitionID: propertyDefID)
+            resolvedText.isVisible && resolvedText.contentSource == .componentProperty(definitionID: propertyDefID.id)
         }
         
         let toggleAction = {

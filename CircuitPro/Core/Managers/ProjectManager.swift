@@ -105,7 +105,7 @@ final class ProjectManager {
             print("Error: Visibility can only be toggled for definition-based properties.")
             return
         }
-        let source = TextSource.componentProperty(definitionID: propertyDefID)
+        let source = TextSource.componentProperty(definitionID: propertyDefID.id)
         toggleDynamicTextVisibility(for: component, source: source, using: packManager)
     }
     
@@ -114,10 +114,10 @@ final class ProjectManager {
         guard case .definition(let definitionID) = editedProperty.source else { return }
         guard let originalProperty = component.displayedProperties.first(where: { $0.id == editedProperty.id }) else { return }
         if originalProperty.value != editedProperty.value {
-            component.instance.update(definitionID: definitionID, value: editedProperty.value)
+            component.instance.update(definitionID: definitionID.id, value: editedProperty.value)
         }
         if originalProperty.unit.prefix != editedProperty.unit.prefix {
-            component.instance.update(definitionID: definitionID, prefix: editedProperty.unit.prefix)
+            component.instance.update(definitionID: definitionID.id, prefix: editedProperty.unit.prefix)
         }
         rebuildCanvasNodes(with: packManager)
     }

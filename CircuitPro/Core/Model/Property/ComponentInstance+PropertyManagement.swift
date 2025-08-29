@@ -63,11 +63,11 @@ extension ComponentInstance {
         case .definition(let definitionID):
             // To "remove" a definition-based property, we just remove its override,
             // which causes it to revert to the default value from the definition.
-            self.propertyOverrides.removeAll { $0.definitionID == definitionID }
+            self.propertyOverrides.removeAll { $0.definitionID == definitionID.id }
             
         case .instance(let instancePropertyID):
             // An ad-hoc instance property can be removed entirely from the instance.
-            self.propertyInstances.removeAll { $0.id == instancePropertyID }
+            self.propertyInstances.removeAll { $0.id == instancePropertyID.id }
         }
     }
 }

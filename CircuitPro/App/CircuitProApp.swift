@@ -11,8 +11,23 @@ import SwiftDataPacks
 @main
 struct CircuitProApp: App {
     
+    @State private var packManager: SwiftDataPackManager
+
+     init() {
+         // Initialize the manager once when the app starts.
+         // This will throw a fatalError if it fails, which is appropriate
+         // for a critical app service that fails on launch.
+         let manager = try! SwiftDataPackManager(for: [
+             ComponentDefinition.self,
+             SymbolDefinition.self,
+             FootprintDefinition.self
+         ])
+         _packManager = State(initialValue: manager)
+     }
+     
+    
     var body: some Scene {
-        WelcomeWindowScene()
+        WelcomeWindowScene(packManager: packManager)
             .commands {
                 CircuitProCommands()
             }
@@ -20,7 +35,7 @@ struct CircuitProApp: App {
         WindowGroup(for: DocumentID.self) { $docID in
             if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {
                 WorkspaceView(document: doc)
-                    .packContainer(for: [ComponentDefinition.self, SymbolDefinition.self, FootprintDefinition.self])
+                    .packContainer(packManager)
                     .environment(\.projectManager, ProjectManager(project: doc.model))
                     .focusedSceneValue(\.activeDocumentID, id)
                     .onReceive(doc.objectWillChange) { _ in
@@ -37,7 +52,7 @@ struct CircuitProApp: App {
         Window("Component Design", id: "ComponentDesignWindow") {
             ComponentDesignView()
                 .frame(minWidth: 800, minHeight: 600)
-                .packContainer(for: [ComponentDefinition.self, SymbolDefinition.self, FootprintDefinition.self])
+                .packContainer(packManager)
         }
         
         AboutWindowScene()

@@ -8,6 +8,7 @@
 import AppKit
 import UniformTypeIdentifiers
 import WelcomeWindow
+import SwiftDataPacks
 
 @MainActor
 final class CircuitProjectDocumentService {
@@ -49,54 +50,80 @@ final class CircuitProjectDocumentService {
         }
     }
 
-    func openWithDialog(
-        onDialogPresented: @escaping () -> Void = {},
-        onCompletion: @escaping (DocumentID) -> Void = { _ in },
-        onCancel: @escaping () -> Void = {}
-    ) {
-        let panel = NSOpenPanel()
-        panel.title = "Open Project"
-        panel.allowedContentTypes = [.circuitProject]
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.treatsFilePackagesAsDirectories = false
-        panel.level = .modalPanel
-
-        panel.begin { result in
-            guard result == .OK, let url = panel.url else {
-                onCancel(); return
-            }
-            Task { @MainActor in
-                self.open(at: url, onCompletion: onCompletion, onCancel: onCancel)
-            }
-        }
-
-        onDialogPresented()
-    }
+//    func openWithDialog(
+//        onDialogPresented: @escaping () -> Void = {},
+//        onCompletion: @escaping (DocumentID) -> Void = { _ in },
+//        onCancel: @escaping () -> Void = {}
+//    ) {
+//        let panel = NSOpenPanel()
+//        panel.title = "Open Project"
+//        panel.allowedContentTypes = [.circuitProject]
+//        panel.canChooseFiles = true
+//        panel.canChooseDirectories = false
+//        panel.allowsMultipleSelection = false
+//        panel.treatsFilePackagesAsDirectories = false
+//        panel.level = .modalPanel
+//
+//        panel.begin { result in
+//            guard result == .OK, let url = panel.url else {
+//                onCancel(); return
+//            }
+//            Task { @MainActor in
+//                self.open(at: url, onCompletion: onCompletion, onCancel: onCancel)
+//            }
+//        }
+//
+//        onDialogPresented()
+//    }
 
     func open(
-        at url: URL,
-        onCompletion: @escaping (DocumentID) -> Void = { _ in },
-        onCancel: @escaping () -> Void = {}
-    ) {
-        do {
-            if let existing = DocumentRegistry.shared.id(for: url) {
-                onCompletion(existing)
-                return
-            }
+         at url: URL,
+         // --- ADD THIS PARAMETER ---
+         using packManager: SwiftDataPackManager,
+         onCompletion: @escaping (DocumentID) -> Void = { _ in },
+         onCancel: @escaping () -> Void = {}
+     ) {
+         do {
+             if let existing = DocumentRegistry.shared.id(for: url) {
+                 onCompletion(existing)
+                 return
+             }
 
-            // Validate before registering to avoid starting a security scope if the file is invalid
-            let doc = try CircuitProjectFileDocument(fileURL: url)
-            let id = DocumentRegistry.shared.register(doc, url: url)
+             // At this point, the file is successfully read into memory.
+             let doc = try CircuitProjectFileDocument(fileURL: url)
+             
+             // --- OUR TEST GOES HERE ---
+             print("--- Document Loaded, Performing Hydration Test ---")
+             let context = ModelContext(packManager.mainContainer)
+             let descriptor = FetchDescriptor<ComponentDefinition>()
+             
+             do {
+                 let definitions = try context.fetch(descriptor)
+                 print("SUCCESS: Found \(definitions.count) ComponentDefinitions in the main container.")
+                 for (index, def) in definitions.enumerated() {
+                     if index < 5 { // Print first 5 to avoid spamming the console
+                         print("  - \(def.name)")
+                     }
+                 }
+                 if definitions.count > 5 {
+                     print("  - ... and \(definitions.count - 5) more.")
+                 }
+             } catch {
+                 print("ERROR: Could not fetch ComponentDefinitions: \(error.localizedDescription)")
+             }
+             print("--- Test Complete ---")
+             // --- END OF TEST ---
 
-            RecentsStore.documentOpened(at: url)
-            onCompletion(id)
-        } catch {
-            NSAlert(error: error).runModal()
-            onCancel()
-        }
-    }
+             let id = DocumentRegistry.shared.register(doc, url: url)
+
+             RecentsStore.documentOpened(at: url)
+             onCompletion(id)
+         } catch {
+             NSAlert(error: error).runModal()
+             onCancel()
+         }
+     }
+
 
     func save(id: DocumentID) {
         guard let doc = DocumentRegistry.shared.document(for: id) else { return }

@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/CircuitProApp/Resolvable",
       "state" : {
-        "branch" : "main",
-        "revision" : "12a5065c1d45bae170a66cb5e3edbe90c680980f"
+        "branch" : "storable",
+        "revision" : "e54c8d9f9c78551d7d5239393db0eda5cb571596"
       }
     },
     {
@@ -52,7 +52,7 @@
       "location" : "https://github.com/CircuitProApp/SwiftDataPacks",
       "state" : {
         "branch" : "main",
-        "revision" : "e043a1f41b208c33e3fbf634d1b86b7b5125164d"
+        "revision" : "54bf447a8f061d24be2aa4502c7e43788c0223c5"
       }
     },
     {

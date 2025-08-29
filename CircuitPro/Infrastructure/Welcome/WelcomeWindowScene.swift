@@ -7,11 +7,14 @@
 
 import SwiftUI
 import WelcomeWindow
+import SwiftDataPacks
 
 struct WelcomeWindowScene: Scene {
     
     @Environment(\.openWindow)
     private var openWindow
+    
+    var packManager: SwiftDataPackManager
     
     var body: some Scene {
         WelcomeWindow(
@@ -26,11 +29,11 @@ struct WelcomeWindowScene: Scene {
                 .symbolVariant(.square)
 
                 WelcomeButton(iconName: CircuitProSymbols.Generic.folder, title: "Open Existing Project...") {
-                    CircuitProjectDocumentService.shared.openWithDialog(
-                        onDialogPresented: { dismiss() },
-                        onCompletion: { id in openWindow(value: id) },
-                        onCancel: {}
-                    )
+//                    CircuitProjectDocumentService.shared.openWithDialog(
+//                        onDialogPresented: { dismiss() },
+//                        onCompletion: { id in openWindow(value: id) },
+//                        onCancel: {}
+//                    )
                 }
                 .symbolVariant(.rectangle)
 
@@ -40,16 +43,16 @@ struct WelcomeWindowScene: Scene {
             },
             onDrop: { url, dismiss in
                 Task { @MainActor in
-                    CircuitProjectDocumentService.shared.open(at: url) { id in
-                        openWindow(value: id)
-                        dismiss()
-                    }
+//                    CircuitProjectDocumentService.shared.open(at: url) { id in
+//                        openWindow(value: id)
+//                        dismiss()
+//                    }
                 }
             },
             openHandler: { urls, dismiss in
                 for url in urls {
                     Task { @MainActor in
-                        CircuitProjectDocumentService.shared.open(at: url) { id in
+                        CircuitProjectDocumentService.shared.open(at: url, using: packManager) { id in
                             openWindow(value: id)
                             dismiss()
                         }

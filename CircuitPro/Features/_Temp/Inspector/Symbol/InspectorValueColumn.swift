@@ -56,7 +56,7 @@ struct InspectorValueColumn: View {
             }
         }
         // If the underlying model changes from another source, update our local state.
-        .onChange(of: property) {
+        .onChange(of: property.value) {
             // Only update if we aren't the one actively editing.
             if focusedField == nil {
                 initializeState()
