@@ -12,23 +12,12 @@ struct SymbolNodeAttributesView: View {
     @Environment(\.projectManager) private var projectManager
     @PackManager private var packManager
     
-    let component: ComponentInstance
+    @Bindable var component: ComponentInstance
     @Bindable var symbolNode: SymbolNode
     
     @State private var selectedProperty: Property.Resolved.ID?
     
     @State private var viewFrame: CGSize = .zero
-    
-    private var referenceDesignatorBinding: Binding<Int> {
-        Binding(
-            get: { component.referenceDesignatorIndex },
-            set: { newValue in
-                projectManager.updateReferenceDesignator(
-                    for: component, newIndex: newValue
-                )
-            }
-        )
-    }
     
     private var propertiesBinding: Binding<[Property.Resolved]> {
         Binding(
@@ -64,7 +53,7 @@ struct SymbolNodeAttributesView: View {
                 InspectorRow("Refdes", style: .leading) {
                     InspectorNumericField(
                         label: component.definition?.referenceDesignatorPrefix,
-                        value: referenceDesignatorBinding,
+                        value: $component.referenceDesignatorIndex,
                         placeholder: "?",
                         labelStyle: .prominent
                     )
@@ -137,6 +126,9 @@ struct SymbolNodeAttributesView: View {
                 .frame(height: 220)
                 .clipAndStroke(with: .rect(cornerRadius: 8))
             }
+        }
+        .onChange(of: component) { oldValue, newValue in
+            symbolNode.onNeedsRedraw?()
         }
     }
 

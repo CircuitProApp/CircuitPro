@@ -7,7 +7,6 @@
 
 import SwiftUI
 import Observation
-import SwiftData // Keep for potential future use, though not directly needed here.
 
 @Observable
 final class ProjectManager {
@@ -38,7 +37,6 @@ final class ProjectManager {
         selectedDesign?.wires = schematicGraph.toWires()
     }
     
-    @MainActor
     func toggleDynamicTextVisibility(for component: ComponentInstance, source: TextSource) {
         guard let definition = component.definition,
               let symbol = definition.symbol else { return }
@@ -82,7 +80,6 @@ final class ProjectManager {
         rebuildCanvasNodes()
     }
 
-    @MainActor
     func togglePropertyVisibility(for component: ComponentInstance, property: Property.Resolved) {
         guard case .definition(let propertyDefID) = property.source else {
             print("Error: Visibility can only be toggled for definition-based properties.")
@@ -92,7 +89,6 @@ final class ProjectManager {
         toggleDynamicTextVisibility(for: component, source: source)
     }
     
-    @MainActor
     func updateProperty(for component: ComponentInstance, with editedProperty: Property.Resolved) {
         guard case .definition(let definitionID) = editedProperty.source else { return }
         
@@ -108,13 +104,11 @@ final class ProjectManager {
         rebuildCanvasNodes()
     }
 
-    @MainActor
     func updateReferenceDesignator(for component: ComponentInstance, newIndex: Int) {
         component.referenceDesignatorIndex = newIndex
         rebuildCanvasNodes()
     }
 
-    @MainActor
     private func makeGraph(from design: CircuitDesign) -> WireGraph {
         let newGraph = WireGraph()
         newGraph.build(from: design.wires)
@@ -127,7 +121,6 @@ final class ProjectManager {
         return newGraph
     }
 
-    @MainActor
     func rebuildCanvasNodes() {
         guard let design = selectedDesign else {
             self.canvasNodes = []
@@ -167,8 +160,6 @@ final class ProjectManager {
 
 
 // MARK: - ComponentInstance Helpers
-
-// Place this extension in a relevant file, perhaps near the ComponentInstance definition.
 extension ComponentInstance {
     /// A helper to resolve the properties of this specific instance.
     /// This replaces the logic that was previously on `DesignComponent`.

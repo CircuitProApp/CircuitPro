@@ -23,10 +23,6 @@ final class ComponentInstance: Identifiable, Codable {
     var footprintInstance: FootprintInstance?
 
     var referenceDesignatorIndex: Int
-    
-    var referenceDesignator: String {
-        (definition?.referenceDesignatorPrefix ?? "?") + referenceDesignatorIndex.description
-    }
 
     init(
         id: UUID = UUID(),

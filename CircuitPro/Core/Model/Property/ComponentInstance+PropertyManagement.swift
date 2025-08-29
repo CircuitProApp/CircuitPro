@@ -60,14 +60,14 @@ extension ComponentInstance {
     ///   or delete an ad-hoc instance property entirely.
     func remove(_ propertyToRemove: Property.Resolved) {
         switch propertyToRemove.source {
-        case .definition(let definitionID):
+        case .definition(let definition):
             // To "remove" a definition-based property, we just remove its override,
             // which causes it to revert to the default value from the definition.
-            self.propertyOverrides.removeAll { $0.definitionID == definitionID.id }
+            self.propertyOverrides.removeAll { $0.definitionID == definition.id }
             
-        case .instance(let instancePropertyID):
+        case .instance(let instance):
             // An ad-hoc instance property can be removed entirely from the instance.
-            self.propertyInstances.removeAll { $0.id == instancePropertyID.id }
+            self.propertyInstances.removeAll { $0.id == instance.id }
         }
     }
 }

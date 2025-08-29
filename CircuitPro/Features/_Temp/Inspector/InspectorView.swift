@@ -6,13 +6,11 @@
 //
 
 import SwiftUI
-// SwiftDataPacks is no longer needed here, as we are not fetching data.
 
 struct InspectorView: View {
     
     @BindableEnvironment(\.projectManager) private var projectManager
-    
-    // The @PackManager is no longer needed in this view.
+
     
     @State private var selectedTab: InspectorTab = .attributes
     
@@ -34,8 +32,6 @@ struct InspectorView: View {
             return nil
         }
         
-        // We no longer need to fetch or resolve anything.
-        // We just find the instance in the project manager's list.
         if let componentInstance = projectManager.componentInstances.first(where: { $0.id == symbolNode.id }) {
             return (componentInstance, symbolNode)
         }
@@ -45,14 +41,9 @@ struct InspectorView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            
-            // The logic here remains the same, but the `context.component` is now a `ComponentInstance`.
             if let context = selectedComponentContext {
-                
-                // You will need to update `SymbolNodeInspectorHostView` to accept a `ComponentInstance`
-                // instead of a `DesignComponent`.
                 SymbolNodeInspectorHostView(
-                    component: context.component, // This is now a ComponentInstance
+                    component: context.component,
                     symbolNode: context.node,
                     selectedTab: $selectedTab
                 )

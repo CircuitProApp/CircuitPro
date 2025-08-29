@@ -75,7 +75,7 @@ struct Component {
     )
     var referenceDesignator: ReferenceDesignator
 
-    @StorableRelationship(deleteRule: .cascade, inverse: \Symbol.component)
+    @StorableRelationship(deleteRule: .cascade)
     var symbol: Symbol
 }
 

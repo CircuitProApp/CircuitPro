@@ -10,13 +10,11 @@ import SwiftDataPacks
 
 struct SymbolNodeInspectorHostView: View {
     
-    let component: ComponentInstance
+    var component: ComponentInstance
     @Bindable var symbolNode: SymbolNode
     
-    // This binding allows the parent InspectorView to control and remember the selected tab
     @Binding var selectedTab: InspectorTab
     
-    // Define which tabs are relevant for a SymbolNode
     private let availableTabs: [InspectorTab] = [.attributes, .appearance]
     
     var body: some View {
