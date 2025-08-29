@@ -12,7 +12,12 @@ final class AnchoredTextNode: TextNode {
     // MARK: - Anchor and Data Provenance
 
     /// The original, un-overridden position from the definition.
-    var anchorPosition: CGPoint
+    var anchorPosition: CGPoint {
+        didSet {
+            parent?.onNeedsRedraw?()
+            onNeedsRedraw?()
+        }
+    }
 
     /// A direct, unowned reference to the symbol instance that owns this text.
     /// This provides the link needed to persist changes back to the main data model.

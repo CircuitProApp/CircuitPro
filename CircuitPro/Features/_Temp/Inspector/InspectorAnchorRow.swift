@@ -17,6 +17,7 @@ struct InspectorAnchorRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(textAnchor.label)
                 .foregroundColor(.secondary)
+                .font(.callout)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }

@@ -21,6 +21,10 @@ struct AnchoredTextInspectorView: View {
                 VStack(spacing: 5) {
                     InspectorSection("Transform") {
                         PointControlView(
+                            title: "Anchor",
+                            point: $anchoredText.anchorPosition
+                        )
+                        PointControlView(
                             title: "Position",
                             point: $anchoredText.textModel.position
                         )

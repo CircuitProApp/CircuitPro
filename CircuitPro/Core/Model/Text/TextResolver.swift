@@ -31,7 +31,7 @@ struct TextResolver {
             case .componentAttribute(let attributeSource):
                 // We access the string key from the safe `AttributeSource` struct
                 // and use the component's dynamic member lookup.
-                finalResolved.text = component[dynamicMember: attributeSource.key]
+                finalResolved.text = component[attributeSource]
                 
             case .componentProperty(let definitionID):
                 // This logic correctly uses the component's displayedProperties.

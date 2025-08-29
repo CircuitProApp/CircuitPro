@@ -6,23 +6,18 @@
 //
 
 import SwiftUI
-import SwiftDataPacks // Import this to use @PackManager
+import SwiftDataPacks
 
 struct SymbolNavigatorView: View {
     
     @Environment(\.projectManager)
     private var projectManager
     
-    // 1. Get the PackManager from the environment.
     @PackManager private var packManager
     
-    // This @Query is likely no longer needed as component definitions are
-    // fetched through the projectManager and packManager.
-    // @Query private var components: [Component]
     
     var document: CircuitProjectFileDocument
     
-    // 3. Update the delete logic. It can now access `packManager` from the view's properties.
     private func performDelete(on designComponent: DesignComponent, selected: inout Set<UUID>) {
         let idsToRemove: Set<UUID>
         
@@ -69,7 +64,7 @@ struct SymbolNavigatorView: View {
                     selection: $bindableProjectManager.selectedNodeIDs
                 ) { designComponent in
                     HStack {
-                        Text(designComponent.definition.name)
+                        Text(designComponent.name)
                             .foregroundStyle(.primary)
                         Spacer()
                         Text(designComponent.referenceDesignator)

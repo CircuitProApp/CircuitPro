@@ -9,13 +9,13 @@ import SwiftUI
 
 @dynamicMemberLookup
 struct DesignComponent: Identifiable, Hashable {
-
+    
     // The sources of truth
     let definition: ComponentDefinition
     let instance: ComponentInstance
-
+    
     var id: UUID { instance.id }
-
+    
     var displayedProperties: [Property.Resolved] {
         return Property.Resolver.resolve(
             definitions: definition.propertyDefinitions,
@@ -24,25 +24,29 @@ struct DesignComponent: Identifiable, Hashable {
         )
     }
     
+    var referenceDesignator: String {
+        "\(definition.referenceDesignatorPrefix)\(instance.referenceDesignatorIndex)"
+    }
+    
     /// Provides type-safe access to component attributes using the generated `AttributeSource`.
     /// This allows for clean, safe syntax like `component[.name]`.
     subscript(source: ComponentDefinition.AttributeSource) -> String {
         // It simply delegates to the dynamic member subscript using the underlying string key.
+        if source == .referenceDesignatorPrefix {
+            return self.referenceDesignator
+        }
         return self[dynamicMember: source.key]
     }
     
-    /// Provides dynamic access to component attributes via string keys.
-    /// This is the engine that powers both `@dynamicMemberLookup` and the type-safe subscript.
+    /// Provides dynamic access to component attributes via the generated KeyPath lookup table.
     subscript(dynamicMember key: String) -> String {
-        if key == "referenceDesignator" {
-            return "\(definition.referenceDesignatorPrefix)\(instance.referenceDesignatorIndex)"
+        // Next, use the auto-generated lookup table to find the real KeyPath.
+        if let keyPath = ComponentDefinition._keyPath(for: key) {
+            let value = definition[keyPath: keyPath]
+            return String(describing: value)
         }
         
-        let mirror = Mirror(reflecting: definition)
-        if let propertyValue = mirror.descendant(key) {
-            return String(describing: propertyValue)
-        }
-        
+        // Final fallback if the key is invalid.
         return "n/a"
     }
 }
