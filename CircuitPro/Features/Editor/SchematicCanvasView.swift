@@ -12,7 +12,7 @@ struct SchematicCanvasView: View {
 
     @BindableEnvironment(\.projectManager) private var projectManager
     
-    // We will use this to perform data operations.
+    // The packManager is now only needed for fetching NEW definitions from the library.
     @PackManager private var packManager
     
     var document: CircuitProjectFileDocument
@@ -57,7 +57,8 @@ struct SchematicCanvasView: View {
                 .padding(16)
         }
         .onAppear {
-            projectManager.rebuildCanvasNodes(with: packManager)
+            // The call is now simpler, with no packManager needed.
+            projectManager.rebuildCanvasNodes()
             
             projectManager.schematicGraph.onModelDidChange = {
                 projectManager.persistSchematicGraph()
@@ -65,14 +66,16 @@ struct SchematicCanvasView: View {
             }
         }
         .onChange(of: projectManager.componentInstances) {
+            // --- CORRECTED ---
             // Move existing pin vertices to their new absolute positions; do NOT rebuild.
-            let comps = projectManager.designComponents(using: packManager)
-            for comp in comps {
-                guard let symbolDef = comp.definition.symbol else { continue }
+            for instance in projectManager.componentInstances {
+                // Safely unwrap the definition from the instance itself.
+                guard let symbolDef = instance.definition?.symbol else { continue }
+                
                 projectManager.schematicGraph.syncPins(
-                    for: comp.instance.symbolInstance,
+                    for: instance.symbolInstance,
                     of: symbolDef,
-                    ownerID: comp.id
+                    ownerID: instance.id
                 )
             }
             // Persist if you want autosave on drags:
@@ -85,11 +88,12 @@ struct SchematicCanvasView: View {
     }
     
     private func syncProjectManagerFromNodes() {
-        // We need the packManager here to resolve the component list
-        let currentDesignComponents = projectManager.designComponents(using: packManager)
-        
+        // --- CORRECTED ---
+        // We no longer need the packManager or the old designComponents().
+        // We work directly with the source of truth.
+        let currentComponentIDs = Set(projectManager.componentInstances.map(\.id))
         let nodeIDs = Set(projectManager.canvasNodes.map(\.id))
-        let missingComponentIDs = Set(currentDesignComponents.map(\.id)).subtracting(nodeIDs)
+        let missingComponentIDs = currentComponentIDs.subtracting(nodeIDs)
 
         if !missingComponentIDs.isEmpty {
             for componentID in missingComponentIDs {
@@ -106,20 +110,18 @@ struct SchematicCanvasView: View {
              return false
          }
          
-         // Create a fetch descriptor to find the component definition by its unique ID.
+         // The logic for fetching a definition from the library remains the same.
+         // This is the correct and only place the packManager is now needed in this view.
          var fetchDescriptor = FetchDescriptor<ComponentDefinition>(predicate: #Predicate { $0.uuid == transferable.componentUUID })
-         
          fetchDescriptor.relationshipKeyPathsForPrefetching = [\.symbol]
-         
          let fullLibraryContext = ModelContext(packManager.mainContainer)
          
-         // This guard statement will now succeed because the symbol data is already loaded.
          guard let componentDefinition = (try? fullLibraryContext.fetch(fetchDescriptor))?.first,
                let symbolDefinition = componentDefinition.symbol else {
              return false
          }
          
-         // The rest of the logic remains the same.
+         // Logic for creating the new instance.
          let instances = projectManager.componentInstances
          let nextRefIndex = (instances.filter { $0.componentUUID == componentDefinition.uuid }.map(\.referenceDesignatorIndex).max() ?? 0) + 1
          
@@ -128,16 +130,25 @@ struct SchematicCanvasView: View {
              position: location,
              cardinalRotation: .east
          )
-         let newComponentInstance = ComponentInstance(
+         
+         // --- IMPORTANT ---
+         // The new ComponentInstance does NOT have its `definition` property set yet.
+         // This is a small gap in our logic we need to address.
+         var newComponentInstance = ComponentInstance(
              componentUUID: componentDefinition.uuid,
-             propertyInstances: [],
              symbolInstance: newSymbolInstance,
-             footprintInstance: nil,
              reference: nextRefIndex
          )
          
+         // --- HYDRATE THE NEW INSTANCE MANUALLY ---
+         // After creating a new instance, we immediately hydrate it with the
+         // definition we just fetched.
+         newComponentInstance.definition = componentDefinition
+         
+         // Now, add the fully hydrated instance to the project.
          projectManager.selectedDesign?.componentInstances.append(newComponentInstance)
          
+         // The rest of the logic is the same.
          projectManager.schematicGraph.syncPins(
              for: newSymbolInstance,
              of: symbolDefinition,

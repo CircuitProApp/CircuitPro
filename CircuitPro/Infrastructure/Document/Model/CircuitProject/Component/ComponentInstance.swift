@@ -14,6 +14,8 @@ final class ComponentInstance: Identifiable, Codable {
     var id: UUID
     var componentUUID: UUID
     
+    var definition: ComponentDefinition? = nil
+    
     var propertyOverrides: [Property.Override]
     var propertyInstances: [Property.Instance]
 
@@ -21,10 +23,15 @@ final class ComponentInstance: Identifiable, Codable {
     var footprintInstance: FootprintInstance?
 
     var referenceDesignatorIndex: Int
+    
+    var referenceDesignator: String {
+        (definition?.referenceDesignatorPrefix ?? "?") + referenceDesignatorIndex.description
+    }
 
     init(
         id: UUID = UUID(),
         componentUUID: UUID,
+        definition: ComponentDefinition? = nil,
         propertyOverrides: [Property.Override] = [],
         propertyInstances: [Property.Instance] = [],
         symbolInstance: SymbolInstance,
@@ -33,6 +40,7 @@ final class ComponentInstance: Identifiable, Codable {
     ) {
         self.id = id
         self.componentUUID = componentUUID
+        self.definition = definition
         self.propertyOverrides = propertyOverrides
         self.propertyInstances = propertyInstances
         self.symbolInstance = symbolInstance

@@ -6,14 +6,13 @@
 //
 
 import SwiftUI
-import SwiftDataPacks // Required to use @PackManager
+// SwiftDataPacks is no longer needed here, as we are not fetching data.
 
 struct InspectorView: View {
     
     @BindableEnvironment(\.projectManager) private var projectManager
     
-    // 1. Get the PackManager from the environment to fetch component definitions.
-    @PackManager private var packManager
+    // The @PackManager is no longer needed in this view.
     
     @State private var selectedTab: InspectorTab = .attributes
     
@@ -26,20 +25,19 @@ struct InspectorView: View {
         return projectManager.canvasNodes.findNode(with: selectedID)
     }
     
-    /// A computed property that finds both the symbol node AND its corresponding DesignComponent.
+    /// --- CORRECTED ---
+    /// A computed property that finds both the symbol node AND its corresponding ComponentInstance.
     /// This is the key piece of logic that connects the canvas selection to the data model.
-    @MainActor private var selectedComponentContext: (component: DesignComponent, node: SymbolNode)? {
+    private var selectedComponentContext: (component: ComponentInstance, node: SymbolNode)? {
         // Ensure the selected node is a SymbolNode
         guard let symbolNode = singleSelectedNode as? SymbolNode else {
             return nil
         }
         
-        // Use the project manager to get the list of all design components
-        let components = projectManager.designComponents(using: packManager)
-        
-        // Find the specific component that matches our selected node's ID
-        if let component = components.first(where: { $0.id == symbolNode.id }) {
-            return (component, symbolNode)
+        // We no longer need to fetch or resolve anything.
+        // We just find the instance in the project manager's list.
+        if let componentInstance = projectManager.componentInstances.first(where: { $0.id == symbolNode.id }) {
+            return (componentInstance, symbolNode)
         }
         
         return nil
@@ -48,27 +46,26 @@ struct InspectorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             
-            // 2. Check for the rich context object first.
+            // The logic here remains the same, but the `context.component` is now a `ComponentInstance`.
             if let context = selectedComponentContext {
+                
+                // You will need to update `SymbolNodeInspectorHostView` to accept a `ComponentInstance`
+                // instead of a `DesignComponent`.
                 SymbolNodeInspectorHostView(
-                    component: context.component,
+                    component: context.component, // This is now a ComponentInstance
                     symbolNode: context.node,
-                    selectedTab: $selectedTab // Pass the binding for tab selection
+                    selectedTab: $selectedTab
                 )
 
             }  else if let anchoredText = singleSelectedNode as? AnchoredTextNode {
             
                 AnchoredTextInspectorView(anchoredText: anchoredText)
                 
-                
             } else if singleSelectedNode != nil {
-                // 3. Handle cases where an item is selected, but it's not a component
-                //    (e.g., a wire or a net label).
                 Text("Properties for this element type are not yet implemented.")
                     .padding()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                // 4. Handle no selection or multiple selection.
                 VStack {
                     Spacer()
                     Text(projectManager.selectedNodeIDs.isEmpty ? "No Selection" : "Multiple Items Selected")

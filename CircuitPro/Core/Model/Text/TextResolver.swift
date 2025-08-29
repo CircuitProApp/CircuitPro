@@ -3,15 +3,36 @@ import Foundation
 struct TextResolver {
     
     /// The main resolution function that converts abstract text templates into displayable, resolved text models.
-    static func resolve(
+    /// This is the new, primary entry point for the resolver.
+    static func resolve(for componentInstance: ComponentInstance) -> [CircuitText.Resolved] {
+        // 1. Safely unwrap the necessary definition from the instance.
+        //    If the symbol doesn't exist, there are no texts to resolve.
+        guard let symbolDefinition = componentInstance.definition?.symbol else {
+            return []
+        }
+
+        // 2. Call the detailed resolver, passing the now-guaranteed parts.
+        //    This keeps the logic separated and clean.
+        return self.resolve(
+            definitions: symbolDefinition.textDefinitions,
+            overrides: componentInstance.symbolInstance.textOverrides,
+            instances: componentInstance.symbolInstance.textInstances,
+            properties: componentInstance.displayedProperties, // Pass the resolved properties for context
+            componentDefinition: componentInstance.definition // Pass the definition for attributes
+        )
+    }
+
+    /// The detailed resolution function that performs the string content generation.
+    /// This is now a private helper, as the `resolve(for:)` function is the public API.
+    private static func resolve(
         definitions: [CircuitText.Definition],
         overrides: [CircuitText.Override],
         instances: [CircuitText.Instance],
-        // The entire context is now passed in this single, smart object.
-        for component: DesignComponent
+        properties: [Property.Resolved], // The resolved properties of the component
+        componentDefinition: ComponentDefinition? // The definition for accessing attributes
     ) -> [CircuitText.Resolved] {
 
-        // 1. Use the macro's resolver to get the final combined template settings.
+        // 1. Use the @Resolvable macro's generated resolver to get the final combined template settings.
         let resolvedTemplates = CircuitText.Resolver.resolve(
             definitions: definitions,
             overrides: overrides,
@@ -20,22 +41,28 @@ struct TextResolver {
         
         // 2. Post-process the templates to generate the final string content.
         return resolvedTemplates.compactMap { resolved -> CircuitText.Resolved? in
-            guard resolved.isVisible else { return nil }
+            guard resolved.isVisible, let def = componentDefinition else { return nil }
             
             var finalResolved = resolved
             
-            // --- THIS IS THE CORRECTED LOGIC ---
-            // It now correctly handles the final, type-safe TextSource enum.
+            // The logic for generating text content remains largely the same,
+            // but it now uses the direct `properties` and `componentDefinition` parameters
+            // instead of the old `DesignComponent`.
             switch resolved.contentSource {
                 
             case .componentAttribute(let attributeSource):
-                // We access the string key from the safe `AttributeSource` struct
-                // and use the component's dynamic member lookup.
-                finalResolved.text = component[attributeSource]
+                // To access attributes, we now need a simple way to look them up on the definition.
+                // You can use the KeyPathable feature you already have.
+                if let keyPath = ComponentDefinition._keyPath(for: attributeSource.key) {
+                    let value = def[keyPath: keyPath]
+                    finalResolved.text = String(describing: value)
+                } else {
+                    finalResolved.text = "n/a"
+                }
                 
             case .componentProperty(let definitionID):
-                // This logic correctly uses the component's displayedProperties.
-                guard let prop = component.displayedProperties.first(where: { $0.id == definitionID }) else {
+                // This logic now correctly uses the pre-resolved `properties` array.
+                guard let prop = properties.first(where: { $0.id == definitionID }) else {
                     finalResolved.text = "n/a"
                     break
                 }

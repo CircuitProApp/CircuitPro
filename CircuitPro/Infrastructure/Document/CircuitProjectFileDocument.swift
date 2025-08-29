@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
+import SwiftData
 
 @Observable
 final class CircuitProjectFileDocument: ReferenceFileDocument {
@@ -44,9 +45,10 @@ final class CircuitProjectFileDocument: ReferenceFileDocument {
         self.model = CircuitProject(name: name, designs: [])
     }
 
-    convenience init(fileURL url: URL) throws {
+    convenience init(fileURL url: URL, container: ModelContainer) throws {
         let wrapper = try FileWrapper(url: url, options: .immediate)
-        let model = try Self.readPackage(from: wrapper)
+        var model = try Self.readPackage(from: wrapper)
+        try model.hydrate(using: container)
         self.init(model: model, fileURL: url)
     }
 

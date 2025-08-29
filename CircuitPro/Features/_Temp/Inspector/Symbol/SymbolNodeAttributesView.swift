@@ -12,7 +12,7 @@ struct SymbolNodeAttributesView: View {
     @Environment(\.projectManager) private var projectManager
     @PackManager private var packManager
     
-    let component: DesignComponent
+    let component: ComponentInstance
     @Bindable var symbolNode: SymbolNode
     
     @State private var selectedProperty: Property.Resolved.ID?
@@ -21,10 +21,10 @@ struct SymbolNodeAttributesView: View {
     
     private var referenceDesignatorBinding: Binding<Int> {
         Binding(
-            get: { component.instance.referenceDesignatorIndex },
+            get: { component.referenceDesignatorIndex },
             set: { newValue in
                 projectManager.updateReferenceDesignator(
-                    for: component, newIndex: newValue, using: packManager
+                    for: component, newIndex: newValue
                 )
             }
         )
@@ -44,8 +44,7 @@ struct SymbolNodeAttributesView: View {
                     if newProperty.id != oldProperty.id {
                         projectManager.updateProperty(
                             for: currentComponent,
-                            with: newProperty,
-                            using: packManager
+                            with: newProperty
                         )
                         break
                     }
@@ -59,12 +58,12 @@ struct SymbolNodeAttributesView: View {
         VStack(spacing: 5) {
             InspectorSection("Identity") {
                 InspectorRow("Name") {
-                    Text(component.definition.name)
+                    Text(component.definition?.name ?? "n/a")
                         .foregroundStyle(.secondary)
                 }
                 InspectorRow("Refdes", style: .leading) {
                     InspectorNumericField(
-                        label: component.definition.referenceDesignatorPrefix,
+                        label: component.definition?.referenceDesignatorPrefix,
                         value: referenceDesignatorBinding,
                         placeholder: "?",
                         labelStyle: .prominent
@@ -156,7 +155,7 @@ struct SymbolNodeAttributesView: View {
         let toggleAction = {
             projectManager.togglePropertyVisibility(
                 for: component,
-                property: property, using: packManager
+                property: property
             )
         }
         

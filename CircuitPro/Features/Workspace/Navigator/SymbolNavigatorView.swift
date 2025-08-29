@@ -6,38 +6,37 @@
 //
 
 import SwiftUI
-import SwiftDataPacks
+// SwiftDataPacks is no longer needed here.
 
 struct SymbolNavigatorView: View {
     
     @Environment(\.projectManager)
     private var projectManager
     
-    @PackManager private var packManager
-    
+    // The @PackManager is no longer needed.
+    // @PackManager private var packManager
     
     var document: CircuitProjectFileDocument
     
-    private func performDelete(on designComponent: DesignComponent, selected: inout Set<UUID>) {
+    /// --- CORRECTED ---
+    /// This function now works directly with ComponentInstance and is much simpler.
+    private func performDelete(on componentInstance: ComponentInstance, selected: inout Set<UUID>) {
         let idsToRemove: Set<UUID>
         
-        let isMultiSelect = selected.contains(designComponent.id) && selected.count > 1
+        let isMultiSelect = selected.contains(componentInstance.id) && selected.count > 1
         
         if isMultiSelect {
-            // To handle multi-delete, we need to resolve all design components
-            // using the packManager, filter by the selection, and get their instance IDs.
-            let allDesignComponents = projectManager.designComponents(using: packManager)
-            idsToRemove = Set(allDesignComponents.filter { selected.contains($0.id) }.map(\.instance.id))
+            // For multi-delete, we can just use the selection set directly.
+            // No need to fetch or resolve anything.
+            idsToRemove = selected
             selected.removeAll()
         } else {
-            // For a single delete, we just need the instance ID of the target component.
-            idsToRemove = [designComponent.instance.id]
-            selected.remove(designComponent.id)
+            // For a single delete, it's just the ID of the passed-in instance.
+            idsToRemove = [componentInstance.id]
+            selected.remove(componentInstance.id)
         }
         
         // Remove the component instances from the project's source of truth.
-        // This change will be automatically detected by SchematicCanvasView's .onChange,
-        // which will then trigger a canvas rebuild.
         projectManager.selectedDesign?.componentInstances.removeAll { idsToRemove.contains($0.id) }
         
         // Persist the change to the document.
@@ -47,11 +46,13 @@ struct SymbolNavigatorView: View {
     var body: some View {
         @Bindable var bindableProjectManager = projectManager
         
-        // 2. Fetch the design components here, inside the body.
-        // The view will automatically re-render when the underlying data changes.
-        let designComponents = projectManager.designComponents(using: packManager)
+        // --- CORRECTED ---
+        // We now use the hydrated componentInstances directly from the project manager.
+        // I've renamed the variable for clarity.
+        let componentInstances = projectManager.componentInstances
+        
         VStack(spacing: 0) {
-            if designComponents.isEmpty {
+            if componentInstances.isEmpty {
                 Spacer()
                 Text("No Symbols")
                     .font(.callout)
@@ -59,24 +60,26 @@ struct SymbolNavigatorView: View {
                 Spacer()
             } else {
                 List(
-                    designComponents, // Use the locally fetched components
+                    componentInstances, // Use the direct list of instances
                     id: \.id,
                     selection: $bindableProjectManager.selectedNodeIDs
-                ) { designComponent in
+                ) { instance in // The loop variable is now a ComponentInstance
                     HStack {
-                        Text(designComponent.name)
+                        // Safely access the name from the hydrated definition.
+                        Text(instance.definition?.name ?? "Missing Definition")
                             .foregroundStyle(.primary)
                         Spacer()
-                        Text(designComponent.referenceDesignator)
+                        // Use the helper property for the reference designator string.
+                        Text(instance.referenceDesignatorString)
                             .foregroundStyle(.secondary)
                             .monospaced()
                     }
                     .frame(height: 14)
                     .listRowSeparator(.hidden)
                     .contextMenu {
-                        let multi = bindableProjectManager.selectedNodeIDs.contains(designComponent.id) && bindableProjectManager.selectedNodeIDs.count > 1
+                        let multi = bindableProjectManager.selectedNodeIDs.contains(instance.id) && bindableProjectManager.selectedNodeIDs.count > 1
                         Button(role: .destructive) {
-                            performDelete(on: designComponent, selected: &bindableProjectManager.selectedNodeIDs)
+                            performDelete(on: instance, selected: &bindableProjectManager.selectedNodeIDs)
                         } label: {
                             Text(multi
                                  ? "Delete Selected (\(bindableProjectManager.selectedNodeIDs.count))"
@@ -88,7 +91,18 @@ struct SymbolNavigatorView: View {
                 .scrollContentBackground(.hidden)
                 .environment(\.defaultMinListRowHeight, 14)
             }
-            
         }
+    }
+}
+
+
+// MARK: - ComponentInstance Helper
+
+// You should already have this helper from a previous step.
+// It's good practice to keep it near the ComponentInstance definition.
+extension ComponentInstance {
+    var referenceDesignatorString: String {
+        guard let prefix = definition?.referenceDesignatorPrefix else { return "REF?" }
+        return "\(prefix)\(referenceDesignatorIndex)"
     }
 }

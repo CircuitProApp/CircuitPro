@@ -29,11 +29,12 @@ struct WelcomeWindowScene: Scene {
                 .symbolVariant(.square)
 
                 WelcomeButton(iconName: CircuitProSymbols.Generic.folder, title: "Open Existing Project...") {
-//                    CircuitProjectDocumentService.shared.openWithDialog(
-//                        onDialogPresented: { dismiss() },
-//                        onCompletion: { id in openWindow(value: id) },
-//                        onCancel: {}
-//                    )
+                    CircuitProjectDocumentService.shared.openWithDialog(
+                        using: packManager,
+                        onDialogPresented: { dismiss() },
+                        onCompletion: { id in openWindow(value: id) },
+                        onCancel: {}
+                    )
                 }
                 .symbolVariant(.rectangle)
 
@@ -43,10 +44,10 @@ struct WelcomeWindowScene: Scene {
             },
             onDrop: { url, dismiss in
                 Task { @MainActor in
-//                    CircuitProjectDocumentService.shared.open(at: url) { id in
-//                        openWindow(value: id)
-//                        dismiss()
-//                    }
+                    CircuitProjectDocumentService.shared.open(at: url, using: packManager) { id in
+                        openWindow(value: id)
+                        dismiss()
+                    }
                 }
             },
             openHandler: { urls, dismiss in

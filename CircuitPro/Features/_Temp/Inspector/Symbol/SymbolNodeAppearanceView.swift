@@ -12,7 +12,7 @@ struct SymbolNodeAppearanceView: View {
     @Environment(\.projectManager) private var projectManager
     @PackManager private var packManager
     
-    let component: DesignComponent
+    let component: ComponentInstance
     @Bindable var symbolNode: SymbolNode
     
     var body: some View {
@@ -65,9 +65,9 @@ struct SymbolNodeAppearanceView: View {
     private func toggleVisibility(for source: TextSource) {
          if case .componentProperty(let definitionID) = source,
              let property = component.displayedProperties.first(where: { $0.id == definitionID }) {
-            projectManager.togglePropertyVisibility(for: component, property: property, using: packManager)
+            projectManager.togglePropertyVisibility(for: component, property: property)
         } else {
-            projectManager.toggleDynamicTextVisibility(for: component, source: source, using: packManager)
+            projectManager.toggleDynamicTextVisibility(for: component, source: source)
         }
     }
     
