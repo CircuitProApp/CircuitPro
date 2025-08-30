@@ -7,22 +7,18 @@
 
 import SwiftData
 import Foundation
-import KeyPathable
 import Storable
 import Resolvable
 
 @Model
-@KeyPathable
 class ComponentDefinition {
 
     @Attribute(.unique)
     var uuid: UUID
 
-    @KeyPath
     @Attribute(.unique)
     var name: String
 
-    @KeyPath
     @Attribute(.unique)
     var referenceDesignatorPrefix: String
 

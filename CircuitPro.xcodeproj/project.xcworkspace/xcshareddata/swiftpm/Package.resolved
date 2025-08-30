@@ -1,5 +1,5 @@
 {
-  "originHash" : "cccfdfba82ad703d39bff5786c38fe72f173ef0f0dd278d8c10611aba6803ca7",
+  "originHash" : "4d7ef784113fc47cf8294a3072c80c9a97b1b4eccbbd2e3fe5a147e58d8108e6",
   "pins" : [
     {
       "identity" : "aboutwindow",
@@ -17,15 +17,6 @@
       "state" : {
         "branch" : "main",
         "revision" : "c42d5b24a807b98b3b5131e531eb0969762492cc"
-      }
-    },
-    {
-      "identity" : "keypathable",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/CircuitProApp/KeyPathable",
-      "state" : {
-        "branch" : "main",
-        "revision" : "b5c2624f0863273d95f7ae0d6a2041f364043510"
       }
     },
     {

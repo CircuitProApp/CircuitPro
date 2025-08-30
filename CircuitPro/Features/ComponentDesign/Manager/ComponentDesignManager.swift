@@ -52,17 +52,14 @@ final class ComponentDesignManager {
     var availableTextSources: [(displayName: String, source: TextSource)] {
         var sources: [(String, TextSource)] = []
         
-        // --- MODIFIED: Generate key-based sources ---
-        // These keys correspond to the properties on the `ComponentDefinition` model.
         if !componentName.isEmpty {
-            sources.append(("Name", .componentAttribute(.name)))
+            sources.append(("Name", .componentName))
         }
         if !referenceDesignatorPrefix.isEmpty {
-            // Note: We use the prefix key. The full refdes is computed later.
-            sources.append(("Reference", .componentAttribute(.referenceDesignatorPrefix)))
+            sources.append(("Reference", .componentReferenceDesignator))
         }
         
-        // This part uses the more specific .componentProperty case.
+        // This part remains correct.
         for propDef in componentProperties {
             sources.append((propDef.key.label, .componentProperty(definitionID: propDef.id)))
         }

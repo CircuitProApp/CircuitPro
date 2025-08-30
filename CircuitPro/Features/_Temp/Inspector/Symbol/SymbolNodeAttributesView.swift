@@ -22,22 +22,47 @@ struct SymbolNodeAttributesView: View {
     private var propertiesBinding: Binding<[Property.Resolved]> {
         Binding(
             get: {
+                // The getter is correct.
                 return component.displayedProperties
             },
             set: { newPropertiesArray in
-                let currentComponent = component
+                // We need to find which property actually changed.
+                // It's safer to assume only one property changes at a time in a Table.
+                guard let componentDefinition = component.definition else { return }
 
                 for (index, newProperty) in newPropertiesArray.enumerated() {
-                    let oldProperty = currentComponent.displayedProperties[index]
+                    // It's crucial to compare against the original state, not the computed property.
+                    let oldProperty = component.displayedProperties[index]
                     
-                    if newProperty.id != oldProperty.id {
+                    // --- THE FIX ---
+                    // Compare the actual editable values, not the stable ID.
+                    let valueChanged = (newProperty.value != oldProperty.value)
+                    let unitChanged = (newProperty.unit.prefix != oldProperty.unit.prefix)
+
+                    if valueChanged || unitChanged {
+                        // We found the property that was edited.
+                        // Now, tell the ProjectManager to handle it.
                         projectManager.updateProperty(
-                            for: currentComponent,
+                            for: component,
                             with: newProperty
                         )
+                        // Since we found the change, we can stop searching.
                         break
                     }
                 }
+            }
+        )
+    }
+    
+    private var refdesIndexBinding: Binding<Int> {
+        Binding(
+            get: {
+                // Read the value directly from the model
+                self.component.referenceDesignatorIndex
+            },
+            set: { newIndex in
+                // On change, call the manager's function to handle the update and redraw
+                projectManager.updateReferenceDesignator(for: self.component, newIndex: newIndex)
             }
         )
     }
@@ -53,7 +78,7 @@ struct SymbolNodeAttributesView: View {
                 InspectorRow("Refdes", style: .leading) {
                     InspectorNumericField(
                         label: component.definition?.referenceDesignatorPrefix,
-                        value: $component.referenceDesignatorIndex,
+                        value: refdesIndexBinding,
                         placeholder: "?",
                         labelStyle: .prominent
                     )

@@ -167,18 +167,16 @@ extension CanvasEditorManager {
     
     private func resolveText(for elementID: UUID, source: TextSource, componentData: (name: String, prefix: String, properties: [Property.Definition])) -> String {
         switch source {
-        case .componentAttribute(let attributeSource):
-            // Resolve top-level attributes based on the string key.
-            switch attributeSource {
-            case .name:
-                return componentData.name
-            case .referenceDesignatorPrefix:
-                return componentData.prefix
-            default:
-                return "n/a"
-            }
+        case .componentName:
+            return componentData.name
+            
+        case .componentReferenceDesignator:
+            // In the context of the component editor, we only have the prefix.
+            // The full "R1" is resolved later when an instance is created.
+            return componentData.prefix
+            
         case .componentProperty(let definitionID):
-            // This logic is unchanged, but now clearly separated.
+            // This logic is unchanged and correct.
             guard let prop = componentData.properties.first(where: { $0.id == definitionID }) else {
                 return "Invalid Property"
             }

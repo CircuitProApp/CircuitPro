@@ -12,7 +12,6 @@
 		C77B0ECA2E522D9700A0227D /* SwiftDataPacks in Frameworks */ = {isa = PBXBuildFile; productRef = C77B0EC92E522D9700A0227D /* SwiftDataPacks */; };
 		C7FAEEFC2E620F42009031FD /* Resolvable in Frameworks */ = {isa = PBXBuildFile; productRef = C7FAEEFB2E620F42009031FD /* Resolvable */; };
 		C7FAEEFE2E620F42009031FD /* Storable in Frameworks */ = {isa = PBXBuildFile; productRef = C7FAEEFD2E620F42009031FD /* Storable */; };
-		C7FFE6952E610C0200BF5514 /* KeyPathable in Frameworks */ = {isa = PBXBuildFile; productRef = C7FFE6942E610C0200BF5514 /* KeyPathable */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,7 +48,6 @@
 				5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */,
 				C7FAEEFE2E620F42009031FD /* Storable in Frameworks */,
 				C7FAEEFC2E620F42009031FD /* Resolvable in Frameworks */,
-				C7FFE6952E610C0200BF5514 /* KeyPathable in Frameworks */,
 				C77B0ECA2E522D9700A0227D /* SwiftDataPacks in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -96,7 +94,6 @@
 				5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */,
 				5E2704172DF5F410008B26BC /* AboutWindow */,
 				C77B0EC92E522D9700A0227D /* SwiftDataPacks */,
-				C7FFE6942E610C0200BF5514 /* KeyPathable */,
 				C7FAEEFB2E620F42009031FD /* Resolvable */,
 				C7FAEEFD2E620F42009031FD /* Storable */,
 			);
@@ -133,7 +130,6 @@
 				5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */,
 				5E2704162DF5F410008B26BC /* XCRemoteSwiftPackageReference "AboutWindow" */,
 				C77B0EC82E522D9700A0227D /* XCRemoteSwiftPackageReference "SwiftDataPacks" */,
-				C7FFE6932E610C0200BF5514 /* XCRemoteSwiftPackageReference "KeyPathable" */,
 				C7FAEEFA2E620F42009031FD /* XCRemoteSwiftPackageReference "Resolvable" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -417,14 +413,6 @@
 				kind = branch;
 			};
 		};
-		C7FFE6932E610C0200BF5514 /* XCRemoteSwiftPackageReference "KeyPathable" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/CircuitProApp/KeyPathable";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -452,11 +440,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C7FAEEFA2E620F42009031FD /* XCRemoteSwiftPackageReference "Resolvable" */;
 			productName = Storable;
-		};
-		C7FFE6942E610C0200BF5514 /* KeyPathable */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = C7FFE6932E610C0200BF5514 /* XCRemoteSwiftPackageReference "KeyPathable" */;
-			productName = KeyPathable;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

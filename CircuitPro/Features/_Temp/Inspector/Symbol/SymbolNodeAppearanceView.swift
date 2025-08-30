@@ -19,8 +19,8 @@ struct SymbolNodeAppearanceView: View {
         VStack(spacing: 5) {
             InspectorSection("Text Visibility") {
                 PlainList {
-                    textVisibilityListRow(label: "Name", source: .componentAttribute(.name))
-                    textVisibilityListRow(label: "Reference", source: .componentAttribute(.referenceDesignatorPrefix))
+                    textVisibilityListRow(label: "Name", source: .componentName)
+                    textVisibilityListRow(label: "Reference", source: .componentReferenceDesignator)
                     
                     if !component.displayedProperties.isEmpty { Divider() }
                     
