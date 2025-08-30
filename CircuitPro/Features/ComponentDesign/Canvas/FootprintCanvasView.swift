@@ -61,7 +61,7 @@ struct FootprintCanvasView: View {
                     .padding(10)
             }
         } handle: {
-            CanvasStatusBarView(isCollapsed: $isCollapsed, configuration: .fixedGrid)
+            CanvasStatusBarView(isCollapsed: $isCollapsed, configuration: .default)
         } secondary: {
             Text("WIP")
         }

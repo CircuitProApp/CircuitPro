@@ -26,7 +26,7 @@ struct ToolInteraction: CanvasInteraction {
         guard case .newNode(let newNode) = result else {
             // If the tool handled the tap but didn't create a new node (e.g., the
             // first click of a line tool), we should still consume the mouse event.
-            return result != .noResult
+            return true
         }
 
         // --- Orchestration logic is unchanged ---

@@ -10,8 +10,8 @@
 		5E2704182DF5F410008B26BC /* AboutWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 5E2704172DF5F410008B26BC /* AboutWindow */; };
 		5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */; };
 		C77B0ECA2E522D9700A0227D /* SwiftDataPacks in Frameworks */ = {isa = PBXBuildFile; productRef = C77B0EC92E522D9700A0227D /* SwiftDataPacks */; };
-		C7FAEEFC2E620F42009031FD /* Resolvable in Frameworks */ = {isa = PBXBuildFile; productRef = C7FAEEFB2E620F42009031FD /* Resolvable */; };
-		C7FAEEFE2E620F42009031FD /* Storable in Frameworks */ = {isa = PBXBuildFile; productRef = C7FAEEFD2E620F42009031FD /* Storable */; };
+		C7FEEB702E636EC100683985 /* Storable in Frameworks */ = {isa = PBXBuildFile; productRef = C7FEEB6F2E636EC100683985 /* Storable */; };
+		C7FEEB732E636ED300683985 /* Resolvable in Frameworks */ = {isa = PBXBuildFile; productRef = C7FEEB722E636ED300683985 /* Resolvable */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,8 +46,8 @@
 			files = (
 				5E2704182DF5F410008B26BC /* AboutWindow in Frameworks */,
 				5ED3BD3E2DE7CA3E00F6DB0B /* WelcomeWindow in Frameworks */,
-				C7FAEEFE2E620F42009031FD /* Storable in Frameworks */,
-				C7FAEEFC2E620F42009031FD /* Resolvable in Frameworks */,
+				C7FEEB732E636ED300683985 /* Resolvable in Frameworks */,
+				C7FEEB702E636EC100683985 /* Storable in Frameworks */,
 				C77B0ECA2E522D9700A0227D /* SwiftDataPacks in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -94,8 +94,8 @@
 				5ED3BD3D2DE7CA3E00F6DB0B /* WelcomeWindow */,
 				5E2704172DF5F410008B26BC /* AboutWindow */,
 				C77B0EC92E522D9700A0227D /* SwiftDataPacks */,
-				C7FAEEFB2E620F42009031FD /* Resolvable */,
-				C7FAEEFD2E620F42009031FD /* Storable */,
+				C7FEEB6F2E636EC100683985 /* Storable */,
+				C7FEEB722E636ED300683985 /* Resolvable */,
 			);
 			productName = Electron;
 			productReference = 5E5AB35A2D9C60330069B623 /* CircuitPro.app */;
@@ -130,7 +130,8 @@
 				5ED3BD3C2DE7CA3E00F6DB0B /* XCRemoteSwiftPackageReference "CodeEditWelcomeWindow" */,
 				5E2704162DF5F410008B26BC /* XCRemoteSwiftPackageReference "AboutWindow" */,
 				C77B0EC82E522D9700A0227D /* XCRemoteSwiftPackageReference "SwiftDataPacks" */,
-				C7FAEEFA2E620F42009031FD /* XCRemoteSwiftPackageReference "Resolvable" */,
+				C7FEEB6E2E636EC100683985 /* XCRemoteSwiftPackageReference "Storable" */,
+				C7FEEB712E636ED300683985 /* XCRemoteSwiftPackageReference "Resolvable" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5E5AB35B2D9C60330069B623 /* Products */;
@@ -405,11 +406,19 @@
 				kind = branch;
 			};
 		};
-		C7FAEEFA2E620F42009031FD /* XCRemoteSwiftPackageReference "Resolvable" */ = {
+		C7FEEB6E2E636EC100683985 /* XCRemoteSwiftPackageReference "Storable" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CircuitProApp/Storable";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+		C7FEEB712E636ED300683985 /* XCRemoteSwiftPackageReference "Resolvable" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/CircuitProApp/Resolvable";
 			requirement = {
-				branch = storable;
+				branch = main;
 				kind = branch;
 			};
 		};
@@ -431,15 +440,15 @@
 			package = C77B0EC82E522D9700A0227D /* XCRemoteSwiftPackageReference "SwiftDataPacks" */;
 			productName = SwiftDataPacks;
 		};
-		C7FAEEFB2E620F42009031FD /* Resolvable */ = {
+		C7FEEB6F2E636EC100683985 /* Storable */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = C7FAEEFA2E620F42009031FD /* XCRemoteSwiftPackageReference "Resolvable" */;
-			productName = Resolvable;
-		};
-		C7FAEEFD2E620F42009031FD /* Storable */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = C7FAEEFA2E620F42009031FD /* XCRemoteSwiftPackageReference "Resolvable" */;
+			package = C7FEEB6E2E636EC100683985 /* XCRemoteSwiftPackageReference "Storable" */;
 			productName = Storable;
+		};
+		C7FEEB722E636ED300683985 /* Resolvable */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C7FEEB712E636ED300683985 /* XCRemoteSwiftPackageReference "Resolvable" */;
+			productName = Resolvable;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

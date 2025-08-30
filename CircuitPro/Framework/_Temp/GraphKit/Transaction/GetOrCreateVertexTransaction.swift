@@ -8,7 +8,7 @@
 import Foundation
 import CoreGraphics
 
-struct GetOrCreateVertexTransaction: GraphTransaction {
+struct GetOrCreateVertexTransaction: MetadataOnlyTransaction, GraphTransaction {
     let point: CGPoint
     private(set) var createdID: GraphVertex.ID?
 
