@@ -60,7 +60,7 @@ struct FootprintElementListView: View {
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
             
-            DynamicTextSourceListView(editor: editor)
+            TextSourceListView(editor: editor)
         }
         // This logic remains unchanged and is compatible with the new structure.
         .onChange(of: selection) { handleSelectionChange() }

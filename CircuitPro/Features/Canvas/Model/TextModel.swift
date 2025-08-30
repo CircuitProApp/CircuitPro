@@ -14,9 +14,9 @@ struct TextModel: Identifiable {
     let id: UUID
     var text: String
     var position: CGPoint
-    var anchor: TextAnchor
+    var anchor: TextAnchor = .leading
     var font: SDFont = .init(font: .systemFont(ofSize: 12))
-    var color: SDColor = .init(color: .primary)
+    var color: SDColor = .init(color: .black)
     var alignment: SDAlignment = .left
 
     // Keep the cardinal rotation for snapping behavior.

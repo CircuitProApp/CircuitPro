@@ -127,7 +127,7 @@ extension CanvasEditorManager {
         let textModel = TextModel(
             id: newElementID,
             text: resolvedText.isEmpty ? displayName : resolvedText,
-            position: centerPoint, anchor: .bottomLeading
+            position: centerPoint
         )
         
         let newNode = TextNode(textModel: textModel)
@@ -173,7 +173,7 @@ extension CanvasEditorManager {
         case .componentReferenceDesignator:
             // In the context of the component editor, we only have the prefix.
             // The full "R1" is resolved later when an instance is created.
-            return componentData.prefix
+            return componentData.prefix + "?"
             
         case .componentProperty(let definitionID):
             // This logic is unchanged and correct.

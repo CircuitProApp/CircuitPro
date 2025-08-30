@@ -200,6 +200,42 @@ final class WireGraph {
         )
         _ = engine.execute(transaction: &tx) // metadata-only; rules skipped
     }
+    
+    public func nets() -> [Net] {
+        var nets: [Net] = []
+        var processed = Set<UUID>()
+        let s = engine.currentState
+
+        for vID in s.vertices.keys {
+            guard !processed.contains(vID) else { continue }
+            
+            let (compV, compE) = net(startingFrom: vID, in: s)
+            processed.formUnion(compV)
+
+            // A component must have edges to be considered a wire/net.
+            // The clusterID is the net's unique identifier.
+            guard !compE.isEmpty, let groupID = s.vertices[vID]?.clusterID else { continue }
+
+            // Use the stored label or generate a default name.
+            let netName = groupLabels[groupID] ?? "Net \(groupID.uuidString.prefix(8))"
+            nets.append(Net(
+                id: groupID,
+                name: netName,
+                vertexCount: compV.count,
+                edgeCount: compE.count
+            ))
+        }
+        return nets
+    }
+
+    public func component(for netID: UUID) -> (vertices: Set<UUID>, edges: Set<UUID>) {
+        // Find any vertex within the desired net to start the traversal.
+        guard let vertexInNet = vertices.values.first(where: { $0.clusterID == netID }) else {
+            return ([], [])
+        }
+        // Use the private helper to find the full connected component.
+        return net(startingFrom: vertexInNet.id, in: engine.currentState)
+    }
 
     private func attachmentPoint(for v: GraphVertex) -> AttachmentPoint? {
         switch ownership[v.id] ?? .free {

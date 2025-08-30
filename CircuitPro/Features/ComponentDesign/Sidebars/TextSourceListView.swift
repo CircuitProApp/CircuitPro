@@ -1,5 +1,5 @@
 //
-//  DynamicTextSourceListView.swift
+//  TextSourceListView.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 8/3/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct DynamicTextSourceListView: View {
+struct TextSourceListView: View {
     @Environment(ComponentDesignManager.self) private var componentDesignManager
     let editor: CanvasEditorManager
 

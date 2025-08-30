@@ -47,7 +47,7 @@ struct SymbolElementListView: View {
                 .listStyle(.inset)
                 .scrollContentBackground(.hidden)
             }
-            DynamicTextSourceListView(editor: symbolEditor)
+            TextSourceListView(editor: symbolEditor)
         }
     }
 }

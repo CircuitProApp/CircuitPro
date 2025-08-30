@@ -5,7 +5,6 @@ import AppKit
 /// anchor-repositioning drags for text nodes when the Control key is held.
 final class DragInteraction: CanvasInteraction {
     
-    // ... (No changes to DraggingState or other properties) ...
     private struct DraggingState {
         let origin: CGPoint
         let originalNodePositions: [UUID: CGPoint]
@@ -21,7 +20,6 @@ final class DragInteraction: CanvasInteraction {
     var wantsRawInput: Bool { true }
     
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
-        // ... (No changes to the initial setup logic) ...
         self.state = nil
         guard controller.selectedTool is CursorTool, !controller.selectedNodes.isEmpty else { return false }
         let tolerance = 5.0 / context.magnification
@@ -51,10 +49,7 @@ final class DragInteraction: CanvasInteraction {
         // Prime pin vertices for selected symbols so beginDrag has something to move
         if let graphNode = context.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode {
             for node in controller.selectedNodes {
-                // --- UPDATED LOGIC ---
-                // We now safely unwrap the symbol definition from the instance.
                 if let sym = node as? SymbolNode, let symbolDef = sym.instance.definition {
-                    // No need to make a copy of the instance. The node's instance is the source of truth.
                     graphNode.graph.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
                 }
             }
@@ -77,7 +72,6 @@ final class DragInteraction: CanvasInteraction {
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard let currentState = self.state else { return }
 
-        // ... (No changes to delta calculation and anchor drag logic) ...
         let rawDelta = CGVector(dx: point.x - currentState.origin.x, dy: point.y - currentState.origin.y)
         if !didMove {
             if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }
@@ -126,7 +120,6 @@ final class DragInteraction: CanvasInteraction {
         controller.redraw()
     }
     
-    // --- NO CHANGES NEEDED FOR MOUSEUP ---
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         if let graph = self.state?.graph {
             graph.endDrag()
