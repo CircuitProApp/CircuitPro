@@ -10,15 +10,15 @@ import Observation
 
 @Observable
 final class ProjectManager {
-
+    
     var project: CircuitProject
     var selectedDesign: CircuitDesign?
     var selectedNodeIDs: Set<UUID> = []
     var canvasNodes: [BaseNode] = []
     var selectedNetIDs: Set<UUID> = []
-
+    
     var schematicGraph = WireGraph()
-
+    
     init(
         project: CircuitProject,
         selectedDesign: CircuitDesign? = nil
@@ -26,12 +26,12 @@ final class ProjectManager {
         self.project        = project
         self.selectedDesign = selectedDesign
     }
-
+    
     var componentInstances: [ComponentInstance] {
         get { selectedDesign?.componentInstances ?? [] }
         set { selectedDesign?.componentInstances = newValue }
     }
-
+    
     func persistSchematicGraph() {
         guard selectedDesign != nil else { return }
         selectedDesign?.wires = schematicGraph.toWires()
@@ -40,7 +40,7 @@ final class ProjectManager {
     func toggleDynamicTextVisibility(for component: ComponentInstance, source: TextSource) {
         guard let definition = component.definition,
               let symbol = definition.symbol else { return }
-
+        
         // Case 1: The text is defined in the symbol definition. We toggle its visibility via an override.
         if let textDefinition = symbol.textDefinitions.first(where: { $0.contentSource == source }) {
             if let overrideIndex = component.symbolInstance.textOverrides.firstIndex(where: { $0.definitionID == textDefinition.id }) {
@@ -51,12 +51,12 @@ final class ProjectManager {
                 component.symbolInstance.textOverrides.append(newOverride)
             }
             
-        // Case 2: The text exists as a user-added instance. We toggle its visibility.
+            // Case 2: The text exists as a user-added instance. We toggle its visibility.
         } else if let instanceIndex = component.symbolInstance.textInstances.firstIndex(where: { $0.contentSource == source }) {
             let currentVisibility = component.symbolInstance.textInstances[instanceIndex].isVisible
             component.symbolInstance.textInstances[instanceIndex].isVisible = !currentVisibility
             
-        // Case 3: The text is not displayed at all. We create a new instance to show it.
+            // Case 3: The text is not displayed at all. We create a new instance to show it.
         } else {
             let existingTextPositions = component.symbolInstance.textInstances.map(\.relativePosition)
             let lowestY = existingTextPositions.map(\.y).min() ?? -20
@@ -79,7 +79,7 @@ final class ProjectManager {
         
         rebuildCanvasNodes()
     }
-
+    
     func togglePropertyVisibility(for component: ComponentInstance, property: Property.Resolved) {
         guard case .definition(let propertyDefID) = property.source else {
             print("Error: Visibility can only be toggled for definition-based properties.")
@@ -105,12 +105,12 @@ final class ProjectManager {
         }
         rebuildCanvasNodes()
     }
-
+    
     func updateReferenceDesignator(for component: ComponentInstance, newIndex: Int) {
         component.referenceDesignatorIndex = newIndex
         rebuildCanvasNodes()
     }
-
+    
     private func makeGraph(from design: CircuitDesign) -> WireGraph {
         let newGraph = WireGraph()
         newGraph.build(from: design.wires)
@@ -122,42 +122,42 @@ final class ProjectManager {
         }
         return newGraph
     }
-
+    
     func rebuildCanvasNodes() {
-           guard let design = selectedDesign else {
-               self.canvasNodes = []
-               self.schematicGraph = WireGraph()
-               return
-           }
-
-           let newGraph = self.makeGraph(from: design)
-           self.schematicGraph = newGraph
-
-           // --- REFACTORED LOGIC ---
-           let symbolNodes: [SymbolNode] = design.componentInstances.compactMap { inst -> SymbolNode? in
-               
-               // The guard is now simpler and more direct.
-               // We just need the definition on the symbol instance itself.
-               guard let symbolDefinition = inst.symbolInstance.definition else {
-                   return nil
-               }
-               
-               let resolvedTexts = TextResolver.resolve(for: inst)
-               
-               return SymbolNode(
-                   id: inst.id,
-                   instance: inst.symbolInstance,
-                   resolvedTexts: resolvedTexts,
-                   graph: self.schematicGraph
-               )
-           }
-
-           let graphNode = SchematicGraphNode(graph: self.schematicGraph)
-           graphNode.syncChildNodesFromModel()
-
-           self.canvasNodes = symbolNodes + [graphNode]
-       }
-
+        guard let design = selectedDesign else {
+            self.canvasNodes = []
+            self.schematicGraph = WireGraph()
+            return
+        }
+        
+        let newGraph = self.makeGraph(from: design)
+        self.schematicGraph = newGraph
+        
+        // --- REFACTORED LOGIC ---
+        let symbolNodes: [SymbolNode] = design.componentInstances.compactMap { inst -> SymbolNode? in
+            
+            // The guard is now simpler and more direct.
+            // We just need the definition on the symbol instance itself.
+            guard let symbolDefinition = inst.symbolInstance.definition else {
+                return nil
+            }
+            
+            let resolvedTexts = TextResolver.resolve(for: inst)
+            
+            return SymbolNode(
+                id: inst.id,
+                instance: inst.symbolInstance,
+                resolvedTexts: resolvedTexts,
+                graph: self.schematicGraph
+            )
+        }
+        
+        let graphNode = SchematicGraphNode(graph: self.schematicGraph)
+        graphNode.syncChildNodesFromModel()
+        
+        self.canvasNodes = symbolNodes + [graphNode]
+    }
+    
 }
 
 
@@ -176,3 +176,39 @@ extension ComponentInstance {
         )
     }
 }
+
+extension ProjectManager {
+    func upsertSymbolNode(for inst: ComponentInstance) {
+        // Must be hydrated or we can't render the symbol
+        guard inst.symbolInstance.definition != nil else { return }
+        
+        // Build the node. If your SymbolNode init is failable, unwrap here.
+        guard let node = SymbolNode(
+            id: inst.id,
+            instance: inst.symbolInstance,
+            resolvedTexts: TextResolver.resolve(for: inst),
+            graph: self.schematicGraph
+        ) else {
+            // If the initializer is NOT failable in your project,
+            // remove `guard let` and the `?` on the type above.
+            return
+        }
+        
+        // Replace if symbol already exists
+        if let idx = canvasNodes.firstIndex(where: { $0.id == inst.id }) {
+            canvasNodes[idx] = node // or `node as BaseNode` if the compiler asks
+            return
+        }
+        
+        // Insert before the graph node if present, otherwise create a graph node
+        if let graphIndex = canvasNodes.firstIndex(where: { $0 is SchematicGraphNode }) {
+            canvasNodes.insert(node, at: graphIndex) // or `node as BaseNode`
+        } else {
+            let graphNode = SchematicGraphNode(graph: self.schematicGraph)
+            graphNode.syncChildNodesFromModel()
+            canvasNodes = [node, graphNode] // both are BaseNode
+        }
+    }
+}
+
+

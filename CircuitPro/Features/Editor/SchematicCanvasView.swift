@@ -9,15 +9,14 @@ import SwiftUI
 import SwiftDataPacks
 
 struct SchematicCanvasView: View {
-
+    
     @BindableEnvironment(\.projectManager) private var projectManager
     
-    // The packManager is now only needed for fetching NEW definitions from the library.
     @PackManager private var packManager
     
     var document: CircuitProjectFileDocument
     @Bindable var canvasManager = CanvasManager()
-
+    
     @State private var selectedTool: CanvasTool = CursorTool()
     let defaultTool: CanvasTool = CursorTool()
     
@@ -57,7 +56,6 @@ struct SchematicCanvasView: View {
                 .padding(16)
         }
         .onAppear {
-            // The call is now simpler, with no packManager needed.
             projectManager.rebuildCanvasNodes()
             
             projectManager.schematicGraph.onModelDidChange = {
@@ -66,8 +64,6 @@ struct SchematicCanvasView: View {
             }
         }
         .onChange(of: projectManager.componentInstances) {
-            // --- CORRECTED ---
-            // Move existing pin vertices to their new absolute positions; do NOT rebuild.
             for instance in projectManager.componentInstances {
                 // Safely unwrap the definition from the instance itself.
                 guard let symbolDef = instance.definition?.symbol else { continue }
@@ -78,7 +74,6 @@ struct SchematicCanvasView: View {
                     ownerID: instance.id
                 )
             }
-            // Persist if you want autosave on drags:
             projectManager.persistSchematicGraph()
             document.scheduleAutosave()
         }
@@ -88,13 +83,10 @@ struct SchematicCanvasView: View {
     }
     
     private func syncProjectManagerFromNodes() {
-        // --- CORRECTED ---
-        // We no longer need the packManager or the old designComponents().
-        // We work directly with the source of truth.
         let currentComponentIDs = Set(projectManager.componentInstances.map(\.id))
         let nodeIDs = Set(projectManager.canvasNodes.map(\.id))
         let missingComponentIDs = currentComponentIDs.subtracting(nodeIDs)
-
+        
         if !missingComponentIDs.isEmpty {
             for componentID in missingComponentIDs {
                 projectManager.schematicGraph.releasePins(for: componentID)
@@ -105,58 +97,55 @@ struct SchematicCanvasView: View {
     
     /// Handles dropping a new component onto the canvas from a library.
     private func handleComponentDrop(pasteboard: NSPasteboard, location: CGPoint) -> Bool {
-         guard let data = pasteboard.data(forType: .transferableComponent),
-               let transferable = try? JSONDecoder().decode(TransferableComponent.self, from: data) else {
-             return false
-         }
-         
-         // The logic for fetching a definition from the library remains the same.
-         // This is the correct and only place the packManager is now needed in this view.
-         var fetchDescriptor = FetchDescriptor<ComponentDefinition>(predicate: #Predicate { $0.uuid == transferable.componentUUID })
-         fetchDescriptor.relationshipKeyPathsForPrefetching = [\.symbol]
-         let fullLibraryContext = ModelContext(packManager.mainContainer)
-         
-         guard let componentDefinition = (try? fullLibraryContext.fetch(fetchDescriptor))?.first,
-               let symbolDefinition = componentDefinition.symbol else {
-             return false
-         }
-         
-         // Logic for creating the new instance.
-         let instances = projectManager.componentInstances
-         let nextRefIndex = (instances.filter { $0.componentUUID == componentDefinition.uuid }.map(\.referenceDesignatorIndex).max() ?? 0) + 1
-         
-         let newSymbolInstance = SymbolInstance(
-             symbolUUID: symbolDefinition.uuid,
-             position: location,
-             cardinalRotation: .east
-         )
-         
-         // --- IMPORTANT ---
-         // The new ComponentInstance does NOT have its `definition` property set yet.
-         // This is a small gap in our logic we need to address.
-         var newComponentInstance = ComponentInstance(
-             componentUUID: componentDefinition.uuid,
-             symbolInstance: newSymbolInstance,
-             reference: nextRefIndex
-         )
-         
-         // --- HYDRATE THE NEW INSTANCE MANUALLY ---
-         // After creating a new instance, we immediately hydrate it with the
-         // definition we just fetched.
-         newComponentInstance.definition = componentDefinition
-         
-         // Now, add the fully hydrated instance to the project.
-         projectManager.selectedDesign?.componentInstances.append(newComponentInstance)
-         
-         // The rest of the logic is the same.
-         projectManager.schematicGraph.syncPins(
-             for: newSymbolInstance,
-             of: symbolDefinition,
-             ownerID: newComponentInstance.id
-         )
-         
-         document.scheduleAutosave()
-         
-         return true
-     }
+        guard let data = pasteboard.data(forType: .transferableComponent),
+              let transferable = try? JSONDecoder().decode(TransferableComponent.self, from: data),
+              projectManager.selectedDesign != nil else {
+            return false
+        }
+        
+        var fetchDescriptor = FetchDescriptor<ComponentDefinition>(predicate: #Predicate { $0.uuid == transferable.componentUUID })
+        fetchDescriptor.relationshipKeyPathsForPrefetching = [\.symbol]
+        let fullLibraryContext = ModelContext(packManager.mainContainer)
+        
+        guard let componentDefinition = (try? fullLibraryContext.fetch(fetchDescriptor))?.first,
+              let symbolDefinition = componentDefinition.symbol else {
+            return false
+        }
+        
+        let instances = projectManager.componentInstances
+        let nextRefIndex = (instances.filter { $0.componentUUID == componentDefinition.uuid }.map(\.referenceDesignatorIndex).max() ?? 0) + 1
+        
+        // Make var so we can set definition
+        var newSymbolInstance = SymbolInstance(
+            symbolUUID: symbolDefinition.uuid,
+            position: location,
+            cardinalRotation: .east
+        )
+        newSymbolInstance.definition = symbolDefinition   // IMPORTANT
+        
+        var newComponentInstance = ComponentInstance(
+            componentUUID: componentDefinition.uuid,
+            symbolInstance: newSymbolInstance,
+            reference: nextRefIndex
+        )
+        newComponentInstance.definition = componentDefinition
+        
+        // Append to the selected design
+        var currentInstances = projectManager.componentInstances
+        currentInstances.append(newComponentInstance)
+        projectManager.componentInstances = currentInstances
+        
+        // Update the wire graph immediately so pins exist at the right place
+        projectManager.schematicGraph.syncPins(
+            for: newSymbolInstance,
+            of: symbolDefinition,
+            ownerID: newComponentInstance.id
+        )
+        
+        // Put a SymbolNode into canvasNodes right away (no full rebuild needed)
+        projectManager.upsertSymbolNode(for: newComponentInstance)
+        
+        document.scheduleAutosave()
+        return true
+    }
 }
