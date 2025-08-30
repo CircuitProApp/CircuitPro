@@ -13,7 +13,7 @@ extension CircuitProject {
     /// corresponding `ComponentDefinition` from the SwiftData store.
     func hydrate(using container: ModelContainer) throws {
         let context = ModelContext(container)
-
+        
         // 1. Collect all unique definition IDs from the project.
         var allDefinitionIDs: Set<UUID> = []
         for design in self.designs {
@@ -23,7 +23,7 @@ extension CircuitProject {
         }
         
         guard !allDefinitionIDs.isEmpty else { return } // Nothing to do.
-
+        
         // 2. Fetch all required definitions in a single, efficient query.
         let predicate = #Predicate<ComponentDefinition> { allDefinitionIDs.contains($0.uuid) }
         let fetchDescriptor = FetchDescriptor<ComponentDefinition>(predicate: predicate)
@@ -37,7 +37,13 @@ extension CircuitProject {
             for instanceIndex in self.designs[designIndex].componentInstances.indices {
                 let instance = self.designs[designIndex].componentInstances[instanceIndex]
                 if let definition = definitionsByID[instance.componentUUID] {
+                    // Link the ComponentDefinition to the ComponentInstance
                     self.designs[designIndex].componentInstances[instanceIndex].definition = definition
+                    
+                    // --- ADD THIS LINE ---
+                    // Also link the SymbolDefinition to the SymbolInstance
+                    self.designs[designIndex].componentInstances[instanceIndex].symbolInstance.definition = definition.symbol
+
                 } else {
                     // This is an important error case to handle.
                     // It means the document references a component that is not in the user's library.

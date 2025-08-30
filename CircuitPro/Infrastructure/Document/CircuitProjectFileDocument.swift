@@ -36,7 +36,11 @@ final class CircuitProjectFileDocument: ReferenceFileDocument {
         DispatchQueue.main.asyncAfter(deadline: .now() + autosaveDelay, execute: work)
     }
 
-    var model: CircuitProject
+    var model: CircuitProject {
+        didSet {
+            scheduleAutosave()
+        }
+    }
     // Track the backing URL when opened/saved programmatically
     var fileURL: URL?
 

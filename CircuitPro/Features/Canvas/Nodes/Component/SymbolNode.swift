@@ -16,17 +16,24 @@ import AppKit
 final class SymbolNode: BaseNode {
 
     // MARK: - Properties
+    // MARK: - Properties
 
     var instance: SymbolInstance {
         didSet {
+            // This is still useful for triggering redraws on property changes.
             onNeedsRedraw?()
         }
     }
-    let symbol: SymbolDefinition
+    
+    // --- REMOVED ---
+    // The separate 'symbol' property is now redundant. We will use 'instance.definition'.
+    // let symbol: SymbolDefinition
+    
     weak var graph: WireGraph?
 
     override var isSelectable: Bool { true }
     
+    // This remains a good way to pass in the calculated text.
     let resolvedTexts: [CircuitText.Resolved]
 
     // MARK: - Overridden Scene Graph Properties
@@ -49,27 +56,34 @@ final class SymbolNode: BaseNode {
 
     // MARK: - Initialization
 
-    // CHANGED: The initializer now takes an array of the new `CircuitText.Resolved` model.
-    init(id: UUID, instance: SymbolInstance, symbol: SymbolDefinition, resolvedTexts: [CircuitText.Resolved], graph: WireGraph? = nil) {
-        self.instance = instance
-        self.symbol = symbol
-        self.graph = graph
+    // --- REFACTORED INITIALIZER ---
+    // It no longer accepts a separate 'symbol'. It relies on the definition
+    // already being attached to the instance.
+    init?(id: UUID, instance: SymbolInstance, resolvedTexts: [CircuitText.Resolved], graph: WireGraph? = nil) {
+        // Add a guard to ensure the instance has been properly hydrated.
+        // If not, we can't build the node, so the initializer fails.
+        guard let symbolDefinition = instance.definition else {
+            print("Error: SymbolNode cannot be initialized without a hydrated SymbolInstance.definition.")
+            return nil
+        }
         
+        self.instance = instance
+        self.graph = graph
         self.resolvedTexts = resolvedTexts
         
         super.init(id: id)
 
-        // Primitive and Pin creation is unchanged.
-        for primitive in symbol.primitives {
+        // --- UPDATED LOGIC ---
+        // Create children using the definition from the instance.
+        for primitive in symbolDefinition.primitives {
             self.addChild(PrimitiveNode(primitive: primitive))
         }
 
-        for pin in symbol.pins {
+        for pin in symbolDefinition.pins {
             self.addChild(PinNode(pin: pin, graph: self.graph))
         }
         
-        // REFACTORED: The logic for creating text nodes is now dramatically simpler.
-        // We just pass the resolved data model directly to the AnchoredTextNode's initializer.
+        // This logic is unchanged but is now more robust.
         for resolvedText in resolvedTexts {
             let textNode = AnchoredTextNode(
                 resolvedText: resolvedText,
@@ -78,7 +92,6 @@ final class SymbolNode: BaseNode {
             self.addChild(textNode)
         }
     }
-
     // MARK: - Overridden Methods (These methods are unchanged)
 
     override func makeHaloPath() -> CGPath? {

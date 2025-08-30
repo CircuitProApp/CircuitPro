@@ -47,6 +47,7 @@ struct InspectorView: View {
                     symbolNode: context.node,
                     selectedTab: $selectedTab
                 )
+                .id(context.component.id)
 
             }  else if let anchoredText = singleSelectedNode as? AnchoredTextNode {
             

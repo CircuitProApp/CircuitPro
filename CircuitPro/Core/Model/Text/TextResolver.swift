@@ -5,20 +5,20 @@ struct TextResolver {
     /// The main resolution function that converts abstract text templates into displayable, resolved text models.
     /// This is the new, primary entry point for the resolver.
     static func resolve(for componentInstance: ComponentInstance) -> [CircuitText.Resolved] {
-        // 1. Safely unwrap the necessary definition from the instance.
-        //    If the symbol doesn't exist, there are no texts to resolve.
-        guard let symbolDefinition = componentInstance.definition?.symbol else {
+        // 1. --- SIMPLIFIED LOGIC ---
+        // Get the symbol definition directly from the hydrated symbol instance.
+        // If it's not there, we know hydration failed, and we can't proceed.
+        guard let symbolDefinition = componentInstance.symbolInstance.definition else {
             return []
         }
 
-        // 2. Call the detailed resolver, passing the now-guaranteed parts.
-        //    This keeps the logic separated and clean.
+        // 2. Call the detailed resolver.
         return self.resolve(
             definitions: symbolDefinition.textDefinitions,
             overrides: componentInstance.symbolInstance.textOverrides,
             instances: componentInstance.symbolInstance.textInstances,
-            properties: componentInstance.displayedProperties, // Pass the resolved properties for context
-            componentDefinition: componentInstance.definition // Pass the definition for attributes
+            properties: componentInstance.displayedProperties,
+            componentDefinition: componentInstance.definition
         )
     }
 

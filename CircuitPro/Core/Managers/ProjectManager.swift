@@ -90,8 +90,10 @@ final class ProjectManager {
     }
     
     func updateProperty(for component: ComponentInstance, with editedProperty: Property.Resolved) {
-        guard case .definition(let definitionID) = editedProperty.source else { return }
-        
+        guard case .definition(let definitionID) = editedProperty.source else {
+            print("not found")
+            return }
+        print(definitionID)
         // Use the new helper to get the original property
         guard let originalProperty = component.displayedProperties.first(where: { $0.id == editedProperty.id }) else { return }
         
@@ -122,40 +124,40 @@ final class ProjectManager {
     }
 
     func rebuildCanvasNodes() {
-        guard let design = selectedDesign else {
-            self.canvasNodes = []
-            self.schematicGraph = WireGraph()
-            return
-        }
+           guard let design = selectedDesign else {
+               self.canvasNodes = []
+               self.schematicGraph = WireGraph()
+               return
+           }
 
-        let newGraph = self.makeGraph(from: design)
-        self.schematicGraph = newGraph
+           let newGraph = self.makeGraph(from: design)
+           self.schematicGraph = newGraph
 
-        // We add an explicit return type annotation to the closure: `-> SymbolNode?`
-        // This removes all ambiguity for the compiler.
-        let symbolNodes: [SymbolNode] = design.componentInstances.compactMap { inst -> SymbolNode? in
-            
-            guard let symbolDefinition = inst.definition?.symbol else {
-                return nil
-            }
-            
-            // Ensure your TextResolver.resolve(for:) function is working correctly.
-            let resolvedTexts = TextResolver.resolve(for: inst)
-            
-            return SymbolNode(
-                id: inst.id,
-                instance: inst.symbolInstance,
-                symbol: symbolDefinition,
-                resolvedTexts: resolvedTexts,
-                graph: self.schematicGraph
-            )
-        }
+           // --- REFACTORED LOGIC ---
+           let symbolNodes: [SymbolNode] = design.componentInstances.compactMap { inst -> SymbolNode? in
+               
+               // The guard is now simpler and more direct.
+               // We just need the definition on the symbol instance itself.
+               guard let symbolDefinition = inst.symbolInstance.definition else {
+                   return nil
+               }
+               
+               let resolvedTexts = TextResolver.resolve(for: inst)
+               
+               return SymbolNode(
+                   id: inst.id,
+                   instance: inst.symbolInstance,
+                   resolvedTexts: resolvedTexts,
+                   graph: self.schematicGraph
+               )
+           }
 
-        let graphNode = SchematicGraphNode(graph: self.schematicGraph)
-        graphNode.syncChildNodesFromModel()
+           let graphNode = SchematicGraphNode(graph: self.schematicGraph)
+           graphNode.syncChildNodesFromModel()
 
-        self.canvasNodes = symbolNodes + [graphNode]
-    }
+           self.canvasNodes = symbolNodes + [graphNode]
+       }
+
 }
 
 

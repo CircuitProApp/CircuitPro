@@ -14,6 +14,9 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
     var id: UUID
 
     var symbolUUID: UUID
+    
+    var definition: SymbolDefinition? = nil
+    
     var position: CGPoint
     var cardinalRotation: CardinalRotation = .east
     
@@ -27,9 +30,18 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
         set { cardinalRotation = .closest(to: newValue) }
     }
 
-    init(id: UUID = UUID(), symbolUUID: UUID, position: CGPoint, cardinalRotation: CardinalRotation = .east, textOverrides: [CircuitText.Override] = [], textInstances: [CircuitText.Instance] = []) {
+    init(
+        id: UUID = UUID(),
+        symbolUUID: UUID,
+        definition: SymbolDefinition? = nil,
+        position: CGPoint,
+        cardinalRotation: CardinalRotation = .east,
+        textOverrides: [CircuitText.Override] = [],
+        textInstances: [CircuitText.Instance] = []
+    ) {
         self.id = id
         self.symbolUUID = symbolUUID
+        self.definition = definition
         self.position = position
         self.cardinalRotation = cardinalRotation
         self.textOverrides = textOverrides

@@ -26,7 +26,7 @@ struct SymbolNodeAttributesView: View {
             },
             set: { newPropertiesArray in
                 let currentComponent = component
-                
+
                 for (index, newProperty) in newPropertiesArray.enumerated() {
                     let oldProperty = currentComponent.displayedProperties[index]
                     
@@ -57,6 +57,7 @@ struct SymbolNodeAttributesView: View {
                         placeholder: "?",
                         labelStyle: .prominent
                     )
+                 
                 }
             }
             
