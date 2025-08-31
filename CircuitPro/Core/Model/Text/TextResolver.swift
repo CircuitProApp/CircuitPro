@@ -4,18 +4,19 @@ struct TextResolver {
     
     /// The main resolution function.
     static func resolve(for componentInstance: ComponentInstance) -> [CircuitText.Resolved] {
-        guard let symbolDefinition = componentInstance.symbolInstance.definition else {
-            return []
-        }
-
-        // --- CHANGE 1: Pass the whole instance down ---
-        return self.resolve(
-            definitions: symbolDefinition.textDefinitions,
-            overrides: componentInstance.symbolInstance.textOverrides,
-            instances: componentInstance.symbolInstance.textInstances,
-            properties: componentInstance.displayedProperties,
-            componentInstance: componentInstance // Pass the full instance
-        )
+//        guard let symbolDefinition = componentInstance.symbolInstance.definition else {
+//            return []
+//        }
+//
+//        // --- CHANGE 1: Pass the whole instance down ---
+//        return self.resolve(
+//            definitions: symbolDefinition.textDefinitions,
+//            overrides: componentInstance.symbolInstance.textOverrides,
+//            instances: componentInstance.symbolInstance.textInstances,
+//            properties: componentInstance.displayedProperties,
+//            componentInstance: componentInstance // Pass the full instance
+//        )
+        return []
     }
 
     /// The detailed resolution function.
@@ -45,7 +46,7 @@ struct TextResolver {
                     finalResolved.text = def.name
                     
                 case .componentReferenceDesignator:
-                    finalResolved.text = "\(def.referenceDesignatorPrefix)\(componentInstance.referenceDesignatorIndex)"
+                    finalResolved.text = def.referenceDesignatorPrefix
                     
                 case .componentProperty(let definitionID):
                     guard let prop = properties.first(where: { $0.id == definitionID }) else {

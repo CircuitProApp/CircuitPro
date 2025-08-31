@@ -113,22 +113,20 @@ struct SchematicCanvasView: View {
         }
         
         let instances = projectManager.componentInstances
-        let nextRefIndex = (instances.filter { $0.componentUUID == componentDefinition.uuid }.map(\.referenceDesignatorIndex).max() ?? 0) + 1
-        
+        let nextRefIndex = (
+            instances
+                .filter { $0.definitionUUID == componentDefinition.uuid }
+                .map { $0.referenceDesignatorIndex}
+                .max() ?? 0
+        ) + 1
         // Make var so we can set definition
         var newSymbolInstance = SymbolInstance(
-            symbolUUID: symbolDefinition.uuid,
+            definitionUUID: symbolDefinition.uuid, definition: symbolDefinition,
             position: location,
             cardinalRotation: .east
         )
-        newSymbolInstance.definition = symbolDefinition   // IMPORTANT
         
-        var newComponentInstance = ComponentInstance(
-            componentUUID: componentDefinition.uuid,
-            symbolInstance: newSymbolInstance,
-            reference: nextRefIndex
-        )
-        newComponentInstance.definition = componentDefinition
+        var newComponentInstance = ComponentInstance(definitionUUID: componentDefinition.uuid, definition: componentDefinition, symbolInstance: newSymbolInstance)
         
         // Append to the selected design
         var currentInstances = projectManager.componentInstances

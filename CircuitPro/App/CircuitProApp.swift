@@ -19,8 +19,7 @@ struct CircuitProApp: App {
          // for a critical app service that fails on launch.
          let manager = try! SwiftDataPackManager(for: [
              ComponentDefinition.self,
-             SymbolDefinition.self,
-             FootprintDefinition.self
+             SymbolDefinition.self
          ])
          _packManager = State(initialValue: manager)
      }

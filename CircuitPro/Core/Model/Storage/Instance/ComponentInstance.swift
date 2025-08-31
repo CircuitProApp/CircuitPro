@@ -12,7 +12,7 @@ import SwiftUI
 final class ComponentInstance: Identifiable, Codable {
 
     var id: UUID
-    var componentUUID: UUID
+    var definitionUUID: UUID
     
     var definition: ComponentDefinition? = nil
     
@@ -26,7 +26,7 @@ final class ComponentInstance: Identifiable, Codable {
 
     init(
         id: UUID = UUID(),
-        componentUUID: UUID,
+        definitionUUID: UUID,
         definition: ComponentDefinition? = nil,
         propertyOverrides: [Property.Override] = [],
         propertyInstances: [Property.Instance] = [],
@@ -35,7 +35,7 @@ final class ComponentInstance: Identifiable, Codable {
         reference: Int = 0
     ) {
         self.id = id
-        self.componentUUID = componentUUID
+        self.definitionUUID = definitionUUID
         self.definition = definition
         self.propertyOverrides = propertyOverrides
         self.propertyInstances = propertyInstances
@@ -46,7 +46,7 @@ final class ComponentInstance: Identifiable, Codable {
 
     enum CodingKeys: String, CodingKey {
         case _id = "id"
-        case _componentUUID = "componentUUID"
+        case _definitionUUID = "definitionUUID"
         case _propertyOverrides = "propertyOverrides"
         case _propertyInstances = "propertyInstances"
         case _symbolInstance = "symbolInstance"

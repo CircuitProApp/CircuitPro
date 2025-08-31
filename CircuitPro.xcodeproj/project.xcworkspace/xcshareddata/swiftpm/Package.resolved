@@ -1,5 +1,5 @@
 {
-  "originHash" : "da5f1ee94d6bee8c843f0df047a8f7d3d634f9f315ad0359067b9d612a1a6415",
+  "originHash" : "4d7ef784113fc47cf8294a3072c80c9a97b1b4eccbbd2e3fe5a147e58d8108e6",
   "pins" : [
     {
       "identity" : "aboutwindow",
@@ -25,16 +25,7 @@
       "location" : "https://github.com/CircuitProApp/Resolvable",
       "state" : {
         "branch" : "main",
-        "revision" : "5a43abbf1996b2b4506cbd64d6c96c5c895491e8"
-      }
-    },
-    {
-      "identity" : "storable",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/CircuitProApp/Storable",
-      "state" : {
-        "branch" : "main",
-        "revision" : "7771d0430b046e0fdfbf886278acd1765bb0b7ba"
+        "revision" : "4f8580b7955d7d6555330af9d1b75af578821157"
       }
     },
     {

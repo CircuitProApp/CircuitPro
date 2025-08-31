@@ -10,7 +10,7 @@ import SwiftUI
 
 struct SymbolNavigatorView: View {
     
-    @Environment(\.projectManager)
+    @BindableEnvironment(\.projectManager)
     private var projectManager
     
     // The @PackManager is no longer needed.
@@ -44,7 +44,6 @@ struct SymbolNavigatorView: View {
     }
     
     var body: some View {
-        @Bindable var bindableProjectManager = projectManager
         
         // --- CORRECTED ---
         // We now use the hydrated componentInstances directly from the project manager.
@@ -62,7 +61,7 @@ struct SymbolNavigatorView: View {
                 List(
                     componentInstances, // Use the direct list of instances
                     id: \.id,
-                    selection: $bindableProjectManager.selectedNodeIDs
+                    selection: $projectManager.selectedNodeIDs
                 ) { instance in // The loop variable is now a ComponentInstance
                     HStack {
                         // Safely access the name from the hydrated definition.
@@ -70,19 +69,19 @@ struct SymbolNavigatorView: View {
                             .foregroundStyle(.primary)
                         Spacer()
                         // Use the helper property for the reference designator string.
-                        Text(instance.referenceDesignatorString)
+                        Text((instance.definition?.referenceDesignatorPrefix ?? "?") + instance.referenceDesignatorIndex.description)
                             .foregroundStyle(.secondary)
                             .monospaced()
                     }
                     .frame(height: 14)
                     .listRowSeparator(.hidden)
                     .contextMenu {
-                        let multi = bindableProjectManager.selectedNodeIDs.contains(instance.id) && bindableProjectManager.selectedNodeIDs.count > 1
+                        let multi = projectManager.selectedNodeIDs.contains(instance.id) && projectManager.selectedNodeIDs.count > 1
                         Button(role: .destructive) {
-                            performDelete(on: instance, selected: &bindableProjectManager.selectedNodeIDs)
+                            performDelete(on: instance, selected: &projectManager.selectedNodeIDs)
                         } label: {
                             Text(multi
-                                 ? "Delete Selected (\(bindableProjectManager.selectedNodeIDs.count))"
+                                 ? "Delete Selected (\(projectManager.selectedNodeIDs.count))"
                                  : "Delete")
                         }
                     }
@@ -92,17 +91,5 @@ struct SymbolNavigatorView: View {
                 .environment(\.defaultMinListRowHeight, 14)
             }
         }
-    }
-}
-
-
-// MARK: - ComponentInstance Helper
-
-// You should already have this helper from a previous step.
-// It's good practice to keep it near the ComponentInstance definition.
-extension ComponentInstance {
-    var referenceDesignatorString: String {
-        guard let prefix = definition?.referenceDesignatorPrefix else { return "REF?" }
-        return "\(prefix)\(referenceDesignatorIndex)"
     }
 }

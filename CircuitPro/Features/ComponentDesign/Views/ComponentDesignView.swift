@@ -173,19 +173,17 @@ struct ComponentDesignView: View {
         
         let newComponent = ComponentDefinition(
             name: componentDesignManager.componentName,
-            referenceDesignatorPrefix: componentDesignManager.referenceDesignatorPrefix,
-            symbol: nil,
-            footprints: [],
             category: category,
-            propertyDefinitions: componentDesignManager.componentProperties
+            referenceDesignatorPrefix: componentDesignManager.referenceDesignatorPrefix,
+            propertyDefinitions: componentDesignManager.componentProperties,
+            symbol: nil
         )
         
         let newSymbol = SymbolDefinition(
-            name: componentDesignManager.componentName,
-            component: newComponent,
             primitives: primitives,
             pins: pins,
-            textDefinitions: textDefinitions
+            textDefinitions: textDefinitions,
+            component: newComponent
         )
         
         newComponent.symbol = newSymbol

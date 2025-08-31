@@ -40,42 +40,42 @@ final class ProjectManager {
     func toggleDynamicTextVisibility(for component: ComponentInstance, source: TextSource) {
         guard let definition = component.definition,
               let symbol = definition.symbol else { return }
-        
-        // Case 1: The text is defined in the symbol definition. We toggle its visibility via an override.
-        if let textDefinition = symbol.textDefinitions.first(where: { $0.contentSource == source }) {
-            if let overrideIndex = component.symbolInstance.textOverrides.firstIndex(where: { $0.definitionID == textDefinition.id }) {
-                let currentVisibility = component.symbolInstance.textOverrides[overrideIndex].isVisible ?? true
-                component.symbolInstance.textOverrides[overrideIndex].isVisible = !currentVisibility
-            } else {
-                let newOverride = CircuitText.Override(definitionID: textDefinition.id, isVisible: false)
-                component.symbolInstance.textOverrides.append(newOverride)
-            }
-            
-            // Case 2: The text exists as a user-added instance. We toggle its visibility.
-        } else if let instanceIndex = component.symbolInstance.textInstances.firstIndex(where: { $0.contentSource == source }) {
-            let currentVisibility = component.symbolInstance.textInstances[instanceIndex].isVisible
-            component.symbolInstance.textInstances[instanceIndex].isVisible = !currentVisibility
-            
-            // Case 3: The text is not displayed at all. We create a new instance to show it.
-        } else {
-            let existingTextPositions = component.symbolInstance.textInstances.map(\.relativePosition)
-            let lowestY = existingTextPositions.map(\.y).min() ?? -20
-            let newPosition = CGPoint(x: 0, y: lowestY - 10)
-            
-            let newTextInstance = CircuitText.Instance(
-                id: UUID(),
-                contentSource: source,
-                relativePosition: newPosition,
-                anchorPosition: newPosition,
-                font: .init(font: .systemFont(ofSize: 12)),
-                color: .init(color: .black),
-                anchor: .leading,
-                alignment: .left,
-                cardinalRotation: .east,
-                isVisible: true
-            )
-            component.symbolInstance.textInstances.append(newTextInstance)
-        }
+//        
+//        // Case 1: The text is defined in the symbol definition. We toggle its visibility via an override.
+//        if let textDefinition = symbol.textDefinitions.first(where: { $0.contentSource == source }) {
+//            if let overrideIndex = component.symbolInstance.textOverrides.firstIndex(where: { $0.definitionID == textDefinition.id }) {
+//                let currentVisibility = component.symbolInstance.textOverrides[overrideIndex].isVisible ?? true
+//                component.symbolInstance.textOverrides[overrideIndex].isVisible = !currentVisibility
+//            } else {
+//                let newOverride = CircuitText.Override(definitionID: textDefinition.id, isVisible: false)
+//                component.symbolInstance.textOverrides.append(newOverride)
+//            }
+//            
+//            // Case 2: The text exists as a user-added instance. We toggle its visibility.
+//        } else if let instanceIndex = component.symbolInstance.textInstances.firstIndex(where: { $0.contentSource == source }) {
+//            let currentVisibility = component.symbolInstance.textInstances[instanceIndex].isVisible
+//            component.symbolInstance.textInstances[instanceIndex].isVisible = !currentVisibility
+//            
+//            // Case 3: The text is not displayed at all. We create a new instance to show it.
+//        } else {
+//            let existingTextPositions = component.symbolInstance.textInstances.map(\.relativePosition)
+//            let lowestY = existingTextPositions.map(\.y).min() ?? -20
+//            let newPosition = CGPoint(x: 0, y: lowestY - 10)
+//            
+//            let newTextInstance = CircuitText.Instance(
+//                id: UUID(),
+//                contentSource: source,
+//                relativePosition: newPosition,
+//                anchorPosition: newPosition,
+//                font: .init(font: .systemFont(ofSize: 12)),
+//                color: .init(color: .black),
+//                anchor: .leading,
+//                alignment: .left,
+//                cardinalRotation: .east,
+//                isVisible: true
+//            )
+//            component.symbolInstance.textInstances.append(newTextInstance)
+//        }
         
         rebuildCanvasNodes()
     }
@@ -107,7 +107,7 @@ final class ProjectManager {
     }
     
     func updateReferenceDesignator(for component: ComponentInstance, newIndex: Int) {
-        component.referenceDesignatorIndex = newIndex
+//        component.referenceDesignatorOverride = newIndex
         rebuildCanvasNodes()
     }
     
@@ -116,10 +116,10 @@ final class ProjectManager {
         newGraph.build(from: design.wires)
         
         // Iterate directly over the hydrated instances.
-        for inst in design.componentInstances {
-            guard let symbolDef = inst.definition?.symbol else { continue }
-            newGraph.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
-        }
+//        for inst in design.componentInstances {
+//            guard let symbolDef = inst.definition?.symbol else { continue }
+//            newGraph.syncPins(for: inst.symbol, of: symbolDef, ownerID: inst.id)
+//        }
         return newGraph
     }
     

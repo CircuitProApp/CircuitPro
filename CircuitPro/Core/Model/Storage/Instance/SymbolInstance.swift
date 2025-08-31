@@ -1,10 +1,3 @@
-//
-//  SymbolInstance.swift
-//  Circuit Pro
-//
-//  Created by Giorgi Tchelidze on 4/14/25.
-//
-
 import Observation
 import SwiftUI
 
@@ -12,17 +5,11 @@ import SwiftUI
 final class SymbolInstance: Identifiable, Codable, Transformable {
 
     var id: UUID
-
-    var symbolUUID: UUID
-    
+    var definitionUUID: UUID
     var definition: SymbolDefinition? = nil
-    
     var position: CGPoint
     var cardinalRotation: CardinalRotation = .east
-    
-    // Stores overrides for text defined in the master symbol.
     var textOverrides: [CircuitText.Override]
-    // Stores new text added only to this specific instance.
     var textInstances: [CircuitText.Instance]
 
     var rotation: CGFloat {
@@ -32,7 +19,7 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
 
     init(
         id: UUID = UUID(),
-        symbolUUID: UUID,
+        definitionUUID: UUID,
         definition: SymbolDefinition? = nil,
         position: CGPoint,
         cardinalRotation: CardinalRotation = .east,
@@ -40,7 +27,7 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
         textInstances: [CircuitText.Instance] = []
     ) {
         self.id = id
-        self.symbolUUID = symbolUUID
+        self.definitionUUID = definitionUUID
         self.definition = definition
         self.position = position
         self.cardinalRotation = cardinalRotation
@@ -48,19 +35,41 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
         self.textInstances = textInstances
     }
 
+    // MARK: - Codable
+
     enum CodingKeys: String, CodingKey {
-        case _id = "id"
-        case _symbolUUID = "symbolUUID"
-        case _position = "position"
-        case _cardinalRotation = "rotation"
-        case _textOverrides = "textOverrides"
-        case _textInstances = "textInstances"
+        case id
+        case definitionUUID
+        case position
+        case cardinalRotation
+        case textOverrides
+        case textInstances
+    }
+
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.definitionUUID = try container.decode(UUID.self, forKey: .definitionUUID)
+        self.position = try container.decode(CGPoint.self, forKey: .position)
+        self.cardinalRotation = try container.decode(CardinalRotation.self, forKey: .cardinalRotation)
+        self.textOverrides = try container.decode([CircuitText.Override].self, forKey: .textOverrides)
+        self.textInstances = try container.decode([CircuitText.Instance].self, forKey: .textInstances)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(definitionUUID, forKey: .definitionUUID)
+        try container.encode(position, forKey: .position)
+        try container.encode(cardinalRotation, forKey: .cardinalRotation)
+        try container.encode(textOverrides, forKey: .textOverrides)
+        try container.encode(textInstances, forKey: .textInstances)
     }
     
     /// Creates a new instance with the same property values.
     func copy() -> SymbolInstance {
         SymbolInstance(id: id,
-                       symbolUUID: symbolUUID,
+                       definitionUUID: definitionUUID,
                        position: position,
                        cardinalRotation: cardinalRotation,
                        textOverrides: textOverrides,
@@ -73,7 +82,7 @@ final class SymbolInstance: Identifiable, Codable, Transformable {
 extension SymbolInstance: Equatable {
     static func == (lhs: SymbolInstance, rhs: SymbolInstance) -> Bool {
         lhs.id == rhs.id &&
-        lhs.symbolUUID == rhs.symbolUUID &&
+        lhs.definitionUUID == rhs.definitionUUID &&
         lhs.position == rhs.position &&
         lhs.cardinalRotation == rhs.cardinalRotation &&
         lhs.textOverrides == rhs.textOverrides &&

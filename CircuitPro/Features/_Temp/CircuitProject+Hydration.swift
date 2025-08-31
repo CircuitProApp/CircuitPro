@@ -18,7 +18,7 @@ extension CircuitProject {
         var allDefinitionIDs: Set<UUID> = []
         for design in self.designs {
             for instance in design.componentInstances {
-                allDefinitionIDs.insert(instance.componentUUID)
+                allDefinitionIDs.insert(instance.definitionUUID)
             }
         }
         
@@ -36,18 +36,17 @@ extension CircuitProject {
         for designIndex in self.designs.indices {
             for instanceIndex in self.designs[designIndex].componentInstances.indices {
                 let instance = self.designs[designIndex].componentInstances[instanceIndex]
-                if let definition = definitionsByID[instance.componentUUID] {
+                if let definition = definitionsByID[instance.definitionUUID] {
                     // Link the ComponentDefinition to the ComponentInstance
                     self.designs[designIndex].componentInstances[instanceIndex].definition = definition
-                    
-                    // --- ADD THIS LINE ---
+
                     // Also link the SymbolDefinition to the SymbolInstance
                     self.designs[designIndex].componentInstances[instanceIndex].symbolInstance.definition = definition.symbol
 
                 } else {
                     // This is an important error case to handle.
                     // It means the document references a component that is not in the user's library.
-                    print("Warning: ComponentDefinition with ID \(instance.componentUUID) not found in library for an instance in design '\(self.designs[designIndex].name)'.")
+                    print("Warning: ComponentDefinition with ID \(instance.definitionUUID) not found in library for an instance in design '\(self.designs[designIndex].name)'.")
                 }
             }
         }

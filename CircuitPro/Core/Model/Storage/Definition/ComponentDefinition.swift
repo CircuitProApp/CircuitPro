@@ -7,8 +7,6 @@
 
 import SwiftData
 import Foundation
-import Storable
-import Resolvable
 
 @Model
 class ComponentDefinition {
@@ -32,11 +30,11 @@ class ComponentDefinition {
     init(
         uuid: UUID = UUID(),
         name: String,
-        referenceDesignatorPrefix: String,
-        symbol: SymbolDefinition? = nil,
-        footprints: [FootprintDefinition] = [],
         category: ComponentCategory,
-        propertyDefinitions: [Property.Definition] = []
+        referenceDesignatorPrefix: String,
+        propertyDefinitions: [Property.Definition] = [],
+        symbol: SymbolDefinition? = nil,
+        footprints: [FootprintDefinition] = []
     ) {
         self.uuid = uuid
         self.name = name
