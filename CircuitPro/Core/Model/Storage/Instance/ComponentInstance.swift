@@ -64,3 +64,18 @@ extension ComponentInstance: Hashable {
         hasher.combine(id)
     }
 }
+
+extension ComponentInstance {
+    /// A helper to resolve the properties of this specific instance.
+    /// This replaces the logic that was previously on `DesignComponent`.
+    var displayedProperties: [Property.Resolved] {
+        // Gracefully handle the case where the definition is missing.
+        guard let definition = self.definition else { return [] }
+        
+        return Property.Resolver.resolve(
+            definitions: definition.propertyDefinitions,
+            overrides: self.propertyOverrides,
+            instances: self.propertyInstances
+        )
+    }
+}
