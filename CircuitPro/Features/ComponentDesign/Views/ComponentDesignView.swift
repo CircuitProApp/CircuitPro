@@ -126,32 +126,44 @@ struct ComponentDesignView: View {
         let canvasSize = symbolCanvasManager.viewport.size
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
         
+        // --- THIS IS THE FULLY UPDATED LOGIC ---
         let textNodes = symbolEditor.canvasNodes.compactMap { $0 as? TextNode }
         
-        let textDefinitions: [CircuitText.Definition] = textNodes.compactMap { textNode in
-            // All text in the symbol editor MUST have a source. If not, it's an
-            // inconsistent state and we should ignore it.
-            guard let contentSource = symbolEditor.textSourceMap[textNode.id] else {
-                assertionFailure("TextNode found on canvas without a content source.")
-                return nil
+        // Map over the nodes to create the persistent `CircuitText.Definition` models.
+        let textDefinitions: [CircuitText.Definition] = textNodes.map { textNode in
+            // Get the resolved model from the node. This is the source of truth for style and content *type*.
+            let model = textNode.resolvedText
+            
+            // Center the position relative to the symbol's origin (0,0).
+            let centeredPosition = CGPoint(
+                x: model.relativePosition.x - anchor.x,
+                y: model.relativePosition.y - anchor.y
+            )
+            
+            // Prepare the final `content` enum for persistence.
+            var finalContent = model.content
+            
+            // **CRITICAL STEP**: For static text, we must update its associated value with the
+            // latest user-edited string from the `displayTextMap`. For all other cases,
+            // the placeholder strings from the map are correctly ignored.
+            if case .static = finalContent {
+                let userEnteredText = symbolEditor.displayTextMap[textNode.id] ?? ""
+                finalContent = .static(text: userEnteredText)
             }
             
-            let relativePosition = CGPoint(x: textNode.position.x - anchor.x, y: textNode.position.y - anchor.y)
-            let displayOptions = symbolEditor.textDisplayOptionsMap[textNode.id, default: .default]
-            
-            // Create the new Definition struct using its updated initializer.
+            // Create the persistent definition struct with the final, cleaned data.
+            // This assumes CircuitText.Definition now has an initializer like this.
             return CircuitText.Definition(
-                id: UUID(), // A new, persistent ID for the data model
-                contentSource: contentSource,
-                displayOptions: displayOptions,
-                relativePosition: relativePosition,
-                anchorPosition: relativePosition, // For a new definition, these start identical
-                font: textNode.textModel.font,
-                color: textNode.textModel.color,
-                anchor: textNode.textModel.anchor,
-                alignment: textNode.textModel.alignment,
-                cardinalRotation: textNode.textModel.cardinalRotation,
-                isVisible: true
+                id: model.id, // Use the same ID from the editor session for consistency.
+                content: finalContent, // The fully prepared content enum.
+                relativePosition: centeredPosition,
+                anchorPosition: centeredPosition, // For a new definition, these start identical.
+                font: model.font,
+                color: model.color,
+                anchor: model.anchor,
+                alignment: model.alignment,
+                cardinalRotation: model.cardinalRotation,
+                isVisible: model.isVisible
             )
         }
         
@@ -182,7 +194,7 @@ struct ComponentDesignView: View {
         let newSymbol = SymbolDefinition(
             primitives: primitives,
             pins: pins,
-            textDefinitions: textDefinitions,
+            textDefinitions: textDefinitions, // Use the newly created definitions.
             component: newComponent
         )
         
@@ -191,7 +203,6 @@ struct ComponentDesignView: View {
         didCreateComponent = true
     }
     
-    // --- resetForNewComponent remains the same ---
     private func resetForNewComponent() {
         componentDesignManager.resetAll()
         currentStage = .details

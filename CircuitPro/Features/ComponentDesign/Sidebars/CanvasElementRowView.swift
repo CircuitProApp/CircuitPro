@@ -20,22 +20,40 @@ struct CanvasElementRowView: View {
     var body: some View {
         
     
-            switch element {
-            case let primitiveNode as PrimitiveNode:
-                Label(primitiveNode.displayName, systemImage: primitiveNode.symbol)
-            case let pinNode as PinNode:
-                Label("Pin \(pinNode.pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
+        switch element {
+        case let primitiveNode as PrimitiveNode:
+            Label(primitiveNode.displayName, systemImage: primitiveNode.symbol)
+        case let pinNode as PinNode:
+            Label("Pin \(pinNode.pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
+        case let padNode as PadNode:
+            Label("Pin \(padNode.pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
+
+        // --- THIS IS THE UPDATED CASE ---
+        case let textNode as TextNode:
+            // We now switch on the `content` enum to determine the appropriate label.
+            switch textNode.resolvedText.content {
+            case .static(let text):
+                // For static text, show its content, but truncate it if it's too long
+                // for an outline view. Provide a placeholder if it's empty.
+                Text(text.isEmpty ? "Static Text" : text)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    
+            case .componentName:
+                Text("Component Name")
                 
+            case .componentReferenceDesignator:
+                Text("Reference Designator")
                 
-            case let padNode as PadNode:
-                Label("Pin \(padNode.pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
-            case let textNode as TextNode:
-                Text(textNode.textModel.text)
-                
-            default:
-                Label("Unknown Element", systemImage: "questionmark.diamond")
-                
+            case .componentProperty:
+                // We could make this more specific by looking up the property name,
+                // but "Component Property" is a safe and clear default for an outline.
+                Text("Component Property")
             }
+            
+        default:
+            Label("Unknown Element", systemImage: "questionmark.diamond")
+        }
         
     }
     

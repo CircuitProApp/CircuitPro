@@ -14,13 +14,14 @@ class TextTool: CanvasTool {
     override var label: String {  "Text" }
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
-        let newTextModel = TextModel(
-            id: UUID(),
-            text: "Text",
-            position: location, anchor: .bottomLeading
-        )
-
-//        let newTextNode = TextNode(textModel: newTextModel)
+    //        let newTextModel = CircuitText.Resolved(
+    //            source: ,
+    //            content: ,
+    //            relativePosition: location,
+    //            anchorPosition: location
+    //        )
+    //
+    //        let newTextNode = TextNode(textModel: newTextModel)
 
         return .noResult
     }

@@ -8,34 +8,20 @@
 import AppKit
 
 /// A scene graph node that represents an instance of a library `Symbol`.
-///
-/// This is a container node that doesn't draw any geometry itself. Instead, it acts as a
-/// parent for `PinNode`, `PrimitiveNode`, and `AnchoredTextNode` children. Its transform
-/// is applied to all its children automatically by the scene graph.
+/// It acts as a parent for `PinNode`, `PrimitiveNode`, and `AnchoredTextNode` children.
 @Observable
 final class SymbolNode: BaseNode {
 
     // MARK: - Properties
-    // MARK: - Properties
 
     var instance: SymbolInstance {
-        didSet {
-            // This is still useful for triggering redraws on property changes.
-            onNeedsRedraw?()
-        }
+        didSet { onNeedsRedraw?() }
     }
-    
-    // --- REMOVED ---
-    // The separate 'symbol' property is now redundant. We will use 'instance.definition'.
-    // let symbol: SymbolDefinition
     
     weak var graph: WireGraph?
 
     override var isSelectable: Bool { true }
     
-    // This remains a good way to pass in the calculated text.
-    let resolvedTexts: [CircuitText.Resolved]
-
     // MARK: - Overridden Scene Graph Properties
 
     override var position: CGPoint {
@@ -56,12 +42,7 @@ final class SymbolNode: BaseNode {
 
     // MARK: - Initialization
 
-    // --- REFACTORED INITIALIZER ---
-    // It no longer accepts a separate 'symbol'. It relies on the definition
-    // already being attached to the instance.
-    init?(id: UUID, instance: SymbolInstance, resolvedTexts: [CircuitText.Resolved], graph: WireGraph? = nil) {
-        // Add a guard to ensure the instance has been properly hydrated.
-        // If not, we can't build the node, so the initializer fails.
+    init?(id: UUID, instance: SymbolInstance, renderableTexts: [RenderableText], graph: WireGraph? = nil) {
         guard let symbolDefinition = instance.definition else {
             print("Error: SymbolNode cannot be initialized without a hydrated SymbolInstance.definition.")
             return nil
@@ -69,31 +50,33 @@ final class SymbolNode: BaseNode {
         
         self.instance = instance
         self.graph = graph
-        self.resolvedTexts = resolvedTexts
         
         super.init(id: id)
 
-        // --- UPDATED LOGIC ---
-        // Create children using the definition from the instance.
-        for primitive in symbolDefinition.primitives {
-            self.addChild(PrimitiveNode(primitive: primitive))
-        }
-
-        for pin in symbolDefinition.pins {
-            self.addChild(PinNode(pin: pin, graph: self.graph))
-        }
+        // Create child nodes from the symbol's definition and the renderable text data.
+        let primitiveNodes = symbolDefinition.primitives.map { PrimitiveNode(primitive: $0) }
+        let pinNodes = symbolDefinition.pins.map { PinNode(pin: $0, graph: graph) }
         
-        // This logic is unchanged but is now more robust.
-        for resolvedText in resolvedTexts {
-            let textNode = AnchoredTextNode(
-                resolvedText: resolvedText,
+        // Loop over the renderable texts to create fully hydrated `AnchoredTextNode`s.
+        let textNodes: [AnchoredTextNode] = renderableTexts.map { renderable in
+            AnchoredTextNode(
+                resolvedText: renderable.model,
+                text: renderable.text, // Pass the pre-generated string.
                 ownerInstance: self.instance
             )
-            self.addChild(textNode)
+        }
+
+        // Assign all children at once.
+        self.children = primitiveNodes + pinNodes + textNodes
+        
+        // Configure parent-child relationships.
+        for child in self.children {
+            child.parent = self
+            child.onNeedsRedraw = { [weak self] in self?.onNeedsRedraw?() }
         }
     }
-    // MARK: - Overridden Methods (These methods are unchanged)
 
+    // MARK: - Overridden Methods (Unchanged)
     override func makeHaloPath() -> CGPath? {
         let compositePath = CGMutablePath()
 
@@ -107,7 +90,7 @@ final class SymbolNode: BaseNode {
 
         return compositePath.isEmpty ? nil : compositePath
     }
-    
+
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
         // First, delegate to the base implementation to hit-test all children.
         // This correctly finds hits on selectable children (like pins or text nodes)
@@ -143,4 +126,6 @@ final class SymbolNode: BaseNode {
         
         return combinedBox
     }
+
 }
+

@@ -12,25 +12,33 @@ struct SymbolNodeAppearanceView: View {
     @Environment(\.projectManager) private var projectManager
     @PackManager private var packManager
     
-    let component: ComponentInstance
-    @Bindable var symbolNode: SymbolNode
+    // Using @Bindable on component is correct as it's an Observable class.
+    @Bindable var component: ComponentInstance
+    // SymbolNode is an @Observable class, but it might not need @Bindable here
+    // unless you are directly binding to its properties, which we are not.
+    let symbolNode: SymbolNode
     
     var body: some View {
         VStack(spacing: 5) {
             InspectorSection("Text Visibility") {
                 PlainList {
-                    textVisibilityListRow(label: "Name", source: .componentName)
-                    textVisibilityListRow(label: "Reference", source: .componentReferenceDesignator)
+                    // This logic remains valid as it passes the correct content type.
+                    textVisibilityListRow(label: "Name", content: .componentName)
+                    textVisibilityListRow(label: "Reference", content: .componentReferenceDesignator)
                     
                     if !component.displayedProperties.isEmpty { Divider() }
                     
                     ForEach(component.displayedProperties) { property in
-                        let source: TextSource = .componentProperty(definitionID: property.id)
-                        let isVisible = isDynamicTextVisible(source)
+                        // Create a temporary content enum to use for searching.
+                        // The actual options will be read from the resolved model.
+                        let content: CircuitTextContent = .componentProperty(definitionID: property.id, options: .default)
+                        let isVisible = isDynamicTextVisible(content)
+                        
                         VStack(alignment: .leading, spacing: 6) {
-                            textVisibilityListRow(label: property.key.label, source: source)
+                            textVisibilityListRow(label: property.key.label, content: content)
                             if isVisible {
-                                displayOptionsRow(for: source)
+                                // Pass the same search template to the options row builder.
+                                displayOptionsRow(for: content)
                             }
                         }
                     }
@@ -45,17 +53,18 @@ struct SymbolNodeAppearanceView: View {
         }
     }
     
-    // MARK: - Row Builders
+    // MARK: - Row Builders (Updated)
     
     @ViewBuilder
-    private func textVisibilityListRow(label: String, source: TextSource) -> some View {
-        let isVisible = isDynamicTextVisible(source)
+    private func textVisibilityListRow(label: String, content: CircuitTextContent) -> some View {
+        // The logic here is unchanged, but it now relies on the corrected helper below.
+        let isVisible = isDynamicTextVisible(content)
         
         HStack {
             Text(label).font(.callout)
             Spacer()
             Button {
-                toggleVisibility(for: source)
+                toggleVisibility(for: content)
             } label: {
                 Image(systemName: "eye")
                     .symbolVariant(isVisible ? .none : .slash)
@@ -68,78 +77,67 @@ struct SymbolNodeAppearanceView: View {
     }
     
     @ViewBuilder
-    private func displayOptionsRow(for source: TextSource) -> some View {
-        // Use `if let` instead of `guard let` inside a @ViewBuilder.
-        // If this fails, the builder automatically produces nothing (an EmptyView).
-        if let resolvedText = component.symbolInstance.resolvedItems.first(where: { $0.contentSource == source }) {
+    private func displayOptionsRow(for content: CircuitTextContent) -> some View {
+        // 1. Find the text by its content type.
+        if let resolvedText = component.symbolInstance.resolvedItems.first(where: { $0.content.isSameType(as: content) }) {
             
-            // This code only runs if the resolvedText was found.
-            
-            let keyBinding = Binding<Bool>(
-                get: { resolvedText.displayOptions.showKey },
-                set: { wantsToShowKey in
-                    var editedText = resolvedText
-                    editedText.displayOptions.showKey = wantsToShowKey
-                    projectManager.updateText(for: component, with: editedText)
+            // 2. Safely extract the definition ID and current options from the enum.
+            if case .componentProperty(let definitionID, let currentOptions) = resolvedText.content {
+                
+                // 3. Create a single, robust binding for the whole TextDisplayOptions struct.
+                let optionsBinding = Binding<TextDisplayOptions>(
+                    get: {
+                        // Use the options from the found model.
+                        currentOptions
+                    },
+                    set: { newOptions in
+                        // Reconstruct the enum with the new options and assign it back to the model.
+                        var editedText = resolvedText
+                        editedText.content = .componentProperty(definitionID: definitionID, options: newOptions)
+                        // Have the manager apply the change.
+                        projectManager.updateText(for: component, with: editedText)
+                    }
+                )
+                
+                HStack(spacing: 8) {
+                    Text("Display Options")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                    Spacer(minLength: 0)
+                    // The toggles now correctly work with the derived binding.
+                    Toggle("Key", isOn: optionsBinding.showKey)
+                    Toggle("Value", isOn: optionsBinding.showValue)
+                    Toggle("Unit", isOn: optionsBinding.showUnit)
                 }
-            )
-            
-            let valueBinding = Binding<Bool>(
-                get: { resolvedText.displayOptions.showValue },
-                set: { wantsToShowValue in
-                    var editedText = resolvedText
-                    editedText.displayOptions.showValue = wantsToShowValue
-                    projectManager.updateText(for: component, with: editedText)
-                }
-            )
-            
-            let unitBinding = Binding<Bool>(
-                get: { resolvedText.displayOptions.showUnit },
-                set: { wantsToShowUnit in
-                    var editedText = resolvedText
-                    editedText.displayOptions.showUnit = wantsToShowUnit
-                    projectManager.updateText(for: component, with: editedText)
-                }
-            )
-            
-            HStack(spacing: 8) {
-                Text("Display Options")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                Spacer(minLength: 0)
-                Toggle("Key", isOn: keyBinding)
-                Toggle("Value", isOn: valueBinding)
-                Toggle("Unit", isOn: unitBinding)
+                .controlSize(.small)
+                .toggleStyle(.button)
             }
-            .controlSize(.small)
-            .toggleStyle(.button)
-            
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Helpers (Updated)
     
-    private func toggleVisibility(for source: TextSource) {
-        if case .componentProperty(let definitionID) = source,
+    private func toggleVisibility(for content: CircuitTextContent) {
+        // This logic correctly delegates to the ProjectManager, which was previously updated.
+        if case .componentProperty(let definitionID, _) = content,
            let property = component.displayedProperties.first(where: { $0.id == definitionID }) {
             projectManager.togglePropertyVisibility(for: component, property: property)
         } else {
-            projectManager.toggleDynamicTextVisibility(for: component, source: source)
+            projectManager.toggleDynamicTextVisibility(for: component, content: content)
         }
     }
     
-    private func isDynamicTextVisible(_ source: TextSource) -> Bool {
-        // The @ResolvableDestination macro on SymbolInstance generates `resolvedCircuitTexts`.
-        // This is the single source of truth for the current state.
-        // The `component` is an @Observable class, so SwiftUI will automatically
-        // track changes to its `symbolInstance` and its properties.
-        if let text = component.symbolInstance.resolvedItems.first(where: { $0.contentSource == source }) {
+    private func isDynamicTextVisible(_ content: CircuitTextContent) -> Bool {
+        // Find the resolved text by comparing its content type, then check its visibility.
+        if let text = component.symbolInstance.resolvedItems.first(where: {
+            $0.content.isSameType(as: content)
+        }) {
             return text.isVisible
         }
         
-        // If a text doesn't exist in the resolved list, it's not visible.
+        // If no text with that content type exists, it's not visible.
         return false
     }
 }

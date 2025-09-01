@@ -19,10 +19,12 @@ struct AnchoredTextInspectorView: View {
         SidebarView(selectedTab: $selectedTab, availableTabs: availableTabs) {
             ScrollView {
                 VStack(spacing: 5) {
-                    InspectorSection("Identity and Type") {
-                        
-                        
-                    }
+//                    InspectorSection("Identity and Type") {
+//                        InspectorRow("Visibility") {
+//                            
+//                        }
+//                        
+//                    }
                     InspectorSection("Transform") {
                         PointControlView(
                             title: "Anchor",
@@ -30,15 +32,15 @@ struct AnchoredTextInspectorView: View {
                         )
                         PointControlView(
                             title: "Position",
-                            point: $anchoredText.textModel.position
+                            point: $anchoredText.resolvedText.relativePosition
                         )
                         
-                        RotationControlView(object: $anchoredText.textModel)
+//                        RotationControlView(object: $anchoredText.textModel)
                         
                     }
                     Divider()
                     InspectorSection("Text Options") {
-                        InspectorAnchorRow(textAnchor: $anchoredText.textModel.anchor)
+                        InspectorAnchorRow(textAnchor: $anchoredText.resolvedText.anchor)
                     }
                 }
                 .padding(5)

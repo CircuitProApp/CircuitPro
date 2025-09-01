@@ -27,3 +27,24 @@ enum TextAnchor: Displayable {
         }
     }
 }
+
+extension TextAnchor {
+    /// Calculates the coordinates of the anchor point within a given rectangle.
+    func point(in rect: CGRect) -> CGPoint {
+        let x: CGFloat
+        let y: CGFloat
+
+        switch self {
+        case .topLeading:     x = rect.minX; y = rect.maxY
+        case .top:            x = rect.midX; y = rect.maxY
+        case .topTrailing:    x = rect.maxX; y = rect.maxY
+        case .leading:        x = rect.minX; y = rect.midY
+        case .center:         x = rect.midX; y = rect.midY
+        case .trailing:       x = rect.maxX; y = rect.midY
+        case .bottomLeading:  x = rect.minX; y = rect.minY
+        case .bottom:         x = rect.midX; y = rect.minY
+        case .bottomTrailing: x = rect.maxX; y = rect.minY
+        }
+        return CGPoint(x: x, y: y)
+    }
+}

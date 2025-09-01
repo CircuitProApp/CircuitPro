@@ -29,9 +29,9 @@ struct SymbolPropertiesView: View {
                         PrimitivePropertiesView(primitive: $primitiveNode.primitive)
 
                     } else if let textNode = node as? TextNode {
-                        @Bindable var textNode = textNode
+                      
                         
-                        TextPropertiesView(textModel: $textNode.textModel, editor: manager)
+                        TextPropertiesView(textNode: textNode)
                         
                     } else {
                         Text("Properties for this element type are not yet implemented.")

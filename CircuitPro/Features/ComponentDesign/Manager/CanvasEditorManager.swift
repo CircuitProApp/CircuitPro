@@ -12,38 +12,36 @@ import Observation
 final class CanvasEditorManager {
     
     // MARK: - Canvas State
+    
     var canvasNodes: [BaseNode] = [] {
-        didSet {
-            updateElementIndexMap()
-        }
+        didSet { updateElementIndexMap() }
     }
     
     var selectedElementIDs: Set<UUID> = []
     
     var singleSelectedNode: BaseNode? {
-        guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else {
-            return nil
-        }
-        guard let index = elementIndexMap[id] else {
+        guard selectedElementIDs.count == 1,
+              let id = selectedElementIDs.first,
+              let index = elementIndexMap[id] else {
             return nil
         }
         return canvasNodes[index]
     }
     
     var selectedTool: CanvasTool = CursorTool()
-    var elementIndexMap: [UUID: Int] = [:]
+    private var elementIndexMap: [UUID: Int] = [:]
     
-    // MARK: - Layer State (Primarily for Footprint)
+    /// NEW: Since placeholder text is now view-state, not model-state, this map
+    /// holds the currently displayed string for each text node.
+    var displayTextMap: [UUID: String] = [:]
+    
+    // MARK: - Layer State
+    
     var layers: [CanvasLayer] = []
-    
-    /// The ID of the currently active layer for drawing operations.
     var activeLayerId: UUID?
     
-    // MARK: - Text State
-    private(set) var textSourceMap: [UUID: TextSource] = [:]
-    private(set) var textDisplayOptionsMap: [UUID: TextDisplayOptions] = [:]
-    
     // MARK: - Computed Properties
+    
     var pins: [Pin] {
         canvasNodes.compactMap { ($0 as? PinNode)?.pin }
     }
@@ -52,21 +50,21 @@ final class CanvasEditorManager {
         canvasNodes.compactMap { ($0 as? PadNode)?.pad }
     }
     
-    var placedTextSources: Set<TextSource> {
-        return Set(textSourceMap.values)
+    /// UPDATED: This now inspects the `resolvedText.content` property.
+    var placedTextContents: Set<CircuitTextContent> {
+        let contents = canvasNodes.compactMap { ($0 as? TextNode)?.resolvedText.content }
+        return Set(contents)
     }
     
     // MARK: - State Management
+    
     private func updateElementIndexMap() {
         elementIndexMap = Dictionary(
             uniqueKeysWithValues: canvasNodes.enumerated().map { ($1.id, $0) }
         )
-        
-        // Prune any text source mappings that no longer have a corresponding element.
-        // This now correctly filters for TextNode objects and extracts their IDs.
-        let currentTextNodeIDs = Set(canvasNodes.compactMap { ($0 as? TextNode)?.id })
-        textSourceMap = textSourceMap.filter { currentTextNodeIDs.contains($0.key) }
-        textDisplayOptionsMap = textDisplayOptionsMap.filter { currentTextNodeIDs.contains($0.key) }
+        // Also prune the display text map.
+        let currentNodeIDs = Set(canvasNodes.map(\.id))
+        displayTextMap = displayTextMap.filter { currentNodeIDs.contains($0.key) }
     }
     
     func setupForFootprintEditing() {
@@ -81,7 +79,6 @@ final class CanvasEditorManager {
             )
         }
         self.layers.append(self.unlayeredSection)
-        // Set the first layer as active by default.
         self.activeLayerId = self.layers.first?.id
     }
     
@@ -98,134 +95,166 @@ final class CanvasEditorManager {
         selectedElementIDs = []
         selectedTool = CursorTool()
         elementIndexMap = [:]
+        displayTextMap = [:] // Reset the new map
         layers = []
         activeLayerId = nil
-        textSourceMap = [:]
-        textDisplayOptionsMap = [:]
     }
 }
 
 // MARK: - Text Management
 extension CanvasEditorManager {
     
-    func addTextToSymbol(source: TextSource, displayName: String, componentData: (name: String, prefix: String, properties: [Property.Definition])) {
-        guard !placedTextSources.contains(source) else { return }
-        
-        let defaultPaper = PaperSize.component
-        let canvasSize = defaultPaper.canvasSize()
-        let centerPoint = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+    /// REWRITTEN: Creates text based on the new `CircuitTextContent` model.
+    func addTextToSymbol(content: CircuitTextContent, componentData: (name: String, prefix: String, properties: [Property.Definition])) {
+        // Prevent adding duplicate functional texts like 'Component Name'.
+        if !content.isStatic {
+            guard !placedTextContents.contains(where: { $0.isSameType(as: content) }) else { return }
+        }
         
         let newElementID = UUID()
+        let centerPoint = CGPoint(x: PaperSize.component.canvasSize().width / 2, y: PaperSize.component.canvasSize().height / 2)
         
-        textSourceMap[newElementID] = source
-        if case .componentProperty = source {
-            textDisplayOptionsMap[newElementID] = .default
-        }
-        
-        let resolvedText = resolveText(for: newElementID, source: source, componentData: componentData)
-        
-        let textModel = TextModel(
+        // This assumes a new Resolvable model where `id` is the identity and `content` is an overridable property.
+        let tempDefinition = CircuitText.Definition(
             id: newElementID,
-            text: resolvedText.isEmpty ? displayName : resolvedText,
-            position: centerPoint
+            content: content,
+            relativePosition: centerPoint,
+            anchorPosition: centerPoint,
+            font: .init(font: .systemFont(ofSize: 12)),
+            color: .init(color: .init(nsColor: .black)),
+            anchor: .bottomLeading,
+            alignment: .center,
+            cardinalRotation: .east,
+            isVisible: true
         )
         
-        let newNode = TextNode(textModel: textModel)
+        let resolvedText = CircuitText.Resolver.resolve(definition: tempDefinition, override: nil)
+        
+        // Populate the placeholder text and store it in our display map.
+        let placeholder = self.resolveText(for: resolvedText.content, componentData: componentData)
+        self.displayTextMap[newElementID] = placeholder
+        
+        // --- THIS IS THE FIX ---
+        // Pass the generated `placeholder` string to the TextNode initializer.
+        let newNode = TextNode(id: newElementID, resolvedText: resolvedText, text: placeholder)
+        
         canvasNodes.append(newNode)
     }
-    
+
+    /// REWRITTEN: Updates placeholder text in the `displayTextMap`.
     func updateDynamicTextElements(componentData: (name: String, prefix: String, properties: [Property.Definition])) {
-        for (elementID, source) in textSourceMap {
-            guard let index = elementIndexMap[elementID],
-                  let textNode = canvasNodes[index] as? TextNode else {
-                continue
-            }
+        for node in canvasNodes {
+            guard let textNode = node as? TextNode else { continue }
             
-            let newText = resolveText(for: elementID, source: source, componentData: componentData)
+            // Re-resolve the placeholder string.
+            let newText = resolveText(for: textNode.resolvedText.content, componentData: componentData)
             
-            if textNode.textModel.text != newText {
-                textNode.textModel.text = newText
+            // Update the display map. The canvas view must observe this change.
+            if displayTextMap[textNode.id] != newText {
+                displayTextMap[textNode.id] = newText
             }
         }
     }
     
+    /// UPDATED: Switches on the new `content` enum.
     func synchronizeSymbolTextWithProperties(properties: [Property.Definition]) {
         let validPropertyIDs = Set(properties.map { $0.id })
         
-        let textElementsToRemove = textSourceMap.filter { (_, source) in
-            if case .componentProperty(let definitionID) = source {
-                return !validPropertyIDs.contains(definitionID)
+        let idsToRemove = canvasNodes.compactMap { node -> UUID? in
+            guard let textNode = node as? TextNode,
+                  case .componentProperty(let definitionID, _) = textNode.resolvedText.content else {
+                return nil
             }
-            return false
+            return validPropertyIDs.contains(definitionID) ? nil : textNode.id
         }
         
-        guard !textElementsToRemove.isEmpty else { return }
-        
-        let idsToRemove = Set(textElementsToRemove.keys)
+        guard !idsToRemove.isEmpty else { return }
         canvasNodes.removeAll { idsToRemove.contains($0.id) }
+        selectedElementIDs.subtract(idsToRemove)
+        // displayTextMap will be pruned automatically by the canvasNodes.didSet observer.
     }
     
-    private func resolveText(for elementID: UUID, source: TextSource, componentData: (name: String, prefix: String, properties: [Property.Definition])) -> String {
-        switch source {
+    /// REWRITTEN: Takes a `CircuitTextContent` and resolves the placeholder string.
+    private func resolveText(for content: CircuitTextContent, componentData: (name: String, prefix: String, properties: [Property.Definition])) -> String {
+        switch content {
+        case .static(let text):
+            return text
+            
         case .componentName:
-            return componentData.name
+            return componentData.name.isEmpty ? "Name" : componentData.name
             
         case .componentReferenceDesignator:
-            // In the context of the component editor, we only have the prefix.
-            // The full "R1" is resolved later when an instance is created.
-            return componentData.prefix + "?"
+            return componentData.prefix.isEmpty ? "REF?" : componentData.prefix + "?"
             
-        case .componentProperty(let definitionID):
-            // This logic is unchanged and correct.
+        case .componentProperty(let definitionID, let options):
             guard let prop = componentData.properties.first(where: { $0.id == definitionID }) else {
                 return "Invalid Property"
             }
             
-            let options = textDisplayOptionsMap[elementID, default: .default]
             var parts: [String] = []
-            
-            if options.showKey {
-                parts.append("\(prop.key.label):")
-            }
-            if options.showValue {
-                let valueDescription = prop.value.description
-                parts.append(valueDescription.isEmpty ? "?" : valueDescription)
-            }
-            if options.showUnit, !prop.unit.symbol.isEmpty {
-                parts.append(prop.unit.symbol)
-            }
+            if options.showKey { parts.append("\(prop.key.label):") }
+            if options.showValue { parts.append(prop.value.description.isEmpty ? "?" : prop.value.description) }
+            if options.showUnit, !prop.unit.symbol.isEmpty { parts.append(prop.unit.symbol) }
             return parts.joined(separator: " ")
         }
     }
     
-    func bindingForDisplayOptions(with id: UUID, componentData: (name: String, prefix: String, properties: [Property.Definition])) -> Binding<TextDisplayOptions>? {
-        guard let source = textSourceMap[id], case .componentProperty = source else {
+    /// REWRITTEN: Creates a custom binding to an enum's associated value.
+    func bindingForDisplayOptions(with id: UUID) -> Binding<TextDisplayOptions>? {
+        guard let index = elementIndexMap[id],
+              let textNode = canvasNodes[index] as? TextNode,
+              case .componentProperty(let definitionID, _) = textNode.resolvedText.content else {
             return nil
         }
         
         return Binding<TextDisplayOptions>(
             get: {
-                return self.textDisplayOptionsMap[id, default: .default]
+                // Safely extract the options from the current content enum.
+                if case .componentProperty(_, let options) = textNode.resolvedText.content {
+                    return options
+                }
+                return .default // Fallback
             },
             set: { newOptions in
-                self.textDisplayOptionsMap[id] = newOptions
-                self.updateDynamicTextElements(componentData: componentData)
+                // Reconstruct the enum with the new options and assign it back to the model.
+                // This triggers the `didSet` in the TextNode, persisting the change.
+                textNode.resolvedText.content = .componentProperty(definitionID: definitionID, options: newOptions)
             }
         )
     }
     
-    func removeTextFromSymbol(source: TextSource) {
-        let idsToRemove = textSourceMap.filter { $0.value == source }.map { $0.key }
-        guard !idsToRemove.isEmpty else { return }
-
-        canvasNodes.removeAll { node in
-            idsToRemove.contains(node.id)
+    /// UPDATED: Switches on the new `content` enum.
+    func removeTextFromSymbol(content: CircuitTextContent) {
+        let idsToRemove = canvasNodes.compactMap { node -> UUID? in
+            guard let textNode = node as? TextNode,
+                  textNode.resolvedText.content.isSameType(as: content) else {
+                return nil
+            }
+            return textNode.id
         }
+        
+        guard !idsToRemove.isEmpty else { return }
+        canvasNodes.removeAll { idsToRemove.contains($0.id) }
+        selectedElementIDs.subtract(idsToRemove)
+    }
+}
 
-        for id in idsToRemove {
-            textSourceMap.removeValue(forKey: id)
-            textDisplayOptionsMap.removeValue(forKey: id)
-            selectedElementIDs.remove(id)
+
+// Add this helper to your CircuitTextContent enum to simplify checking.
+extension CircuitTextContent {
+    var isStatic: Bool {
+        if case .static = self { return true }
+        return false
+    }
+
+    /// Compares if two enum cases are of the same type, ignoring associated values.
+    func isSameType(as other: CircuitTextContent) -> Bool {
+        switch (self, other) {
+        case (.static, .static): return true // Note: You might want to compare text for static
+        case (.componentName, .componentName): return true
+        case (.componentReferenceDesignator, .componentReferenceDesignator): return true
+        case (.componentProperty(let id1, _), .componentProperty(let id2, _)): return id1 == id2
+        default: return false
         }
     }
 }

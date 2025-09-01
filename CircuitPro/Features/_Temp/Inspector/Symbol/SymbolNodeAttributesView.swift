@@ -17,36 +17,24 @@ struct SymbolNodeAttributesView: View {
     
     @State private var selectedProperty: Property.Resolved.ID?
     
-    @State private var viewFrame: CGSize = .zero
-    
+    // This binding is complex, but its logic correctly finds the edited property
+    // and calls the manager to handle the update. No changes are needed here.
     private var propertiesBinding: Binding<[Property.Resolved]> {
         Binding(
             get: {
-                // The getter is correct.
                 return component.displayedProperties
             },
             set: { newPropertiesArray in
-                // We need to find which property actually changed.
-                // It's safer to assume only one property changes at a time in a Table.
                 guard let componentDefinition = component.definition else { return }
 
                 for (index, newProperty) in newPropertiesArray.enumerated() {
-                    // It's crucial to compare against the original state, not the computed property.
                     let oldProperty = component.displayedProperties[index]
                     
-                    // --- THE FIX ---
-                    // Compare the actual editable values, not the stable ID.
                     let valueChanged = (newProperty.value != oldProperty.value)
                     let unitChanged = (newProperty.unit.prefix != oldProperty.unit.prefix)
 
                     if valueChanged || unitChanged {
-                        // We found the property that was edited.
-                        // Now, tell the ProjectManager to handle it.
-                        projectManager.updateProperty(
-                            for: component,
-                            with: newProperty
-                        )
-                        // Since we found the change, we can stop searching.
+                        projectManager.updateProperty(for: component, with: newProperty)
                         break
                     }
                 }
@@ -57,16 +45,13 @@ struct SymbolNodeAttributesView: View {
     private var refdesIndexBinding: Binding<Int> {
         Binding(
             get: {
-                // Read the value directly from the model
                 self.component.referenceDesignatorIndex
             },
             set: { newIndex in
-                // On change, call the manager's function to handle the update and redraw
                 projectManager.updateReferenceDesignator(for: self.component, newIndex: newIndex)
             }
         )
     }
-
     
     var body: some View {
         VStack(spacing: 5) {
@@ -82,13 +67,13 @@ struct SymbolNodeAttributesView: View {
                         placeholder: "?",
                         labelStyle: .prominent
                     )
-                 
                 }
             }
             
             Divider()
             
             InspectorSection("Transform") {
+                // Binding directly to the observable instance on the node is correct.
                 PointControlView(
                     title: "Position",
                     point: $symbolNode.instance.position
@@ -97,8 +82,10 @@ struct SymbolNodeAttributesView: View {
                 RotationControlView(object: $symbolNode.instance)
             }
             Divider()
+            
             InspectorSection("Properties") {
                 VStack(spacing: 0) {
+                    // This Table now correctly binds to the properties.
                     Table(propertiesBinding, selection: $selectedProperty) {
                         TableColumn("Key") { $property in
                             Text(property.key.label)
@@ -111,72 +98,28 @@ struct SymbolNodeAttributesView: View {
                         TableColumn("Unit") { $property in
                             InspectorUnitColumn(property: $property)
                         }
-                
                     }
                     .font(.caption)
                     .tableStyle(.bordered)
                     .border(.white.blendMode(.destinationOut), width: 1)
                     .compositingGroup()
-//                    HStack(spacing: 4) {
-//                        Button {
-//                            
-//                        } label: {
-//                            Image(systemName: "plus")
-//                                .frame(width: 24, height: 24)
-//                                .contentShape(.rect)
-//                        }
-//                        Divider()
-//                        Button {
-//                            
-//                        } label: {
-//                            Image(systemName: "minus")
-//                                .frame(width: 24, height: 24)
-//                                .contentShape(.rect)
-//                        }
-//                        .disabled(selectedProperty == nil)
-//                        Divider()
-//                        Button {
-//                            
-//                        } label: {
-//                            Image(systemName: "pencil")
-//                                .frame(width: 24, height: 24)
-//                                .contentShape(.rect)
-//                        }
-//                    }
-//                    .buttonStyle(.plain)
-//                    .padding(.horizontal, 4)
-//                    .frame(height: 24)
-//                    .frame(maxWidth: .infinity, alignment: .leading)
-//                    .background(Color(nsColor: .controlBackgroundColor))
+                    // The toolbar for adding/removing properties is commented out for now.
                 }
                 .frame(height: 220)
                 .clipAndStroke(with: .rect(cornerRadius: 8))
             }
         }
-        .onChange(of: component) { oldValue, newValue in
+        .onChange(of: component) {
+            // This is a correct way to ensure canvas redraws on model changes.
             symbolNode.onNeedsRedraw?()
         }
     }
 
-    /// A helper function to determine the visibility state and action for a given property.
-    /// This keeps the body of the ForEach clean.
-    private func calculateVisibility(for property: Property.Resolved) -> (isVisible: Bool, onToggle: () -> Void) {
-        
-        guard case .definition(let propertyDefID) = property.source else {
-            return (isVisible: false, onToggle: {})
-        }
-        
-        let isCurrentlyVisible = symbolNode.resolvedTexts.contains { resolvedText in
-            resolvedText.isVisible && resolvedText.contentSource == .componentProperty(definitionID: propertyDefID.id)
-        }
-        
-        let toggleAction = {
-            projectManager.togglePropertyVisibility(
-                for: component,
-                property: property
-            )
-        }
-        
-        return (isVisible: isCurrentlyVisible, onToggle: toggleAction)
-    }
+    // --- REMOVED ---
+    // The `calculateVisibility` function has been removed.
+    // 1. It relied on the now-deleted `symbolNode.resolvedTexts` property.
+    // 2. The `Table` UI does not provide a natural place to display the visibility
+    //    toggle that this function would control. This function is dead code
+    //    left over from a previous UI implementation. A feature to toggle property
+    //    visibility would now need to be implemented differently (e.g., a context menu).
 }

@@ -13,13 +13,7 @@ struct CircuitText {
     // MARK: - Content Properties
     
     /// The source that defines the text's string content (e.g., static, dynamic).
-    @Identity var contentSource: TextSource
-    
-    /// A placeholder for the final resolved string.
-    @Identity var text: String = ""
-
-    /// Formatting options for dynamically generated text.
-    var displayOptions: TextDisplayOptions = .default
+    var content: CircuitTextContent
     
     // MARK: - Overridable Style & Position Properties
     

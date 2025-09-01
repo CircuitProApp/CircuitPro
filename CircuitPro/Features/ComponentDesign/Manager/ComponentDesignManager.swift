@@ -49,8 +49,8 @@ final class ComponentDesignManager {
 
     /// A computed property providing a list of available semantic text sources.
     /// This now generates key-based sources for maximum flexibility.
-    var availableTextSources: [(displayName: String, source: TextSource)] {
-        var sources: [(String, TextSource)] = []
+    var availableTextSources: [(displayName: String, source: CircuitTextContent)] {
+        var sources: [(String, CircuitTextContent)] = []
         
         if !componentName.isEmpty {
             sources.append(("Name", .componentName))
@@ -61,7 +61,7 @@ final class ComponentDesignManager {
         
         // This part remains correct.
         for propDef in componentProperties {
-            sources.append((propDef.key.label, .componentProperty(definitionID: propDef.id)))
+            sources.append((propDef.key.label, .componentProperty(definitionID: propDef.id, options: .default)))
         }
         
         return sources
