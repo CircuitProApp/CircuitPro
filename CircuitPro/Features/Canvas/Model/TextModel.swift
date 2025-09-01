@@ -10,7 +10,7 @@ import AppKit
 import SwiftUI
 
 /// The underlying data model for a text element.
-struct TextModel: Identifiable {
+struct TextModel: Identifiable, Equatable {
     let id: UUID
     var text: String
     var position: CGPoint

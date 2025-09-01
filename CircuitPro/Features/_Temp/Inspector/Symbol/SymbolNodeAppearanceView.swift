@@ -121,27 +121,15 @@ struct SymbolNodeAppearanceView: View {
     }
     
     private func isDynamicTextVisible(_ source: TextSource) -> Bool {
-        // Force the view to observe changes coming from ProjectManager so the row re-renders.
-        // canvasNodes changes on every rebuild after toggling visibility.
-        _ = projectManager.canvasNodes.count
-        
-        // Prefer definition-based visibility (with overrides) if the text is defined on the symbol.
-        if let symbol = component.definition?.symbol,
-           let def = symbol.textDefinitions.first(where: { $0.contentSource == source }) {
-            if let override = component.symbolInstance.textOverrides.first(where: { $0.definitionID == def.id }),
-               let isVisible = override.isVisible {
-                return isVisible
-            }
-            // If no override exists, assume definition defaults to visible.
-            return true
+        // The @ResolvableDestination macro on SymbolInstance generates `resolvedCircuitTexts`.
+        // This is the single source of truth for the current state.
+        // The `component` is an @Observable class, so SwiftUI will automatically
+        // track changes to its `symbolInstance` and its properties.
+        if let text = component.symbolInstance.resolvedItems.first(where: { $0.contentSource == source }) {
+            return text.isVisible
         }
         
-        // Otherwise, check for an instance-based text and use its visibility.
-        if let inst = component.symbolInstance.textInstances.first(where: { $0.contentSource == source }) {
-            return inst.isVisible
-        }
-        
-        // If there's no definition or instance, it's effectively not visible.
+        // If a text doesn't exist in the resolved list, it's not visible.
         return false
     }
 }

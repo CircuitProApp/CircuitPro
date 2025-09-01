@@ -15,11 +15,22 @@ class TextNode: BaseNode {
     // MARK: - Properties
 
     var textModel: TextModel {
-        didSet {
-            parent?.onNeedsRedraw?()
-            onNeedsRedraw?()
-        }
-    }
+         didSet {
+             // Check if a meaningful change occurred to avoid commit loops.
+             guard textModel != oldValue else { return }
+
+             // Redraw the canvas to reflect the visual change immediately.
+             parent?.onNeedsRedraw?()
+             onNeedsRedraw?()
+             
+             // --- THE FIX ---
+             // If this node is an AnchoredTextNode, it knows how to save its state.
+             // We tell it to persist the change back to the main data model.
+             if let anchoredself = self as? AnchoredTextNode {
+                 anchoredself.commitChanges()
+             }
+         }
+     }
 
     /// Defines the distinct, hittable parts of a TextNode.
     enum Part: Hashable {
@@ -90,6 +101,7 @@ class TextNode: BaseNode {
      // MARK: - Drawable Conformance
 
      override func makeDrawingPrimitives() -> [DrawingPrimitive] {
+         guard isVisible else { return [] }
          let finalPath = makeFinalPath()
          guard !finalPath.isEmpty else { return [] }
        
@@ -100,6 +112,7 @@ class TextNode: BaseNode {
      }
 
      override func makeHaloPath() -> CGPath? {
+         guard isVisible else { return nil }
          let finalPath = makeFinalPath()
          guard !finalPath.isEmpty else { return nil }
          

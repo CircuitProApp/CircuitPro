@@ -65,6 +65,7 @@ final class AnchoredTextNode: TextNode {
         )
         
         super.init(textModel: textModelForRenderer)
+        self.isVisible = resolvedText.isVisible
     }
 
     // MARK: - Overridden Drawable Conformance
@@ -93,14 +94,11 @@ final class AnchoredTextNode: TextNode {
 
 // MARK: - Committing Changes
 extension AnchoredTextNode {
-    /// Persists the node's current visual state back into the main data model (`SymbolInstance`).
-    /// This is the critical step that saves changes like repositioning.
     func commitChanges() {
         let resolvedModel = self.toResolvedModel()
         self.ownerInstance.apply(resolvedModel)
     }
 
-    /// Converts the node's current state back into an immutable `CircuitText.Resolved` data model.
     func toResolvedModel() -> CircuitText.Resolved {
         return CircuitText.Resolved(
             source: self.source,
@@ -114,11 +112,11 @@ extension AnchoredTextNode {
             anchor: textModel.anchor,
             alignment: textModel.alignment,
             cardinalRotation: textModel.cardinalRotation,
-            isVisible: true
+            // This now correctly reads the `isVisible` property from the BaseNode superclass.
+            isVisible: self.isVisible
         )
     }
 }
-
 
 // MARK: - Private Path Generation Helpers
 private extension AnchoredTextNode {
