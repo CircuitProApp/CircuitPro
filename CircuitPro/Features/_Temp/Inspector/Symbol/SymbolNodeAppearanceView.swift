@@ -69,44 +69,54 @@ struct SymbolNodeAppearanceView: View {
     
     @ViewBuilder
     private func displayOptionsRow(for source: TextSource) -> some View {
-//        let keyBinding = Binding<Bool>(
-//            get: { projectManager.displayOptions(for: component, source: source).showKey },
-//            set: { newValue in
-//                var options = projectManager.displayOptions(for: component, source: source)
-//                options.showKey = newValue
-//                projectManager.setDisplayOptions(for: component, source: source, options: options)
-//            }
-//        )
-//        let valueBinding = Binding<Bool>(
-//            get: { projectManager.displayOptions(for: component, source: source).showValue },
-//            set: { newValue in
-//                var options = projectManager.displayOptions(for: component, source: source)
-//                options.showValue = newValue
-//                projectManager.setDisplayOptions(for: component, source: source, options: options)
-//            }
-//        )
-//        let unitBinding = Binding<Bool>(
-//            get: { projectManager.displayOptions(for: component, source: source).showUnit },
-//            set: { newValue in
-//                var options = projectManager.displayOptions(for: component, source: source)
-//                options.showUnit = newValue
-//                projectManager.setDisplayOptions(for: component, source: source, options: options)
-//            }
-//        )
-        
-        HStack(spacing: 8) {
-            Text("Display Options")
-                .foregroundStyle(.secondary)
-                .font(.caption)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-            Spacer(minLength: 0)
-//            Toggle("Key", isOn: keyBinding)
-//            Toggle("Value", isOn: valueBinding)
-//            Toggle("Unit", isOn: unitBinding)
+        // Use `if let` instead of `guard let` inside a @ViewBuilder.
+        // If this fails, the builder automatically produces nothing (an EmptyView).
+        if let resolvedText = component.symbolInstance.resolvedItems.first(where: { $0.contentSource == source }) {
+            
+            // This code only runs if the resolvedText was found.
+            
+            let keyBinding = Binding<Bool>(
+                get: { resolvedText.displayOptions.showKey },
+                set: { wantsToShowKey in
+                    var editedText = resolvedText
+                    editedText.displayOptions.showKey = wantsToShowKey
+                    projectManager.updateText(for: component, with: editedText)
+                }
+            )
+            
+            let valueBinding = Binding<Bool>(
+                get: { resolvedText.displayOptions.showValue },
+                set: { wantsToShowValue in
+                    var editedText = resolvedText
+                    editedText.displayOptions.showValue = wantsToShowValue
+                    projectManager.updateText(for: component, with: editedText)
+                }
+            )
+            
+            let unitBinding = Binding<Bool>(
+                get: { resolvedText.displayOptions.showUnit },
+                set: { wantsToShowUnit in
+                    var editedText = resolvedText
+                    editedText.displayOptions.showUnit = wantsToShowUnit
+                    projectManager.updateText(for: component, with: editedText)
+                }
+            )
+            
+            HStack(spacing: 8) {
+                Text("Display Options")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                Spacer(minLength: 0)
+                Toggle("Key", isOn: keyBinding)
+                Toggle("Value", isOn: valueBinding)
+                Toggle("Unit", isOn: unitBinding)
+            }
+            .controlSize(.small)
+            .toggleStyle(.button)
+            
         }
-        .controlSize(.small)
-        .toggleStyle(.button)
     }
 
     // MARK: - Helpers

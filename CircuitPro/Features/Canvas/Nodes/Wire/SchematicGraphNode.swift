@@ -140,17 +140,28 @@ extension SchematicGraphNode {
         let compositePath = CGMutablePath()
 
         for wireNode in selectedWires {
-            // It is safe to unwrap here because a WireNode must have a valid edge to exist.
-            let edge = graph.edges[wireNode.edgeID]!
-            let startVertex = graph.vertices[edge.start]!
-            let endVertex = graph.vertices[edge.end]!
+            // Safely unwrap the edge and its vertices from the graph model.
+            // Using `guard let` is a robust way to prevent crashes if the UI and model
+            // become temporarily out of sync.
+            guard let edge = graph.edges[wireNode.edgeID],
+                  let startVertex = graph.vertices[edge.start],
+                  let endVertex = graph.vertices[edge.end] else {
+                
+                // If a wire node exists for an edge that has been removed from the graph,
+                // we'll just skip it. This prevents a crash and allows the UI to fail gracefully.
+                continue
+            }
             
             compositePath.move(to: startVertex.point)
             compositePath.addLine(to: endVertex.point)
         }
 
-        // 3. Stroke the entire composite path at once. The result is a new path
-        // that outlines the stroke, which should be filled.
-        return compositePath.copy(strokingWithWidth: 5.0, lineCap: .round, lineJoin: .round, miterLimit: 0)
+        // 3. If we added segments to the path, stroke it to create the final halo shape.
+        // Otherwise, return nil.
+        if !compositePath.isEmpty {
+            return compositePath.copy(strokingWithWidth: 5.0, lineCap: .round, lineJoin: .round, miterLimit: 0)
+        }
+        
+        return nil
     }
 }

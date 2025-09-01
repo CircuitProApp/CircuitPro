@@ -117,37 +117,37 @@ struct SymbolNodeAttributesView: View {
                     .tableStyle(.bordered)
                     .border(.white.blendMode(.destinationOut), width: 1)
                     .compositingGroup()
-                    HStack(spacing: 4) {
-                        Button {
-                            
-                        } label: {
-                            Image(systemName: "plus")
-                                .frame(width: 24, height: 24)
-                                .contentShape(.rect)
-                        }
-                        Divider()
-                        Button {
-                            
-                        } label: {
-                            Image(systemName: "minus")
-                                .frame(width: 24, height: 24)
-                                .contentShape(.rect)
-                        }
-                        .disabled(selectedProperty == nil)
-                        Divider()
-                        Button {
-                            
-                        } label: {
-                            Image(systemName: "pencil")
-                                .frame(width: 24, height: 24)
-                                .contentShape(.rect)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 4)
-                    .frame(height: 24)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(nsColor: .controlBackgroundColor))
+//                    HStack(spacing: 4) {
+//                        Button {
+//                            
+//                        } label: {
+//                            Image(systemName: "plus")
+//                                .frame(width: 24, height: 24)
+//                                .contentShape(.rect)
+//                        }
+//                        Divider()
+//                        Button {
+//                            
+//                        } label: {
+//                            Image(systemName: "minus")
+//                                .frame(width: 24, height: 24)
+//                                .contentShape(.rect)
+//                        }
+//                        .disabled(selectedProperty == nil)
+//                        Divider()
+//                        Button {
+//                            
+//                        } label: {
+//                            Image(systemName: "pencil")
+//                                .frame(width: 24, height: 24)
+//                                .contentShape(.rect)
+//                        }
+//                    }
+//                    .buttonStyle(.plain)
+//                    .padding(.horizontal, 4)
+//                    .frame(height: 24)
+//                    .frame(maxWidth: .infinity, alignment: .leading)
+//                    .background(Color(nsColor: .controlBackgroundColor))
                 }
                 .frame(height: 220)
                 .clipAndStroke(with: .rect(cornerRadius: 8))
