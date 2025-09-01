@@ -97,7 +97,7 @@ extension AnchoredTextNode {
     /// This is the critical step that saves changes like repositioning.
     func commitChanges() {
         let resolvedModel = self.toResolvedModel()
-        self.ownerInstance.update(with: resolvedModel)
+        self.ownerInstance.apply(resolvedModel)
     }
 
     /// Converts the node's current state back into an immutable `CircuitText.Resolved` data model.

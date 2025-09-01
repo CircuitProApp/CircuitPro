@@ -1,12 +1,17 @@
 import Observation
 import SwiftUI
+import Resolvable
 
 @Observable
+@ResolvableDestination(for: CircuitText.self)
 final class SymbolInstance: Identifiable, Codable, Transformable {
 
     var id: UUID
     var definitionUUID: UUID
+    
+    @DefinitionSource(for: CircuitText.self, at: \SymbolDefinition.textDefinitions)
     var definition: SymbolDefinition? = nil
+    
     var position: CGPoint
     var cardinalRotation: CardinalRotation = .east
     var textOverrides: [CircuitText.Override]

@@ -69,30 +69,30 @@ struct SymbolNodeAppearanceView: View {
     
     @ViewBuilder
     private func displayOptionsRow(for source: TextSource) -> some View {
-        let keyBinding = Binding<Bool>(
-            get: { projectManager.displayOptions(for: component, source: source).showKey },
-            set: { newValue in
-                var options = projectManager.displayOptions(for: component, source: source)
-                options.showKey = newValue
-                projectManager.setDisplayOptions(for: component, source: source, options: options)
-            }
-        )
-        let valueBinding = Binding<Bool>(
-            get: { projectManager.displayOptions(for: component, source: source).showValue },
-            set: { newValue in
-                var options = projectManager.displayOptions(for: component, source: source)
-                options.showValue = newValue
-                projectManager.setDisplayOptions(for: component, source: source, options: options)
-            }
-        )
-        let unitBinding = Binding<Bool>(
-            get: { projectManager.displayOptions(for: component, source: source).showUnit },
-            set: { newValue in
-                var options = projectManager.displayOptions(for: component, source: source)
-                options.showUnit = newValue
-                projectManager.setDisplayOptions(for: component, source: source, options: options)
-            }
-        )
+//        let keyBinding = Binding<Bool>(
+//            get: { projectManager.displayOptions(for: component, source: source).showKey },
+//            set: { newValue in
+//                var options = projectManager.displayOptions(for: component, source: source)
+//                options.showKey = newValue
+//                projectManager.setDisplayOptions(for: component, source: source, options: options)
+//            }
+//        )
+//        let valueBinding = Binding<Bool>(
+//            get: { projectManager.displayOptions(for: component, source: source).showValue },
+//            set: { newValue in
+//                var options = projectManager.displayOptions(for: component, source: source)
+//                options.showValue = newValue
+//                projectManager.setDisplayOptions(for: component, source: source, options: options)
+//            }
+//        )
+//        let unitBinding = Binding<Bool>(
+//            get: { projectManager.displayOptions(for: component, source: source).showUnit },
+//            set: { newValue in
+//                var options = projectManager.displayOptions(for: component, source: source)
+//                options.showUnit = newValue
+//                projectManager.setDisplayOptions(for: component, source: source, options: options)
+//            }
+//        )
         
         HStack(spacing: 8) {
             Text("Display Options")
@@ -101,9 +101,9 @@ struct SymbolNodeAppearanceView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
             Spacer(minLength: 0)
-            Toggle("Key", isOn: keyBinding)
-            Toggle("Value", isOn: valueBinding)
-            Toggle("Unit", isOn: unitBinding)
+//            Toggle("Key", isOn: keyBinding)
+//            Toggle("Value", isOn: valueBinding)
+//            Toggle("Unit", isOn: unitBinding)
         }
         .controlSize(.small)
         .toggleStyle(.button)

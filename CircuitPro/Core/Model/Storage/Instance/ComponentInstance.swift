@@ -7,13 +7,16 @@
 
 import Observation
 import SwiftUI
+import Resolvable
 
 @Observable
+@ResolvableDestination(for: Property.self)
 final class ComponentInstance: Identifiable, Codable {
 
     var id: UUID
     var definitionUUID: UUID
     
+    @DefinitionSource(for: Property.self, at: \ComponentDefinition.propertyDefinitions)
     var definition: ComponentDefinition? = nil
     
     var propertyOverrides: [Property.Override]

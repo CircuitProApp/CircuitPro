@@ -19,6 +19,10 @@ struct AnchoredTextInspectorView: View {
         SidebarView(selectedTab: $selectedTab, availableTabs: availableTabs) {
             ScrollView {
                 VStack(spacing: 5) {
+                    InspectorSection("Identity and Type") {
+                        
+                        
+                    }
                     InspectorSection("Transform") {
                         PointControlView(
                             title: "Anchor",

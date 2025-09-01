@@ -20,9 +20,9 @@ class TextTool: CanvasTool {
             position: location, anchor: .bottomLeading
         )
 
-        let newTextNode = TextNode(textModel: newTextModel)
+//        let newTextNode = TextNode(textModel: newTextModel)
 
-        return .newNode(newTextNode)
+        return .noResult
     }
 
     /// Handles the Escape key. This tool has no intermediate state, so it

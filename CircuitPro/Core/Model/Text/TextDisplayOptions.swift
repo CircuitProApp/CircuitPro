@@ -18,3 +18,7 @@ struct TextDisplayOptions: Codable, Hashable {
         TextDisplayOptions(showKey: false, showValue: true, showUnit: true)
     }
 }
+
+enum TextDisplayPart {
+    case key, value, unit
+}
