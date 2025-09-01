@@ -123,8 +123,15 @@ class TextNode: BaseNode {
 
 extension CircuitText.Resolved: Equatable {
     static func == (lhs: CircuitText.Resolved, rhs: CircuitText.Resolved) -> Bool {
-        return lhs.id == rhs.id
+        return lhs.source == rhs.source &&
+               lhs.content == rhs.content &&
+               lhs.relativePosition == rhs.relativePosition &&
+               lhs.anchorPosition == rhs.anchorPosition &&
+               lhs.font == rhs.font &&
+               lhs.color == rhs.color &&
+               lhs.anchor == rhs.anchor &&
+               lhs.alignment == rhs.alignment &&
+               lhs.cardinalRotation == rhs.cardinalRotation &&
+               lhs.isVisible == rhs.isVisible
     }
-    
-    
 }
