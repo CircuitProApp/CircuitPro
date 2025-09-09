@@ -16,7 +16,11 @@ final class PinTool: CanvasTool {
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         // This method is already correct and does not need to change.
-        let number = 1 // Placeholder
+        let number = context.renderContext.sceneRoot.children
+            .compactMap { $0 as? PinNode }
+            .map { $0.pin.number }
+            .max()
+            .map { $0 + 1 } ?? 1
         let pin = Pin(name: "", number: number, position: location, cardinalRotation: rotation, type: .unknown, lengthType: .regular)
         let node = PinNode(pin: pin)
         return .newNode(node)
@@ -25,7 +29,12 @@ final class PinTool: CanvasTool {
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         // 1. Create a temporary pin model to represent the preview.
         // Its position can be .zero since we are describing it in a local space.
-        let previewPin = Pin(name: "", number: 1, position: .zero, cardinalRotation: rotation, type: .unknown, lengthType: .regular)
+        let number = context.sceneRoot.children
+            .compactMap { $0 as? PinNode }
+            .map { $0.pin.number }
+            .max()
+            .map { $0 + 1 } ?? 1
+        let previewPin = Pin(name: "", number: number, position: .zero, cardinalRotation: rotation, type: .unknown, lengthType: .regular)
         
         // 2. Get the model's drawing commands in its local coordinate space.
         let localPrimitives = previewPin.makeDrawingPrimitives()

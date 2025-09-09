@@ -32,6 +32,9 @@ struct FootprintElementListView: View {
     /// This state variable now controls the DisclosureGroups.
     @State private var expandedLayers: Set<UUID> = []
     
+    /// Tracks node IDs to detect when new elements are added.
+    @State private var previousNodeIDs: Set<UUID> = []
+    
     private var sortedLayers: [CanvasLayer] {
         editor.layers.sorted { lhs, rhs in
             if lhs.zIndex == rhs.zIndex {
@@ -46,7 +49,7 @@ struct FootprintElementListView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Footprint Elements")
-                .font(.title3.weight(.semibold))
+                .font(.headline)
                 .padding(10)
             
             // Reverted to a List with ForEach and explicit DisclosureGroup to control expansion.
@@ -66,14 +69,16 @@ struct FootprintElementListView: View {
         .onChange(of: selection) { handleSelectionChange() }
         .onChange(of: editor.activeLayerId) { syncSelectionFromManager() }
         .onChange(of: editor.selectedElementIDs) { syncSelectionFromManager() }
+        .onChange(of: editor.canvasNodes.count) { expandGroupForNewNodes() }
         .onAppear {
             syncSelectionFromManager()
             // This now correctly controls which disclosure groups start open.
             // Populating with all layer IDs will auto-expand all layers.
             expandedLayers = Set(editor.layers.map { $0.id })
+            previousNodeIDs = Set(editor.canvasNodes.map(\.id))
         }
     }
-    
+
     // MARK: - View Builders
 
     /// Creates the DisclosureGroup for a layer and its children.
@@ -137,38 +142,75 @@ struct FootprintElementListView: View {
         return items
     }
     
+    // MARK: - Change Handling
+    
+    /// When a new element is added to the canvas, expand its parent layer in the list.
+    private func expandGroupForNewNodes() {
+        let newNodes = editor.canvasNodes
+        let newNodeIDs = Set(newNodes.map(\.id))
+        
+        // An item was added.
+        guard newNodeIDs.count > previousNodeIDs.count else {
+            previousNodeIDs = newNodeIDs
+            return
+        }
+
+        let addedNodeIDs = newNodeIDs.subtracting(previousNodeIDs)
+        
+        // Create a lookup for the new nodes.
+        let nodesByID = Dictionary(uniqueKeysWithValues: newNodes.map { ($0.id, $0) })
+
+        for id in addedNodeIDs {
+            if let newNode = nodesByID[id],
+               let layerable = newNode as? Layerable,
+               let layerId = layerable.layerId {
+                expandedLayers.insert(layerId)
+            }
+        }
+        
+        // Update the state for the next comparison.
+        previousNodeIDs = newNodeIDs
+    }
+
     // MARK: - Selection Synchronization Logic
     
-    /// Updates the manager when the list selection changes. (Unchanged from your new code)
+    /// Updates the manager when the list selection changes.
     private func handleSelectionChange() {
         let selectedLayerId = selection.compactMap { $0 as? UUID }.first { id in
             editor.layers.contains(where: { $0.id == id })
         }
 
         if let selectedLayerId = selectedLayerId {
+            // A layer was selected. Make it active and deselect elements.
             editor.activeLayerId = selectedLayerId
             editor.selectedElementIDs = []
             
-            if selection.count > 1 || selection.first as! UUID != selectedLayerId {
+            // Enforce single selection of the layer.
+            if selection.count > 1 || (selection.first as? UUID) != selectedLayerId {
                 DispatchQueue.main.async {
                     self.selection = [selectedLayerId]
                 }
             }
         } else {
-            editor.activeLayerId = nil
+            // One or more elements were selected. Update selection but keep the active layer.
             editor.selectedElementIDs = Set(selection.compactMap { $0 as? UUID })
         }
     }
     
-    /// Updates the list's selection from the manager. (Unchanged from your new code)
+    /// Updates the list's selection from the manager's state.
     private func syncSelectionFromManager() {
         var newSelection: Set<OutlineItemID> = []
-        if let activeLayerId = editor.activeLayerId {
-            newSelection.insert(activeLayerId)
-        } else {
+        
+        // Prioritize element selection. If elements are selected, they should be highlighted.
+        if !editor.selectedElementIDs.isEmpty {
             editor.selectedElementIDs.forEach { newSelection.insert($0) }
         }
+        // Otherwise, if no elements are selected, highlight the active layer.
+        else if let activeLayerId = editor.activeLayerId {
+            newSelection.insert(activeLayerId)
+        }
         
+        // Only update the state if it has actually changed to prevent selection loops.
         if self.selection != newSelection {
             self.selection = newSelection
         }

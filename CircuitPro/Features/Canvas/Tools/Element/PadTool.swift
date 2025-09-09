@@ -31,7 +31,11 @@ final class PadTool: CanvasTool {
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         // 1. Create the Pad data model with the tool's current state.
-        let number = 1 // Placeholder for now
+        let number = context.renderContext.sceneRoot.children
+            .compactMap { $0 as? PadNode }
+            .map { $0.pad.number }
+            .max()
+            .map { $0 + 1 } ?? 1
         let pad = Pad(
             number: number,
             position: location,
@@ -51,7 +55,11 @@ final class PadTool: CanvasTool {
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         // 1. Create a temporary Pad model to generate its local-space geometry.
         // Its position is .zero because we only care about its shape relative to its own center.
-        let number = 1 // Placeholder
+        let number = context.sceneRoot.children
+            .compactMap { $0 as? PadNode }
+            .map { $0.pad.number }
+            .max()
+            .map { $0 + 1 } ?? 1
         let previewPad = Pad(
             number: number,
             position: .zero,

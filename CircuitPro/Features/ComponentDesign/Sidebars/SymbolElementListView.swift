@@ -19,7 +19,7 @@ struct SymbolElementListView: View {
         
         VStack(alignment: .leading, spacing: 0) {
             Text("Symbol Elements")
-                .font(.title3.weight(.semibold))
+                .font(.headline)
                 .padding(10)
 
             if manager.canvasNodes.isEmpty {

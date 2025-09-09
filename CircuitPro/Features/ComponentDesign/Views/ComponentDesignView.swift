@@ -47,7 +47,7 @@ struct ComponentDesignView: View {
                     symbolCanvasManager: symbolCanvasManager,
                     footprintCanvasManager: footprintCanvasManager
                 )
-                .navigationTitle("Component Designer")
+             
                 .environment(componentDesignManager)
                 .toolbar {
                     ToolbarItem {

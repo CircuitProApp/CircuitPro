@@ -7,16 +7,17 @@
 
 import SwiftUI
 
+enum ComponentDetailsFocusField: Hashable {
+    case name
+    case referencePrefix
+}
+
 struct ComponentDetailsView: View {
 
     @Environment(ComponentDesignManager.self) private var componentDesignManager
 
-    enum FocusField: Hashable {
-        case name
-        case referencePrefix
-    }
+    @FocusState.Binding var focusedField: ComponentDetailsFocusField?
 
-    @FocusState private var focusedField: FocusField?
 
     
     var body: some View {
