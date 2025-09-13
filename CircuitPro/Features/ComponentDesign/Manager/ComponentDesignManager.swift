@@ -28,11 +28,21 @@ final class ComponentDesignManager {
     /// Holds footprints that will be linked from an existing library.
     var assignedFootprints: [FootprintDefinition] = []
     
-    /// The UUID of the currently selected footprint draft.
+    // --- RE-ADD ---
+    /// The UUID of the currently selected footprint draft. This is the source of truth again.
     var selectedFootprintID: UUID?
     
     var navigationPath: NavigationPath = .init()
     
+    var currentStage: ComponentDesignStage = .details
+    
+    let placeholderFootprintEditor: CanvasEditorManager = {
+        let ed = CanvasEditorManager()
+        ed.setupForFootprintEditing()     // harmless base state
+        return ed
+    }()
+    
+    // --- RE-ADD ---
     /// The currently selected footprint draft model.
     var selectedFootprint: FootprintDefinition? {
         guard let selectedFootprintID else { return nil }

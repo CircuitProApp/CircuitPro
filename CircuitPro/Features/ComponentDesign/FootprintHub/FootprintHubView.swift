@@ -37,6 +37,7 @@ struct FootprintHubView: View {
                         NewFootprintsSectionView(
                             hubSelectionID: $hubSelectionID,
                             onOpen: { footprint in
+                     
                                 componentDesignManager.navigationPath.append(footprint)
                             }
                         )

@@ -9,12 +9,9 @@ import SwiftUI
 
 struct FootprintCanvasView: View {
     
-    // Manages the global canvas state like viewport and mouse location.
     @Environment(CanvasManager.self)
     private var canvasManager
-    
-    // The editor for the currently *selected* footprint. This is injected
-    // by the parent view (ComponentDesignStageContainerView) when a footprint is chosen.
+
     @Environment(CanvasEditorManager.self)
     private var footprintEditor
     
@@ -70,7 +67,5 @@ struct FootprintCanvasView: View {
         } secondary: {
             Text("WIP")
         }
-        // The .onAppear modifier is no longer necessary. The editor is configured
-        // upon creation of a new Footprint instance within the ComponentDesignManager.
     }
 }

@@ -17,7 +17,6 @@ struct ComponentDesignView: View {
     
     @State private var componentDesignManager = ComponentDesignManager()
     
-    @State private var currentStage: ComponentDesignStage = .details
     @State private var symbolCanvasManager = CanvasManager()
     @State private var footprintCanvasManager = CanvasManager()
     
@@ -42,12 +41,13 @@ struct ComponentDesignView: View {
                 )
                 .navigationTitle("Component Designer")
             } else {
-                ComponentDesignStageContainerView(
-                    currentStage: $currentStage,
-                    symbolCanvasManager: symbolCanvasManager,
-                    footprintCanvasManager: footprintCanvasManager
-                )
-             
+                NavigationSplitView {
+                    ComponentDesignNavigator()
+                } content: {
+                    ComponentDesignContent(symbolCanvasManager: symbolCanvasManager, footprintCanvasManager: footprintCanvasManager)
+                } detail: {
+                    ComponentDesignInspector()
+                }
                 .environment(componentDesignManager)
                 .toolbar {
                     ToolbarItem {
@@ -69,7 +69,7 @@ struct ComponentDesignView: View {
             }
         }
         .sheet(isPresented: $showFeedbackSheet) {
-            FeedbackFormView(additionalContext: "Feedback sent from the Component Designer View, '\(currentStage.label)' stage.")
+            FeedbackFormView(additionalContext: "Feedback sent from the Component Designer View, '\(componentDesignManager.currentStage.label)' stage.")
                 .frame(minWidth: 400, minHeight: 300)
         }
         .toolbar {
@@ -234,7 +234,7 @@ struct ComponentDesignView: View {
     
     private func resetForNewComponent() {
         componentDesignManager.resetAll()
-        currentStage = .details
+        componentDesignManager.currentStage = .details
         symbolCanvasManager = CanvasManager()
         footprintCanvasManager = CanvasManager()
         didCreateComponent = false
