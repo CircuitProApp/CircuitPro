@@ -8,21 +8,17 @@
 import SwiftUI
 
 struct SymbolElementListView: View {
-    @Environment(ComponentDesignManager.self) private var componentDesignManager
-
-    private var symbolEditor: CanvasEditorManager {
-        componentDesignManager.symbolEditor
-    }
+    
+    @BindableEnvironment(CanvasEditorManager.self)
+    private var symbolEditor
 
     var body: some View {
-        @Bindable var manager = symbolEditor
-        
         VStack(alignment: .leading, spacing: 0) {
             Text("Symbol Elements")
                 .font(.headline)
                 .padding(10)
 
-            if manager.canvasNodes.isEmpty {
+            if symbolEditor.canvasNodes.isEmpty {
                 ContentUnavailableView {
                     Label {
                         Text("No Symbol Elements")
@@ -37,8 +33,8 @@ struct SymbolElementListView: View {
                 }
                 .frame(maxHeight: .infinity)
             } else {
-                List(selection: $manager.selectedElementIDs) {
-                    ForEach(manager.canvasNodes) { element in
+                List(selection: $symbolEditor.selectedElementIDs) {
+                    ForEach(symbolEditor.canvasNodes) { element in
                         CanvasElementRowView(element: element, editor: symbolEditor)
                             .tag(element.id)
                     }

@@ -10,7 +10,7 @@ import SwiftDataPacks
 
 struct ComponentListView: View {
     
-    @Environment(LibraryManager.self)
+    @BindableEnvironment(LibraryManager.self)
     private var libraryManager
     
     @UserContext private var userContext
@@ -26,7 +26,6 @@ struct ComponentListView: View {
     }
     
     var body: some View {
-        @Bindable var libraryManager = libraryManager
         if filteredComponents.isNotEmpty {
             GroupedList(selection: $libraryManager.selectedComponent) {
                 ForEach(ComponentCategory.allCases) { category in

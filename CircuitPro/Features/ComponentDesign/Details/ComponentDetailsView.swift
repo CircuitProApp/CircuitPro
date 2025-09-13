@@ -14,19 +14,16 @@ enum ComponentDetailsFocusField: Hashable {
 
 struct ComponentDetailsView: View {
 
-    @Environment(ComponentDesignManager.self) private var componentDesignManager
+    @BindableEnvironment(ComponentDesignManager.self)
+    private var componentDesignManager
 
     @FocusState.Binding var focusedField: ComponentDetailsFocusField?
-
-
     
     var body: some View {
-        @Bindable var manager = componentDesignManager
-
         VStack(alignment: .leading, spacing: 25) {
             HStack {
                 SectionView("Name") {
-                    TextField("e.g. Light Emitting Diode", text: $manager.componentName)
+                    TextField("e.g. Light Emitting Diode", text: $componentDesignManager.componentName)
                         .textFieldStyle(.plain)
                         .focused($focusedField, equals: .name)
                      
@@ -38,7 +35,7 @@ struct ComponentDetailsView: View {
                         .environment(\.focusRingColor, componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.name).contains(.error) ? .red : .clear)
                 }
                 SectionView("Reference Designator Prefix") {
-                    TextField("e.g. LED", text: $manager.referenceDesignatorPrefix)
+                    TextField("e.g. LED", text: $componentDesignManager.referenceDesignatorPrefix)
                         .textFieldStyle(.plain)
                         .focused($focusedField, equals: .referencePrefix)
                         .font(.title3)
@@ -53,7 +50,7 @@ struct ComponentDetailsView: View {
 
             HStack {
                 SectionView("Category") {
-                    Picker("Category", selection: $manager.selectedCategory) {
+                    Picker("Category", selection: $componentDesignManager.selectedCategory) {
                         Text("Select a Category").tag(nil as ComponentCategory?)
 
                         ForEach(ComponentCategory.allCases) { category in
@@ -80,7 +77,7 @@ struct ComponentDetailsView: View {
             }
             SectionView("Properties") {
                 ComponentPropertiesView(
-                    componentProperties: $manager.draftProperties,
+                    componentProperties: $componentDesignManager.draftProperties,
                     validationState: componentDesignManager.validationState(for: ComponentDesignStage.ComponentRequirement.properties)
                 )
             }

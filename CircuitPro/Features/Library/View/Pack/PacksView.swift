@@ -10,7 +10,7 @@ import SwiftDataPacks
 
 struct PacksView: View {
     
-    @Environment(LibraryManager.self)
+    @BindableEnvironment(LibraryManager.self)
     private var libraryManager
     
     @PackManager private var packManager
@@ -40,7 +40,6 @@ struct PacksView: View {
     }
     
     var body: some View {
-        @Bindable var libraryManager = libraryManager
         VStack(spacing: 0) {
             GroupedList(selection: $libraryManager.selectedPack) {
                 installedPacksSection()
@@ -117,7 +116,6 @@ struct PacksView: View {
     
     @ViewBuilder
     private func installedPacksSection() -> some View {
-        @Bindable var libraryManager = libraryManager
         Section {
             if packManager.installedPacks.isEmpty {
                 emptyView("No packs installed")
@@ -155,7 +153,6 @@ struct PacksView: View {
     
     @ViewBuilder
     private func availablePacksSection() -> some View {
-        @Bindable var libraryManager = libraryManager
         Section {
             switch libraryManager.remotePackProvider.loadState {
             case .idle, .loading:

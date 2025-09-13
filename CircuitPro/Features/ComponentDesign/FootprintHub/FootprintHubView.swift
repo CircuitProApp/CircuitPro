@@ -73,6 +73,7 @@ struct FootprintHubView: View {
             .background(.quaternary)
             .contentShape(.rect)
             .clipShape(.rect(cornerRadius: 8))
+            .fontWeight(.semibold)
         }
         .buttonStyle(.plain)
     }

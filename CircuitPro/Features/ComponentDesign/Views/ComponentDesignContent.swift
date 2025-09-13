@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ComponentDesignContent: View {
     
-    @Environment(ComponentDesignManager.self)
+    @BindableEnvironment(ComponentDesignManager.self)
     private var componentDesignManager
     
     var symbolCanvasManager: CanvasManager
@@ -18,12 +18,11 @@ struct ComponentDesignContent: View {
     @FocusState private var focusedField: ComponentDetailsFocusField?
     
     var body: some View {
-        @Bindable var componentDesignManager = componentDesignManager
-
         switch componentDesignManager.currentStage {
         case .details:
             ComponentDetailsView(focusedField: $focusedField)
                 .navigationTitle("Component Details")
+                .directionalPadding(vertical: 75, horizontal: 50)
                 
         case .symbol:
             SymbolCanvasView()
@@ -46,7 +45,6 @@ struct ComponentDesignContent: View {
                                     .frame(width: 16, height: 16)
                              
                             }
-                   
                         }
                     }
             } else {

@@ -55,31 +55,36 @@ struct ExistingFootprintsView: View {
             
             Divider().padding(.top)
 
-            // Grid of Footprints (Simplified)
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 180), spacing: 16)], spacing: 16) {
-                    ForEach(searchResults) { footprint in
-                        // CLEANER: The parent view now just passes the selection state to the card.
-                        FootprintCardView(
-                            name: footprint.name,
-                            isSelected: selection.contains(footprint.uuid)
-                        )
-                        .onTapGesture {
-                            if selection.contains(footprint.uuid) {
-                                selection.remove(footprint.uuid)
-                            } else {
-                                selection.insert(footprint.uuid)
+            if searchResults.isNotEmpty {
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 180), spacing: 16)], spacing: 16) {
+                        ForEach(searchResults) { footprint in
+                            // CLEANER: The parent view now just passes the selection state to the card.
+                            FootprintCardView(
+                                name: footprint.name,
+                                isSelected: selection.contains(footprint.uuid)
+                            )
+                            .onTapGesture {
+                                if selection.contains(footprint.uuid) {
+                                    selection.remove(footprint.uuid)
+                                } else {
+                                    selection.insert(footprint.uuid)
+                                }
                             }
                         }
                     }
+                    .padding()
                 }
-                .padding()
+            } else {
+                Text("No footprints found")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             Divider()
             HStack {
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bordered)
                 Button(action: assignSelection) {
                     Text("Assign \(selection.count) Selected")
                 }

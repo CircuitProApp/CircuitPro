@@ -9,22 +9,18 @@ import SwiftUI
 
 struct FootprintCanvasView: View {
     
-    @Environment(CanvasManager.self)
+    @BindableEnvironment(CanvasManager.self)
     private var canvasManager
 
-    @Environment(CanvasEditorManager.self)
+    @BindableEnvironment(CanvasEditorManager.self)
     private var footprintEditor
     
     @State private var isCollapsed: Bool = true
     
     var body: some View {
-        // Bind directly to the editor from the environment.
-        @Bindable var footprintEditor = footprintEditor
-        @Bindable var manager = canvasManager
-        
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
-                viewport: $manager.viewport,
+                viewport: $canvasManager.viewport,
                 nodes: $footprintEditor.canvasNodes,
                 selection: $footprintEditor.selectedElementIDs,
                 tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),

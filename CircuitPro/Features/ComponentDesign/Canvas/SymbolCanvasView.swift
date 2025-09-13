@@ -9,19 +9,17 @@ import SwiftUI
 
 struct SymbolCanvasView: View {
 
-    @Environment(CanvasManager.self)
+    @BindableEnvironment(CanvasManager.self)
     private var canvasManager
 
-    @Environment(ComponentDesignManager.self) private var componentDesignManager
+    @BindableEnvironment(CanvasEditorManager.self)
+    private var symbolEditor
     
     @State private var isCollapsed: Bool = true
     
     @State private var tool: CanvasTool? = CursorTool()
 
     var body: some View {
-
-        @Bindable var symbolEditor = componentDesignManager.symbolEditor
-        @Bindable var canvasManager = canvasManager
 
         let defaultTool = CursorTool()
 

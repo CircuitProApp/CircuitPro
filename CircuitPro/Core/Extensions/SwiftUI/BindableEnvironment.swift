@@ -6,22 +6,29 @@
 //
 
 import SwiftUI
+import Observation
 
 @propertyWrapper
 struct BindableEnvironment<Value>: DynamicProperty where Value: Observable & AnyObject {
     private var env: Environment<Value>
 
+    // Support classic key-path environment values (rarely Observable)
     init(_ keyPath: KeyPath<EnvironmentValues, Value>) {
         self.env = Environment(keyPath)
+    }
+
+    // Support typed environment objects: @Environment(Value.self)
+    init(_ type: Value.Type) {
+        self.env = Environment(type)
     }
 
     var wrappedValue: Value {
         env.wrappedValue
     }
 
-    // This is what gives you `$value.property` bindings just like `@Bindable`.
+    // Enables `$myValue.someProperty` bindings (like @Bindable)
     var projectedValue: Bindable<Value> {
-        Bindable(wrappedValue: env.wrappedValue)
+        Bindable(env.wrappedValue)
     }
 
     mutating func update() {

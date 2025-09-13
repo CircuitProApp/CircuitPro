@@ -10,7 +10,8 @@ import SwiftUI
 public struct DesignNavigatorView: View {
 
     @Environment(\.undoManager) private var undoManager
-    @Environment(\.projectManager)
+   
+    @BindableEnvironment(\.projectManager)
     private var projectManager
 
     @State private var isExpanded: Bool = true
@@ -18,13 +19,11 @@ public struct DesignNavigatorView: View {
     var document: CircuitProjectFileDocument
 
     public var body: some View {
-        @Bindable var bindableProjectManager = projectManager
-
         DisclosureGroup(isExpanded: $isExpanded) {
             List(
-                $bindableProjectManager.project.designs,
+                $projectManager.project.designs,
                 id: \.self,
-                selection: $bindableProjectManager.selectedDesign
+                selection: $projectManager.selectedDesign
             ) { $design in
                 HStack {
                     Image(systemName: CircuitProSymbols.Design.design)

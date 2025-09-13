@@ -9,18 +9,13 @@ import SwiftUI
 
 struct FootprintPropertiesView: View {
 
-    // The parent view (ComponentDesignStageContainerView) now places the
-    // correct CanvasEditorManager for the selected footprint into the environment.
-    // We retrieve it directly here.
-    @Environment(CanvasEditorManager.self)
-    private var manager
+    @BindableEnvironment(CanvasEditorManager.self)
+    private var footprintEditor
     
     var body: some View {
-        // This @Bindable wrapper now correctly observes the manager for the selected footprint.
-        @Bindable var manager = manager
         
         ScrollView {
-            if let element = manager.singleSelectedNode {
+            if let element = footprintEditor.singleSelectedNode {
                 if let padNode = element as? PadNode {
                     @Bindable var padNode = padNode
                     
@@ -42,7 +37,7 @@ struct FootprintPropertiesView: View {
                         .padding()
                 }
             }  else {
-                Text(manager.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
+                Text(footprintEditor.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
                     .foregroundColor(.secondary)
                     .padding()
             }

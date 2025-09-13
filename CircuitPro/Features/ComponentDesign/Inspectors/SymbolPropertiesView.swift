@@ -9,15 +9,13 @@ import SwiftUI
 
 struct SymbolPropertiesView: View {
 
-    @Environment(ComponentDesignManager.self)
-    private var componentDesignManager
+    @Environment(CanvasEditorManager.self)
+    private var symbolEditor
 
     var body: some View {
-        @Bindable var manager = componentDesignManager.symbolEditor
-    
         VStack {
             ScrollView {
-                if let node = manager.singleSelectedNode {
+                if let node = symbolEditor.singleSelectedNode {
                     if let pinNode = node as? PinNode {
                         @Bindable var pinNode = pinNode
 
@@ -38,7 +36,7 @@ struct SymbolPropertiesView: View {
                             .padding()
                     }
                 } else {
-                    Text(manager.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
+                    Text(symbolEditor.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
                         .foregroundColor(.secondary)
                         .padding()
                 }

@@ -33,8 +33,6 @@ struct ProjectNavigatorView: View {
     @Namespace private var namespace
 
     var body: some View {
-        @Bindable var bindableProjectManager = projectManager
-
         VStack(spacing: 0) {
             DesignNavigatorView(document: document)
 
