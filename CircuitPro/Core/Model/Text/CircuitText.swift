@@ -30,7 +30,7 @@ struct CircuitText {
     var color: SDColor = .init(color: .init(nsColor: .black))
     
     /// The text's anchor point.
-    var anchor: TextAnchor = .bottomLeading
+    var anchor: TextAnchor = .leading
     
     /// The text alignment, stored as a custom Codable `SDAlignment` enum.
     var alignment: SDAlignment = .center

@@ -122,7 +122,7 @@ extension CanvasEditorManager {
             anchorPosition: centerPoint,
             font: .init(font: .systemFont(ofSize: 12)),
             color: .init(color: .init(nsColor: .black)),
-            anchor: .bottomLeading,
+            anchor: .leading,
             alignment: .center,
             cardinalRotation: .east,
             isVisible: true
