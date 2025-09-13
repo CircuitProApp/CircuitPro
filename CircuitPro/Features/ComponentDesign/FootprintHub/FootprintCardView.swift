@@ -9,9 +9,9 @@ import SwiftUI
 
 struct FootprintCardView: View {
     
-    // CHANGED: The card now only needs the name to display.
-    // This makes it reusable for both FootprintDefinition and FootprintDraft.
     let name: String
+    
+    var isSelected: Bool = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -25,13 +25,24 @@ struct FootprintCardView: View {
                     .foregroundStyle(.secondary)
             }
             .clipShape(.rect(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 3)
+            )
+            .overlay(alignment: .topTrailing) {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.white, .blue)
+                        .padding(6)
+                }
+            }
             
-            // Displays the name that was passed in.
             Text(name)
                 .font(.headline)
                 .padding(.horizontal, 4)
                 .lineLimit(1)
         }
         .contentShape(.rect)
+        .animation(.easeInOut(duration: 0.1), value: isSelected)
     }
 }

@@ -1,3 +1,10 @@
+//
+//  SymbolCanvasView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 9/13/25.
+//
+
 import SwiftUI
 
 struct SymbolCanvasView: View {

@@ -21,18 +21,14 @@ struct ComponentDesignInspector: View {
                     .foregroundColor(.secondary)
                 
             case .symbol:
-                // This logic is correct and remains unchanged.
                 selectionBasedDetailView(count: componentDesignManager.symbolEditor.selectedElementIDs.count, content: SymbolPropertiesView.init)
                     .environment(componentDesignManager.symbolEditor)
                     
             case .footprint:
-                // CORRECTED: This now accesses the editor from the selected draft object.
-                // If a draft is selected, its editor is passed to the properties view.
                 if let editor = componentDesignManager.selectedFootprintDraft?.editor {
                     selectionBasedDetailView(count: editor.selectedElementIDs.count, content: FootprintPropertiesView.init)
                         .environment(editor)
                 } else {
-                    // If no draft is selected (i.e., the Hub is showing), this placeholder is displayed.
                     Text("Select a footprint to see its properties.")
                         .font(.callout)
                         .foregroundColor(.secondary)

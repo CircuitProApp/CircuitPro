@@ -11,8 +11,6 @@ struct AssignedFootprintsSectionView: View {
     
     @Environment(ComponentDesignManager.self) private var componentDesignManager
     
-    @Binding var hubSelectionID: UUID?
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Assigned from Library")
@@ -28,6 +26,13 @@ struct AssignedFootprintsSectionView: View {
                     ForEach(componentDesignManager.assignedFootprints) { footprint in
                         // CORRECTED: Uses the original FootprintCardView, passing the footprint's name
                         FootprintCardView(name: footprint.name)
+                            .contextMenu {
+                                Button {
+                                    componentDesignManager.assignedFootprints.removeAll { $0.uuid == footprint.uuid }
+                                } label: {
+                                    Text("Remove from assignment")
+                                }
+                            }
                     }
                 }
             }

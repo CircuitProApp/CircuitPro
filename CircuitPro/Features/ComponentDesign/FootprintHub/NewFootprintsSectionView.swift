@@ -11,7 +11,6 @@ struct NewFootprintsSectionView: View {
     @Environment(ComponentDesignManager.self) private var componentDesignManager
     @Binding var hubSelectionID: UUID?
     
-    // The closure correctly passes back a `FootprintDraft`
     let onOpen: (FootprintDraft) -> Void
 
     var body: some View {
@@ -20,23 +19,39 @@ struct NewFootprintsSectionView: View {
                 .font(.title3.bold())
                 .foregroundStyle(.secondary)
 
-            // Checks the new `footprintDrafts` array
             if componentDesignManager.footprintDrafts.isEmpty {
                 Text("No new footprints created.")
                     .foregroundStyle(.secondary)
                     .padding(.leading, 4)
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 180), spacing: 16)], spacing: 16) {
-                    // Iterates over the array of `FootprintDraft` objects
                     ForEach(componentDesignManager.footprintDrafts) { draft in
-                        // CORRECTED: Uses the original FootprintCardView, passing the draft's name
                         FootprintCardView(name: draft.name)
                             .onTapGesture {
                                 self.onOpen(draft)
                             }
+                            // ADDED: Context menu for each card
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    // Action to remove the specific draft
+                                    removeDraft(draft)
+                                } label: {
+                                    Label("Remove Footprint", systemImage: "trash")
+                                }
+                            }
                     }
                 }
             }
+        }
+    }
+    
+    /// A helper function to call the manager to remove a specific draft.
+    private func removeDraft(_ draft: FootprintDraft) {
+        componentDesignManager.footprintDrafts.removeAll { $0.id == draft.id }
+        
+        // If the removed draft was the one being edited, this will safely deselect it.
+        if componentDesignManager.selectedFootprintID == draft.id {
+            componentDesignManager.selectedFootprintID = nil
         }
     }
 }

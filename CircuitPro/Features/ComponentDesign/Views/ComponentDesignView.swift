@@ -135,8 +135,9 @@ struct ComponentDesignView: View {
 
         // 2. Create the symbol definition
         let symbolEditor = componentDesignManager.symbolEditor
-        let canvasSize = symbolCanvasManager.viewport.size
-        let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        // NOTE: Using footprintCanvasManager.viewport.size since it's the same size.
+        // Could also create a shared constant for this.
+        let anchor = CGPoint(x: footprintCanvasManager.viewport.size.width / 2, y: footprintCanvasManager.viewport.size.height / 2)
 
         let symbolTextDefinitions = createTextDefinitions(from: symbolEditor, anchor: anchor)
         let symbolPrimitives = createPrimitives(from: symbolEditor, anchor: anchor)
@@ -154,25 +155,25 @@ struct ComponentDesignView: View {
         )
         newComponent.symbol = newSymbol
 
-        // 3. --- REFACTORED: Finalize the new footprint drafts ---
+        // 3. Finalize the new footprint drafts
         var finalNewFootprints: [FootprintDefinition] = []
         for draft in componentDesignManager.footprintDrafts {
-            // The editor is now directly on the draft object.
             let editor = draft.editor
 
-            // Extract the final primitives and pads from the editor.
+            // Extract all necessary data from the editor.
             let primitives = createPrimitives(from: editor, anchor: anchor)
             let pads = editor.pads.map { pad -> Pad in
                 var copy = pad
                 copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
                 return copy
             }
+            let textDefinitions = createTextDefinitions(from: editor, anchor: anchor)
 
-            // Create the final, clean Model object from the draft's data.
             let newFootprint = FootprintDefinition(
                 name: draft.name,
                 primitives: primitives,
-                pads: pads
+                pads: pads,
+                textDefinitions: textDefinitions
             )
             newFootprint.components.append(newComponent)
             finalNewFootprints.append(newFootprint)
@@ -188,7 +189,6 @@ struct ComponentDesignView: View {
         }
 
         // 5. Insert the new component into the data context.
-        // SwiftData will automatically save the new footprints via the relationship.
         userContext.insert(newComponent)
 
         didCreateComponent = true
@@ -237,8 +237,6 @@ struct ComponentDesignView: View {
     private func resetForNewComponent() {
         componentDesignManager.resetAll()
         componentDesignManager.currentStage = .details
-        // No need to create new CanvasManagers, their internal state
-        // doesn't need to be reset between component creations.
         didCreateComponent = false
     }
 }

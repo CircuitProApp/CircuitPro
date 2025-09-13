@@ -35,14 +35,10 @@ struct ComponentDesignNavigator: View {
                     SymbolElementListView()
                     
                 case .footprint:
-                    // CORRECTED: This now checks for the selected draft.
-                    // The element list is only shown when editing a specific footprint.
                     if let draft = componentDesignManager.selectedFootprintDraft {
                         FootprintElementListView()
-                            // Pass the editor from the selected draft into the environment.
                             .environment(draft.editor)
                     } else {
-                        // When the user is viewing the Hub, this area is empty.
                         EmptyView()
                     }
                 }
@@ -54,8 +50,6 @@ struct ComponentDesignNavigator: View {
     
     private func stageNavigationButton(stage: ComponentDesignStage, label: String) -> some View {
         Button {
-            // ADDED LOGIC: When switching to the Footprint stage, always reset
-            // the selection. This ensures the user always sees the Hub first.
             if stage == .footprint {
                 componentDesignManager.selectedFootprintID = nil
             }
@@ -65,7 +59,6 @@ struct ComponentDesignNavigator: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 6)
-                // Use the stage's ID for a reliable comparison.
                 .background(componentDesignManager.currentStage.id == stage.id ? Color.blue : nil)
                 .foregroundStyle(componentDesignManager.currentStage.id == stage.id ? .white : .primary)
                 .contentShape(.rect)

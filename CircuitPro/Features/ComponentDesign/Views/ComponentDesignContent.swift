@@ -31,22 +31,17 @@ struct ComponentDesignContent: View {
                 .navigationTitle("Symbol Editor")
                 
         case .footprint:
-            // --- MANUAL NAVIGATION LOGIC ---
-            // If a draft is selected, show the canvas editor.
             if let draft = componentDesignManager.selectedFootprintDraft {
                 FootprintCanvasView()
                     .environment(footprintCanvasManager)
                     .environment(draft.editor)
                     .id(draft.id)
                     .navigationTitle(draft.name)
-                    // ADDED: A toolbar with a back button that only appears with the canvas.
                     .toolbar {
                         ToolbarItem(placement: .navigation) {
                             Button {
-                                // The action to "navigate back" is to deselect the current draft.
                                 componentDesignManager.selectedFootprintID = nil
                             } label: {
-                                
                                 Image(systemName: "chevron.left")
                                     .frame(width: 16, height: 16)
                              
@@ -55,7 +50,6 @@ struct ComponentDesignContent: View {
                         }
                     }
             } else {
-                // If NO draft is selected, show the Hub.
                 FootprintHubView()
                     .navigationTitle("Footprint Hub")
             }

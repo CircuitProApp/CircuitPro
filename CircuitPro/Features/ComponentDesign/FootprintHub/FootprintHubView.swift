@@ -1,4 +1,12 @@
+//
+//  FootprintHubView.swift
+//  CircuitPro
+//
+//  Created by Giorgi Tchelidze on 9/13/25.
+//
+
 import SwiftUI
+import SwiftData
 
 struct FootprintHubView: View {
     
@@ -42,17 +50,14 @@ struct FootprintHubView: View {
                             }
                         )
                         
-                        AssignedFootprintsSectionView(
-                            hubSelectionID: $hubSelectionID
-                        )
+                        AssignedFootprintsSectionView()
                     }
                     .padding()
                 }
             }
         }
         .sheet(isPresented: $showFootprintsSheet) {
-            Text("Assign Existing Footprint (Not Implemented)")
-                .frame(minWidth: 400, minHeight: 300)
+            ExistingFootprintsView()
         }
     }
     

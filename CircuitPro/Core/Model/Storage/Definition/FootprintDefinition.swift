@@ -16,6 +16,9 @@ class FootprintDefinition {
     var footprintType: FootprintType
     var primitives: [AnyCanvasPrimitive]
     var pads: [Pad]
+    
+    var textDefinitions: [CircuitText.Definition]
+    
     var components: [ComponentDefinition]
 
     init(
@@ -24,6 +27,7 @@ class FootprintDefinition {
         footprintType: FootprintType = .throughHole,
         primitives: [AnyCanvasPrimitive],
         pads: [Pad] = [],
+        textDefinitions: [CircuitText.Definition] = [],
         components: [ComponentDefinition] = []
     ) {
         self.uuid = uuid
@@ -31,6 +35,7 @@ class FootprintDefinition {
         self.footprintType = footprintType
         self.primitives = primitives
         self.pads = pads
+        self.textDefinitions = textDefinitions
         self.components = components
     }
 }
