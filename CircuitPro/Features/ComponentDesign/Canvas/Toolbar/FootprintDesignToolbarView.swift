@@ -8,12 +8,17 @@
 import SwiftUI
 
 struct FootprintDesignToolbarView: View {
-    @Environment(ComponentDesignManager.self) private var componentDesignManager
+    // Just like the Canvas and Properties views, the toolbar now sources
+    // the active editor directly from the environment.
+    @Environment(CanvasEditorManager.self) private var footprintEditor
 
     var body: some View {
-        @Bindable var manager = componentDesignManager.footprintEditor
+        // Bind to the environment's editor instance.
+        @Bindable var manager = footprintEditor
+        
         CanvasToolbarView(
             tools: CanvasToolRegistry.footprintDesignTools,
+            // The `selectedTool` property is non-optional, so we can bind to it directly.
             selectedTool: $manager.selectedTool.unwrapping(withDefault: CursorTool()),
             dividerBefore: { $0 is PadTool },
             dividerAfter: { $0 is CursorTool }

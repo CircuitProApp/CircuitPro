@@ -122,42 +122,106 @@ struct ComponentDesignView: View {
             return
         }
         
+        guard let category = componentDesignManager.selectedCategory else { return }
+
+        // 1. Create the base component definition
+        let newComponent = ComponentDefinition(
+            name: componentDesignManager.componentName,
+            category: category,
+            referenceDesignatorPrefix: componentDesignManager.referenceDesignatorPrefix,
+            propertyDefinitions: componentDesignManager.componentProperties,
+            symbol: nil
+        )
+
+        // 2. Create the symbol definition
         let symbolEditor = componentDesignManager.symbolEditor
         let canvasSize = symbolCanvasManager.viewport.size
         let anchor = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+
+        let symbolTextDefinitions = createTextDefinitions(from: symbolEditor, anchor: anchor)
+        let symbolPrimitives = createPrimitives(from: symbolEditor, anchor: anchor)
+        let symbolPins = symbolEditor.pins.map { pin -> Pin in
+            var copy = pin
+            copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
+            return copy
+        }
         
-        // --- THIS IS THE FULLY UPDATED LOGIC ---
-        let textNodes = symbolEditor.canvasNodes.compactMap { $0 as? TextNode }
+        let newSymbol = SymbolDefinition(
+            primitives: symbolPrimitives,
+            pins: symbolPins,
+            textDefinitions: symbolTextDefinitions,
+            component: newComponent
+        )
+        newComponent.symbol = newSymbol
+
+        // 3. Finalize the new footprint drafts
+        for footprintDraft in componentDesignManager.newFootprints {
+            // Find the temporary editor for this draft.
+            guard let editor = componentDesignManager.footprintEditors[footprintDraft.uuid] else {
+                print("Error: Could not find editor for footprint draft \(footprintDraft.name)")
+                continue
+            }
+
+            // Extract the final primitives and pads from the editor.
+            let primitives = createPrimitives(from: editor, anchor: anchor)
+            let pads = editor.pads.map { pad -> Pad in
+                var copy = pad
+                copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
+                return copy
+            }
+
+            // Update the draft model directly with the final data.
+            footprintDraft.primitives = primitives
+            footprintDraft.pads = pads
+            footprintDraft.components.append(newComponent)
+        }
         
-        // Map over the nodes to create the persistent `CircuitText.Definition` models.
-        let textDefinitions: [CircuitText.Definition] = textNodes.map { textNode in
-            // Get the resolved model from the node. This is the source of truth for style and content *type*.
+        // 4. Combine new and assigned footprints
+        let allFootprints = componentDesignManager.newFootprints + componentDesignManager.assignedFootprints
+        newComponent.footprints = allFootprints
+        
+        // Also associate the component with any pre-existing, assigned footprints
+        for assignedFootprint in componentDesignManager.assignedFootprints {
+            assignedFootprint.components.append(newComponent)
+        }
+
+        // 5. Insert the new component into the data context.
+        // SwiftData will automatically save the new footprints via the relationship.
+        userContext.insert(newComponent)
+
+        didCreateComponent = true
+    }
+
+    private func createPrimitives(from editor: CanvasEditorManager, anchor: CGPoint) -> [AnyCanvasPrimitive] {
+        let rawPrimitives: [AnyCanvasPrimitive] = editor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
+        return rawPrimitives.map { prim -> AnyCanvasPrimitive in
+            var copy = prim
+            copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
+            return copy
+        }
+    }
+
+    private func createTextDefinitions(from editor: CanvasEditorManager, anchor: CGPoint) -> [CircuitText.Definition] {
+        let textNodes = editor.canvasNodes.compactMap { $0 as? TextNode }
+        
+        return textNodes.map { textNode in
             let model = textNode.resolvedText
-            
-            // Center the position relative to the symbol's origin (0,0).
             let centeredPosition = CGPoint(
                 x: model.relativePosition.x - anchor.x,
                 y: model.relativePosition.y - anchor.y
             )
             
-            // Prepare the final `content` enum for persistence.
             var finalContent = model.content
-            
-            // **CRITICAL STEP**: For static text, we must update its associated value with the
-            // latest user-edited string from the `displayTextMap`. For all other cases,
-            // the placeholder strings from the map are correctly ignored.
             if case .static = finalContent {
-                let userEnteredText = symbolEditor.displayTextMap[textNode.id] ?? ""
+                let userEnteredText = editor.displayTextMap[textNode.id] ?? ""
                 finalContent = .static(text: userEnteredText)
             }
             
-            // Create the persistent definition struct with the final, cleaned data.
-            // This assumes CircuitText.Definition now has an initializer like this.
             return CircuitText.Definition(
-                id: model.id, // Use the same ID from the editor session for consistency.
-                content: finalContent, // The fully prepared content enum.
+                id: model.id,
+                content: finalContent,
                 relativePosition: centeredPosition,
-                anchorPosition: centeredPosition, // For a new definition, these start identical.
+                anchorPosition: centeredPosition,
                 font: model.font,
                 color: model.color,
                 anchor: model.anchor,
@@ -166,41 +230,6 @@ struct ComponentDesignView: View {
                 isVisible: model.isVisible
             )
         }
-        
-        let rawPrimitives: [AnyCanvasPrimitive] = symbolEditor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
-        let primitives = rawPrimitives.map { prim -> AnyCanvasPrimitive in
-            var copy = prim
-            copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
-            return copy
-        }
-        
-        let rawPins = symbolEditor.pins
-        let pins = rawPins.map { pin -> Pin in
-            var copy = pin
-            copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
-            return copy
-        }
-        
-        guard let category = componentDesignManager.selectedCategory else { return }
-        
-        let newComponent = ComponentDefinition(
-            name: componentDesignManager.componentName,
-            category: category,
-            referenceDesignatorPrefix: componentDesignManager.referenceDesignatorPrefix,
-            propertyDefinitions: componentDesignManager.componentProperties,
-            symbol: nil
-        )
-        
-        let newSymbol = SymbolDefinition(
-            primitives: primitives,
-            pins: pins,
-            textDefinitions: textDefinitions, // Use the newly created definitions.
-            component: newComponent
-        )
-        
-        newComponent.symbol = newSymbol
-        userContext.insert(newComponent)
-        didCreateComponent = true
     }
     
     private func resetForNewComponent() {

@@ -9,16 +9,20 @@ import SwiftUI
 
 struct FootprintCanvasView: View {
     
+    // Manages the global canvas state like viewport and mouse location.
     @Environment(CanvasManager.self)
     private var canvasManager
     
-    @Environment(ComponentDesignManager.self)
-    private var componentDesignManager
+    // The editor for the currently *selected* footprint. This is injected
+    // by the parent view (ComponentDesignStageContainerView) when a footprint is chosen.
+    @Environment(CanvasEditorManager.self)
+    private var footprintEditor
     
     @State private var isCollapsed: Bool = true
     
     var body: some View {
-        @Bindable var footprintEditor = componentDesignManager.footprintEditor
+        // Bind directly to the editor from the environment.
+        @Bindable var footprintEditor = footprintEditor
         @Bindable var manager = canvasManager
         
         SplitPaneView(isCollapsed: $isCollapsed) {
@@ -57,6 +61,7 @@ struct FootprintCanvasView: View {
                 canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
             }
             .overlay(alignment: .leading) {
+                // The toolbar will also pick up the footprintEditor from the environment.
                 FootprintDesignToolbarView()
                     .padding(10)
             }
@@ -65,8 +70,7 @@ struct FootprintCanvasView: View {
         } secondary: {
             Text("WIP")
         }
-        .onAppear {
-            componentDesignManager.footprintEditor.setupForFootprintEditing()
-        }
+        // The .onAppear modifier is no longer necessary. The editor is configured
+        // upon creation of a new Footprint instance within the ComponentDesignManager.
     }
 }

@@ -28,27 +28,20 @@ struct CanvasElementRowView: View {
         case let padNode as PadNode:
             Label("Pin \(padNode.pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
 
-        // --- THIS IS THE UPDATED CASE ---
         case let textNode as TextNode:
-            // We now switch on the `content` enum to determine the appropriate label.
             switch textNode.resolvedText.content {
             case .static(let text):
-                // For static text, show its content, but truncate it if it's too long
-                // for an outline view. Provide a placeholder if it's empty.
-                Text(text.isEmpty ? "Static Text" : text)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    
+                Label("\"\(text)\"", systemImage: "text.bubble.fill")
+
             case .componentName:
-                Text("Component Name")
+                Label("Component Name", systemImage: "c.square.fill")
                 
             case .componentReferenceDesignator:
-                Text("Reference Designator")
+                Label("Reference Designator", systemImage: "textformat.alt")
                 
-            case .componentProperty:
-                // We could make this more specific by looking up the property name,
-                // but "Component Property" is a safe and clear default for an outline.
-                Text("Component Property")
+            case .componentProperty(let definitionID, _):
+                let displayName = componentProperties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
+                Label(displayName, systemImage: "tag.fill")
             }
             
         default:
@@ -56,23 +49,4 @@ struct CanvasElementRowView: View {
         }
         
     }
-    
-    //    @ViewBuilder
-    //    private func textElementRow(_ textModel: TextElement) -> some View {
-    //        if let source = editor.textSourceMap[textModel.id] {
-    //            switch source {
-    //            case .dynamic(.componentName):
-    //                Label("Component Name", systemImage: "c.square.fill")
-    //            case .dynamic(.reference):
-    //                Label("Reference Designator", systemImage: "textformat.alt")
-    //            case .dynamic(.property(let definitionID)):
-    //                let displayName = componentProperties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
-    //                Label(displayName, systemImage: "tag.fill")
-    //            case .static:
-    //                Label("\"\(textModel.text)\"", systemImage: "text.bubble.fill")
-    //            }
-    //        } else {
-    //            Label("\"\(textModel.text)\"", systemImage: "text.bubble.fill")
-    //        }
-    //    }
 }

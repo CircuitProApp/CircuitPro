@@ -9,11 +9,15 @@ import SwiftUI
 
 struct FootprintPropertiesView: View {
 
-    @Environment(ComponentDesignManager.self)
-    private var componentDesignManager
+    // The parent view (ComponentDesignStageContainerView) now places the
+    // correct CanvasEditorManager for the selected footprint into the environment.
+    // We retrieve it directly here.
+    @Environment(CanvasEditorManager.self)
+    private var manager
     
     var body: some View {
-        @Bindable var manager = componentDesignManager.footprintEditor
+        // This @Bindable wrapper now correctly observes the manager for the selected footprint.
+        @Bindable var manager = manager
         
         ScrollView {
             if let element = manager.singleSelectedNode {
@@ -29,7 +33,8 @@ struct FootprintPropertiesView: View {
 
                 } else if let textNode = element as? TextNode {
                  
-
+                    // TextPropertiesView will also use the manager from the environment
+                    // to resolve bindings and other contextual data.
                     TextPropertiesView(textNode: textNode)
 
                 } else {

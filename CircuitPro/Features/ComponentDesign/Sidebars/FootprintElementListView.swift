@@ -1,14 +1,9 @@
-// Features/ComponentDesign/Sidebars/FootprintElementListView.swift
-
 import SwiftUI
 
 struct FootprintElementListView: View {
-    /// The manager that holds the state for the canvas editor.
-    @Environment(ComponentDesignManager.self) private var componentDesignManager
-    
-    var editor: CanvasEditorManager {
-        componentDesignManager.footprintEditor
-    }
+    // The view now directly receives the correct editor for the
+    // currently selected footprint from the environment.
+    @Environment(CanvasEditorManager.self) private var editor
 
     /// A type-safe identifier for any selectable item in the outline.
     typealias OutlineItemID = AnyHashable

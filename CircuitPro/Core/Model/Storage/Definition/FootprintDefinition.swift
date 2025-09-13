@@ -14,7 +14,7 @@ class FootprintDefinition {
     var uuid: UUID
     var name: String
     var footprintType: FootprintType
-    var primitives: [AnyPrimitive]
+    var primitives: [AnyCanvasPrimitive]
     var pads: [Pad]
     var components: [ComponentDefinition]
 
@@ -22,7 +22,7 @@ class FootprintDefinition {
         uuid: UUID = UUID(),
         name: String,
         footprintType: FootprintType = .throughHole,
-        primitives: [AnyPrimitive],
+        primitives: [AnyCanvasPrimitive],
         pads: [Pad] = [],
         components: [ComponentDefinition] = []
     ) {
