@@ -1,3 +1,10 @@
+//
+//  AssignedFootprintsSectionView.swift
+//  Circuit Pro
+//
+//  Created by Giorgi Tchelidze on 9/13/25.
+//
+
 import SwiftUI
 
 struct AssignedFootprintsSectionView: View {
@@ -18,8 +25,9 @@ struct AssignedFootprintsSectionView: View {
                     .padding(.leading, 4)
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 180), spacing: 16)], spacing: 16) {
-                    ForEach(componentDesignManager.assignedFootprints, id: \.uuid) { footprint in
-                        FootprintCardView(footprint: footprint)
+                    ForEach(componentDesignManager.assignedFootprints) { footprint in
+                        // CORRECTED: Uses the original FootprintCardView, passing the footprint's name
+                        FootprintCardView(name: footprint.name)
                     }
                 }
             }

@@ -12,21 +12,31 @@ struct ComponentDesignInspector: View {
     @Environment(ComponentDesignManager.self)
     private var componentDesignManager
     
-    var currentStage: ComponentDesignStage {
-        componentDesignManager.currentStage
-    }
-    
     var body: some View {
         VStack {
-            switch currentStage {
-            case .details: Text("Select a field to see details.").font(.callout).foregroundColor(.secondary)
-            case .symbol: selectionBasedDetailView(count: componentDesignManager.symbolEditor.selectedElementIDs.count, content: SymbolPropertiesView.init).environment(componentDesignManager.symbolEditor)
+            switch componentDesignManager.currentStage {
+            case .details:
+                Text("Select a field to see details.")
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+                
+            case .symbol:
+                // This logic is correct and remains unchanged.
+                selectionBasedDetailView(count: componentDesignManager.symbolEditor.selectedElementIDs.count, content: SymbolPropertiesView.init)
+                    .environment(componentDesignManager.symbolEditor)
+                    
             case .footprint:
-                // MODIFIED: Use the restored selectedFootprintEditor
-                if let editor = componentDesignManager.selectedFootprintEditor {
-                    selectionBasedDetailView(count: editor.selectedElementIDs.count, content: FootprintPropertiesView.init).environment(editor)
+                // CORRECTED: This now accesses the editor from the selected draft object.
+                // If a draft is selected, its editor is passed to the properties view.
+                if let editor = componentDesignManager.selectedFootprintDraft?.editor {
+                    selectionBasedDetailView(count: editor.selectedElementIDs.count, content: FootprintPropertiesView.init)
+                        .environment(editor)
                 } else {
-                    Text("Select a footprint to see its properties.").font(.callout).foregroundColor(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // If no draft is selected (i.e., the Hub is showing), this placeholder is displayed.
+                    Text("Select a footprint to see its properties.")
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
         }

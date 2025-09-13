@@ -12,12 +12,7 @@ struct ComponentDesignContent: View {
     @Environment(ComponentDesignManager.self)
     private var componentDesignManager
     
-    var currentStage: ComponentDesignStage {
-        componentDesignManager.currentStage
-    }
-    
     var symbolCanvasManager: CanvasManager
-    
     var footprintCanvasManager: CanvasManager
     
     @FocusState private var focusedField: ComponentDetailsFocusField?
@@ -25,7 +20,7 @@ struct ComponentDesignContent: View {
     var body: some View {
         @Bindable var componentDesignManager = componentDesignManager
 
-        switch currentStage {
+        switch componentDesignManager.currentStage {
         case .details:
             ComponentDetailsView(focusedField: $focusedField)
                 .navigationTitle("Component Details")
@@ -33,31 +28,36 @@ struct ComponentDesignContent: View {
         case .symbol:
             SymbolCanvasView()
                 .environment(symbolCanvasManager)
-                .environment(componentDesignManager.symbolEditor)
                 .navigationTitle("Symbol Editor")
                 
         case .footprint:
-            NavigationStack(path: $componentDesignManager.navigationPath) {
-                FootprintHubView()
+            // --- MANUAL NAVIGATION LOGIC ---
+            // If a draft is selected, show the canvas editor.
+            if let draft = componentDesignManager.selectedFootprintDraft {
+                FootprintCanvasView()
                     .environment(footprintCanvasManager)
-                    .navigationTitle("Footprint Hub")
-                    .navigationDestination(for: FootprintDefinition.self) { footprint in
-                        if let editor = componentDesignManager.footprintEditors[footprint.uuid] {
-                            FootprintCanvasView()
-                                .environment(footprintCanvasManager)
-                                .environment(editor)
-                                .navigationTitle(footprint.name)
-                                // --- MODIFIED: This is the key fix ---
-                                .onAppear {
-                                    componentDesignManager.selectedFootprintID = footprint.uuid
-                                }
-                                .onDisappear {
-                                    componentDesignManager.selectedFootprintID = nil
-                                }
-                        } else {
-                            Text("Error: Editor not found for this footprint.")
+                    .environment(draft.editor)
+                    .id(draft.id)
+                    .navigationTitle(draft.name)
+                    // ADDED: A toolbar with a back button that only appears with the canvas.
+                    .toolbar {
+                        ToolbarItem(placement: .navigation) {
+                            Button {
+                                // The action to "navigate back" is to deselect the current draft.
+                                componentDesignManager.selectedFootprintID = nil
+                            } label: {
+                                
+                                Image(systemName: "chevron.left")
+                                    .frame(width: 16, height: 16)
+                             
+                            }
+                   
                         }
                     }
+            } else {
+                // If NO draft is selected, show the Hub.
+                FootprintHubView()
+                    .navigationTitle("Footprint Hub")
             }
         }
     }

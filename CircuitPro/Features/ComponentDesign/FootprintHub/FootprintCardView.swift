@@ -1,8 +1,17 @@
+//
+//  FootprintCardView.swift
+//  Circuit Pro
+//
+//  Created by Giorgi Tchelidze on 9/13/25.
+//
+
 import SwiftUI
 
 struct FootprintCardView: View {
     
-    let footprint: FootprintDefinition
+    // CHANGED: The card now only needs the name to display.
+    // This makes it reusable for both FootprintDefinition and FootprintDraft.
+    let name: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -17,7 +26,8 @@ struct FootprintCardView: View {
             }
             .clipShape(.rect(cornerRadius: 12))
             
-            Text(footprint.name)
+            // Displays the name that was passed in.
+            Text(name)
                 .font(.headline)
                 .padding(.horizontal, 4)
                 .lineLimit(1)

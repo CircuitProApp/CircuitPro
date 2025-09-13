@@ -12,12 +12,9 @@ struct ComponentDesignNavigator: View {
     @Environment(ComponentDesignManager.self)
     private var componentDesignManager
     
-    var currentStage: ComponentDesignStage {
-        componentDesignManager.currentStage
-    }
-    
     var body: some View {
         VStack(spacing: 0) {
+            // MARK: - Stage Selection
             VStack(spacing: 0) {
                 stageNavigationButton(stage: .details, label: "Component Details")
                 stageNavigationButton(stage: .symbol, label: "Symbol Editor")
@@ -28,16 +25,25 @@ struct ComponentDesignNavigator: View {
             
             Divider()
             
+            // MARK: - Contextual Element List
             VStack(spacing: 0) {
-                switch currentStage {
-                case .details: EmptyView()
-                case .symbol: SymbolElementListView().environment(componentDesignManager.symbolEditor)
+                switch componentDesignManager.currentStage {
+                case .details:
+                    EmptyView()
+                    
+                case .symbol:
+                    SymbolElementListView()
+                    
                 case .footprint:
-                    // MODIFIED: Use the restored selectedFootprintEditor
-                    if let editor = componentDesignManager.selectedFootprintEditor {
-                        FootprintElementListView().environment(editor)
+                    // CORRECTED: This now checks for the selected draft.
+                    // The element list is only shown when editing a specific footprint.
+                    if let draft = componentDesignManager.selectedFootprintDraft {
+                        FootprintElementListView()
+                            // Pass the editor from the selected draft into the environment.
+                            .environment(draft.editor)
                     } else {
-                        Spacer()
+                        // When the user is viewing the Hub, this area is empty.
+                        EmptyView()
                     }
                 }
             }
@@ -48,14 +54,20 @@ struct ComponentDesignNavigator: View {
     
     private func stageNavigationButton(stage: ComponentDesignStage, label: String) -> some View {
         Button {
+            // ADDED LOGIC: When switching to the Footprint stage, always reset
+            // the selection. This ensures the user always sees the Hub first.
+            if stage == .footprint {
+                componentDesignManager.selectedFootprintID = nil
+            }
             componentDesignManager.currentStage = stage
         } label: {
             Text(label)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 6)
-                .background(currentStage == stage ? Color.blue : nil)
-                .foregroundStyle(currentStage == stage ? .white : .primary)
+                // Use the stage's ID for a reliable comparison.
+                .background(componentDesignManager.currentStage.id == stage.id ? Color.blue : nil)
+                .foregroundStyle(componentDesignManager.currentStage.id == stage.id ? .white : .primary)
                 .contentShape(.rect)
                 .clipShape(.rect(cornerRadius: 5))
         }

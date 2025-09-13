@@ -8,8 +8,6 @@
 import SwiftUI
 import Observation
 
-// The temporary `Footprint` class has been removed entirely.
-
 @Observable
 final class ComponentDesignManager {
 
@@ -18,41 +16,23 @@ final class ComponentDesignManager {
     
     // --- NEW ARCHITECTURE ---
     
-    /// Holds the drafts of the actual @Model object. These are temporary until the component is saved.
-    var newFootprints: [FootprintDefinition] = []
+    /// Holds the work-in-progress drafts for each new footprint.
+    /// Each draft is a self-contained object holding its name and its dedicated editor (UI state).
+    var footprintDrafts: [FootprintDraft] = []
     
-    /// Holds the temporary UI state (the editor) for each draft, mapping the draft's UUID to its editor.
-    /// This keeps the UI state completely separate from the data model.
-    var footprintEditors = [UUID: CanvasEditorManager]()
-    
-    /// Holds footprints that will be linked from an existing library.
+    /// Holds footprints that will be linked from an existing library (pre-existing models).
     var assignedFootprints: [FootprintDefinition] = []
     
-    // --- RE-ADD ---
-    /// The UUID of the currently selected footprint draft. This is the source of truth again.
+    /// The ID of the currently selected footprint draft. This is the source of truth for navigation.
+    /// If this is non-nil, the UI should show the canvas editor. If nil, it should show the Hub.
     var selectedFootprintID: UUID?
-    
-    var navigationPath: NavigationPath = .init()
     
     var currentStage: ComponentDesignStage = .details
     
-    let placeholderFootprintEditor: CanvasEditorManager = {
-        let ed = CanvasEditorManager()
-        ed.setupForFootprintEditing()     // harmless base state
-        return ed
-    }()
-    
-    // --- RE-ADD ---
-    /// The currently selected footprint draft model.
-    var selectedFootprint: FootprintDefinition? {
+    /// A computed property to easily access the currently selected draft object and its associated editor.
+    var selectedFootprintDraft: FootprintDraft? {
         guard let selectedFootprintID else { return nil }
-        return newFootprints.first(where: { $0.uuid == selectedFootprintID })
-    }
-    
-    /// The canvas editor for the currently selected footprint draft.
-    var selectedFootprintEditor: CanvasEditorManager? {
-        guard let selectedFootprintID else { return nil }
-        return footprintEditors[selectedFootprintID]
+        return footprintDrafts.first(where: { $0.id == selectedFootprintID })
     }
 
     // MARK: - Component Metadata
@@ -70,7 +50,7 @@ final class ComponentDesignManager {
         didSet {
             let validProperties = componentProperties
             symbolEditor.synchronizeSymbolTextWithProperties(properties: validProperties)
-            footprintEditors.values.forEach { $0.synchronizeSymbolTextWithProperties(properties: validProperties) }
+            footprintDrafts.forEach { $0.editor.synchronizeSymbolTextWithProperties(properties: validProperties) }
             didUpdateComponentData()
         }
     }
@@ -119,25 +99,17 @@ final class ComponentDesignManager {
     private func didUpdateComponentData() {
         let data = (componentName, referenceDesignatorPrefix, componentProperties)
         symbolEditor.updateDynamicTextElements(componentData: data)
-        footprintEditors.values.forEach { $0.updateDynamicTextElements(componentData: data) }
+        footprintDrafts.forEach { $0.editor.updateDynamicTextElements(componentData: data) }
         refreshValidation()
     }
 
     // MARK: - Public Methods
     
-    /// Creates a new footprint model draft and a corresponding temporary editor for it.
+    /// Creates a new footprint draft, which encapsulates its own name and editor state.
     func addNewFootprint() {
-        // 1. Create a new instance of the actual data model.
-        let newFootprint = FootprintDefinition(
-            name: "Footprint \(newFootprints.count + 1)",
-            primitives: [] // Starts empty
-        )
-        newFootprints.append(newFootprint)
-        
-        // 2. Create a temporary editor for it and store it in our dictionary.
-        let newEditor = CanvasEditorManager()
-        newEditor.setupForFootprintEditing()
-        footprintEditors[newFootprint.uuid] = newEditor
+        let newDraft = FootprintDraft(name: "Footprint \(footprintDrafts.count + 1)")
+        footprintDrafts.append(newDraft)
+        // We do NOT automatically select it. The user must click "Open" from the Hub.
     }
     
     /// Resets the entire component design session to its initial state.
@@ -148,9 +120,8 @@ final class ComponentDesignManager {
         draftProperties = [DraftProperty(key: nil, value: .single(nil), unit: .init())]
         
         symbolEditor.reset()
-        newFootprints.removeAll()
+        footprintDrafts.removeAll()
         assignedFootprints.removeAll()
-        footprintEditors.removeAll() // Clear the temporary editors
         selectedFootprintID = nil
         
         validationSummary = ValidationSummary()

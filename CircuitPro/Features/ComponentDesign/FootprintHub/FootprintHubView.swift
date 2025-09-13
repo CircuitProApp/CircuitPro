@@ -3,7 +3,6 @@ import SwiftUI
 struct FootprintHubView: View {
     
     @Environment(ComponentDesignManager.self) private var componentDesignManager
-    @Environment(CanvasManager.self) private var footprintCanvasManager: CanvasManager
     
     @State private var showFootprintsSheet: Bool = false
     @State private var hubSelectionID: UUID?
@@ -18,13 +17,14 @@ struct FootprintHubView: View {
                 actionButton("Assign Existing", systemImage: "magnifyingglass") {
                     showFootprintsSheet.toggle()
                 }
+                Spacer()
             }
             .padding()
 
             Divider()
 
             // MARK: - Content Area
-            if componentDesignManager.newFootprints.isEmpty && componentDesignManager.assignedFootprints.isEmpty {
+            if componentDesignManager.footprintDrafts.isEmpty && componentDesignManager.assignedFootprints.isEmpty {
                 ContentUnavailableView(
                     "No Footprints Created",
                     systemImage: "square.dashed",
@@ -36,9 +36,9 @@ struct FootprintHubView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         NewFootprintsSectionView(
                             hubSelectionID: $hubSelectionID,
-                            onOpen: { footprint in
-                     
-                                componentDesignManager.navigationPath.append(footprint)
+                            onOpen: { draft in
+                                // Trigger navigation by setting the selected ID in the manager
+                                componentDesignManager.selectedFootprintID = draft.id
                             }
                         )
                         

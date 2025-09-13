@@ -154,13 +154,11 @@ struct ComponentDesignView: View {
         )
         newComponent.symbol = newSymbol
 
-        // 3. Finalize the new footprint drafts
-        for footprintDraft in componentDesignManager.newFootprints {
-            // Find the temporary editor for this draft.
-            guard let editor = componentDesignManager.footprintEditors[footprintDraft.uuid] else {
-                print("Error: Could not find editor for footprint draft \(footprintDraft.name)")
-                continue
-            }
+        // 3. --- REFACTORED: Finalize the new footprint drafts ---
+        var finalNewFootprints: [FootprintDefinition] = []
+        for draft in componentDesignManager.footprintDrafts {
+            // The editor is now directly on the draft object.
+            let editor = draft.editor
 
             // Extract the final primitives and pads from the editor.
             let primitives = createPrimitives(from: editor, anchor: anchor)
@@ -170,14 +168,18 @@ struct ComponentDesignView: View {
                 return copy
             }
 
-            // Update the draft model directly with the final data.
-            footprintDraft.primitives = primitives
-            footprintDraft.pads = pads
-            footprintDraft.components.append(newComponent)
+            // Create the final, clean Model object from the draft's data.
+            let newFootprint = FootprintDefinition(
+                name: draft.name,
+                primitives: primitives,
+                pads: pads
+            )
+            newFootprint.components.append(newComponent)
+            finalNewFootprints.append(newFootprint)
         }
         
-        // 4. Combine new and assigned footprints
-        let allFootprints = componentDesignManager.newFootprints + componentDesignManager.assignedFootprints
+        // 4. Combine the newly created models with any pre-assigned ones.
+        let allFootprints = finalNewFootprints + componentDesignManager.assignedFootprints
         newComponent.footprints = allFootprints
         
         // Also associate the component with any pre-existing, assigned footprints
@@ -235,8 +237,8 @@ struct ComponentDesignView: View {
     private func resetForNewComponent() {
         componentDesignManager.resetAll()
         componentDesignManager.currentStage = .details
-        symbolCanvasManager = CanvasManager()
-        footprintCanvasManager = CanvasManager()
+        // No need to create new CanvasManagers, their internal state
+        // doesn't need to be reset between component creations.
         didCreateComponent = false
     }
 }
