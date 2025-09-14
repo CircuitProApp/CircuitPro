@@ -54,12 +54,16 @@ struct LayoutView: View {
                 .padding(16)
         }
         .onAppear {
+              // This correctly sets up the view when it first appears.
               projectManager.rebuildActiveCanvasNodes()
-              // --- ADDED: Sync the layers when the view appears ---
               self.canvasLayers = projectManager.activeCanvasLayers
           }
-          // --- ADDED: Keep the layers in sync if the design changes ---
-          .onChange(of: projectManager.selectedDesign?.layers) {
+          // --- THIS IS THE CRITICAL FIX FOR SWITCHING DESIGNS ---
+          .onChange(of: projectManager.selectedDesign) {
+              // When the selected design changes while this view is visible:
+              // 1. Tell the manager to rebuild its nodes for the new design.
+              projectManager.rebuildActiveCanvasNodes()
+              // 2. Sync this view's local layer state with the new design's layers.
               self.canvasLayers = projectManager.activeCanvasLayers
           }
     }

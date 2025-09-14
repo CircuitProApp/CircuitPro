@@ -2,7 +2,7 @@
 //  TraceNode.swift
 //  CircuitPro
 //
-//  Created by Gemini
+//  Created by Giorgi Tchelidze on 9/15/25.
 //
 
 import AppKit

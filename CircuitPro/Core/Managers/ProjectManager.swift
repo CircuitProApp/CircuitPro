@@ -21,6 +21,7 @@ final class ProjectManager {
     var project: CircuitProject
     var selectedDesign: CircuitDesign? {
         // When the design changes, clear the active layer to prevent stale state.
+        // As you correctly discovered, we must NOT modify the traceGraph here.
         didSet { activeLayerId = nil }
     }
     var selectedNodeIDs: Set<UUID> = []
@@ -35,6 +36,9 @@ final class ProjectManager {
     var selectedEditor: EditorType = .schematic
     
     var schematicGraph = WireGraph()
+    // --- ADDED: The single instance of the trace graph. ---
+    // We will use one instance for now to ensure stability.
+    var traceGraph = TraceGraph()
     
     var activeLayerId: UUID? = nil
     
@@ -77,6 +81,23 @@ final class ProjectManager {
     func persistSchematicGraph() {
         guard selectedDesign != nil else { return }
         selectedDesign?.wires = schematicGraph.toWires()
+    }
+
+    // --- ADDED: Placeholder persistence and handler for new traces ---
+    func persistTraceGraph() {
+        print("Fake persisting TraceGraph...")
+    }
+
+    func handleNewNode(_ node: BaseNode) {
+        if let traceRequest = node as? TraceRequestNode {
+            traceGraph.addTrace(
+                path: traceRequest.points,
+                width: traceRequest.width,
+                layerId: traceRequest.layerId
+            )
+            persistTraceGraph()
+            rebuildLayoutNodes()
+        }
     }
     
     // MARK: - Property Management (Unchanged)
@@ -153,7 +174,7 @@ final class ProjectManager {
         rebuildActiveCanvasNodes()
     }
     
-    // MARK: - Canvas and Graph Management (Unchanged)
+    // MARK: - Canvas and Graph Management
     
     private func makeGraph(from design: CircuitDesign) -> WireGraph {
         let newGraph = WireGraph()
@@ -173,9 +194,6 @@ final class ProjectManager {
         }
     }
     
-    // --- REFACTORED: Node rebuilding logic ---
-    
-    /// Rebuilds the canvas nodes for the currently active editor.
     func rebuildActiveCanvasNodes() {
         switch selectedEditor {
         case .schematic:
@@ -212,8 +230,6 @@ final class ProjectManager {
             return
         }
         
-        // --- THIS IS THE KEY ---
-        // We generate the canvas layers *once* here.
         let currentCanvasLayers = self.activeCanvasLayers
         
         let footprintNodes: [FootprintNode] = design.componentInstances.compactMap { inst in
@@ -222,16 +238,18 @@ final class ProjectManager {
                   footprintInst.definition != nil else {
                 return nil
             }
-            // Then we pass the generated layers to the node so it can resolve its children.
             return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: currentCanvasLayers)
         }
         
-        self.layoutCanvasNodes = footprintNodes
+        // --- MODIFIED: Add the TraceGraphNode to the canvas ---
+        let traceGraphNode = TraceGraphNode(graph: self.traceGraph)
+        traceGraphNode.syncChildNodesFromModel()
+        
+        self.layoutCanvasNodes = footprintNodes + [traceGraphNode]
     }
 
     func assignFootprint(to component: ComponentInstance, footprint: FootprintDefinition?) {
         if let footprint = footprint {
-            // A newly assigned footprint is always .unplaced by default.
             let newFootprintInstance = FootprintInstance(
                 definitionUUID: footprint.uuid,
                 definition: footprint,
@@ -261,33 +279,20 @@ final class ProjectManager {
         }
     }
     
-    /// Finds an unplaced component instance, changes its state to 'placed',
-    /// sets its position, and rebuilds the layout canvas.
-    /// - Parameters:
-    ///   - instanceID: The UUID of the `ComponentInstance` to place.
-    ///   - location: The canvas coordinates where the component was dropped.
-    ///   - side: The board side to place the component on.
     func placeComponent(instanceID: UUID, at location: CGPoint, on side: BoardSide) {
-        // 1. Find the specific component instance in the project.
         guard let component = componentInstances.first(where: { $0.id == instanceID }) else {
             print("Error: Could not find component instance with ID \(instanceID) to place.")
             return
         }
         
-        // 2. Safely update its footprint instance.
         if let footprint = component.footprintInstance {
-            // Change the state from .unplaced to .placed with the specified side.
             footprint.placement = .placed(side: side)
-            // Set its initial position on the canvas.
             footprint.position = location
         }
         
-        // 3. Rebuild the layout nodes so the new FootprintNode appears on the canvas.
         rebuildLayoutNodes()
     }
     
-    /// Generates the array of `CanvasLayer` models for the currently active editor.
-    /// This transforms the domain-specific `LayerType` into the generic `CanvasLayer` the renderer needs.
     var activeCanvasLayers: [CanvasLayer] {
         switch selectedEditor {
         case .schematic:
@@ -298,8 +303,6 @@ final class ProjectManager {
             
             return design.layers.map { layerType in
                 CanvasLayer(
-                    // --- THE FIX ---
-                    // Directly use the stable UUID from the LayerType. No conversion needed.
                     id: layerType.id,
                     name: layerType.name,
                     isVisible: true,
