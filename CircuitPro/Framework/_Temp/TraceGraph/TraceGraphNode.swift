@@ -42,21 +42,28 @@ final class TraceGraphNode: BaseNode {
     /// This is the core synchronization method. It rebuilds the node hierarchy to match the model.
     ///
     /// Call this method whenever the trace graph's topology changes.
-    func syncChildNodesFromModel() {
-        // A simple and robust way to sync is to remove all children and recreate them
-        // from the latest state of the graph model.
-        self.children.removeAll()
+    func syncChildNodesFromModel(canvasLayers: [CanvasLayer]) {
+          self.children.removeAll()
 
-        // Create a TraceNode for every edge in the graph's engine state.
-        for edge in graph.engine.currentState.edges.values {
-            let traceNode = TraceNode(edgeID: edge.id, graph: graph)
-            self.addChild(traceNode)
-        }
-        
-        // Signal to the canvas that this part of the scene has changed
-        // and needs to be redrawn in the next render pass.
-        self.onNeedsRedraw?()
-    }
+          // 1. Create a TraceNode for every edge in the graph's engine state.
+          for edge in graph.engine.currentState.edges.values {
+              let traceNode = TraceNode(edgeID: edge.id, graph: graph)
+              
+              // 2. Resolve the color for this specific trace node.
+              //    This is the "lookup like we do in footprint node" pattern.
+              if let layerId = traceNode.layerId,
+                 let layer = canvasLayers.first(where: { $0.id == layerId }) {
+                  traceNode.color = layer.color
+              } else {
+                  // Fallback color if the layer is not found (e.g., it's hidden).
+                  traceNode.color = NSColor.darkGray.cgColor
+              }
+              
+              self.addChild(traceNode)
+          }
+          
+          self.onNeedsRedraw?()
+      }
     
     /// Overridden to ensure that marquee selection can find the selectable child nodes within this container.
     override func nodes(intersecting rect: CGRect) -> [BaseNode] {

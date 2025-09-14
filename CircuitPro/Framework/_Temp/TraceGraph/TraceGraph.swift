@@ -32,16 +32,6 @@ final class TraceGraph {
              self?.onModelDidChange?()
          }
      }
-    
-    func clear() {
-        // Replace the state of the underlying engine with a new, empty state.
-        engine.replaceState(.empty)
-        // Clear all the associated metadata for the old traces.
-        traceData.removeAll()
-        // Manually notify observers that the model has changed (e.g., to update the canvas).
-        onModelDidChange?()
-    }
-    
     /// Adds a single, straight trace segment to the graph.
     // --- THIS IS THE NEW FUNCTION ---
       /// Processes a `TraceRequestNode` by creating a chain of vertices and edges for its path.

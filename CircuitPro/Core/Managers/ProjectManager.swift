@@ -230,6 +230,7 @@ final class ProjectManager {
             return
         }
         
+        // This is already here and is correct.
         let currentCanvasLayers = self.activeCanvasLayers
         
         let footprintNodes: [FootprintNode] = design.componentInstances.compactMap { inst in
@@ -241,9 +242,11 @@ final class ProjectManager {
             return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: currentCanvasLayers)
         }
         
-        // --- MODIFIED: Add the TraceGraphNode to the canvas ---
         let traceGraphNode = TraceGraphNode(graph: self.traceGraph)
-        traceGraphNode.syncChildNodesFromModel()
+        
+        // --- THIS IS THE FIX ---
+        // Pass the list of layers to the node so it can resolve its children's colors.
+        traceGraphNode.syncChildNodesFromModel(canvasLayers: currentCanvasLayers)
         
         self.layoutCanvasNodes = footprintNodes + [traceGraphNode]
     }
