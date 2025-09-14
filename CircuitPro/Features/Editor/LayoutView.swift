@@ -21,6 +21,7 @@ struct LayoutView: View {
             selection: $projectManager.selectedNodeIDs,
             tool: $selectedTool.unwrapping(withDefault: defaultTool),
             layers: $canvasLayers,
+            activeLayerId: $projectManager.activeLayerId,
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
@@ -47,6 +48,10 @@ struct LayoutView: View {
         )
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
+        }
+        .overlay(alignment: .leading) {
+            LayoutToolbarView(selectedSchematicTool: $selectedTool)
+                .padding(16)
         }
         .onAppear {
               projectManager.rebuildActiveCanvasNodes()

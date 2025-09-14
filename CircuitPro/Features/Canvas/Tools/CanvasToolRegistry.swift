@@ -34,4 +34,6 @@ enum CanvasToolRegistry {
     static let schematicTools: [CanvasTool] =
         cursor + [WireTool()] + ruler
 
+    static let layoutTools: [CanvasTool] =
+    cursor + [TraceTool()] + ruler
 }

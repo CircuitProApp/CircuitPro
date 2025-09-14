@@ -34,6 +34,18 @@ extension LayerType {
     }
 }
 
+extension LayerType {
+    /// Determines if a layer is a copper layer that can have traces.
+    var isTraceable: Bool {
+        switch self.kind {
+        case .copper, .innerCopper:
+            return true
+        default:
+            return false
+        }
+    }
+}
+
 // MARK: - Standard Layer Definitions
 extension LayerType {
     static let frontCopper      = LayerType(id: UUID(uuidString: "F9B6E1A3-C6D4-4A8E-9B1A-0E1F2A3B4C5D")!, name: "Front Copper", kind: .copper, side: .front)

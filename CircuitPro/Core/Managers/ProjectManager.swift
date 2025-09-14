@@ -19,7 +19,10 @@ struct RenderableText {
 final class ProjectManager {
     
     var project: CircuitProject
-    var selectedDesign: CircuitDesign?
+    var selectedDesign: CircuitDesign? {
+        // When the design changes, clear the active layer to prevent stale state.
+        didSet { activeLayerId = nil }
+    }
     var selectedNodeIDs: Set<UUID> = []
     
     // --- MODIFIED: Separate node arrays for each editor ---
@@ -32,6 +35,8 @@ final class ProjectManager {
     var selectedEditor: EditorType = .schematic
     
     var schematicGraph = WireGraph()
+    
+    var activeLayerId: UUID? = nil
     
     init(
         project: CircuitProject,
