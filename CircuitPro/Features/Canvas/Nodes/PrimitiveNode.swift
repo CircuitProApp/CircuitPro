@@ -34,8 +34,8 @@ class PrimitiveNode: BaseNode, Layerable {
      }
     
     override var isSelectable: Bool {
-        return !(parent is SymbolNode)
-    }
+          return !(parent is SymbolNode || parent is FootprintNode)
+      }
     
     // MARK: - Init
     

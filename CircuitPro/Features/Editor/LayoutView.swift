@@ -4,19 +4,23 @@ struct LayoutView: View {
     @BindableEnvironment(\.projectManager)
     private var projectManager
     
+    // --- ADDED: We need the document to schedule autosaves ---
+    var document: CircuitProjectFileDocument
+    
     @State var canvasManager: CanvasManager = CanvasManager()
     
     @State private var selectedTool: CanvasTool = CursorTool()
     let defaultTool: CanvasTool = CursorTool()
     
+    @State private var canvasLayers: [CanvasLayer] = []
+    
     var body: some View {
         CanvasView(
             viewport: $canvasManager.viewport,
-            // --- MODIFIED ---
             nodes: $projectManager.activeCanvasNodes,
-            // ---
             selection: $projectManager.selectedNodeIDs,
             tool: $selectedTool.unwrapping(withDefault: defaultTool),
+            layers: $canvasLayers,
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
@@ -35,20 +39,45 @@ struct LayoutView: View {
             ],
             inputProcessors: [ GridSnapProcessor() ],
             snapProvider: CircuitProSnapProvider(),
-            registeredDraggedTypes: [.transferableComponent],
-//            onPasteboardDropped: handleComponentDrop,
-//            onModelDidChange: { document.scheduleAutosave() }
+            // --- MODIFIED: Register our new draggable type ---
+            registeredDraggedTypes: [.transferablePlacement],
+            // --- MODIFIED: Implement the drop handler ---
+            onPasteboardDropped: handlePlacementDrop,
+            onModelDidChange: { document.scheduleAutosave() }
         )
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
-        // --- ADDED: Rebuild nodes when the view appears ---
         .onAppear {
-            projectManager.rebuildActiveCanvasNodes()
-        }
+              projectManager.rebuildActiveCanvasNodes()
+              // --- ADDED: Sync the layers when the view appears ---
+              self.canvasLayers = projectManager.activeCanvasLayers
+          }
+          // --- ADDED: Keep the layers in sync if the design changes ---
+          .onChange(of: projectManager.selectedDesign?.layers) {
+              self.canvasLayers = projectManager.activeCanvasLayers
+          }
     }
-}
-
-#Preview {
-    LayoutView()
+    
+    // --- ADDED: The drop handler function ---
+    /// Handles dropping an unplaced component from the navigator onto the canvas.
+    private func handlePlacementDrop(pasteboard: NSPasteboard, location: CGPoint) -> Bool {
+        // 1. Check if the pasteboard contains our specific placement data.
+        guard let data = pasteboard.data(forType: .transferablePlacement),
+              let transferable = try? JSONDecoder().decode(TransferablePlacement.self, from: data) else {
+            // If not, this drop is not for us.
+            return false
+        }
+        
+        // 2. Call the project manager to perform the state change.
+        //    For now, we default to placing on the front side. Flipping can be a separate action.
+        projectManager.placeComponent(
+            instanceID: transferable.componentInstanceID,
+            at: location,
+            on: .front
+        )
+        
+        // 3. Tell the canvas we successfully handled this drop.
+        return true
+    }
 }

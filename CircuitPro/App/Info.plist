@@ -12,17 +12,13 @@
         <dict>
             <key>UTTypeIdentifier</key>
             <string>app.circuitpro.project</string>
-
-            <!-- MUST include public.package so the system knows it's a folder-based doc -->
             <key>UTTypeConformsTo</key>
             <array>
-                <string>com.apple.package</string> 
+                <string>com.apple.package</string>
                 <string>public.data</string>
             </array>
-
             <key>UTTypeDescription</key>
             <string>CircuitPro Project</string>
-
             <key>UTTypeTagSpecification</key>
             <dict>
                 <key>public.filename-extension</key>
@@ -47,6 +43,21 @@
             <key>UTTypeTagSpecification</key>
             <dict/>
         </dict>
+
+        <!-- ⭐️ ADDED: Declaration for the new placement data type ⭐️ -->
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>app.circuitpro.transferable-placement-data</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>Transferable Placement Data</string>
+            <key>UTTypeTagSpecification</key>
+            <dict/>
+        </dict>
+        <!-- ⭐️ END OF ADDITION ⭐️ -->
 
         <!-- Schematic File (unchanged) -->
         <dict>
@@ -100,20 +111,14 @@
         <dict>
             <key>CFBundleTypeName</key>
             <string>CircuitPro Project</string>
-
-            <!-- must reference the UTI declared above -->
             <key>LSItemContentTypes</key>
             <array>
                 <string>app.circuitpro.project</string>
             </array>
-
             <key>CFBundleTypeRole</key>
             <string>Editor</string>
-
             <key>LSHandlerRank</key>
             <string>Owner</string>
-
-            <!-- THIS FLAG makes Finder treat *.circuitproj as a package -->
             <key>LSTypeIsPackage</key>
             <true/>
         </dict>

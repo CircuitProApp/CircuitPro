@@ -207,14 +207,18 @@ final class ProjectManager {
             return
         }
         
-        // The logic now checks the placement state.
+        // --- THIS IS THE KEY ---
+        // We generate the canvas layers *once* here.
+        let currentCanvasLayers = self.activeCanvasLayers
+        
         let footprintNodes: [FootprintNode] = design.componentInstances.compactMap { inst in
             guard let footprintInst = inst.footprintInstance,
-                  case .placed = footprintInst.placement, // Only create nodes for placed components
+                  case .placed = footprintInst.placement,
                   footprintInst.definition != nil else {
                 return nil
             }
-            return FootprintNode(id: inst.id, instance: footprintInst)
+            // Then we pass the generated layers to the node so it can resolve its children.
+            return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: currentCanvasLayers)
         }
         
         self.layoutCanvasNodes = footprintNodes
@@ -249,6 +253,56 @@ final class ProjectManager {
             let graphNode = SchematicGraphNode(graph: self.schematicGraph)
             graphNode.syncChildNodesFromModel()
             schematicCanvasNodes = [node, graphNode]
+        }
+    }
+    
+    /// Finds an unplaced component instance, changes its state to 'placed',
+    /// sets its position, and rebuilds the layout canvas.
+    /// - Parameters:
+    ///   - instanceID: The UUID of the `ComponentInstance` to place.
+    ///   - location: The canvas coordinates where the component was dropped.
+    ///   - side: The board side to place the component on.
+    func placeComponent(instanceID: UUID, at location: CGPoint, on side: BoardSide) {
+        // 1. Find the specific component instance in the project.
+        guard let component = componentInstances.first(where: { $0.id == instanceID }) else {
+            print("Error: Could not find component instance with ID \(instanceID) to place.")
+            return
+        }
+        
+        // 2. Safely update its footprint instance.
+        if let footprint = component.footprintInstance {
+            // Change the state from .unplaced to .placed with the specified side.
+            footprint.placement = .placed(side: side)
+            // Set its initial position on the canvas.
+            footprint.position = location
+        }
+        
+        // 3. Rebuild the layout nodes so the new FootprintNode appears on the canvas.
+        rebuildLayoutNodes()
+    }
+    
+    /// Generates the array of `CanvasLayer` models for the currently active editor.
+    /// This transforms the domain-specific `LayerType` into the generic `CanvasLayer` the renderer needs.
+    var activeCanvasLayers: [CanvasLayer] {
+        switch selectedEditor {
+        case .schematic:
+            return []
+            
+        case .layout:
+            guard let design = selectedDesign else { return [] }
+            
+            return design.layers.map { layerType in
+                CanvasLayer(
+                    // --- THE FIX ---
+                    // Directly use the stable UUID from the LayerType. No conversion needed.
+                    id: layerType.id,
+                    name: layerType.name,
+                    isVisible: true,
+                    color: NSColor(layerType.defaultColor).cgColor,
+                    zIndex: layerType.kind.zIndex,
+                    kind: layerType
+                )
+            }
         }
     }
     

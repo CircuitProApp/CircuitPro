@@ -10,18 +10,15 @@ import SwiftUI
 struct FootprintNavigatorView: View {
     @BindableEnvironment(\.projectManager) private var projectManager
 
-    // --- MODIFIED: Logic is now cleaner and safer with the enum ---
     private var unplacedComponents: [ComponentInstance] {
         projectManager.componentInstances.filter {
             $0.footprintInstance?.placement == .unplaced
         }
     }
     
-    // --- MODIFIED: Logic now uses a 'case' statement to check state and get the side ---
     private func placedComponents(on side: BoardSide) -> [ComponentInstance] {
         projectManager.componentInstances.filter { component in
             guard let footprint = component.footprintInstance else { return false }
-            
             if case .placed(let footprintSide) = footprint.placement {
                 return footprintSide == side
             }
@@ -38,11 +35,14 @@ struct FootprintNavigatorView: View {
                 } else {
                     ForEach(unplacedComponents) { component in
                         componentRow(for: component)
+                            // --- ADDED: Make this row draggable ---
+                            .draggable(TransferablePlacement(componentInstanceID: component.id))
                     }
                 }
             }
             
             Section("Placed on Front") {
+                // ... (rest of the view is unchanged)
                 let frontComponents = placedComponents(on: .front)
                 if frontComponents.isEmpty {
                     Text("No components on front.")

@@ -5,9 +5,6 @@
 //  Created by Giorgi Tchelidze on 9/14/25.
 //
 
-
-// Core/Model/Layer/BoardSide.swift
-
 import Foundation
 
 /// Defines the physical side of the board a component footprint is placed on.
