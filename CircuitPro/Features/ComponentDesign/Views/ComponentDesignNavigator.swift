@@ -33,6 +33,7 @@ struct ComponentDesignNavigator: View {
                     
                 case .symbol:
                     SymbolElementListView()
+                        .environment(componentDesignManager.symbolEditor)
                     
                 case .footprint:
                     if let draft = componentDesignManager.selectedFootprintDraft {

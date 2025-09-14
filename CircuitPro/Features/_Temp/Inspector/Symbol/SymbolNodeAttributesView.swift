@@ -6,19 +6,43 @@
 //
 
 import SwiftUI
-import SwiftDataPacks
+import SwiftData
 
 struct SymbolNodeAttributesView: View {
     @Environment(\.projectManager) private var projectManager
-    @PackManager private var packManager
     
     @Bindable var component: ComponentInstance
     @Bindable var symbolNode: SymbolNode
     
+    // ADDED: Query to fetch all available footprints to populate the picker.
+    @Query(sort: \FootprintDefinition.name) private var allFootprints: [FootprintDefinition]
+    
     @State private var selectedProperty: Property.Resolved.ID?
     
-    // This binding is complex, but its logic correctly finds the edited property
-    // and calls the manager to handle the update. No changes are needed here.
+    // MARK: - Computed Properties for Footprint Sections
+    
+    /// Footprints that are directly associated with the component's definition.
+    private var compatibleFootprints: [FootprintDefinition] {
+        component.definition?.footprints.sorted(by: { $0.name < $1.name }) ?? []
+    }
+    
+    /// All other footprints in the library, excluding the compatible ones.
+    private var otherFootprints: [FootprintDefinition] {
+        let compatibleUUIDs = Set(compatibleFootprints.map { $0.uuid })
+        return allFootprints.filter { !compatibleUUIDs.contains($0.uuid) }
+    }
+    
+    /// The display name of the currently selected footprint.
+    private var selectedFootprintName: String {
+        guard let selectedUUID = component.footprintInstance?.definitionUUID else {
+            return "None"
+        }
+        // Find the footprint in the full list to get its name.
+        return allFootprints.first { $0.uuid == selectedUUID }?.name ?? "Invalid Footprint"
+    }
+
+    // MARK: - Bindings
+
     private var propertiesBinding: Binding<[Property.Resolved]> {
         Binding(
             get: {
@@ -52,6 +76,28 @@ struct SymbolNodeAttributesView: View {
             }
         )
     }
+
+    private var footprintBinding: Binding<UUID?> {
+        Binding(
+            get: {
+                // The value of the picker is the UUID of the currently assigned footprint instance.
+                return component.footprintInstance?.definitionUUID
+            },
+            set: { newUUID in
+                // When the picker's value changes, this logic runs.
+                if let newUUID = newUUID {
+                    // If a new footprint was selected, find it in our query results.
+                    if let selectedFootprint = allFootprints.first(where: { $0.uuid == newUUID }) {
+                        // Tell the project manager to assign this footprint.
+                        projectManager.assignFootprint(to: component, footprint: selectedFootprint)
+                    }
+                } else {
+                    // If "None" was selected (newUUID is nil), un-assign the footprint.
+                    projectManager.assignFootprint(to: component, footprint: nil)
+                }
+            }
+        )
+    }
     
     var body: some View {
         VStack(spacing: 5) {
@@ -69,6 +115,53 @@ struct SymbolNodeAttributesView: View {
                     )
                 }
             }
+            
+            Divider()
+
+            // --- UPDATED: Footprint Assignment Section ---
+            InspectorSection("Footprint") {
+                InspectorRow("Assigned") {
+                    // Replace the Picker with a more flexible Menu
+                    Menu {
+                        // Option to clear the selection
+                        Button("None") {
+                            footprintBinding.wrappedValue = nil
+                        }
+
+                        // Section 1: Compatible Footprints
+                        if !compatibleFootprints.isEmpty {
+                            Section("Compatible") {
+                                ForEach(compatibleFootprints) { footprint in
+                                    Button(footprint.name) {
+                                        footprintBinding.wrappedValue = footprint.uuid
+                                    }
+                                }
+                            }
+                        }
+
+                        // Visual separator if both sections exist
+                        if !compatibleFootprints.isEmpty && !otherFootprints.isEmpty {
+                            Divider()
+                        }
+
+                        // Section 2: Other Footprints
+                        if !otherFootprints.isEmpty {
+                            Section("Other Footprints") {
+                                ForEach(otherFootprints) { footprint in
+                                    Button(footprint.name) {
+                                        footprintBinding.wrappedValue = footprint.uuid
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        Text(selectedFootprintName)
+                    }
+                    .menuStyle(.automatic)
+                    .controlSize(.small)
+                }
+            }
+            // --- END UPDATED SECTION ---
             
             Divider()
             
@@ -114,12 +207,4 @@ struct SymbolNodeAttributesView: View {
             symbolNode.onNeedsRedraw?()
         }
     }
-
-    // --- REMOVED ---
-    // The `calculateVisibility` function has been removed.
-    // 1. It relied on the now-deleted `symbolNode.resolvedTexts` property.
-    // 2. The `Table` UI does not provide a natural place to display the visibility
-    //    toggle that this function would control. This function is dead code
-    //    left over from a previous UI implementation. A feature to toggle property
-    //    visibility would now need to be implemented differently (e.g., a context menu).
 }

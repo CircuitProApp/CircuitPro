@@ -27,6 +27,7 @@ struct ComponentDesignContent: View {
         case .symbol:
             SymbolCanvasView()
                 .environment(symbolCanvasManager)
+                .environment(componentDesignManager.symbolEditor)
                 .navigationTitle("Symbol Editor")
                 
         case .footprint:
