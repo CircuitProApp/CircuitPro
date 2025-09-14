@@ -17,11 +17,14 @@ struct EditorView: View {
 
     @State private var showUtilityArea: Bool = true
 
-    @State private var selectedEditor: EditorType = .schematic
-
     @State private var schematicCanvasManager = CanvasManager()
     @State private var layoutCanvasManager = CanvasManager()
 
+    
+    var selectedEditor: EditorType {
+        projectManager.selectedEditor
+    }
+    
     var selectedCanvasManager: CanvasManager {
         switch selectedEditor {
         case .schematic:
@@ -65,7 +68,7 @@ struct EditorView: View {
             HStack {
                 Spacer()
                 Button {
-                    selectedEditor = .schematic
+                    projectManager.selectedEditor = .schematic
                 } label: {
                     Text("Schematic")
                         .directionalPadding(vertical: 3, horizontal: 7.5)
@@ -79,7 +82,7 @@ struct EditorView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    selectedEditor = .layout
+                    projectManager.selectedEditor = .layout
                 } label: {
                     Text("Layout")
                         .directionalPadding(vertical: 3, horizontal: 7.5)

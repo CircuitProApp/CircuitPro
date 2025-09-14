@@ -24,6 +24,8 @@ final class ProjectManager {
     var canvasNodes: [BaseNode] = []
     var selectedNetIDs: Set<UUID> = []
     
+    var selectedEditor: EditorType = .schematic
+    
     var schematicGraph = WireGraph()
     
     init(
