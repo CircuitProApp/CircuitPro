@@ -26,7 +26,8 @@ struct CollapseLinearRunsRule: GraphRule {
             let dirs = uniqueIncidentDirections(of: center, tol: tol, state: state)
 
             for dir in dirs {
-                processRun(from: center.id, baseDir: dir, tol: tol, policy: context.policy, state: &state)
+                // --- MODIFIED: Pass the full context to processRun ---
+                processRun(from: center.id, baseDir: dir, tol: tol, context: context, state: &state)
             }
         }
     }
@@ -60,8 +61,8 @@ struct CollapseLinearRunsRule: GraphRule {
         return abs(abs(dot) - 1.0) <= 10 * tol
     }
 
-    // Grow a line run through the graph along baseDir (both directions), then collapse it
-    private func processRun(from startID: UUID, baseDir: CGVector, tol: CGFloat, policy: VertexPolicy?, state: inout GraphState) {
+    // --- MODIFIED: This method now handles metadata propagation via the context ---
+    private func processRun(from startID: UUID, baseDir: CGVector, tol: CGFloat, context: ResolutionContext, state: inout GraphState) {
         guard let startV = state.vertices[startID] else { return }
 
         // BFS/DFS collecting vertices collinear with baseDir
@@ -87,7 +88,7 @@ struct CollapseLinearRunsRule: GraphRule {
         // Decide which vertices to keep
         var keep: Set<UUID> = []
         for v in run {
-            if policy?.isProtected(v, state: state) ?? false {
+            if context.policy?.isProtected(v, state: state) ?? false {
                 keep.insert(v.id)
                 continue
             }
@@ -118,30 +119,43 @@ struct CollapseLinearRunsRule: GraphRule {
         // If nothing to collapse, return
         if keep.count >= run.count { return }
 
-        // Remove internal edges among the run
+        // --- METADATA PROPAGATION LOGIC ---
+        // 1. Before deleting, find all the unique edges that are part of the run.
+        var edgesToDelete: [GraphEdge] = []
         let runIDs = Set(run.map { $0.id })
         for v in run {
             if let eids = state.adjacency[v.id] {
-                for eid in Array(eids) {
+                for eid in eids {
                     guard let e = state.edges[eid] else { continue }
                     let other = (e.start == v.id) ? e.end : e.start
+                    // An edge is part of the run if both its ends are in the run.
                     if runIDs.contains(other) {
-                        state.removeEdge(eid)
+                        edgesToDelete.append(e)
                     }
                 }
             }
         }
+        // De-duplicate the edges.
+        edgesToDelete = Array(Set(edgesToDelete))
 
-        // Remove removable vertices
+        // 2. Remove internal edges of the run.
+        for edge in edgesToDelete {
+            state.removeEdge(edge.id)
+        }
+
+        // 3. Remove the vertices that are being collapsed away.
         for v in run where !keep.contains(v.id) {
             state.removeVertex(v.id)
         }
 
-        // Reconnect the kept vertices in order
+        // 4. Reconnect the kept vertices in order.
         let keptVerts = run.filter { keep.contains($0.id) }
         guard keptVerts.count >= 2 else { return }
         for i in 0..<(keptVerts.count - 1) {
-            _ = state.addEdge(from: keptVerts[i].id, to: keptVerts[i+1].id)
+            if let newEdge = state.addEdge(from: keptVerts[i].id, to: keptVerts[i+1].id) {
+                // 5. CRITICAL: Inform the metadata policy so it can transfer metadata.
+                context.metadataPolicy?.propagateMetadata(from: edgesToDelete, to: newEdge)
+            }
         }
     }
 
@@ -152,5 +166,12 @@ struct CollapseLinearRunsRule: GraphRule {
         // Normalize tol by |dir| (we use |dir| ~ 1 for unit, but be safe)
         let scale = max(hypot(dir.dx, dir.dy), tol)
         return abs(cross) <= tol * scale
+    }
+}
+
+// --- ADDED: Make GraphEdge Hashable for use in Sets ---
+extension GraphEdge {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }

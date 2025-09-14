@@ -12,6 +12,7 @@ struct ResolutionContext {
     let epicenter: Set<UUID>
     let geometry: GeometryPolicy
     let neighborhood: CGRect
-    let policy: VertexPolicy?   // new
+    let policy: VertexPolicy?
+    let metadataPolicy: GraphMetadataPolicy?
 }
 
