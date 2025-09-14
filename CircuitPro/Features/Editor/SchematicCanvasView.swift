@@ -23,7 +23,7 @@ struct SchematicCanvasView: View {
     var body: some View {
         CanvasView(
             viewport: $canvasManager.viewport,
-            nodes: $projectManager.canvasNodes,
+            nodes: $projectManager.activeCanvasNodes,
             selection: $projectManager.selectedNodeIDs,
             tool: $selectedTool.unwrapping(withDefault: defaultTool),
             environment: canvasManager.environment,
@@ -56,7 +56,7 @@ struct SchematicCanvasView: View {
                 .padding(16)
         }
         .onAppear {
-            projectManager.rebuildCanvasNodes()
+            projectManager.rebuildActiveCanvasNodes()
             
             projectManager.schematicGraph.onModelDidChange = {
                 projectManager.persistSchematicGraph()
@@ -77,14 +77,17 @@ struct SchematicCanvasView: View {
             projectManager.persistSchematicGraph()
             document.scheduleAutosave()
         }
-        .onChange(of: projectManager.canvasNodes) {
+        .onChange(of: projectManager.activeCanvasNodes) {
             syncProjectManagerFromNodes()
         }
     }
     
     private func syncProjectManagerFromNodes() {
+        // Ensure we only perform this sync logic for the schematic editor
+        guard projectManager.selectedEditor == .schematic else { return }
+
         let currentComponentIDs = Set(projectManager.componentInstances.map(\.id))
-        let nodeIDs = Set(projectManager.canvasNodes.map(\.id))
+        let nodeIDs = Set(projectManager.activeCanvasNodes.compactMap { $0 as? SymbolNode }.map(\.id) )
         let missingComponentIDs = currentComponentIDs.subtracting(nodeIDs)
         
         if !missingComponentIDs.isEmpty {
@@ -120,13 +123,13 @@ struct SchematicCanvasView: View {
                 .max() ?? 0
         ) + 1
         // Make var so we can set definition
-        var newSymbolInstance = SymbolInstance(
+        let newSymbolInstance = SymbolInstance(
             definitionUUID: symbolDefinition.uuid, definition: symbolDefinition,
             position: location,
             cardinalRotation: .east
         )
         
-        var newComponentInstance = ComponentInstance(definitionUUID: componentDefinition.uuid, definition: componentDefinition, symbolInstance: newSymbolInstance)
+        let newComponentInstance = ComponentInstance(definitionUUID: componentDefinition.uuid, definition: componentDefinition, symbolInstance: newSymbolInstance)
         
         // Append to the selected design
         var currentInstances = projectManager.componentInstances

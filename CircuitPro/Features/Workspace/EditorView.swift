@@ -61,6 +61,10 @@ struct EditorView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(selectedCanvasManager)
+        // --- ADDED: Trigger rebuild when the editor changes ---
+        .onChange(of: projectManager.selectedEditor) {
+            projectManager.rebuildActiveCanvasNodes()
+        }
     }
 
     private var editorSelection: some View {

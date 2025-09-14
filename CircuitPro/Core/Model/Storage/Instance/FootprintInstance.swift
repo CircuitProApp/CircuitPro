@@ -10,28 +10,24 @@ import SwiftUI
 import Resolvable
 
 @Observable
-// ADDED: Make this a destination for resolving text, and make it transformable.
 @ResolvableDestination(for: CircuitText.self)
 final class FootprintInstance: Identifiable, Codable, Transformable {
 
     var id: UUID
-    
-    // RENAMED: Changed from footprintUUID to definitionUUID for consistency with SymbolInstance.
     var definitionUUID: UUID
 
-    // ADDED: A source link to the FootprintDefinition to get the text definitions.
     @DefinitionSource(for: CircuitText.self, at: \FootprintDefinition.textDefinitions)
     var definition: FootprintDefinition? = nil
     
-    // ADDED: Transformable properties for position and rotation on the PCB.
     var position: CGPoint
     var cardinalRotation: CardinalRotation = .east
 
-    // ADDED: Properties to store instance-specific text data.
+    /// The placement status and location of the footprint, e.g., unplaced, or placed on the front/back side.
+    var placement: PlacementState = .unplaced
+    
     var textOverrides: [CircuitText.Override]
     var textInstances: [CircuitText.Instance]
 
-    // ADDED: Computed property to satisfy Transformable conformance.
     var rotation: CGFloat {
         get { cardinalRotation.radians }
         set { cardinalRotation = .closest(to: newValue) }
@@ -41,27 +37,30 @@ final class FootprintInstance: Identifiable, Codable, Transformable {
         id: UUID = UUID(),
         definitionUUID: UUID,
         definition: FootprintDefinition? = nil,
-        position: CGPoint = .zero, // Added
-        cardinalRotation: CardinalRotation = .east, // Added
-        textOverrides: [CircuitText.Override] = [], // Added
-        textInstances: [CircuitText.Instance] = [] // Added
+        position: CGPoint = .zero,
+        cardinalRotation: CardinalRotation = .east,
+        placement: PlacementState = .unplaced,
+        textOverrides: [CircuitText.Override] = [],
+        textInstances: [CircuitText.Instance] = []
     ) {
         self.id = id
         self.definitionUUID = definitionUUID
         self.definition = definition
         self.position = position
         self.cardinalRotation = cardinalRotation
+        self.placement = placement
         self.textOverrides = textOverrides
         self.textInstances = textInstances
     }
 
-    // MARK: - Codable (Updated to handle all new properties)
+    // MARK: - Codable
 
     enum CodingKeys: String, CodingKey {
         case id
         case definitionUUID
         case position
         case cardinalRotation
+        case placement // Updated from 'side' and 'isPlaced'
         case textOverrides
         case textInstances
     }
@@ -72,6 +71,8 @@ final class FootprintInstance: Identifiable, Codable, Transformable {
         self.definitionUUID = try container.decode(UUID.self, forKey: .definitionUUID)
         self.position = try container.decode(CGPoint.self, forKey: .position)
         self.cardinalRotation = try container.decode(CardinalRotation.self, forKey: .cardinalRotation)
+        // Decode the new state, defaulting to .unplaced for backward compatibility with older project files.
+        self.placement = try container.decodeIfPresent(PlacementState.self, forKey: .placement) ?? .unplaced
         self.textOverrides = try container.decode([CircuitText.Override].self, forKey: .textOverrides)
         self.textInstances = try container.decode([CircuitText.Instance].self, forKey: .textInstances)
     }
@@ -82,18 +83,22 @@ final class FootprintInstance: Identifiable, Codable, Transformable {
         try container.encode(definitionUUID, forKey: .definitionUUID)
         try container.encode(position, forKey: .position)
         try container.encode(cardinalRotation, forKey: .cardinalRotation)
+        try container.encode(placement, forKey: .placement)
         try container.encode(textOverrides, forKey: .textOverrides)
         try container.encode(textInstances, forKey: .textInstances)
     }
 }
 
-// ADDED: Equatable conformance for value-based comparisons.
+// MARK: - Equatable Conformance
+
 extension FootprintInstance: Equatable {
     static func == (lhs: FootprintInstance, rhs: FootprintInstance) -> Bool {
+        // Note: 'definition' is a transient property and should not be part of Equatable comparison.
         lhs.id == rhs.id &&
         lhs.definitionUUID == rhs.definitionUUID &&
         lhs.position == rhs.position &&
         lhs.cardinalRotation == rhs.cardinalRotation &&
+        lhs.placement == rhs.placement && // Updated to use the new state enum
         lhs.textOverrides == rhs.textOverrides &&
         lhs.textInstances == rhs.textInstances
     }

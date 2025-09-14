@@ -12,7 +12,9 @@ struct LayoutView: View {
     var body: some View {
         CanvasView(
             viewport: $canvasManager.viewport,
-            nodes: $projectManager.canvasNodes,
+            // --- MODIFIED ---
+            nodes: $projectManager.activeCanvasNodes,
+            // ---
             selection: $projectManager.selectedNodeIDs,
             tool: $selectedTool.unwrapping(withDefault: defaultTool),
             environment: canvasManager.environment,
@@ -39,6 +41,10 @@ struct LayoutView: View {
         )
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
+        }
+        // --- ADDED: Rebuild nodes when the view appears ---
+        .onAppear {
+            projectManager.rebuildActiveCanvasNodes()
         }
     }
 }

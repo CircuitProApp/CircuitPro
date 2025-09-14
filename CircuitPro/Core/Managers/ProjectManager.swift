@@ -21,7 +21,12 @@ final class ProjectManager {
     var project: CircuitProject
     var selectedDesign: CircuitDesign?
     var selectedNodeIDs: Set<UUID> = []
-    var canvasNodes: [BaseNode] = []
+    
+    // --- MODIFIED: Separate node arrays for each editor ---
+    var schematicCanvasNodes: [BaseNode] = []
+    var layoutCanvasNodes: [BaseNode] = []
+    // ---
+    
     var selectedNetIDs: Set<UUID> = []
     
     var selectedEditor: EditorType = .schematic
@@ -35,6 +40,29 @@ final class ProjectManager {
         self.project        = project
         self.selectedDesign = selectedDesign
     }
+    
+    // --- ADDED: Computed property for the active canvas nodes ---
+    /// Returns the appropriate node array based on the selected editor.
+    /// The CanvasViews in the UI should bind to this property.
+    var activeCanvasNodes: [BaseNode] {
+        get {
+            switch selectedEditor {
+            case .schematic:
+                return schematicCanvasNodes
+            case .layout:
+                return layoutCanvasNodes
+            }
+        }
+        set {
+            switch selectedEditor {
+            case .schematic:
+                schematicCanvasNodes = newValue
+            case .layout:
+                layoutCanvasNodes = newValue
+            }
+        }
+    }
+    // ---
     
     var componentInstances: [ComponentInstance] {
         get { selectedDesign?.componentInstances ?? [] }
@@ -50,17 +78,17 @@ final class ProjectManager {
     
     func updateProperty(for component: ComponentInstance, with editedProperty: Property.Resolved) {
         component.apply(editedProperty)
-        rebuildCanvasNodes()
+        rebuildActiveCanvasNodes()
     }
     
     func addProperty(_ newProperty: Property.Instance, to component: ComponentInstance) {
         component.add(newProperty)
-        rebuildCanvasNodes()
+        rebuildActiveCanvasNodes()
     }
     
     func removeProperty(_ propertyToRemove: Property.Resolved, from component: ComponentInstance) {
         component.remove(propertyToRemove)
-        rebuildCanvasNodes()
+        rebuildActiveCanvasNodes()
     }
 
     // MARK: - Text Management (Unchanged)
@@ -100,45 +128,24 @@ final class ProjectManager {
     
     func updateText(for component: ComponentInstance, with editedText: CircuitText.Resolved) {
         component.apply(editedText)
-        rebuildCanvasNodes()
+        rebuildActiveCanvasNodes()
     }
 
     func addText(_ newText: CircuitText.Instance, to component: ComponentInstance) {
         component.add(newText)
-        rebuildCanvasNodes()
+        rebuildActiveCanvasNodes()
     }
 
     func removeText(_ textToRemove: CircuitText.Resolved, from component: ComponentInstance) {
         component.remove(textToRemove)
-        rebuildCanvasNodes()
+        rebuildActiveCanvasNodes()
     }
 
     // MARK: - Other Component Actions
     
     func updateReferenceDesignator(for component: ComponentInstance, newIndex: Int) {
         component.referenceDesignatorIndex = newIndex
-        rebuildCanvasNodes()
-    }
-
-    // --- ADDED: Footprint Management ---
-    
-    /// Assigns or un-assigns a footprint to a component instance.
-    /// - Parameters:
-    ///   - component: The `ComponentInstance` to modify.
-    ///   - footprint: The `FootprintDefinition` to assign. Pass `nil` to remove the current footprint.
-    func assignFootprint(to component: ComponentInstance, footprint: FootprintDefinition?) {
-        if let footprint = footprint {
-            // If a footprint definition is provided, create a new instance for it.
-            // This replaces any existing footprint instance.
-            let newFootprintInstance = FootprintInstance(definitionUUID: footprint.uuid)
-            component.footprintInstance = newFootprintInstance
-        } else {
-            // If nil is passed, remove the current footprint instance.
-            component.footprintInstance = nil
-        }
-        
-        // No need to call rebuildCanvasNodes() as this doesn't affect the schematic view.
-        // The change will be persisted automatically because ComponentInstance is an @Observable class.
+        rebuildActiveCanvasNodes()
     }
     
     // MARK: - Canvas and Graph Management (Unchanged)
@@ -161,9 +168,21 @@ final class ProjectManager {
         }
     }
     
-    func rebuildCanvasNodes() {
+    // --- REFACTORED: Node rebuilding logic ---
+    
+    /// Rebuilds the canvas nodes for the currently active editor.
+    func rebuildActiveCanvasNodes() {
+        switch selectedEditor {
+        case .schematic:
+            rebuildSchematicNodes()
+        case .layout:
+            rebuildLayoutNodes()
+        }
+    }
+    
+    private func rebuildSchematicNodes() {
         guard let design = selectedDesign else {
-            self.canvasNodes = []
+            self.schematicCanvasNodes = []
             self.schematicGraph = WireGraph()
             return
         }
@@ -174,13 +193,45 @@ final class ProjectManager {
         let symbolNodes: [SymbolNode] = design.componentInstances.compactMap { inst -> SymbolNode? in
             guard inst.symbolInstance.definition != nil else { return nil }
             let renderableTexts = self.generateRenderableTexts(for: inst)
-            
             return SymbolNode(id: inst.id, instance: inst.symbolInstance, renderableTexts: renderableTexts, graph: self.schematicGraph)
         }
         let graphNode = SchematicGraphNode(graph: self.schematicGraph)
         graphNode.syncChildNodesFromModel()
         
-        self.canvasNodes = symbolNodes + [graphNode]
+        self.schematicCanvasNodes = symbolNodes + [graphNode]
+    }
+    
+    private func rebuildLayoutNodes() {
+        guard let design = selectedDesign else {
+            self.layoutCanvasNodes = []
+            return
+        }
+        
+        // The logic now checks the placement state.
+        let footprintNodes: [FootprintNode] = design.componentInstances.compactMap { inst in
+            guard let footprintInst = inst.footprintInstance,
+                  case .placed = footprintInst.placement, // Only create nodes for placed components
+                  footprintInst.definition != nil else {
+                return nil
+            }
+            return FootprintNode(id: inst.id, instance: footprintInst)
+        }
+        
+        self.layoutCanvasNodes = footprintNodes
+    }
+
+    func assignFootprint(to component: ComponentInstance, footprint: FootprintDefinition?) {
+        if let footprint = footprint {
+            // A newly assigned footprint is always .unplaced by default.
+            let newFootprintInstance = FootprintInstance(
+                definitionUUID: footprint.uuid,
+                definition: footprint,
+                placement: .unplaced
+            )
+            component.footprintInstance = newFootprintInstance
+        } else {
+            component.footprintInstance = nil
+        }
     }
 
     func upsertSymbolNode(for inst: ComponentInstance) {
@@ -190,14 +241,14 @@ final class ProjectManager {
         
         guard let node = SymbolNode(id: inst.id, instance: inst.symbolInstance, renderableTexts: renderableTexts, graph: self.schematicGraph) else { return }
         
-        if let idx = canvasNodes.firstIndex(where: { $0.id == inst.id }) {
-            canvasNodes[idx] = node
-        } else if let graphIndex = canvasNodes.firstIndex(where: { $0 is SchematicGraphNode }) {
-            canvasNodes.insert(node, at: graphIndex)
+        if let idx = schematicCanvasNodes.firstIndex(where: { $0.id == inst.id }) {
+            schematicCanvasNodes[idx] = node
+        } else if let graphIndex = schematicCanvasNodes.firstIndex(where: { $0 is SchematicGraphNode }) {
+            schematicCanvasNodes.insert(node, at: graphIndex)
         } else {
             let graphNode = SchematicGraphNode(graph: self.schematicGraph)
             graphNode.syncChildNodesFromModel()
-            canvasNodes = [node, graphNode]
+            schematicCanvasNodes = [node, graphNode]
         }
     }
     

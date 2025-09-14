@@ -11,26 +11,26 @@ struct LayoutNavigatorView: View {
 
     var document: CircuitProjectFileDocument
 
-    enum LayoutNavigatorTab: Displayable {
-        case unplaced
+    init(document: CircuitProjectFileDocument) {
+        self.document = document
+    }
+
+    // --- MODIFIED: Renamed tabs to be more accurate ---
+    enum LayoutNavigatorTab: String, Displayable, CaseIterable {
+        case footprints
         case layers
         
         var label: String {
-            switch self {
-            case .unplaced:
-                return "Unplaced"
-            case .layers:
-                return "layers"
-            }
+            return self.rawValue.capitalized
         }
     }
 
-    @State private var selectedTab: LayoutNavigatorTab = .unplaced
-    
+    @State private var selectedTab: LayoutNavigatorTab = .footprints
     @Namespace private var namespace
 
     var body: some View {
         VStack(spacing: 0) {
+            // Tab selection bar (unchanged)
             HStack(spacing: 2.5) {
                 ForEach(LayoutNavigatorTab.allCases, id: \.self) { tab in
                     Button {
@@ -58,17 +58,35 @@ struct LayoutNavigatorView: View {
 
             Divider().foregroundStyle(.quinary)
 
+            // --- MODIFIED: Switch now uses the new, dedicated views ---
             switch selectedTab {
-            case .unplaced:
-                Text("PUnplaced")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            case .footprints:
+                FootprintNavigatorView()
                     .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .leading)))
        
             case .layers:
-                Text("Layers")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                LayerNavigatorListView()
                     .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .trailing)))
             }
         }
+    }
+}
+
+// Helpers can be kept here for now or moved to their model files
+extension LayerSide {
+    static let none: LayerSide = .inner(0)
+    var headerTitle: String {
+        switch self {
+        case .front: return "Front Layers"
+        case .back: return "Back Layers"
+        case .inner(let index): return index == 0 ? "General" : "Inner Layers"
+        }
+    }
+}
+
+extension ComponentInstance {
+    var referenceDesignator: String {
+        let prefix = self.definition?.referenceDesignatorPrefix ?? "REF?"
+        return prefix + String(self.referenceDesignatorIndex)
     }
 }

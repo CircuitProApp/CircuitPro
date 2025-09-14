@@ -9,44 +9,77 @@ import SwiftUI
 import SwiftDataPacks
 
 extension CircuitProject {
-    /// Populates all `ComponentInstance` objects with a direct reference to their
-    /// corresponding `ComponentDefinition` from the SwiftData store.
+    /// Populates all data model instances (Component, Symbol, Footprint) with direct references to their
+    /// corresponding definitions from the SwiftData store. This process is "hydrating" the project.
     func hydrate(using container: ModelContainer) throws {
         let context = ModelContext(container)
         
-        // 1. Collect all unique definition IDs from the project.
-        var allDefinitionIDs: Set<UUID> = []
+        // --- STEP 1: HYDRATE COMPONENT & SYMBOL DEFINITIONS ---
+        
+        // Collect all unique component definition IDs.
+        var allComponentIDs: Set<UUID> = []
         for design in self.designs {
             for instance in design.componentInstances {
-                allDefinitionIDs.insert(instance.definitionUUID)
+                allComponentIDs.insert(instance.definitionUUID)
             }
         }
         
-        guard !allDefinitionIDs.isEmpty else { return } // Nothing to do.
+        if !allComponentIDs.isEmpty {
+            // Fetch all required component definitions in a single query.
+            let componentPredicate = #Predicate<ComponentDefinition> { allComponentIDs.contains($0.uuid) }
+            let componentFetchDescriptor = FetchDescriptor<ComponentDefinition>(predicate: componentPredicate)
+            let allComponentDefinitions = try context.fetch(componentFetchDescriptor)
+            
+            // Create a fast lookup dictionary.
+            let componentsByID = Dictionary(uniqueKeysWithValues: allComponentDefinitions.map { ($0.uuid, $0) })
+            
+            // Loop through the project and populate the transient `definition` properties.
+            for design in self.designs {
+                for instance in design.componentInstances {
+                    if let definition = componentsByID[instance.definitionUUID] {
+                        // Link the ComponentDefinition to the ComponentInstance
+                        instance.definition = definition
+                        // Also link the SymbolDefinition to the SymbolInstance
+                        instance.symbolInstance.definition = definition.symbol
+                    } else {
+                        print("Warning: ComponentDefinition with ID \(instance.definitionUUID) not found in library for an instance in design '\(design.name)'.")
+                    }
+                }
+            }
+        }
         
-        // 2. Fetch all required definitions in a single, efficient query.
-        let predicate = #Predicate<ComponentDefinition> { allDefinitionIDs.contains($0.uuid) }
-        let fetchDescriptor = FetchDescriptor<ComponentDefinition>(predicate: predicate)
-        let allDefinitions = try context.fetch(fetchDescriptor)
+        // --- STEP 2: HYDRATE FOOTPRINT DEFINITIONS (NEWLY ADDED) ---
         
-        // 3. Create a fast lookup dictionary.
-        let definitionsByID = Dictionary(uniqueKeysWithValues: allDefinitions.map { ($0.uuid, $0) })
+        // Collect all unique footprint definition IDs from all component instances.
+        var allFootprintIDs: Set<UUID> = []
+        for design in self.designs {
+            for instance in design.componentInstances {
+                if let footprintInstance = instance.footprintInstance {
+                    allFootprintIDs.insert(footprintInstance.definitionUUID)
+                }
+            }
+        }
         
-        // 4. Loop through the project and populate the transient `definition` property.
-        for designIndex in self.designs.indices {
-            for instanceIndex in self.designs[designIndex].componentInstances.indices {
-                let instance = self.designs[designIndex].componentInstances[instanceIndex]
-                if let definition = definitionsByID[instance.definitionUUID] {
-                    // Link the ComponentDefinition to the ComponentInstance
-                    self.designs[designIndex].componentInstances[instanceIndex].definition = definition
+        if !allFootprintIDs.isEmpty {
+            // Fetch all required footprint definitions in a single query.
+            let footprintPredicate = #Predicate<FootprintDefinition> { allFootprintIDs.contains($0.uuid) }
+            let footprintFetchDescriptor = FetchDescriptor<FootprintDefinition>(predicate: footprintPredicate)
+            let allFootprintDefinitions = try context.fetch(footprintFetchDescriptor)
 
-                    // Also link the SymbolDefinition to the SymbolInstance
-                    self.designs[designIndex].componentInstances[instanceIndex].symbolInstance.definition = definition.symbol
+            // Create a fast lookup dictionary for footprints.
+            let footprintsByID = Dictionary(uniqueKeysWithValues: allFootprintDefinitions.map { ($0.uuid, $0) })
 
-                } else {
-                    // This is an important error case to handle.
-                    // It means the document references a component that is not in the user's library.
-                    print("Warning: ComponentDefinition with ID \(instance.definitionUUID) not found in library for an instance in design '\(self.designs[designIndex].name)'.")
+            // Loop through the project again and populate the transient `footprintInstance.definition` property.
+            for design in self.designs {
+                for instance in design.componentInstances {
+                    if let footprintInstance = instance.footprintInstance {
+                        if let definition = footprintsByID[footprintInstance.definitionUUID] {
+                            // Link the FootprintDefinition to the FootprintInstance
+                            instance.footprintInstance?.definition = definition
+                        } else {
+                            print("Warning: FootprintDefinition with ID \(footprintInstance.definitionUUID) not found in library.")
+                        }
+                    }
                 }
             }
         }
