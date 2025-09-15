@@ -19,7 +19,8 @@ struct ConnectVerticesTransaction: GraphTransaction {
         var affected: Set<UUID> = [a.id, b.id]
 
         if abs(a.point.x - b.point.x) < tol || abs(a.point.y - b.point.y) < tol {
-            affected.formUnion(state.connectStraight(from: a, to: b, tol: tol))
+            // --- MODIFIED: Access the .affectedVertices property from the returned tuple ---
+            affected.formUnion(state.connectStraight(from: a, to: b, tol: tol).affectedVertices)
         } else {
             let corner = strategy == .hThenV
                 ? CGPoint(x: b.point.x, y: a.point.y)
@@ -28,8 +29,10 @@ struct ConnectVerticesTransaction: GraphTransaction {
                 ?? state.addVertex(at: corner).id
             if let c = state.vertices[cornerID] {
                 affected.insert(cornerID)
-                affected.formUnion(state.connectStraight(from: a, to: c, tol: tol))
-                affected.formUnion(state.connectStraight(from: c, to: b, tol: tol))
+                // --- MODIFIED: Access the .affectedVertices property from the returned tuple ---
+                affected.formUnion(state.connectStraight(from: a, to: c, tol: tol).affectedVertices)
+                // --- MODIFIED: Access the .affectedVertices property from the returned tuple ---
+                affected.formUnion(state.connectStraight(from: c, to: b, tol: tol).affectedVertices)
             }
         }
         return affected

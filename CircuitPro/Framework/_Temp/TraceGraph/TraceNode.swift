@@ -19,16 +19,18 @@ final class TraceNode: BaseNode, Layerable {
     
     var layerId: UUID? {
         get {
-            graph.traceData[edgeID]?.layerId
+            // --- MODIFIED: Access the new edgeMetadata dictionary and struct property ---
+            graph.edgeMetadata[edgeID]?.layerId
         }
         set {
             guard let newLayerID = newValue else {
                 print("Warning: Attempted to assign a nil layer to a trace. Operation aborted.")
                 return
             }
-            if var data = graph.traceData[edgeID] {
-                data.layerId = newLayerID
-                graph.traceData[edgeID] = data
+            // --- MODIFIED: Update the struct within the new dictionary ---
+            if var metadata = graph.edgeMetadata[edgeID] {
+                metadata = TraceEdgeMetadata(width: metadata.width, layerId: newLayerID)
+                graph.edgeMetadata[edgeID] = metadata
             }
         }
     }
@@ -39,14 +41,12 @@ final class TraceNode: BaseNode, Layerable {
         super.init(id: edgeID)
     }
 
-    // --- THIS IS THE CORRECTED DRAWING LOGIC ---
-    // We update the method signature to accept the RenderContext, which is standard practice
-    // for nodes that need canvas-wide information to draw themselves.
     override func makeDrawingPrimitives() -> [DrawingPrimitive] {
          guard let edge = graph.engine.currentState.edges[edgeID],
                let startVertex = graph.engine.currentState.vertices[edge.start],
                let endVertex = graph.engine.currentState.vertices[edge.end],
-               let data = graph.traceData[edgeID] else {
+               // --- MODIFIED: Read from the new edgeMetadata dictionary ---
+               let metadata = graph.edgeMetadata[edgeID] else {
              return []
          }
 
@@ -54,12 +54,11 @@ final class TraceNode: BaseNode, Layerable {
          path.move(to: startVertex.point)
          path.addLine(to: endVertex.point)
 
-         // --- THE FIX ---
-         // Use the 'color' property which was set by the parent TraceGraphNode.
          return [.stroke(
              path: path,
              color: self.color, // Use the resolved color
-             lineWidth: data.width,
+             // --- MODIFIED: Access the .width property from the metadata struct ---
+             lineWidth: metadata.width,
              lineCap: .round
          )]
      }
@@ -68,7 +67,8 @@ final class TraceNode: BaseNode, Layerable {
         guard let edge = graph.engine.currentState.edges[edgeID],
               let startVertex = graph.engine.currentState.vertices[edge.start],
               let endVertex = graph.engine.currentState.vertices[edge.end],
-              let data = graph.traceData[edgeID] else {
+              // --- MODIFIED: Read from the new edgeMetadata dictionary ---
+              let metadata = graph.edgeMetadata[edgeID] else {
             return nil
         }
 
@@ -76,6 +76,7 @@ final class TraceNode: BaseNode, Layerable {
         path.move(to: startVertex.point)
         path.addLine(to: endVertex.point)
         
-        return path.copy(strokingWithWidth: data.width + 4.0, lineCap: .round, lineJoin: .round, miterLimit: 1)
+        // --- MODIFIED: Access the .width property from the metadata struct ---
+        return path.copy(strokingWithWidth: metadata.width + 4.0, lineCap: .round, lineJoin: .round, miterLimit: 1)
     }
 }

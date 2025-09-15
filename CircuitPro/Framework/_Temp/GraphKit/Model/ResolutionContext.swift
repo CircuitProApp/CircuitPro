@@ -13,6 +13,6 @@ struct ResolutionContext {
     let geometry: GeometryPolicy
     let neighborhood: CGRect
     let policy: VertexPolicy?
-    let metadataPolicy: GraphMetadataPolicy?
+    let edgePolicy: EdgePolicy?
 }
 

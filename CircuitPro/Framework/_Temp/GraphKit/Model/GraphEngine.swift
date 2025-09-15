@@ -8,24 +8,24 @@ final class GraphEngine {
     private let ruleset: GraphRuleset
     let geometry: GeometryPolicy
     private let policy: VertexPolicy?
-    // --- ADDED: A property to hold the optional metadata policy ---
-    private let metadataPolicy: GraphMetadataPolicy?
+    // --- ADDED: A property to hold the formal EdgePolicy ---
+    private let edgePolicy: EdgePolicy?
 
     var onChange: ((GraphDelta, GraphState) -> Void)?
 
-    // --- MODIFIED: The initializer now accepts a metadata policy ---
+    // --- MODIFIED: The initializer now accepts the formal EdgePolicy ---
     init(
         initialState: GraphState,
         ruleset: GraphRuleset,
         geometry: GeometryPolicy,
         policy: VertexPolicy? = nil,
-        metadataPolicy: GraphMetadataPolicy? = nil
+        edgePolicy: EdgePolicy? = nil
     ) {
         self.currentState = initialState
         self.ruleset = ruleset
         self.geometry = geometry
         self.policy = policy
-        self.metadataPolicy = metadataPolicy
+        self.edgePolicy = edgePolicy
     }
     
     @discardableResult
@@ -45,13 +45,14 @@ final class GraphEngine {
 
         let aabb = RectUtils.aabb(around: epicenter, in: dirty, padding: geometry.neighborhoodPadding)
         
-        // --- MODIFIED: The resolution context is now created with the metadata policy ---
+        // --- MODIFIED: The resolution context is now created with the EdgePolicy ---
+        // This makes the policy available to all rules during the resolve phase.
         let rctx = ResolutionContext(
             epicenter: epicenter,
             geometry: geometry,
             neighborhood: aabb,
             policy: policy,
-            metadataPolicy: metadataPolicy
+            edgePolicy: edgePolicy
         )
 
         let final = ruleset.resolve(state: dirty, context: rctx)

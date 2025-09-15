@@ -14,7 +14,7 @@ struct GraphState {
     var vertices: [GraphVertex.ID: GraphVertex]
     var edges: [GraphEdge.ID: GraphEdge]
     var adjacency: [GraphVertex.ID: Set<GraphEdge.ID>]
-
+    
     /// Creates an empty graph state.
     static var empty: GraphState {
         GraphState(vertices: [:], edges: [:], adjacency: [:])
@@ -29,7 +29,7 @@ extension GraphState {
         adjacency[v.id] = []
         return v
     }
-
+    
     @discardableResult
     mutating func addEdge(from a: UUID, to b: UUID) -> GraphEdge? {
         guard vertices[a] != nil, vertices[b] != nil, a != b else { return nil }
@@ -44,13 +44,13 @@ extension GraphState {
         adjacency[b, default: []].insert(e.id)
         return e
     }
-
+    
     mutating func removeEdge(_ id: UUID) {
         guard let e = edges.removeValue(forKey: id) else { return }
         adjacency[e.start]?.remove(id)
         adjacency[e.end]?.remove(id)
     }
-
+    
     mutating func removeVertex(_ id: UUID) {
         if let edgeIDs = adjacency[id] {
             for eid in edgeIDs { removeEdge(eid) }
@@ -58,11 +58,11 @@ extension GraphState {
         adjacency.removeValue(forKey: id)
         vertices.removeValue(forKey: id)
     }
-
+    
     func findVertex(at point: CGPoint, tol: CGFloat) -> GraphVertex? {
         vertices.values.first { abs($0.point.x - point.x) < tol && abs($0.point.y - point.y) < tol }
     }
-
+    
     func findEdge(at point: CGPoint, tol: CGFloat) -> GraphEdge? {
         for e in edges.values {
             guard let p1 = vertices[e.start]?.point, let p2 = vertices[e.end]?.point else { continue }
@@ -70,7 +70,7 @@ extension GraphState {
         }
         return nil
     }
-
+    
     func isPoint(_ p: CGPoint, onSegmentBetween a: CGPoint, p2 b: CGPoint, tol: CGFloat) -> Bool {
         let dx = b.x - a.x, dy = b.y - a.y
         let len2 = dx*dx + dy*dy
@@ -83,9 +83,9 @@ extension GraphState {
         if dot < -tol || dot > len2 + tol { return false }
         return true
     }
-
+    
     @discardableResult
-    mutating func connectStraight(from a: GraphVertex, to b: GraphVertex, tol: CGFloat) -> Set<UUID> {
+    mutating func connectStraight(from a: GraphVertex, to b: GraphVertex, tol: CGFloat) -> (affectedVertices: Set<UUID>, createdEdges: [GraphEdge]) {
         var affected: Set<UUID> = [a.id, b.id]
         var onPath: [GraphVertex] = [a, b]
         let others = vertices.values.filter {
@@ -94,8 +94,7 @@ extension GraphState {
         }
         for v in others { affected.insert(v.id) }
         onPath.append(contentsOf: others)
-
-        // Sort by param t along AB
+        
         let dx = b.point.x - a.point.x, dy = b.point.y - a.point.y
         let len2 = max(dx*dx + dy*dy, tol*tol)
         onPath.sort { v1, v2 in
@@ -103,8 +102,14 @@ extension GraphState {
             let t2 = ((v2.point.x - a.point.x) * dx + (v2.point.y - a.point.y) * dy) / len2
             return t1 < t2
         }
-        for i in 0..<(onPath.count - 1) { _ = addEdge(from: onPath[i].id, to: onPath[i+1].id) }
-        return affected
+        
+        var createdEdges: [GraphEdge] = []
+        for i in 0..<(onPath.count - 1) {
+            if let newEdge = addEdge(from: onPath[i].id, to: onPath[i+1].id) {
+                createdEdges.append(newEdge)
+            }
+        }
+        return (affected, createdEdges)
     }
 }
 
@@ -115,7 +120,7 @@ extension GraphState {
         let oldIDs = Set(oldVerts.keys), newIDs = Set(newVerts.keys)
         d.createdVertices = newIDs.subtracting(oldIDs)
         d.deletedVertices = oldIDs.subtracting(newIDs)
-
+        
         for id in oldIDs.intersection(newIDs) {
             let o = oldVerts[id]!, n = newVerts[id]!
             if hypot(o.point.x - n.point.x, o.point.y - n.point.y) > tol {
@@ -123,7 +128,7 @@ extension GraphState {
             }
             if o.clusterID != n.clusterID { d.changedClusterIDs[id] = (o.clusterID, n.clusterID) }
         }
-
+        
         let oldEdges = Set(old.edges.keys), newEdges = Set(new.edges.keys)
         d.createdEdges = newEdges.subtracting(oldEdges)
         d.deletedEdges = oldEdges.subtracting(newEdges)
@@ -141,7 +146,7 @@ extension GraphState {
         }
         return out
     }
-
+    
     func component(from start: UUID) -> (vertices: Set<UUID>, edges: Set<UUID>) {
         guard vertices[start] != nil else { return ([], []) }
         var vset: Set<UUID> = [start]

@@ -5,22 +5,22 @@ import SwiftUI
 final class TraceGraph {
     let engine: GraphEngine
      
-     var traceData: [GraphEdge.ID: (width: CGFloat, layerId: UUID)] = [:]
-     var onModelDidChange: (() -> Void)?
+    var edgeMetadata: [GraphEdge.ID: TraceEdgeMetadata] = [:]
+    var onModelDidChange: (() -> Void)?
 
     init() {
         let ruleset = OctilinearGraphRuleset()
         let geometry = OctilinearGeometry(step: 1)
-        let metadataPolicy = TraceMetadataPolicy()
+        let edgePolicy = TraceEdgePolicy()
         
         self.engine = GraphEngine(
             initialState: .empty,
             ruleset: ruleset,
             geometry: geometry,
-            metadataPolicy: metadataPolicy
+            edgePolicy: edgePolicy
         )
         
-        metadataPolicy.traceGraph = self
+        edgePolicy.traceGraph = self
 
         engine.onChange = { [weak self] _, _ in
             self?.onModelDidChange?()
@@ -28,21 +28,15 @@ final class TraceGraph {
     }
     
     func addTrace(path: [CGPoint], width: CGFloat, layerId: UUID) {
-        // --- MODIFIED: Provide the new lookup closure ---
         var tx = AddTraceTransaction(
             path: path,
             width: width,
             layerId: layerId,
-            // This closure allows the transaction to look up existing metadata.
-            lookupMetadata: { [weak self] edgeID in
-                return self?.traceData[edgeID]
-            },
-            // This closure allows the transaction to write new metadata.
             assignMetadata: { [weak self] edgeID, traceWidth, newLayerId in
-                self?.traceData[edgeID] = (width: traceWidth, layerId: newLayerId)
+                let metadata = TraceEdgeMetadata(width: traceWidth, layerId: newLayerId)
+                self?.edgeMetadata[edgeID] = metadata
             }
         )
-        
         engine.execute(transaction: &tx)
     }
 }

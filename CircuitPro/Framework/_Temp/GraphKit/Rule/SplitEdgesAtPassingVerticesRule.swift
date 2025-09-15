@@ -4,31 +4,33 @@ import CoreGraphics
 struct SplitEdgesAtPassingVerticesRule: GraphRule {
     func apply(state: inout GraphState, context: ResolutionContext) {
         let tol = context.geometry.epsilon
-
-        let edges = Array(state.edges.values)
+        
+        // Take a snapshot of edges at the start, as the state will be mutated.
+        let initialEdges = Array(state.edges.values)
         let verts = Array(state.vertices.values)
-
-        for e in edges {
-            // Ensure the edge we are checking still exists in the mutable state
-            guard state.edges[e.id] != nil,
-                  let p1 = state.vertices[e.start]?.point,
-                  let p2 = state.vertices[e.end]?.point else { continue }
+        
+        for edgeToSplit in initialEdges {
+            // Ensure the edge we're processing hasn't already been deleted by a previous iteration.
+            guard state.edges[edgeToSplit.id] != nil,
+                  let p1 = state.vertices[edgeToSplit.start]?.point,
+                  let p2 = state.vertices[edgeToSplit.end]?.point else { continue }
             
-            if !CGRect(x: min(p1.x, p2.x), y: min(p1.y, p2.y), width: abs(p2.x - p1.x), height: abs(p2.y - p1.y)).intersects(context.neighborhood) {
-                continue
-            }
+            // --- Step 1: Find all vertices that lie on this edge ---
             
             var mids: [GraphVertex] = []
-            for v in verts where v.id != e.start && v.id != e.end {
+            for v in verts {
+                // A vertex is a "mid" point if it's not one of the edge's own endpoints.
+                guard v.id != edgeToSplit.start && v.id != edgeToSplit.end else { continue }
+                
                 if state.isPoint(v.point, onSegmentBetween: p1, p2: p2, tol: tol) {
-                    let d1 = hypot(v.point.x - p1.x, v.point.y - p1.y)
-                    let d2 = hypot(v.point.x - p2.x, v.point.y - p2.y)
-                    if d1 > tol && d2 > tol {
-                        mids.append(v)
-                    }
+                    mids.append(v)
                 }
             }
+            
+            // If there are no vertices on this edge, there's nothing to do.
             guard !mids.isEmpty else { continue }
+            
+            // --- Step 2: Build the full chain and sort it geometrically ---
             
             let (dx, dy) = (p2.x - p1.x, p2.y - p1.y)
             let len2 = max(dx*dx + dy*dy, tol*tol)
@@ -38,42 +40,29 @@ struct SplitEdgesAtPassingVerticesRule: GraphRule {
                 return tL < tR
             }
             
-            // --- MODIFIED LOGIC ---
-            // Rebuild the chain segment by segment, propagating metadata at each step.
+            // Create a single, ordered list of all vertex IDs that will form the new chain.
+            let chainOfIDs = [edgeToSplit.start] + mids.map { $0.id } + [edgeToSplit.end]
             
-            var lastVertexID = e.start
-            var lastEdge = e // Start with the original edge for the first split
+            // --- Step 3: Atomically replace the old edge with the new segments ---
             
-            for midVertex in mids {
-                // The edge to be split is the 'lastEdge' from the previous iteration
-                let edgeToSplit = lastEdge
-                
-                // Remove the old edge
-                state.removeEdge(edgeToSplit.id)
-                
-                // Create the two new edges
-                guard let newEdgeA = state.addEdge(from: lastVertexID, to: midVertex.id),
-                      let newEdgeB = state.addEdge(from: midVertex.id, to: edgeToSplit.end) else {
-                    // This should not happen if the topology is valid
-                    continue
+            // Remove the original edge.
+            state.removeEdge(edgeToSplit.id)
+            
+            // Create the new segments.
+            var newEdges: [GraphEdge] = []
+            for i in 0..<(chainOfIDs.count - 1) {
+                if let newEdge = state.addEdge(from: chainOfIDs[i], to: chainOfIDs[i+1]) {
+                    newEdges.append(newEdge)
                 }
-                
-                // CRITICAL: Inform the metadata policy about the split
-                context.metadataPolicy?.propagateMetadata(from: edgeToSplit, to: newEdgeA, and: newEdgeB)
-                
-                // The second new edge becomes the one to split in the next iteration
-                lastVertexID = midVertex.id
-                lastEdge = newEdgeB
             }
             
-            // The final connection to the original end point
-            state.removeEdge(lastEdge.id)
-            if let finalEdgeA = state.addEdge(from: lastVertexID, to: e.end) {
-                 // We need to think if metadata needs propagation here, it's complex.
-                 // For now, let's assume the previous loop handles it.
-                 // Let's re-connect last segment
-                 let finalEdgeB = state.addEdge(from: lastVertexID, to: e.end)! // A bit risky
-                 context.metadataPolicy?.propagateMetadata(from: lastEdge, to: finalEdgeA, and: finalEdgeB)
+            // --- Step 4: Propagate metadata to all new segments ---
+            
+            // CRITICAL: Inform the formal EdgePolicy about the N-way split.
+            if !newEdges.isEmpty {
+                // --- THIS IS THE FIX ---
+                // Use the new, formal 'edgePolicy' property from the context.
+                context.edgePolicy?.propagateMetadata(from: edgeToSplit, to: newEdges)
             }
         }
     }

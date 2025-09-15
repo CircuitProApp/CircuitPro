@@ -26,7 +26,6 @@ struct CollapseLinearRunsRule: GraphRule {
             let dirs = uniqueIncidentDirections(of: center, tol: tol, state: state)
 
             for dir in dirs {
-                // --- MODIFIED: Pass the full context to processRun ---
                 processRun(from: center.id, baseDir: dir, tol: tol, context: context, state: &state)
             }
         }
@@ -46,7 +45,6 @@ struct CollapseLinearRunsRule: GraphRule {
             if len <= tol { continue }
             let dir = CGVector(dx: dx/len, dy: dy/len)
 
-            // Deduplicate directions by angle (within tolerance)
             if !out.contains(where: { approxSameDir($0, dir, tol: tol) }) {
                 out.append(dir)
             }
@@ -55,13 +53,10 @@ struct CollapseLinearRunsRule: GraphRule {
     }
 
     private func approxSameDir(_ a: CGVector, _ b: CGVector, tol: CGFloat) -> Bool {
-        // Consider opposite directions as the same line direction
         let dot = a.dx * b.dx + a.dy * b.dy
-        // dot ~ 1 or ~ -1 within tolerance
         return abs(abs(dot) - 1.0) <= 10 * tol
     }
 
-    // --- MODIFIED: This method now handles metadata propagation via the context ---
     private func processRun(from startID: UUID, baseDir: CGVector, tol: CGFloat, context: ResolutionContext, state: inout GraphState) {
         guard let startV = state.vertices[startID] else { return }
 
@@ -76,7 +71,6 @@ struct CollapseLinearRunsRule: GraphRule {
 
             for nid in state.neighbors(of: vid) {
                 guard !seen.contains(nid), let n = state.vertices[nid] else { continue }
-                // Check if neighbor is collinear with the line through startV in baseDir
                 if isOnLine(a: startV.point, dir: baseDir, p: n.point, tol: tol) {
                     seen.insert(nid)
                     stack.append(nid)
@@ -88,11 +82,12 @@ struct CollapseLinearRunsRule: GraphRule {
         // Decide which vertices to keep
         var keep: Set<UUID> = []
         for v in run {
+            // Reason 1 to keep: VertexPolicy says it's protected (e.g., a pin).
             if context.policy?.isProtected(v, state: state) ?? false {
                 keep.insert(v.id)
                 continue
             }
-            // Degree within the run's line direction (collinear degree)
+            
             let deg = state.adjacency[v.id]?.count ?? 0
             let collinearDeg = (state.adjacency[v.id] ?? []).reduce(0) { acc, eid in
                 guard let e = state.edges[eid] else { return acc }
@@ -100,10 +95,23 @@ struct CollapseLinearRunsRule: GraphRule {
                 guard let n = state.vertices[nid] else { return acc }
                 return acc + (isOnLine(a: v.point, dir: baseDir, p: n.point, tol: tol) ? 1 : 0)
             }
-            if deg > collinearDeg { keep.insert(v.id) } // branching or corner in/out of the run
+            // Reason 2 to keep: It's a T-junction or corner (not just a pass-through).
+            if deg > collinearDeg {
+                keep.insert(v.id)
+                continue
+            }
+
+            // --- THIS IS THE FIX ---
+            // Reason 3 to keep: EdgePolicy says it's a critical "seam" where metadata changes.
+            let edgesInRun = (state.adjacency[v.id] ?? []).compactMap { state.edges[$0] }
+            if context.edgePolicy?.shouldPreserveVertex(v, connecting: edgesInRun) ?? false {
+                keep.insert(v.id)
+                continue
+            }
+            // --- END FIX ---
         }
 
-        // Sort run along the line by projection param t and keep endpoints
+        // Sort run along the line by projection param t and always keep endpoints.
         let a = startV.point
         let dir = baseDir
         let denom = max(dir.dx*dir.dx + dir.dy*dir.dy, tol*tol)
@@ -116,11 +124,10 @@ struct CollapseLinearRunsRule: GraphRule {
         if let first = run.first { keep.insert(first.id) }
         if let last = run.last { keep.insert(last.id) }
 
-        // If nothing to collapse, return
+        // If nothing to collapse, return.
         if keep.count >= run.count { return }
 
         // --- METADATA PROPAGATION LOGIC ---
-        // 1. Before deleting, find all the unique edges that are part of the run.
         var edgesToDelete: [GraphEdge] = []
         let runIDs = Set(run.map { $0.id })
         for v in run {
@@ -128,48 +135,41 @@ struct CollapseLinearRunsRule: GraphRule {
                 for eid in eids {
                     guard let e = state.edges[eid] else { continue }
                     let other = (e.start == v.id) ? e.end : e.start
-                    // An edge is part of the run if both its ends are in the run.
                     if runIDs.contains(other) {
                         edgesToDelete.append(e)
                     }
                 }
             }
         }
-        // De-duplicate the edges.
         edgesToDelete = Array(Set(edgesToDelete))
 
-        // 2. Remove internal edges of the run.
         for edge in edgesToDelete {
             state.removeEdge(edge.id)
         }
 
-        // 3. Remove the vertices that are being collapsed away.
         for v in run where !keep.contains(v.id) {
             state.removeVertex(v.id)
         }
 
-        // 4. Reconnect the kept vertices in order.
         let keptVerts = run.filter { keep.contains($0.id) }
         guard keptVerts.count >= 2 else { return }
         for i in 0..<(keptVerts.count - 1) {
             if let newEdge = state.addEdge(from: keptVerts[i].id, to: keptVerts[i+1].id) {
-                // 5. CRITICAL: Inform the metadata policy so it can transfer metadata.
-                context.metadataPolicy?.propagateMetadata(from: edgesToDelete, to: newEdge)
+                // --- THIS IS THE FIX ---
+                // CRITICAL: Inform the formal EdgePolicy so it can transfer metadata.
+                context.edgePolicy?.propagateMetadata(from: edgesToDelete, to: newEdge)
             }
         }
     }
 
-    // Test if point p lies on the infinite line passing through a in direction dir
     private func isOnLine(a: CGPoint, dir: CGVector, p: CGPoint, tol: CGFloat) -> Bool {
         let vx = p.x - a.x, vy = p.y - a.y
         let cross = dir.dx * vy - dir.dy * vx
-        // Normalize tol by |dir| (we use |dir| ~ 1 for unit, but be safe)
         let scale = max(hypot(dir.dx, dir.dy), tol)
         return abs(cross) <= tol * scale
     }
 }
 
-// --- ADDED: Make GraphEdge Hashable for use in Sets ---
 extension GraphEdge {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
