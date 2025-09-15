@@ -28,11 +28,13 @@ struct LayoutView: View {
                 SheetRenderLayer(),
                 ElementsRenderLayer(),
                 PreviewRenderLayer(),
+                HandlesRenderLayer(),
                 MarqueeRenderLayer(),
                 CrosshairsRenderLayer()
             ],
             interactions: [
                 KeyCommandInteraction(),
+                HandleInteraction(),
                 ToolInteraction(),
                 SelectionInteraction(),
                 DragInteraction(),

@@ -14,7 +14,7 @@ struct LayoutToolbarView: View {
         CanvasToolbarView(
             tools: CanvasToolRegistry.layoutTools,
             selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool()),
-            dividerAfter: { $0 is CursorTool }
+            dividerAfter: { $0 is CursorTool || $0 is TraceTool }
         )
     }
 }
