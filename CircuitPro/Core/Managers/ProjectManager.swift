@@ -1,10 +1,3 @@
-//
-//  ProjectManager.swift
-//  Circuit Pro
-//
-//  Created by Giorgi Tchelidze on 4/5/25.
-//
-
 import SwiftUI
 import Observation
 
@@ -20,27 +13,26 @@ final class ProjectManager {
     
     var project: CircuitProject
     var selectedDesign: CircuitDesign? {
-        // When the design changes, clear the active layer to prevent stale state.
-        // As you correctly discovered, we must NOT modify the traceGraph here.
         didSet { activeLayerId = nil }
     }
     var selectedNodeIDs: Set<UUID> = []
     
-    // --- MODIFIED: Separate node arrays for each editor ---
     var schematicCanvasNodes: [BaseNode] = []
     var layoutCanvasNodes: [BaseNode] = []
-    // ---
     
     var selectedNetIDs: Set<UUID> = []
     
     var selectedEditor: EditorType = .schematic
     
+    var selectedTool: CanvasTool = CursorTool()
+    
     var schematicGraph = WireGraph()
-    // --- ADDED: The single instance of the trace graph. ---
-    // We will use one instance for now to ensure stability.
     var traceGraph = TraceGraph()
     
     var activeLayerId: UUID? = nil
+    
+    // --- MODIFIED: This is now a stored property to allow binding from the UI. ---
+    var activeCanvasLayers: [CanvasLayer] = []
     
     init(
         project: CircuitProject,
@@ -50,9 +42,6 @@ final class ProjectManager {
         self.selectedDesign = selectedDesign
     }
     
-    // --- ADDED: Computed property for the active canvas nodes ---
-    /// Returns the appropriate node array based on the selected editor.
-    /// The CanvasViews in the UI should bind to this property.
     var activeCanvasNodes: [BaseNode] {
         get {
             switch selectedEditor {
@@ -71,7 +60,6 @@ final class ProjectManager {
             }
         }
     }
-    // ---
     
     var componentInstances: [ComponentInstance] {
         get { selectedDesign?.componentInstances ?? [] }
@@ -83,7 +71,6 @@ final class ProjectManager {
         selectedDesign?.wires = schematicGraph.toWires()
     }
 
-    // --- ADDED: Placeholder persistence and handler for new traces ---
     func persistTraceGraph() {
         print("Fake persisting TraceGraph...")
     }
@@ -207,6 +194,8 @@ final class ProjectManager {
         guard let design = selectedDesign else {
             self.schematicCanvasNodes = []
             self.schematicGraph = WireGraph()
+            // --- ADDED: Ensure layers are cleared for the schematic view. ---
+            self.activeCanvasLayers = []
             return
         }
         
@@ -222,31 +211,65 @@ final class ProjectManager {
         graphNode.syncChildNodesFromModel()
         
         self.schematicCanvasNodes = symbolNodes + [graphNode]
+        // --- ADDED: Ensure layers are cleared for the schematic view. ---
+        self.activeCanvasLayers = []
     }
     
     private func rebuildLayoutNodes() {
         guard let design = selectedDesign else {
             self.layoutCanvasNodes = []
+            self.activeCanvasLayers = []
             return
         }
         
-        // This is already here and is correct.
-        let currentCanvasLayers = self.activeCanvasLayers
+        // --- THIS IS THE FIX ---
+
+        // 1. Generate the canvas layers from the project's source of truth.
+        let unsortedCanvasLayers = design.layers.map { layerType in
+            CanvasLayer(
+                id: layerType.id,
+                name: layerType.name,
+                isVisible: true,
+                color: NSColor(layerType.defaultColor).cgColor,
+                zIndex: layerType.kind.zIndex,
+                kind: layerType // Keep the original LayerType for sorting
+            )
+        }
+
+        // 2. Sort the layers to establish the correct global drawing order (bottom-to-top).
+        let sortedCanvasLayers = unsortedCanvasLayers.sorted { (layerA, layerB) -> Bool in
+            // Primary sort key: zIndex (e.g., copper is drawn before silkscreen).
+            if layerA.zIndex != layerB.zIndex {
+                return layerA.zIndex < layerB.zIndex
+            }
+            
+            // Secondary sort key: Physical side (e.g., back copper is drawn before front copper).
+            guard let typeA = layerA.kind as? LayerType, let sideA = typeA.side,
+                  let typeB = layerB.kind as? LayerType, let sideB = typeB.side else {
+                // Fallback for layers without a side (like board outline)
+                return false
+            }
+            
+            return sideA.drawingOrder < sideB.drawingOrder
+        }
         
+        // 3. Store the correctly sorted layers. This is now the source of truth for rendering.
+        self.activeCanvasLayers = sortedCanvasLayers
+        
+        // The rest of the function remains the same, but now uses the correctly ordered layers.
         let footprintNodes: [FootprintNode] = design.componentInstances.compactMap { inst in
             guard let footprintInst = inst.footprintInstance,
                   case .placed = footprintInst.placement,
                   footprintInst.definition != nil else {
                 return nil
             }
-            return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: currentCanvasLayers)
+            // Pass the sorted layers to the footprint node
+            return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: self.activeCanvasLayers)
         }
         
         let traceGraphNode = TraceGraphNode(graph: self.traceGraph)
-        
-        // --- THIS IS THE FIX ---
-        // Pass the list of layers to the node so it can resolve its children's colors.
-        traceGraphNode.syncChildNodesFromModel(canvasLayers: currentCanvasLayers)
+        // Pass the sorted layers to the trace graph node
+        traceGraphNode.syncChildNodesFromModel(canvasLayers: self.activeCanvasLayers)
         
         self.layoutCanvasNodes = footprintNodes + [traceGraphNode]
     }
@@ -294,27 +317,6 @@ final class ProjectManager {
         }
         
         rebuildLayoutNodes()
-    }
-    
-    var activeCanvasLayers: [CanvasLayer] {
-        switch selectedEditor {
-        case .schematic:
-            return []
-            
-        case .layout:
-            guard let design = selectedDesign else { return [] }
-            
-            return design.layers.map { layerType in
-                CanvasLayer(
-                    id: layerType.id,
-                    name: layerType.name,
-                    isVisible: true,
-                    color: NSColor(layerType.defaultColor).cgColor,
-                    zIndex: layerType.kind.zIndex,
-                    kind: layerType
-                )
-            }
-        }
     }
     
     func generateString(for resolvedText: CircuitText.Resolved, component: ComponentInstance) -> String {

@@ -15,7 +15,7 @@ struct SchematicCanvasView: View {
     @PackManager private var packManager
     
     var document: CircuitProjectFileDocument
-    @Bindable var canvasManager = CanvasManager()
+    @Bindable var canvasManager: CanvasManager
     
     @State private var selectedTool: CanvasTool = CursorTool()
     let defaultTool: CanvasTool = CursorTool()

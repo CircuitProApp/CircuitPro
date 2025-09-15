@@ -17,57 +17,91 @@ struct LayerNavigatorListView: View {
     
     private var layerGroupOrder: [LayerSide] = [.front, .inner(1), .back, .none]
 
+    private var isTraceToolActive: Bool {
+        projectManager.selectedTool is TraceTool
+    }
+
+    // 1) Gate selection writes so invalid IDs never land
+    private var validatedSelection: Binding<UUID?> {
+        Binding(
+            get: { projectManager.activeLayerId },
+            set: { newValue in
+                guard shouldAcceptSelection(newValue) else { return }
+                projectManager.activeLayerId = newValue
+            }
+        )
+    }
+
+    private func shouldAcceptSelection(_ id: UUID?) -> Bool {
+        guard isTraceToolActive, let id else { return true }
+        let allLayers = groupedLayers.values.flatMap { $0 }
+        return allLayers.first(where: { $0.id == id })?.isTraceable ?? false
+    }
+
     var body: some View {
         if groupedLayers.isEmpty {
             ContentUnavailableView("No Design Selected", systemImage: "doc.text.magnifyingglass")
         } else {
-            // --- MODIFIED: The List now binds its selection to the project manager ---
-            List(selection: $projectManager.activeLayerId) {
+            List(selection: validatedSelection) {
                 ForEach(layerGroupOrder.filter { groupedLayers.keys.contains($0) }, id: \.self) { side in
                     Section(header: Text(side.headerTitle)) {
-                        // ForEach now iterates over layers sorted to be traceable first
                         ForEach(sortedLayers(for: side)) { layer in
-                            layerRow(for: layer)
-                                // Tag each row with its ID for the selection to work.
-                                .tag(layer.id)
-                                // --- ADDED: Disable selection for non-traceable layers ---
-                                .disabled(!layer.isTraceable)
+                            let isDisabled = isTraceToolActive && !layer.isTraceable
+
+                            if isDisabled {
+                                // 2) No .tag on invalid rows => List cannot select them
+                                // 3) Block selection + block hit testing to remove highlight/press feedback
+                                layerRow(for: layer)
+                                    .opacity(0.5)
+                                    .selectionDisabled(true)     // macOS 13+/iOS 16+
+                                    .allowsHitTesting(false)     // prevents any click
+                                    .contentShape(Rectangle())   // define row shape explicitly
+                            } else {
+                                layerRow(for: layer)
+                                    .tag(layer.id)               // only valid rows are selectable
+                                    .selectionDisabled(false)
+                            }
                         }
                     }
                 }
             }
             .listStyle(.sidebar)
+            .onChange(of: projectManager.selectedTool, initial: true) {
+                handleToolChange()
+            }
         }
     }
     
-    // --- ADDED: A custom view builder for the layer row ---
     @ViewBuilder
     private func layerRow(for layer: LayerType) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "circle.fill")
                 .symbolRenderingMode(.palette)
-                .foregroundStyle(
-                    Color(layer.defaultColor)
-                )
-            
+                .foregroundStyle(Color(layer.defaultColor))
             Text(layer.name)
-            
             Spacer()
         }
-        // Visually dim non-traceable layers to guide the user.
-        .opacity(layer.isTraceable ? 1.0 : 0.5)
     }
     
-    // --- ADDED: Helper to sort layers within a group ---
-    /// Sorts layers so that traceable (copper) layers appear first.
     private func sortedLayers(for side: LayerSide) -> [LayerType] {
         let layers = groupedLayers[side] ?? []
         return layers.sorted {
             if $0.isTraceable != $1.isTraceable {
-                return $0.isTraceable // true comes before false
+                return $0.isTraceable
             }
-            // If both are same traceability, sort by name
             return $0.name < $1.name
         }
+    }
+
+    private func handleToolChange() {
+        guard isTraceToolActive else { return }
+        let allLayers = groupedLayers.values.flatMap { $0 }
+
+        if let activeId = projectManager.activeLayerId,
+           let activeLayer = allLayers.first(where: { $0.id == activeId }),
+           activeLayer.isTraceable {
+            return
+        }
+        projectManager.activeLayerId = allLayers.first(where: { $0.isTraceable })?.id
     }
 }

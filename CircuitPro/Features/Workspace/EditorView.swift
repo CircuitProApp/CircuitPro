@@ -49,7 +49,7 @@ struct EditorView: View {
                     case .schematic:
                         SchematicCanvasView(document: document, canvasManager: selectedCanvasManager)
                     case .layout:
-                        LayoutView(document: document)
+                        LayoutView(document: document, canvasManager: selectedCanvasManager)
                     }
                 }
 

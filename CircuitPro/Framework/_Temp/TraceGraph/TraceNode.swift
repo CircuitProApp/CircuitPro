@@ -40,6 +40,33 @@ final class TraceNode: BaseNode, Layerable {
         self.graph = graph
         super.init(id: edgeID)
     }
+    
+    override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
+        // First, give any potential children a chance to be hit. This is good practice,
+        // even though TraceNode currently has no children.
+        if let childHit = super.hitTest(point, tolerance: tolerance) {
+            return childHit
+        }
+
+        // Now, check if the point hits this node's own geometry.
+        // We use the halo path to create a generous, easy-to-click area.
+        guard let haloPath = self.makeHaloPath() else {
+            return nil
+        }
+        
+        // The core of the fix: check if the point is inside the path.
+        if haloPath.contains(point) {
+            // It's a hit! Return a CanvasHitTarget describing this node.
+            return CanvasHitTarget(
+                node: self,
+                partIdentifier: nil, // We don't need to identify sub-parts of a trace.
+                position: point
+            )
+        }
+
+        // If the point is not within our halo, it's a miss.
+        return nil
+    }
 
     override func makeDrawingPrimitives() -> [DrawingPrimitive] {
         guard let edge = graph.engine.currentState.edges[edgeID],
