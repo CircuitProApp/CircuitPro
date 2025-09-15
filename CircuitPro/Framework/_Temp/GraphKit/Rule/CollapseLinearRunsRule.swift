@@ -60,15 +60,13 @@ struct CollapseLinearRunsRule: GraphRule {
     private func processRun(from startID: UUID, baseDir: CGVector, tol: CGFloat, context: ResolutionContext, state: inout GraphState) {
         guard let startV = state.vertices[startID] else { return }
 
-        // BFS/DFS collecting vertices collinear with baseDir
+        // 1) Collect the run as before
         var run: [GraphVertex] = []
         var stack: [UUID] = [startV.id]
         var seen: Set<UUID> = [startV.id]
-
         while let vid = stack.popLast() {
             guard let v = state.vertices[vid] else { continue }
             run.append(v)
-
             for nid in state.neighbors(of: vid) {
                 guard !seen.contains(nid), let n = state.vertices[nid] else { continue }
                 if isOnLine(a: startV.point, dir: baseDir, p: n.point, tol: tol) {
@@ -79,89 +77,111 @@ struct CollapseLinearRunsRule: GraphRule {
         }
         if run.count < 3 { return }
 
-        // Decide which vertices to keep
+        // 2) Precompute projection t for ordering and for interval tests
+        let a = startV.point
+        let dir = baseDir
+        let denom = max(dir.dx*dir.dx + dir.dy*dir.dy, tol*tol)
+
+        func t(_ p: CGPoint) -> CGFloat {
+            return ((p.x - a.x) * dir.dx + (p.y - a.y) * dir.dy) / denom
+        }
+
+        // Sort run along the line
+        run.sort { lhs, rhs in t(lhs.point) < t(rhs.point) }
+
+        // 3) Build helpers to know which edges lie on the run and their span in t-space
+        let runIDs = Set(run.map { $0.id })
+        struct SpanEdge { let edge: GraphEdge; let tMin: CGFloat; let tMax: CGFloat }
+
+        var edgesOnRun: [SpanEdge] = []
+        for e in state.edges.values {
+            guard runIDs.contains(e.start), runIDs.contains(e.end),
+                  let p1 = state.vertices[e.start]?.point,
+                  let p2 = state.vertices[e.end]?.point,
+                  isOnLine(a: a, dir: dir, p: p1, tol: tol),
+                  isOnLine(a: a, dir: dir, p: p2, tol: tol)
+            else { continue }
+            let t1 = t(p1), t2 = t(p2)
+            edgesOnRun.append(.init(edge: e, tMin: min(t1, t2), tMax: max(t1, t2)))
+        }
+
+        // 4) Decide which vertices to keep (protect, junction/corner, or seam)
         var keep: Set<UUID> = []
         for v in run {
-            // Reason 1 to keep: VertexPolicy says it's protected (e.g., a pin).
             if context.policy?.isProtected(v, state: state) ?? false {
                 keep.insert(v.id)
                 continue
             }
-            
+
+            // Degree/junction test same as before
             let deg = state.adjacency[v.id]?.count ?? 0
             let collinearDeg = (state.adjacency[v.id] ?? []).reduce(0) { acc, eid in
                 guard let e = state.edges[eid] else { return acc }
                 let nid = (e.start == v.id) ? e.end : e.start
                 guard let n = state.vertices[nid] else { return acc }
-                return acc + (isOnLine(a: v.point, dir: baseDir, p: n.point, tol: tol) ? 1 : 0)
+                return acc + (isOnLine(a: v.point, dir: dir, p: n.point, tol: tol) ? 1 : 0)
             }
-            // Reason 2 to keep: It's a T-junction or corner (not just a pass-through).
             if deg > collinearDeg {
                 keep.insert(v.id)
                 continue
             }
 
-            // --- THIS IS THE FIX ---
-            // Reason 3 to keep: EdgePolicy says it's a critical "seam" where metadata changes.
-            let edgesInRun = (state.adjacency[v.id] ?? []).compactMap { state.edges[$0] }
-            if context.edgePolicy?.shouldPreserveVertex(v, connecting: edgesInRun) ?? false {
+            // NEW: Only pass edges from the run into the seam policy
+            let vT = t(v.point)
+            let incidentRunEdges = edgesOnRun.filter { se in
+                // Edge is incident to v if its span touches vT within tolerance
+                (abs(se.tMin - vT) <= 10*tol) || (abs(se.tMax - vT) <= 10*tol)
+            }.map { $0.edge }
+
+            if context.edgePolicy?.shouldPreserveVertex(v, connecting: incidentRunEdges) ?? false {
                 keep.insert(v.id)
                 continue
             }
-            // --- END FIX ---
         }
 
-        // Sort run along the line by projection param t and always keep endpoints.
-        let a = startV.point
-        let dir = baseDir
-        let denom = max(dir.dx*dir.dx + dir.dy*dir.dy, tol*tol)
-
-        run.sort { lhs, rhs in
-            let tL = ((lhs.point.x - a.x) * dir.dx + (lhs.point.y - a.y) * dir.dy) / denom
-            let tR = ((rhs.point.x - a.x) * dir.dx + (rhs.point.y - a.y) * dir.dy) / denom
-            return tL < tR
-        }
+        // Always keep endpoints in sorted order
         if let first = run.first { keep.insert(first.id) }
         if let last = run.last { keep.insert(last.id) }
 
-        // If nothing to collapse, return.
         if keep.count >= run.count { return }
 
-        // --- METADATA PROPAGATION LOGIC ---
-        var edgesToDelete: [GraphEdge] = []
-        let runIDs = Set(run.map { $0.id })
-        for v in run {
-            if let eids = state.adjacency[v.id] {
-                for eid in eids {
-                    guard let e = state.edges[eid] else { continue }
-                    let other = (e.start == v.id) ? e.end : e.start
-                    if runIDs.contains(other) {
-                        edgesToDelete.append(e)
-                    }
-                }
-            }
+        // 5) Remove all run edges and drop non-kept vertices
+        let edgesToDelete = Set(edgesOnRun.map { $0.edge })
+        for e in edgesToDelete {
+            state.removeEdge(e.id)
         }
-        edgesToDelete = Array(Set(edgesToDelete))
-
-        for edge in edgesToDelete {
-            state.removeEdge(edge.id)
-        }
-
         for v in run where !keep.contains(v.id) {
             state.removeVertex(v.id)
         }
 
+        // 6) Rebuild chain between consecutive kept vertices
         let keptVerts = run.filter { keep.contains($0.id) }
         guard keptVerts.count >= 2 else { return }
+
+        // Precompute kept t’s for interval queries
+        let keptT: [CGFloat] = keptVerts.map { t($0.point) }
+
         for i in 0..<(keptVerts.count - 1) {
-            if let newEdge = state.addEdge(from: keptVerts[i].id, to: keptVerts[i+1].id) {
-                // --- THIS IS THE FIX ---
-                // CRITICAL: Inform the formal EdgePolicy so it can transfer metadata.
-                context.edgePolicy?.propagateMetadata(from: edgesToDelete, to: newEdge)
+            let vA = keptVerts[i], vB = keptVerts[i+1]
+            let tA = keptT[i], tB = keptT[i+1]
+            let lo = min(tA, tB) - 10*tol
+            let hi = max(tA, tB) + 10*tol
+
+            if let newEdge = state.addEdge(from: vA.id, to: vB.id) {
+                // NEW: Propagate ONLY from edges whose spans are within this segment
+                let contributing = edgesOnRun
+                    .filter { $0.tMin >= lo && $0.tMax <= hi }
+                    .map { $0.edge }
+
+                // If empty due to precision, fall back to any overlapping edge
+                let contributingFallback = contributing.isEmpty
+                    ? edgesOnRun.filter { $0.tMax >= lo && $0.tMin <= hi }.map { $0.edge }
+                    : contributing
+
+                context.edgePolicy?.propagateMetadata(from: contributingFallback, to: newEdge)
             }
         }
     }
-
     private func isOnLine(a: CGPoint, dir: CGVector, p: CGPoint, tol: CGFloat) -> Bool {
         let vx = p.x - a.x, vy = p.y - a.y
         let cross = dir.dx * vy - dir.dy * vx

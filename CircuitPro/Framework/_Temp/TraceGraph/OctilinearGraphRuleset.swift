@@ -16,12 +16,7 @@ struct OctilinearGraphRuleset: GraphRuleset {
         self.rules = [
             MergeCoincidentRule(),
             SplitEdgesAtPassingVerticesRule(),
-            
-            // --- THIS IS THE FIX ---
-            // This rule is too aggressive. It merges collinear edges into a new edge,
-            // but it doesn't know how to transfer the domain-specific `traceData`
-            // (width, layerId) to the new edge. Disabling it prevents traces
-            // from disappearing when you extend them.
+
             CollapseLinearRunsRule(),
             
             RemoveIsolatedFreeVerticesRule(),

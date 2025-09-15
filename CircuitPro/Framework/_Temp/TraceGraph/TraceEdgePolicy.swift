@@ -24,15 +24,17 @@ class TraceEdgePolicy: EdgePolicy {
     
     // --- Implementation for Merging/Collapsing ---
     func propagateMetadata(from oldEdges: [GraphEdge], to newEdge: GraphEdge) {
-        guard let traceGraph = traceGraph,
-              let firstOldEdge = oldEdges.first,
-              let oldMetadata = traceGraph.edgeMetadata[firstOldEdge.id] else {
+        guard let traceGraph = traceGraph else { return }
+        
+        // Find any old edge that actually has metadata
+        guard let src = oldEdges.first(where: { traceGraph.edgeMetadata[$0.id] != nil }),
+              let oldMetadata = traceGraph.edgeMetadata[src.id] else {
             return
         }
-        
+
         traceGraph.edgeMetadata[newEdge.id] = oldMetadata
-        
-        // Clean up metadata for all the old edges that were just destroyed.
+
+        // Clean up old edges' metadata
         for edge in oldEdges {
             traceGraph.edgeMetadata.removeValue(forKey: edge.id)
         }

@@ -42,41 +42,39 @@ final class TraceNode: BaseNode, Layerable {
     }
 
     override func makeDrawingPrimitives() -> [DrawingPrimitive] {
-         guard let edge = graph.engine.currentState.edges[edgeID],
-               let startVertex = graph.engine.currentState.vertices[edge.start],
-               let endVertex = graph.engine.currentState.vertices[edge.end],
-               // --- MODIFIED: Read from the new edgeMetadata dictionary ---
-               let metadata = graph.edgeMetadata[edgeID] else {
-             return []
-         }
-
-         let path = CGMutablePath()
-         path.move(to: startVertex.point)
-         path.addLine(to: endVertex.point)
-
-         return [.stroke(
-             path: path,
-             color: self.color, // Use the resolved color
-             // --- MODIFIED: Access the .width property from the metadata struct ---
-             lineWidth: metadata.width,
-             lineCap: .round
-         )]
-     }
-     
-    override func makeHaloPath() -> CGPath? {
         guard let edge = graph.engine.currentState.edges[edgeID],
               let startVertex = graph.engine.currentState.vertices[edge.start],
-              let endVertex = graph.engine.currentState.vertices[edge.end],
-              // --- MODIFIED: Read from the new edgeMetadata dictionary ---
-              let metadata = graph.edgeMetadata[edgeID] else {
-            return nil
+              let endVertex = graph.engine.currentState.vertices[edge.end] else {
+            return []
         }
+
+        let metadata = graph.edgeMetadata[edgeID]
+        let width = metadata?.width ?? 1.0 // fallback so it still draws
 
         let path = CGMutablePath()
         path.move(to: startVertex.point)
         path.addLine(to: endVertex.point)
-        
-        // --- MODIFIED: Access the .width property from the metadata struct ---
-        return path.copy(strokingWithWidth: metadata.width + 4.0, lineCap: .round, lineJoin: .round, miterLimit: 1)
+
+        return [.stroke(
+            path: path,
+            color: self.color,
+            lineWidth: width,
+            lineCap: .round
+        )]
+    }
+     
+    override func makeHaloPath() -> CGPath? {
+        guard let edge = graph.engine.currentState.edges[edgeID],
+              let startVertex = graph.engine.currentState.vertices[edge.start],
+              let endVertex = graph.engine.currentState.vertices[edge.end] else {
+            return nil
+        }
+
+        let width = (graph.edgeMetadata[edgeID]?.width ?? 1.0) + 4.0
+
+        let path = CGMutablePath()
+        path.move(to: startVertex.point)
+        path.addLine(to: endVertex.point)
+        return path.copy(strokingWithWidth: width, lineCap: .round, lineJoin: .round, miterLimit: 1)
     }
 }

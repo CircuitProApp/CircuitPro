@@ -41,7 +41,7 @@ struct MergeCoincidentRule: GraphRule {
                 processed.insert(survivor.id)
 
                 for victim in cluster where victim.id != survivor.id {
-                    rewireEdges(from: victim.id, to: survivor.id, state: &state)
+                    rewireEdges(from: victim.id, to: survivor.id, state: &state, context: context)
                     state.removeVertex(victim.id)
                     processed.insert(victim.id)
                 }
@@ -55,13 +55,25 @@ struct MergeCoincidentRule: GraphRule {
         return "\(qx)|\(qy)"
     }
 
-    private func rewireEdges(from oldID: UUID, to newID: UUID, state: inout GraphState) {
+    private func rewireEdges(from oldID: UUID, to newID: UUID, state: inout GraphState, context: ResolutionContext) {
         guard let eids = state.adjacency[oldID] else { return }
         for eid in eids {
             guard let e = state.edges[eid] else { continue }
             let other = (e.start == oldID) ? e.end : e.start
             if other == newID { continue }
-            _ = state.addEdge(from: newID, to: other)
+
+            // Try to add a new replacement edge.
+            if let newEdge = state.addEdge(from: newID, to: other) {
+                // Propagate metadata old -> new
+                context.edgePolicy?.propagateMetadata(from: e, to: [newEdge])
+            } else {
+                // Edge already exists between newID and other. Find it and ensure it has metadata.
+                if let existingEdge = state.adjacency[newID]?
+                    .compactMap({ state.edges[$0] })
+                    .first(where: { ($0.start == newID && $0.end == other) || ($0.start == other && $0.end == newID) }) {
+                    context.edgePolicy?.propagateMetadata(from: e, to: [existingEdge])
+                }
+            }
         }
     }
 }
