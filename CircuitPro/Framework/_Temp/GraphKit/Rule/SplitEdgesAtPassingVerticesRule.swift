@@ -19,9 +19,12 @@ struct SplitEdgesAtPassingVerticesRule: GraphRule {
             
             var mids: [GraphVertex] = []
             for v in verts {
-                // A vertex is a "mid" point if it's not one of the edge's own endpoints.
                 guard v.id != edgeToSplit.start && v.id != edgeToSplit.end else { continue }
-                
+
+                // NEW: layer guard
+                let sameLayer = context.edgePolicy?.shouldEdgeInteractWithVertex(edge: edgeToSplit, vertex: v, state: state) ?? true
+                guard sameLayer else { continue }
+
                 if state.isPoint(v.point, onSegmentBetween: p1, p2: p2, tol: tol) {
                     mids.append(v)
                 }

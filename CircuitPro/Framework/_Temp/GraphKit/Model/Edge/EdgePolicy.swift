@@ -7,37 +7,38 @@
 
 import Foundation
 
-/// A protocol that defines a domain-specific policy for managing edge metadata
-/// during generic graph transformations performed by a ruleset.
 protocol EdgePolicy {
-    
-    /// Called by a rule *after* it has merged multiple edges into a single new edge.
-    /// - Parameters:
-    ///   - oldEdges: The collection of edges that were deleted during the merge.
-    ///   - newEdge: The single new edge that was created to replace them.
     func propagateMetadata(from oldEdges: [GraphEdge], to newEdge: GraphEdge)
-
-    /// Called by a rule *after* it has split a single edge into multiple new edge segments.
-    /// - Parameters:
-    ///   - oldEdge: The original edge that was deleted.
-    ///   - newEdges: The array of new edge segments that were created in its place.
     func propagateMetadata(from oldEdge: GraphEdge, to newEdges: [GraphEdge])
-    
-    /// Asks the policy if a vertex should be preserved during a collapse operation,
-    /// even if it's topologically redundant. This is used to preserve "seams"
-    /// where edge metadata (like trace width or layer) changes.
-    /// - Parameters:
-    ///   - vertex: The vertex being considered for removal.
-    ///   - edgesInRun: The edges connected to this vertex that are part of the linear run.
-    /// - Returns: `true` to force the rule to keep the vertex, `false` otherwise.
     func shouldPreserveVertex(_ vertex: GraphVertex, connecting edgesInRun: [GraphEdge]) -> Bool
+
+    // NEW
+    func layerId(of edge: GraphEdge) -> UUID?
+    func incidentLayerSet(of vertex: GraphVertex, state: GraphState) -> Set<UUID>
+    func shouldEdgeInteractWithVertex(edge: GraphEdge, vertex: GraphVertex, state: GraphState) -> Bool
+    func canMergeVertices(_ a: GraphVertex, _ b: GraphVertex, state: GraphState) -> Bool
 }
 
-// Provide default implementations so conforming types only need to implement what they need.
 extension EdgePolicy {
     func propagateMetadata(from oldEdges: [GraphEdge], to newEdge: GraphEdge) {}
     func propagateMetadata(from oldEdge: GraphEdge, to newEdges: [GraphEdge]) {}
-    func shouldPreserveVertex(_ vertex: GraphVertex, connecting edgesInRun: [GraphEdge]) -> Bool {
-        return false
+    func shouldPreserveVertex(_ vertex: GraphVertex, connecting edgesInRun: [GraphEdge]) -> Bool { false }
+
+    // Defaults: non-layered engines behave as before.
+    func layerId(of edge: GraphEdge) -> UUID? { nil }
+    func incidentLayerSet(of vertex: GraphVertex, state: GraphState) -> Set<UUID> { [] }
+
+    // If the edge has no layer notion, allow interaction; otherwise require same layer.
+    func shouldEdgeInteractWithVertex(edge: GraphEdge, vertex: GraphVertex, state: GraphState) -> Bool {
+        guard let lid = layerId(of: edge) else { return true }
+        return incidentLayerSet(of: vertex, state: state).contains(lid)
+    }
+
+    // Only merge coincident vertices when their layer signatures match and are non-empty.
+    func canMergeVertices(_ a: GraphVertex, _ b: GraphVertex, state: GraphState) -> Bool {
+        let la = incidentLayerSet(of: a, state: state)
+        let lb = incidentLayerSet(of: b, state: state)
+        guard !la.isEmpty, !lb.isEmpty else { return false }
+        return la == lb
     }
 }

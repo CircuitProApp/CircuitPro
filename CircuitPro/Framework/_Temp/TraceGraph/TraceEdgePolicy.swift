@@ -69,4 +69,19 @@ class TraceEdgePolicy: EdgePolicy {
         // If there's more than one unique style, this vertex is a critical seam and must be preserved.
         return uniqueMetadata.count > 1
     }
+    
+    func layerId(of edge: GraphEdge) -> UUID? {
+        traceGraph?.edgeMetadata[edge.id]?.layerId
+    }
+
+    func incidentLayerSet(of vertex: GraphVertex, state: GraphState) -> Set<UUID> {
+        guard let tg = traceGraph else { return [] }
+        var layers: Set<UUID> = []
+        for eid in state.adjacency[vertex.id] ?? [] {
+            if let lid = tg.edgeMetadata[eid]?.layerId {
+                layers.insert(lid)
+            }
+        }
+        return layers
+    }
 }

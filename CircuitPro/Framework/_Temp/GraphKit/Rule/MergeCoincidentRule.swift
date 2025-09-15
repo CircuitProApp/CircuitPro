@@ -18,7 +18,7 @@ struct MergeCoincidentRule: GraphRule {
             let key = bucketKey(v.point, tol: tol)
             buckets[key, default: []].append(v)
         }
-
+        
         for bucketVerts in buckets.values {
             guard bucketVerts.count > 1 else { continue }
             var remaining = bucketVerts
@@ -37,13 +37,26 @@ struct MergeCoincidentRule: GraphRule {
                 }
                 guard cluster.count > 1 else { continue }
 
-                let survivor = context.policy?.preferSurvivor(cluster, state: state) ?? cluster[0]
-                processed.insert(survivor.id)
+                // NEW: split by layer signature
+                let groups = Dictionary(grouping: cluster) { (vx: GraphVertex) -> String in
+                    let layers = context.edgePolicy?.incidentLayerSet(of: vx, state: state) ?? []
+                    // Stable key
+                    return layers.sorted { $0.uuidString < $1.uuidString }.map { $0.uuidString }.joined(separator: "|")
+                }
 
-                for victim in cluster where victim.id != survivor.id {
-                    rewireEdges(from: victim.id, to: survivor.id, state: &state, context: context)
-                    state.removeVertex(victim.id)
-                    processed.insert(victim.id)
+                for group in groups.values where group.count > 1 {
+                    // Optional: skip empty-layer groups (no edges yet) to avoid accidental cross-layer merges
+                    let sig = context.edgePolicy?.incidentLayerSet(of: group[0], state: state) ?? []
+                    if sig.isEmpty { continue }
+
+                    let survivor = context.policy?.preferSurvivor(group, state: state) ?? group[0]
+                    processed.insert(survivor.id)
+
+                    for victim in group where victim.id != survivor.id {
+                        rewireEdges(from: victim.id, to: survivor.id, state: &state, context: context)
+                        state.removeVertex(victim.id)
+                        processed.insert(victim.id)
+                    }
                 }
             }
         }
@@ -62,17 +75,12 @@ struct MergeCoincidentRule: GraphRule {
             let other = (e.start == oldID) ? e.end : e.start
             if other == newID { continue }
 
-            // Try to add a new replacement edge.
             if let newEdge = state.addEdge(from: newID, to: other) {
-                // Propagate metadata old -> new
                 context.edgePolicy?.propagateMetadata(from: e, to: [newEdge])
-            } else {
-                // Edge already exists between newID and other. Find it and ensure it has metadata.
-                if let existingEdge = state.adjacency[newID]?
-                    .compactMap({ state.edges[$0] })
-                    .first(where: { ($0.start == newID && $0.end == other) || ($0.start == other && $0.end == newID) }) {
-                    context.edgePolicy?.propagateMetadata(from: e, to: [existingEdge])
-                }
+            } else if let existing = state.adjacency[newID]?
+                .compactMap({ state.edges[$0] })
+                .first(where: { ($0.start == newID && $0.end == other) || ($0.start == other && $0.end == newID) }) {
+                context.edgePolicy?.propagateMetadata(from: e, to: [existing])
             }
         }
     }
