@@ -14,12 +14,10 @@ struct CircuitProApp: App {
     @State private var packManager: SwiftDataPackManager
 
      init() {
-         // Initialize the manager once when the app starts.
-         // This will throw a fatalError if it fails, which is appropriate
-         // for a critical app service that fails on launch.
          let manager = try! SwiftDataPackManager(for: [
              ComponentDefinition.self,
-             SymbolDefinition.self
+             SymbolDefinition.self,
+             FootprintDefinition.self
          ])
          _packManager = State(initialValue: manager)
      }
@@ -43,8 +41,7 @@ struct CircuitProApp: App {
                     .onDisappear { DocumentRegistry.shared.close(id: id) }
             }
         }
-        .defaultSize(width: 1000, height: 700)
-        .windowToolbarStyle(.unifiedCompact)
+        .defaultSize(width: 1340, height: 800)
         .restorationBehavior(.disabled)
         .defaultLaunchBehavior(.suppressed)
         

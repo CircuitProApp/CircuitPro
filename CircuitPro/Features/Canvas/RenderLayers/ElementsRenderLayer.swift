@@ -88,71 +88,68 @@ final class ElementsRenderLayer: RenderLayer {
         return primitivesByLayer
     }
     
-    /// Collects and transforms all "halo" drawing primitives for highlighted nodes, grouped by layer.
+    /// Collects and transforms all "halo" drawing primitives for highlighted nodes, grouped by layer. 
     private func gatherHaloPrimitives(from context: RenderContext, allNodes: [BaseNode]) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
         let highlightedNodes = context.highlightedNodeIDs.compactMap { id in
             allNodes.first { $0.id == id }
         }
         
-        // This set will track nodes handled by the unified wire halo logic.
         var handledNodeIDs = Set<UUID>()
 
-        // --- PHASE 1: Generate Unified Halos for Wires ---
+        // --- PHASE 1: Generate Unified Halos from Parent Containers (THE FIX) ---
         
-        // Find all unique SchematicGraphNode parents that contain selected wires.
-        let parentGraphs = Set(highlightedNodes.compactMap { ($0 as? WireNode)?.parent as? SchematicGraphNode })
+        // Find all unique parent nodes that contain one or more selected children.
+        let parentNodes = Set(highlightedNodes.compactMap { $0.parent })
         
-        for graphNode in parentGraphs {
-            // Ask the graph node to generate a single, pre-stroked halo path.
-            if let unifiedHaloPath = graphNode.makeHaloPathForSelectedWires(context: context) {
+        for parent in parentNodes {
+            // Ask the parent to generate a single, pre-stroked halo path for ALL of its selected children.
+            // Both SchematicGraphNode and TraceGraphNode override this method.
+            if let unifiedHaloPath = parent.makeHaloPath(context: context) {
                 
-                let haloColor = NSColor.controlAccentColor.cgColor.copy(alpha: 0.4) ?? NSColor.controlAccentColor.cgColor
-                
-                // CORRECT: The unified path is an outline that should be FILLED.
+                // The unified path is an outline that should be FILLED to create the halo effect.
+                let haloColor = NSColor.selectedControlColor.withAlphaComponent(0.3).cgColor
                 let haloPrimitive = DrawingPrimitive.fill(path: unifiedHaloPath, color: haloColor)
                 
+                // Add the primitive to the list. Unlayered halos go in the 'nil' key group.
                 primitivesByLayer[nil, default: []].append(haloPrimitive)
                 
-                // Mark all selected children of this graph as handled to prevent double-drawing.
-                for child in graphNode.children where context.highlightedNodeIDs.contains(child.id) {
+                // Mark all selected children of this parent as "handled" to prevent them
+                // from drawing their own individual halos in Phase 2.
+                for child in parent.children where context.highlightedNodeIDs.contains(child.id) {
                     handledNodeIDs.insert(child.id)
                 }
             }
         }
 
-        // --- PHASE 2: Generate Individual Halos for All Other Nodes (The Original Way) ---
+        // --- PHASE 2: Generate Individual Halos for All Other Nodes ---
+        // This phase handles selected nodes that did NOT have a parent provide a unified halo.
+        // (e.g., a selected SymbolNode or FootprintNode)
 
         for node in highlightedNodes {
-            // If this node was a wire handled in Phase 1, skip it.
-            if handledNodeIDs.contains(node.id) {
-                continue
-            }
+            // If this node was handled by its parent in Phase 1, skip it.
+            guard !handledNodeIDs.contains(node.id) else { continue }
             
-            // This is the original logic for all other selectable nodes.
-            // It calls the node's own `makeHaloPath` method, which might be on BaseNode or an override.
-            guard let haloPath = node.makeHaloPath() else { continue }
-            
-            let haloColor = resolveColor(for: node, in: context)
-            let transparentHaloColor = haloColor.copy(alpha: 0.4) ?? haloColor
-            
-            // CORRECT: Other nodes return a simple path that should be STROKED.
-            // This restores the original behavior.
-            let haloPrimitive = DrawingPrimitive.stroke(
-                path: haloPath,
-                color: transparentHaloColor,
-                lineWidth: 5.0, // Using the original line width.
-                lineCap: .round,
-                lineJoin: .round,
-                miterLimit: 10,
-                lineDash: nil
-            )
+            // This is the original logic for nodes that draw their own halos.
+            // It's important to keep this for things that aren't part of a graph.
+            if let haloPath = node.makeHaloPath() {
+                let haloColor = NSColor.selectedControlColor.withAlphaComponent(0.3).cgColor
                 
-            var transform = node.worldTransform
-            let worldPrimitive = haloPrimitive.applying(transform: &transform)
-            
-            let layerId = (node as? Layerable)?.layerId
-            primitivesByLayer[layerId, default: []].append(worldPrimitive)
+                // This assumes the node returns its centerline, which we then STROKE.
+                let haloPrimitive = DrawingPrimitive.stroke(
+                    path: haloPath,
+                    color: haloColor,
+                    lineWidth: 5.0,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+                    
+                var transform = node.worldTransform
+                let worldPrimitive = haloPrimitive.applying(transform: &transform)
+                
+                let layerId = (node as? Layerable)?.layerId
+                primitivesByLayer[layerId, default: []].append(worldPrimitive)
+            }
         }
         
         return primitivesByLayer

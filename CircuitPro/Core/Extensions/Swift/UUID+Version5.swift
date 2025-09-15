@@ -31,17 +31,17 @@ extension UUID {
         combinedData.append(nameData)
         
         // 4. Compute the SHA-1 hash of the combined data.
-        var digest = Insecure.SHA1.hash(data: combinedData)
-        
-        // 5. Extract the first 16 bytes of the hash to form the UUID.
-        let uuidBytes: uuid_t = withUnsafeBytes(of: &digest) {
-            var bytes: uuid_t = (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-            let bufferPointer = UnsafeMutableRawBufferPointer(start: &bytes, count: 16)
-            bufferPointer.copyMemory(from: UnsafeRawBufferPointer($0))
-            return bytes
+        let digest = Insecure.SHA1.hash(data: combinedData)
+
+        // 5. Extract the first 16 bytes of the hash to form the UUID safely.
+        var rawUUID: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        let digestData = Data(digest)
+        digestData.prefix(16).withUnsafeBytes { src in
+            withUnsafeMutableBytes(of: &rawUUID) { dst in
+                precondition(src.count == 16)
+                dst.copyBytes(from: src)
+            }
         }
-        
-        var rawUUID = uuidBytes
         
         // 6. Set the version bits to 5 (0101).
         // digest[6] is the 7th byte (0-indexed).

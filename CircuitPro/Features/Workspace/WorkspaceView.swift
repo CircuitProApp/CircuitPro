@@ -23,26 +23,10 @@ struct WorkspaceView: View {
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             NavigatorView(document: document)
-                .toolbar(removing: .sidebarToggle)
                 .navigationSplitViewColumnWidth(min: 240, ideal: 240, max: 320)
-                .toolbar {
-                    ToolbarItem(placement: .automatic) {
-                        Button {
-                            withAnimation {
-                                if self.columnVisibility == .detailOnly {
-                                    self.columnVisibility = .all
-                                } else {
-                                    self.columnVisibility = .detailOnly
-                                }
-                            }
-                        } label: {
-                            Image(systemName: CircuitProSymbols.Workspace.sidebarLeading)
-                                .imageScale(.large)
-                        }
-                    }
-                }
         } detail: {
             EditorView(document: document)
+                .frame(minWidth: 320)
                 .sheet(isPresented: $showFeedbackSheet) {
                     FeedbackFormView()
                         .frame(minWidth: 400, minHeight: 300)
@@ -61,7 +45,7 @@ struct WorkspaceView: View {
                         Button {
                             showFeedbackSheet.toggle()
                         } label: {
-                            Image(systemName: CircuitProSymbols.Workspace.feedbackBubble)
+                            Image(systemName: "bubble.left.and.bubble.right")
                                 .imageScale(.large)
                         }
                         .help("Send Feedback")
@@ -69,7 +53,7 @@ struct WorkspaceView: View {
                    
                 }
         }
-        .frame(minWidth: 800, minHeight: 600)
+        .frame(minWidth: 820, minHeight: 600)
         .inspector(isPresented: $showInspector) {
             InspectorView()
             .inspectorColumnWidth(min: 260, ideal: 300, max: 500)
@@ -78,17 +62,16 @@ struct WorkspaceView: View {
                     Button {
                         self.showInspector.toggle()
                     } label: {
-                        Image(systemName: CircuitProSymbols.Workspace.sidebarTrailing)
+                        Image(systemName: "sidebar.right")
                             .imageScale(.large)
                     }
                 }
             }
         }
         .onAppear {
-            if projectManager.project.designs.isNotEmpty {
-                projectManager.selectedDesign = projectManager.project.designs.first!
+            if let firstDesign = projectManager.project.designs.first {
+                projectManager.selectedDesign = firstDesign
             }
         }
     }
 }
-

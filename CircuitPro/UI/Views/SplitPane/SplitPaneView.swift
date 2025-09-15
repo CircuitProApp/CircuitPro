@@ -60,25 +60,34 @@ public struct SplitPaneView<Primary: View, Handle: View, Secondary: View>: View 
         isCollapsed: Binding<Bool>,
         minPrimary: CGFloat = 100,
         minSecondary: CGFloat = 200,
-        handleHeight: CGFloat = 29,
+        handleHeight: CGFloat? = nil,
         secondaryCollapsible: Bool = true,
         @ViewBuilder primary: () -> Primary,
         @ViewBuilder handle: () -> Handle,
         @ViewBuilder secondary: () -> Secondary
     ) {
-        // 6.1. Initialize Bindings and Configuration
         _isCollapsed = isCollapsed
         self.minPrimary = minPrimary
         self.minSecondary = minSecondary
-        self.handleHeight = handleHeight
         self.secondaryCollapsible = secondaryCollapsible
         self.primary = primary()
         self.handle = handle()
         self.secondary = secondary()
 
-        // 6.2. Initialize State
+        #if os(macOS)
+        if #available(macOS 26, *), handleHeight == nil {
+            self.handleHeight = 36
+        } else {
+            self.handleHeight = handleHeight ?? 29
+        }
+        #else
+        self.handleHeight = handleHeight ?? 29
+        #endif
+
         let initialRestoreHeight = minSecondary
-        let initialState: SplitterState = isCollapsed.wrappedValue ? .collapsed : .expanded(height: initialRestoreHeight)
+        let initialState: SplitterState = isCollapsed.wrappedValue
+            ? .collapsed
+            : .expanded(height: initialRestoreHeight)
         _splitterState = State(initialValue: initialState)
         _lastNonCollapsedHeight = State(initialValue: initialRestoreHeight)
     }
