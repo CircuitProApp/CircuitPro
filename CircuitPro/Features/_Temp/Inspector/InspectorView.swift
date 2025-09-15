@@ -19,29 +19,39 @@ struct InspectorView: View {
               let selectedID = projectManager.selectedNodeIDs.first else {
             return nil
         }
-        // --- MODIFIED: Use `activeCanvasNodes` to search the correct node list ---
         return projectManager.activeCanvasNodes.findNode(with: selectedID)
     }
     
     /// A computed property that finds the ComponentInstance for a selected SymbolNode.
-    /// This is only relevant for the schematic editor.
     private var selectedComponentContext: (component: ComponentInstance, node: SymbolNode)? {
-        // Ensure the selected node is a SymbolNode
         guard let symbolNode = singleSelectedNode as? SymbolNode else {
             return nil
         }
         
-        // Find the corresponding data model instance
         if let componentInstance = projectManager.componentInstances.first(where: { $0.id == symbolNode.id }) {
             return (componentInstance, symbolNode)
         }
         
         return nil
     }
+
+    /// A computed property that finds the ComponentInstance for a selected FootprintNode.
+    private var selectedFootprintContext: (component: ComponentInstance, node: FootprintNode)? {
+        // Ensure the selected node is a FootprintNode
+        guard let footprintNode = singleSelectedNode as? FootprintNode else {
+            return nil
+        }
+
+        // The FootprintNode's ID is the same as the ComponentInstance's ID.
+        if let componentInstance = projectManager.componentInstances.first(where: { $0.id == footprintNode.id }) {
+            return (componentInstance, footprintNode)
+        }
+
+        return nil
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // --- MODIFIED: The view's logic is now structured by the active editor ---
             switch projectManager.selectedEditor {
             
             case .schematic:
@@ -68,7 +78,6 @@ struct InspectorView: View {
             AnchoredTextInspectorView(anchoredText: anchoredText)
             
         } else {
-            // Fallback for schematic (e.g., wires, junctions, etc.) or multi-selection
             selectionStatusView
         }
     }
@@ -76,16 +85,28 @@ struct InspectorView: View {
     /// The view content to display when the Layout editor is active.
     @ViewBuilder
     private var layoutInspectorView: some View {
-        if singleSelectedNode != nil {
-            // We have a single selection (e.g., a FootprintNode or PadNode).
-            // Since the layout inspector isn't built, show a placeholder.
-            Text("Layout inspector not yet implemented.")
-                .padding()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // --- MODIFIED: Display the Footprint inspector when a FootprintNode is selected ---
+        if let context = selectedFootprintContext {
+            FootprintNodeInspectorView(
+                component: context.component,
+                footprintNode: context.node
+            )
+            .id(context.component.id)
+            
+        } else if let primitive = singleSelectedNode as? PrimitiveNode {
+            @Bindable var primitive = primitive
+            ScrollView {
+                PrimitivePropertiesView(primitive: $primitive.primitive)
+            }
         } else {
             // Handle no selection or multi-selection for layout.
             selectionStatusView
         }
+    }
+    
+    @ViewBuilder
+    private var primitiveInspectorView: some View {
+        
     }
     
     /// A shared view for displaying the current selection status (none, or multiple).
