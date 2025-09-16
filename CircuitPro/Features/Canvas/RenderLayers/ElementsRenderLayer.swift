@@ -133,7 +133,7 @@ final class ElementsRenderLayer: RenderLayer {
             // This is the original logic for nodes that draw their own halos.
             // It's important to keep this for things that aren't part of a graph.
             if let haloPath = node.makeHaloPath() {
-                let haloColor = NSColor.selectedControlColor.withAlphaComponent(0.3).cgColor
+                let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
                 
                 // This assumes the node returns its centerline, which we then STROKE.
                 let haloPrimitive = DrawingPrimitive.stroke(
