@@ -50,6 +50,7 @@ struct EditorView: View {
                         SchematicCanvasView(document: document, canvasManager: selectedCanvasManager)
                     case .layout:
                         LayoutView(document: document, canvasManager: selectedCanvasManager)
+       
                     }
                 }
 

@@ -27,6 +27,7 @@ struct WorkspaceView: View {
         } detail: {
             EditorView(document: document)
                 .frame(minWidth: 320)
+             
                 .sheet(isPresented: $showFeedbackSheet) {
                     FeedbackFormView()
                         .frame(minWidth: 400, minHeight: 300)
@@ -75,3 +76,4 @@ struct WorkspaceView: View {
         }
     }
 }
+
