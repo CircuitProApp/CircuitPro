@@ -45,7 +45,7 @@ struct FootprintNodeInspectorView: View {
     var body: some View {
         SidebarView(selectedTab: $selectedTab, availableTabs: availableTabs) {
             ScrollView {
-                VStack(spacing: 5) {
+                VStack(alignment: .leading, spacing: 5) {
                     InspectorSection("Identity") {
                         InspectorRow("Refdes") {
                             // Display the reference designator from the parent component.

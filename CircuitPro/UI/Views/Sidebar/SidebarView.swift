@@ -16,7 +16,22 @@ struct SidebarView<T: SidebarTab, Content: View>: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            SidebarTabView(selectedTab: $selectedTab, availableTabs: availableTabs)
+            if #available(macOS 26.0, *) {
+                Picker("Inspector Tab", selection: $selectedTab) {
+                    ForEach(availableTabs) { tab in
+                        Image(systemName: tab.icon)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .controlSize(.large)
+                .buttonSizing(.flexible)
+                .padding(.horizontal, 8)
+
+            } else {
+                SidebarTabView(selectedTab: $selectedTab, availableTabs: availableTabs)
+            }
+      
             content
         }
     }

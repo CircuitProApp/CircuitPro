@@ -93,7 +93,7 @@ struct SymbolNodeAttributesView: View {
     
     // Body of the view (No changes needed here)
     var body: some View {
-        VStack(spacing: 5) {
+        VStack(alignment: .leading, spacing: 5) {
             InspectorSection("Identity") {
                 InspectorRow("Name") {
                     Text(component.definition?.name ?? "n/a")
