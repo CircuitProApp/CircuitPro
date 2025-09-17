@@ -10,7 +10,6 @@ import SwiftData
 
 struct WorkspaceView: View {
     
-    // The correct property wrapper for accessing an observable object from the environment.
     @BindableEnvironment(\.projectManager)
     private var projectManager
 
@@ -32,6 +31,19 @@ struct WorkspaceView: View {
         return count > 99 ? "99+" : "\(count)"
     }
     
+    private var syncModeBinding: Binding<SyncMode> {
+        Binding(
+            get: { self.syncManager.syncMode },
+            set: { newMode in
+                if newMode == .automatic && !syncManager.pendingChanges.isEmpty {
+                    self.showDiscardChangesAlert = true
+                } else {
+                    self.syncManager.syncMode = newMode
+                }
+            }
+        )
+    }
+    
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             NavigatorView(document: document)
@@ -47,15 +59,22 @@ struct WorkspaceView: View {
                     TimelineView()
                 }
                 .libraryPanel(isPresented: $isShowingLibrary)
+                // --- CORRECTED ALERT STRUCTURE ---
                 .alert("Discard Unapplied Changes?", isPresented: $showDiscardChangesAlert) {
+                    // 1. "Review Changes" is the default action (no role = blue).
                     Button("Review Changes") {
                         isShowingTimeline = true
                     }
+                    
+                    // 2. "Discard Changes" is the destructive action.
                     Button("Discard Changes", role: .destructive) {
-                        projectManager.discardPendingChanges() // Use the dedicated discard function
+                        projectManager.discardPendingChanges()
                         syncManager.syncMode = .automatic
                     }
+                    
+                    // 3. "Cancel" is the explicit cancel action.
                     Button("Cancel", role: .cancel) {}
+                    
                 } message: {
                     Text("Switching to Automatic Sync will discard all \(pendingChangesCount) pending changes in your timeline.")
                 }
@@ -111,19 +130,18 @@ struct WorkspaceView: View {
 
         HStack(spacing: 0) {
             Menu {
-                 Picker("Sync Mode", selection: $projectManager.syncManager.syncMode) {
+                 Picker("Sync Mode", selection: syncModeBinding) {
                      Label("Smart Sync", systemImage: "arrow.triangle.2.circlepath")
                          .tag(SyncMode.automatic)
                      Label("Manual ECO", systemImage: "pencil.and.list.clipboard")
                          .tag(SyncMode.manualECO)
                  }
-                 .pickerStyle(.inline) // keeps it compact inside the menu
+                 .pickerStyle(.inline)
              } label: {
                  Image(systemName: "gearshape.arrow.trianglehead.2.clockwise.rotate.90")
              }
              .help("Change Sync Mode")
 
-            // Timeline button only in Manual ECO
             if isEcoMode {
                 Button {
                     isShowingTimeline = true
