@@ -9,6 +9,9 @@ import SwiftUI
 
 struct FootprintNavigatorView: View {
     @BindableEnvironment(\.projectManager) private var projectManager
+    // @Environment(\.editMode) var editMode // Removed: 'editMode' is unavailable on macOS
+
+    var document: CircuitProjectFileDocument // Added for autosave
 
     private var unplacedComponents: [ComponentInstance] {
         projectManager.componentInstances.filter {
@@ -26,47 +29,113 @@ struct FootprintNavigatorView: View {
         }
     }
 
+    /// Handles deletion of component instances based on selection.
+    // This function is identical to the one in SymbolNavigatorView.
+    private func performDelete(on componentInstance: ComponentInstance, selected: inout Set<UUID>) {
+        let idsToRemove: Set<UUID>
+        
+        let isMultiSelect = selected.contains(componentInstance.id) && selected.count > 1
+        
+        if isMultiSelect {
+            idsToRemove = selected
+        } else {
+            idsToRemove = [componentInstance.id]
+        }
+        
+        projectManager.selectedDesign?.componentInstances.removeAll { idsToRemove.contains($0.id) }
+        selected.subtract(idsToRemove) // Clear selection for deleted items
+        document.scheduleAutosave()
+    }
+
     var body: some View {
-        List {
-            Section("Unplaced") {
-                if unplacedComponents.isEmpty {
-                    Text("All components placed.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(unplacedComponents) { component in
-                        componentRow(for: component)
-                            // --- ADDED: Make this row draggable ---
-                            .draggable(TransferablePlacement(componentInstanceID: component.id))
+        VStack(spacing: 0) { // Added VStack for similar structure to SymbolNavigatorView
+            if projectManager.componentInstances.isEmpty { // Checking all component instances
+                Spacer()
+                Text("No Footprints") // Adjusted text
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+                Spacer()
+            } else {
+                List(selection: $projectManager.selectedNodeIDs) { // Apply selection to the entire List
+                    Section("Unplaced") {
+                        if unplacedComponents.isEmpty {
+                            Text("All components placed.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            // Make sure ForEach iterates over the ComponentInstance itself
+                            ForEach(unplacedComponents) { component in
+                                componentRow(for: component)
+                                    .listRowSeparator(.hidden) // Added row separator style
+                                    // --- ADDED: Make this row draggable ---
+                                    .draggable(TransferablePlacement(componentInstanceID: component.id))
+                                    // Add context menu for deletion
+                                    .contextMenu {
+                                        let multi = projectManager.selectedNodeIDs.contains(component.id) && projectManager.selectedNodeIDs.count > 1
+                                        Button(role: .destructive) {
+                                            performDelete(on: component, selected: &projectManager.selectedNodeIDs)
+                                        } label: {
+                                            Text(multi
+                                                 ? "Delete Selected (\(projectManager.selectedNodeIDs.count))"
+                                                 : "Delete")
+                                        }
+                                    }
+                            }
+                        }
+                    }
+                    
+                    Section("Placed on Front") {
+                        let frontComponents = placedComponents(on: .front)
+                        if frontComponents.isEmpty {
+                            Text("No components on front.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(frontComponents) { component in
+                                componentRow(for: component)
+                                    .listRowSeparator(.hidden) // Added row separator style
+                                    // Add context menu for deletion
+                                    .contextMenu {
+                                        let multi = projectManager.selectedNodeIDs.contains(component.id) && projectManager.selectedNodeIDs.count > 1
+                                        Button(role: .destructive) {
+                                            performDelete(on: component, selected: &projectManager.selectedNodeIDs)
+                                        } label: {
+                                            Text(multi
+                                                 ? "Delete Selected (\(projectManager.selectedNodeIDs.count))"
+                                                 : "Delete")
+                                        }
+                                    }
+                            }
+                        }
+                    }
+                    
+                    Section("Placed on Back") {
+                        let backComponents = placedComponents(on: .back)
+                        if backComponents.isEmpty {
+                            Text("No components on back.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(backComponents) { component in
+                                componentRow(for: component)
+                                    .listRowSeparator(.hidden) // Added row separator style
+                                    // Add context menu for deletion
+                                    .contextMenu {
+                                        let multi = projectManager.selectedNodeIDs.contains(component.id) && projectManager.selectedNodeIDs.count > 1
+                                        Button(role: .destructive) {
+                                            performDelete(on: component, selected: &projectManager.selectedNodeIDs)
+                                        } label: {
+                                            Text(multi
+                                                 ? "Delete Selected (\(projectManager.selectedNodeIDs.count))"
+                                                 : "Delete")
+                                        }
+                                    }
+                            }
+                        }
                     }
                 }
-            }
-            
-            Section("Placed on Front") {
-                // ... (rest of the view is unchanged)
-                let frontComponents = placedComponents(on: .front)
-                if frontComponents.isEmpty {
-                    Text("No components on front.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(frontComponents) { component in
-                        componentRow(for: component)
-                    }
-                }
-            }
-            
-            Section("Placed on Back") {
-                let backComponents = placedComponents(on: .back)
-                if backComponents.isEmpty {
-                    Text("No components on back.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(backComponents) { component in
-                        componentRow(for: component)
-                    }
-                }
+                .listStyle(.inset) // Applied .inset list style
+                .scrollContentBackground(.hidden) // Applied .hidden scroll content background
+                .environment(\.defaultMinListRowHeight, 14) // Applied defaultMinListRowHeight
             }
         }
-        .listStyle(.sidebar)
     }
     
     @ViewBuilder
@@ -77,5 +146,7 @@ struct FootprintNavigatorView: View {
             Text(component.footprintInstance?.definition?.name ?? "Default")
                 .foregroundStyle(.secondary)
         }
+        .frame(height: 14) // Applied frame height for the row
     }
 }
+

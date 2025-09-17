@@ -50,7 +50,7 @@ final class TraceGraphNode: BaseNode {
         return foundNodes
     }
     
-    // --- ADDED: This is the halo merging logic, adapted from SchematicGraphNode ---
+    // --- MODIFIED: This is the halo merging logic, adapted from SchematicGraphNode ---
     override func makeHaloPath(context: RenderContext) -> CGPath? {
         // 1. Find which of our children are `TraceNode`s and are also highlighted.
         let selectedTraces = self.children.compactMap { child -> TraceNode? in
@@ -60,8 +60,9 @@ final class TraceGraphNode: BaseNode {
         
         guard !selectedTraces.isEmpty else { return nil }
 
-        // 2. Create a single path containing the center-lines of all selected trace segments.
+        // 2. Create a path for the center-lines and determine the max width.
         let compositePath = CGMutablePath()
+        var maxWidth: CGFloat = 0.0
 
         for traceNode in selectedTraces {
             guard let edge = graph.engine.currentState.edges[traceNode.edgeID],
@@ -70,14 +71,24 @@ final class TraceGraphNode: BaseNode {
                 continue
             }
             
+            // Add the segment to the path
             compositePath.move(to: startVertex.point)
             compositePath.addLine(to: endVertex.point)
+            
+            // Keep track of the maximum width of all selected traces
+            if let metadata = graph.edgeMetadata[traceNode.edgeID] {
+                maxWidth = max(maxWidth, metadata.width)
+            }
         }
 
-        // 3. Stroke the entire composite path at once to create a single, clean, unified halo.
+        // 3. Stroke the path with a width relative to the content.
         if !compositePath.isEmpty {
-            // A generous, fixed-width halo works well, similar to the schematic implementation.
-            return compositePath.copy(strokingWithWidth: 15, lineCap: .round, lineJoin: .round, miterLimit: 0)
+            // The halo width is now the largest trace's width plus a fixed padding.
+            // This ensures it's always visible and proportional.
+            let haloPadding: CGFloat = 2.0 // A reasonable visual padding in points
+            let haloWidth = maxWidth + haloPadding
+            
+            return compositePath.copy(strokingWithWidth: haloWidth, lineCap: .round, lineJoin: .round, miterLimit: 0)
         }
         
         return nil

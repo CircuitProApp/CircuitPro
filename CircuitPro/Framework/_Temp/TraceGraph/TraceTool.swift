@@ -11,20 +11,24 @@ final class TraceTool: CanvasTool {
     override var symbolName: String { "scribble.variable" }
     override var label: String { "Trace" }
 
+    // This property would be updated by a UI control (e.g., a text field in a toolbar).
+    // It is initialized with the application's default value.
+    var currentTraceWidthInPoints: CGFloat = CircuitPro.Constants.defaultTraceWidthMM * CircuitPro.Constants.pointsPerMillimeter
+
     private enum State {
         case idle
         case drawing(lastPoint: CGPoint)
     }
     private var state: State = .idle
-
-    // The handleTap function is already correct and does not need to change.
+    
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         guard let activeLayerId = context.activeLayerId else {
             print("TraceTool Error: No active layer selected.")
             return .noResult
         }
         
-        let traceWidth: CGFloat = 10.0
+        // Use the editable property for the trace width.
+        let traceWidth = self.currentTraceWidthInPoints
         
         switch self.state {
         case .idle:
@@ -38,6 +42,7 @@ final class TraceTool: CanvasTool {
             }
 
             let pathPoints = calculateOptimalPath(from: lastPoint, to: location)
+            // Pass the current, potentially user-modified, width to the request node.
             let requestNode = TraceRequestNode(points: pathPoints, width: traceWidth, layerId: activeLayerId)
             let newLastPoint = pathPoints.last ?? location
             self.state = .drawing(lastPoint: newLastPoint)
@@ -60,14 +65,11 @@ final class TraceTool: CanvasTool {
             path.addLine(to: pathPoints[i])
         }
         
-        // --- THIS IS THE FIX ---
-        // We remove the `lineDash` parameter to make the preview a solid line.
-        // This provides a much clearer "what you see is what you get" experience.
+        // The preview should always reflect the current width setting.
         return [.stroke(
             path: path,
             color: color,
-            lineWidth: 10.0 // Should match the tool's width setting
-            // No lineDash parameter here
+            lineWidth: self.currentTraceWidthInPoints
         )]
     }
     

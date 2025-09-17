@@ -14,5 +14,7 @@ struct CircuitPro {
         /// in the canvas coordinate system.
         static let pointsPerMillimeter: CGFloat = 10.0
         
+        /// The default width for new traces, specified in millimeters.
+        static let defaultTraceWidthMM: CGFloat = 0.2
     }
 }

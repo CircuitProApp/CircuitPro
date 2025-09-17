@@ -61,7 +61,7 @@ struct LayoutNavigatorView: View {
             // --- MODIFIED: Switch now uses the new, dedicated views ---
             switch selectedTab {
             case .footprints:
-                FootprintNavigatorView()
+                FootprintNavigatorView(document: document)
                     .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .leading)))
        
             case .layers:

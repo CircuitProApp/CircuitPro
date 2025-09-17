@@ -23,21 +23,27 @@ struct SymbolNavigatorView: View {
     private func performDelete(on componentInstance: ComponentInstance, selected: inout Set<UUID>) {
         let idsToRemove: Set<UUID>
         
+        // Check if the component instance is part of a multi-selection.
+        // It's important to check `selected.count > 1` here to differentiate
+        // between a single-selection delete and a multi-selection delete that happens to include this item.
         let isMultiSelect = selected.contains(componentInstance.id) && selected.count > 1
         
         if isMultiSelect {
             // For multi-delete, we can just use the selection set directly.
             // No need to fetch or resolve anything.
             idsToRemove = selected
-            selected.removeAll()
         } else {
             // For a single delete, it's just the ID of the passed-in instance.
             idsToRemove = [componentInstance.id]
-            selected.remove(componentInstance.id)
         }
         
         // Remove the component instances from the project's source of truth.
         projectManager.selectedDesign?.componentInstances.removeAll { idsToRemove.contains($0.id) }
+        
+        // Clear the selection for the deleted items.
+        // If it was a multi-select, clear all selected items.
+        // If it was a single-select, remove only the deleted item from selection.
+        selected.subtract(idsToRemove)
         
         // Persist the change to the document.
         document.scheduleAutosave()
