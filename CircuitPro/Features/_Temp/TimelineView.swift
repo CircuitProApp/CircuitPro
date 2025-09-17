@@ -92,9 +92,12 @@ struct TimelineView: View {
 
     private func fieldGroupID(componentID: UUID, key: FieldKey) -> String {
         switch key {
-        case .refdes:             return "refdes:\(componentID.uuidString)"
-        case .footprint:          return "footprint:\(componentID.uuidString)"
-        case .property(let pid):  return "prop:\(componentID.uuidString):\(pid.uuidString)"
+        case .refdes:
+            return "refdes:\(componentID.uuidString)"
+        case .footprint:
+            return "footprint:\(componentID.uuidString)"
+        case .property(let pid):
+            return "prop:\(componentID.uuidString):\(pid.uuidString)"
         }
     }
 
@@ -128,34 +131,31 @@ struct TimelineView: View {
             header
             Divider()
             
-            if timelineGroups.isEmpty {
-                ContentUnavailableView("No Pending Changes", systemImage: "checklist")
-            } else {
-                List {
-                    ForEach(timelineGroups) { comp in
-                        DisclosureGroup(isExpanded: bindingForComponent(id: comp.id)) {
-                            ForEach(comp.fields) { field in
-                                FieldGroupRow(
-                                    componentID: comp.id,
-                                    field: field,
-                                    fieldLabel: fieldLabel(for: field),
-                                    selection: $selection
-                                )
-                            }
-                        } label: {
-                            GroupSelectionRow(
-                                title: componentName(for: comp.id),
-                                // Count fields, not records
-                                changeCount: comp.fields.count,
-                                // Component-level "select all fields"
-                                allChangeIDsInGroup: Set(comp.fields.flatMap { $0.allChangeIDsInField }),
+            // Always show a List (even when empty) – no ContentUnavailableView
+            List {
+                ForEach(timelineGroups) { comp in
+                    DisclosureGroup(isExpanded: bindingForComponent(id: comp.id)) {
+                        ForEach(comp.fields) { field in
+                            FieldGroupRow(
+                                componentID: comp.id,
+                                field: field,
+                                fieldLabel: fieldLabel(for: field),
                                 selection: $selection
                             )
                         }
+                    } label: {
+                        GroupSelectionRow(
+                            title: componentName(for: comp.id),
+                            // Count fields, not records
+                            changeCount: comp.fields.count,
+                            // Component-level "select all fields"
+                            allChangeIDsInGroup: Set(comp.fields.flatMap { $0.allChangeIDsInField }),
+                            selection: $selection
+                        )
                     }
                 }
-                .listStyle(.sidebar)
             }
+            .listStyle(.sidebar)
             
             Divider()
             footer

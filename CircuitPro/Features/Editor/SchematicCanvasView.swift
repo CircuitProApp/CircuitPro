@@ -11,7 +11,6 @@ import SwiftDataPacks
 struct SchematicCanvasView: View {
     
     @BindableEnvironment(\.projectManager) private var projectManager
-    
     @PackManager private var packManager
     
     var document: CircuitProjectFileDocument
@@ -19,6 +18,11 @@ struct SchematicCanvasView: View {
     
     @State private var selectedTool: CanvasTool = CursorTool()
     let defaultTool: CanvasTool = CursorTool()
+
+    // Rebuild trigger: changes whenever the pending log’s contents change
+    private var pendingStamp: Int {
+        projectManager.syncManager.pendingChanges.map(\.id).hashValue
+    }
     
     var body: some View {
         CanvasView(
@@ -57,7 +61,6 @@ struct SchematicCanvasView: View {
         }
         .onAppear {
             projectManager.rebuildActiveCanvasNodes()
-            
             projectManager.schematicGraph.onModelDidChange = {
                 projectManager.persistSchematicGraph()
                 document.scheduleAutosave()
@@ -65,9 +68,7 @@ struct SchematicCanvasView: View {
         }
         .onChange(of: projectManager.componentInstances) {
             for instance in projectManager.componentInstances {
-                // Safely unwrap the definition from the instance itself.
                 guard let symbolDef = instance.definition?.symbol else { continue }
-                
                 projectManager.schematicGraph.syncPins(
                     for: instance.symbolInstance,
                     of: symbolDef,
@@ -79,6 +80,12 @@ struct SchematicCanvasView: View {
         }
         .onChange(of: projectManager.activeCanvasNodes) {
             syncProjectManagerFromNodes()
+        }
+        // Rebuild the schematic canvas when pending manual-ECO changes are recorded/updated
+        .onChange(of: pendingStamp) { _ in
+            if projectManager.selectedEditor == .schematic {
+                projectManager.rebuildActiveCanvasNodes()
+            }
         }
     }
     

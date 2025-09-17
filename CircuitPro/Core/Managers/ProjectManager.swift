@@ -388,6 +388,36 @@ final class ProjectManager {
             return RenderableText(model: resolvedModel, text: displayString)
         }
     }
+
+    func generateString(for resolvedText: CircuitText.Resolved, component: ComponentInstance) -> String {
+        // Pending overlay policy:
+        // - On schematic canvas, show schematic-origin pending values as truth.
+        // - Elsewhere, show model values (no overlay).
+        let overlaySource: ChangeSource? = (selectedEditor == .schematic && syncManager.syncMode == .manualECO) ? .schematic : nil
+
+        switch resolvedText.content {
+        case .static(let text):
+            return text
+
+        case .componentName:
+            return component.definition?.name ?? "???"
+
+        case .componentReferenceDesignator:
+            let idx = resolvedReferenceDesignator(for: component, onlyFrom: overlaySource)
+            return (component.definition?.referenceDesignatorPrefix ?? "REF?") + String(idx)
+
+        case .componentProperty(let definitionID, let options):
+            // Fetch either overlay or model property
+            let prop = resolvedProperty(for: component, propertyID: definitionID, onlyFrom: overlaySource)
+            guard let property = prop else { return "" }
+
+            var parts: [String] = []
+            if options.showKey { parts.append(property.key.label) }
+            if options.showValue { parts.append(property.value.description) }
+            if options.showUnit, !property.unit.description.isEmpty { parts.append(property.unit.description) }
+            return parts.joined(separator: " ")
+        }
+    }
     
     func rebuildActiveCanvasNodes() {
         switch selectedEditor {
@@ -482,27 +512,6 @@ final class ProjectManager {
             let graphNode = SchematicGraphNode(graph: self.schematicGraph)
             graphNode.syncChildNodesFromModel()
             schematicCanvasNodes = [node, graphNode]
-        }
-    }
-        
-    func generateString(for resolvedText: CircuitText.Resolved, component: ComponentInstance) -> String {
-        switch resolvedText.content {
-        case .static(let text):
-            return text
-        case .componentName:
-            return component.definition?.name ?? "???"
-        case .componentReferenceDesignator:
-            return (component.definition?.referenceDesignatorPrefix ?? "REF?") + component.referenceDesignatorIndex.description
-        case .componentProperty(let definitionID, let options):
-            guard let property = component.displayedProperties.first(where: { $0.id == definitionID }) else {
-                return ""
-            }
-            
-            var parts: [String] = []
-            if options.showKey { parts.append(property.key.label) }
-            if options.showValue { parts.append(property.value.description) }
-            if options.showUnit, !property.unit.description.isEmpty { parts.append(property.unit.description) }
-            return parts.joined(separator: " ")
         }
     }
 }
@@ -621,5 +630,85 @@ extension ProjectManager {
         }
         
         return component.footprintInstance?.definitionUUID
+    }
+}
+
+// MARK: - Value Resolvers for UI (source-aware)
+
+extension ProjectManager {
+
+    // Internal helper to find latest pending change with optional source filter
+    private func latestPendingChange(
+        for componentID: UUID,
+        onlyFrom source: ChangeSource?,
+        matches: (ChangeType) -> Bool
+    ) -> ChangeRecord? {
+        guard syncManager.syncMode == .manualECO else { return nil }
+        return syncManager.pendingChanges.first { record in
+            // Component match
+            let recComponentID: UUID = {
+                switch record.payload {
+                case .updateReferenceDesignator(let id, _, _),
+                     .assignFootprint(let id, _, _, _),
+                     .updateProperty(let id, _, _):
+                    return id
+                }
+            }()
+            guard recComponentID == componentID else { return false }
+            // Optional source filter
+            if let source, record.source != source { return false }
+            // Payload match
+            return matches(record.payload)
+        }
+    }
+
+    // Source-aware variants
+    func resolvedReferenceDesignator(for component: ComponentInstance, onlyFrom source: ChangeSource?) -> Int {
+        if let change = latestPendingChange(for: component.id, onlyFrom: source, matches: {
+            if case .updateReferenceDesignator = $0 { return true }
+            return false
+        }),
+           case .updateReferenceDesignator(_, let newIndex, _) = change.payload {
+            return newIndex
+        }
+        return component.referenceDesignatorIndex
+    }
+
+    func resolvedFootprintName(for component: ComponentInstance, onlyFrom source: ChangeSource?) -> String? {
+        if let change = latestPendingChange(for: component.id, onlyFrom: source, matches: {
+            if case .assignFootprint = $0 { return true }
+            return false
+        }),
+           case .assignFootprint(_, _, let newName, _) = change.payload {
+            return newName
+        }
+        return component.footprintInstance?.definition?.name
+    }
+
+    func resolvedFootprintUUID(for component: ComponentInstance, onlyFrom source: ChangeSource?) -> UUID? {
+        if let change = latestPendingChange(for: component.id, onlyFrom: source, matches: {
+            if case .assignFootprint = $0 { return true }
+            return false
+        }),
+           case .assignFootprint(_, let newUUID, _, _) = change.payload {
+            return newUUID
+        }
+        return component.footprintInstance?.definitionUUID
+    }
+
+    func resolvedProperty(for component: ComponentInstance, propertyID: UUID, onlyFrom source: ChangeSource?) -> Property.Resolved? {
+        // Base model value
+        guard let original = component.displayedProperties.first(where: { $0.id == propertyID }) else { return nil }
+
+        // Try pending overlay from the requested source
+        if let change = latestPendingChange(for: component.id, onlyFrom: source, matches: {
+            if case .updateProperty(_, let newProperty, _) = $0, newProperty.id == propertyID { return true }
+            return false
+        }),
+           case .updateProperty(_, let newProperty, _) = change.payload {
+            return newProperty
+        }
+
+        return original
     }
 }
