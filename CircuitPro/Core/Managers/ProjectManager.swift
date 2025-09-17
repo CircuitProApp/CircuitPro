@@ -188,6 +188,23 @@ final class ProjectManager {
          // Finally, trigger a full UI rebuild to show the committed changes.
          rebuildActiveCanvasNodes()
      }
+    
+    /// Applies a specific subset of pending changes identified by their IDs.
+    func applyChanges(withIDs ids: Set<UUID>, allFootprints: [FootprintDefinition]) {
+        let recordsToApply = syncManager.pendingChanges.filter { ids.contains($0.id) }
+        
+        // We can reuse our existing apply logic!
+        applyChanges(recordsToApply, allFootprints: allFootprints)
+        
+        // But we only remove the ones we applied.
+        syncManager.removeChanges(withIDs: ids)
+    }
+
+    /// Discards a specific subset of pending changes identified by their IDs.
+    func discardChanges(withIDs ids: Set<UUID>) {
+        syncManager.removeChanges(withIDs: ids)
+        rebuildActiveCanvasNodes() // Rebuild to revert the UI
+    }
 
     
     func addProperty(_ newProperty: Property.Instance, to component: ComponentInstance) {

@@ -114,12 +114,12 @@ struct WorkspaceView: View {
                  Picker("Sync Mode", selection: $projectManager.syncManager.syncMode) {
                      Label("Smart Sync", systemImage: "arrow.triangle.2.circlepath")
                          .tag(SyncMode.automatic)
-                     Label("Manual ECO", systemImage: "list.bullet.clipboard")
+                     Label("Manual ECO", systemImage: "pencil.and.list.clipboard")
                          .tag(SyncMode.manualECO)
                  }
                  .pickerStyle(.inline) // keeps it compact inside the menu
              } label: {
-                 Image(systemName: "gearshape")
+                 Image(systemName: "gearshape.arrow.trianglehead.2.clockwise.rotate.90")
              }
              .help("Change Sync Mode")
 
@@ -140,5 +140,4 @@ struct WorkspaceView: View {
         }
         .animation(.snappy, value: isEcoMode)
     }
-    
 }

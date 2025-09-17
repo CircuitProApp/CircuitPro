@@ -38,6 +38,10 @@ final class SyncManager {
     func clearChanges() {
         pendingChanges.removeAll()
     }
+    
+    func removeChanges(withIDs ids: Set<UUID>) {
+        pendingChanges.removeAll { ids.contains($0.id) }
+    }
 }
 
 extension SyncManager {
