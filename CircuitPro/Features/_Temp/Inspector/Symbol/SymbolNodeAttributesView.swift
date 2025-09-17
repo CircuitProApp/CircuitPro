@@ -34,56 +34,86 @@ struct SymbolNodeAttributesView: View {
     private var selectedFootprintName: String {
         return projectManager.resolvedFootprintName(for: component) ?? "None"
     }
+    
+    @State private var commitSessionID: UUID? // NEW
+
+    private func withCommitSession(_ perform: (UUID) -> Void) {
+        let id: UUID
+        if let s = commitSessionID {
+            id = s
+        } else {
+            id = projectManager.syncManager.beginSession()
+            commitSessionID = id
+            // End the session after the current commit burst settles.
+            DispatchQueue.main.async { [weak projectManager] in
+                projectManager?.syncManager.endSession(id)
+                commitSessionID = nil
+            }
+        }
+        perform(id)
+    }
 
     // MARK: - Bindings
 
-    private var propertiesBinding: Binding<[Property.Resolved]> {
-        Binding(
-            // --- MODIFIED: The 'get' now resolves each property individually ---
-            get: {
-                // Return a new array where each original property has been resolved
-                // against any pending changes.
-                return component.displayedProperties.compactMap { originalProperty in
-                    projectManager.resolvedProperty(for: component, propertyID: originalProperty.id)
-                }
-            },
-            set: { newPropertiesArray in
-                // The 'set' logic is correct and remains unchanged.
-                for newProperty in newPropertiesArray {
-                    // Find the original property to check if the value actually changed.
-                    if let oldProperty = component.displayedProperties.first(where: { $0.id == newProperty.id }) {
-                        if newProperty.value != oldProperty.value || newProperty.unit.prefix != oldProperty.unit.prefix {
-                            projectManager.updateProperty(for: component, with: newProperty)
-                        }
-                    }
-                }
-            }
-        )
-    }
-    
+    // Refdes
     private var refdesIndexBinding: Binding<Int> {
         Binding(
-            // --- MODIFIED: The 'get' now uses the resolver ---
             get: { projectManager.resolvedReferenceDesignator(for: self.component) },
             set: { newIndex in
-                // The 'set' logic is correct and remains unchanged.
-                projectManager.updateReferenceDesignator(for: self.component, newIndex: newIndex)
+                let current = projectManager.resolvedReferenceDesignator(for: self.component)
+                guard newIndex != current else { return }
+                withCommitSession { session in
+                    projectManager.updateReferenceDesignator(for: self.component, newIndex: newIndex, sessionID: session)
+                }
             }
         )
     }
 
+    // Footprint
     private var footprintBinding: Binding<UUID?> {
         Binding(
-            // This was already correct from your last update!
             get: { projectManager.resolvedFootprintUUID(for: component) },
             set: { newUUID in
-                if let newUUID = newUUID {
-                    if let selectedFootprint = allFootprints.first(where: { $0.uuid == newUUID }) {
-                        projectManager.assignFootprint(to: component, footprint: selectedFootprint)
+                let current = projectManager.resolvedFootprintUUID(for: component)
+                guard newUUID != current else { return }
+                withCommitSession { session in
+                    if let id = newUUID, let fp = allFootprints.first(where: { $0.uuid == id }) {
+                        projectManager.assignFootprint(to: component, footprint: fp, sessionID: session)
+                    } else {
+                        projectManager.assignFootprint(to: component, footprint: nil, sessionID: session)
                     }
-                } else {
-                    projectManager.assignFootprint(to: component, footprint: nil)
                 }
+            }
+        )
+    }
+
+    // Properties table (array -> per-row diff vs resolved)
+    private var propertiesBinding: Binding<[Property.Resolved]> {
+        Binding(
+            get: {
+                component.displayedProperties.compactMap { original in
+                    projectManager.resolvedProperty(for: component, propertyID: original.id)
+                }
+            },
+            set: { newArray in
+                // Build resolved-current map once
+                let currentByID: [UUID: Property.Resolved] = Dictionary(
+                    uniqueKeysWithValues: component.displayedProperties.compactMap { original in
+                        guard let resolved = projectManager.resolvedProperty(for: component, propertyID: original.id) else { return nil }
+                        return (original.id, resolved)
+                    }
+                )
+                var didChange = false
+                withCommitSession { session in
+                    for newProp in newArray {
+                        guard let cur = currentByID[newProp.id] else { continue }
+                        if newProp.value != cur.value || newProp.unit != cur.unit {
+                            didChange = true
+                            projectManager.updateProperty(for: component, with: newProp, sessionID: session)
+                        }
+                    }
+                }
+                _ = didChange // keep for breakpoints if you like
             }
         )
     }

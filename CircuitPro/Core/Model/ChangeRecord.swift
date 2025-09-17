@@ -33,13 +33,21 @@ struct ChangeRecord: Identifiable, Hashable, Codable {
     var timestamp: Date
     var source: ChangeSource
     var payload: ChangeType
+    var sessionID: UUID?
 
-    init(id: UUID = UUID(), timestamp: Date = .now, source: ChangeSource, payload: ChangeType) {
-        self.id = id
-        self.timestamp = timestamp
-        self.source = source
-        self.payload = payload
-    }
+    init(
+         id: UUID = UUID(),
+         timestamp: Date = .now,
+         source: ChangeSource,
+         payload: ChangeType,
+         sessionID: UUID? = nil
+     ) {
+         self.id = id
+         self.timestamp = timestamp
+         self.source = source
+         self.payload = payload
+         self.sessionID = sessionID
+     }
     
     /// Provides a user-friendly, human-readable description of the change.
     /// This is used for display in the ECO timeline UI.

@@ -20,6 +20,7 @@ struct RenderableText {
     let text: String
 }
 
+@MainActor
 @Observable
 final class ProjectManager {
     
@@ -43,19 +44,21 @@ final class ProjectManager {
     
     var activeLayerId: UUID? = nil
     
-    // The new SyncManager to orchestrate change handling.
+    // The SyncManager orchestrates change handling (Manual ECO).
     var syncManager: SyncManager
     
     var activeCanvasLayers: [CanvasLayer] = []
     
+    /// Note: `syncManager` is optional with a nil default to avoid constructing a @MainActor
+    /// type in a nonisolated default-argument context. We initialize it inside the body.
     init(
         project: CircuitProject,
         selectedDesign: CircuitDesign? = nil,
-        syncManager: SyncManager = SyncManager() // Injected with a default
+        syncManager: SyncManager? = nil
     ) {
         self.project        = project
         self.selectedDesign = selectedDesign
-        self.syncManager    = syncManager
+        self.syncManager    = syncManager ?? SyncManager()
     }
     
     var activeCanvasNodes: [BaseNode] {
@@ -105,89 +108,97 @@ final class ProjectManager {
     
     // MARK: - Property Management
     
-    func updateProperty(for component: ComponentInstance, with editedProperty: Property.Resolved) {
+    /// Records a property update. In Manual ECO, uses the current resolved value as the "old" baseline
+    /// and records the change into the session-aware history.
+    func updateProperty(for component: ComponentInstance, with editedProperty: Property.Resolved, sessionID: UUID? = nil) {
         switch syncManager.syncMode {
         case .automatic:
             component.apply(editedProperty)
             rebuildActiveCanvasNodes()
         case .manualECO:
-            guard let oldProperty = component.displayedProperties.first(where: { $0.id == editedProperty.id }) else {
-                print("Error: Could not find original property state to create change record for \(editedProperty.key.label).")
+            // Use the resolved current value (model + latest pending) as baseline.
+            guard let oldResolved = resolvedProperty(for: component, propertyID: editedProperty.id) else {
+                print("Error: Could not resolve original property state to create change record for \(editedProperty.key.label).")
                 return
             }
-            let record = ChangeRecord(
-                source: selectedEditor.changeSource,
-                payload: .updateProperty(componentID: component.id, newProperty: editedProperty, oldProperty: oldProperty)
+            // No-op if nothing effectively changed.
+            guard editedProperty.value != oldResolved.value || editedProperty.unit != oldResolved.unit else {
+                return
+            }
+            let payload = ChangeType.updateProperty(
+                componentID: component.id,
+                newProperty: editedProperty,
+                oldProperty: oldResolved
             )
-            syncManager.upsertChange(record)
+            syncManager.recordChange(source: selectedEditor.changeSource, payload: payload, sessionID: sessionID)
         }
     }
     
     /// Applies a list of pending changes to the main data model.
-     /// This is the commit step for the Manual ECO workflow.
-     /// - Parameter records: The array of `ChangeRecord`s to apply.
-     /// - Parameter allFootprints: A complete list of available footprints to resolve UUIDs.
-     func applyChanges(_ records: [ChangeRecord], allFootprints: [FootprintDefinition]) {
-         // We process in reverse to handle cases where multiple changes affect one component.
-         // The last record in time (first in our array) should be the final state.
-         for record in records.reversed() {
-             guard let component = componentInstances.first(where: {
-                 switch record.payload {
-                 case .updateReferenceDesignator(let id, _, _),
-                      .assignFootprint(let id, _, _, _),
-                      .updateProperty(let id, _, _):
-                     return $0.id == id
-                 }
-             }) else {
-                 print("Warning: Could not find component for change record \(record.id). Skipping.")
-                 continue
-             }
-             
-             // Apply the change based on its type
-             switch record.payload {
-             case .updateReferenceDesignator(_, let newIndex, _):
-                 component.referenceDesignatorIndex = newIndex
-                 
-             case .updateProperty(_, let newProperty, _):
-                 component.apply(newProperty)
-                 
-             case .assignFootprint(_, let newFootprintUUID, _, _):
-                 if let newFootprintUUID = newFootprintUUID {
-                     // Find the full footprint definition from the provided list.
-                     guard let footprintDef = allFootprints.first(where: { $0.uuid == newFootprintUUID }) else {
-                         print("Warning: Could not find footprint definition for UUID \(newFootprintUUID). Skipping.")
-                         continue
-                     }
-                     
-                     // --- "Smart Sync" Logic ---
-                     // Preserve the existing placement if one exists.
-                     let oldPlacement = component.footprintInstance?.placement ?? .unplaced
-                     let oldPosition = component.footprintInstance?.position ?? .zero
-                     let oldRotation = component.footprintInstance?.rotation ?? 0
-                     
-                     let newFootprintInstance = FootprintInstance(
-                         definitionUUID: footprintDef.uuid,
-                         definition: footprintDef,
-                         placement: oldPlacement
-                     )
-                     newFootprintInstance.position = oldPosition
-                     newFootprintInstance.rotation = oldRotation
-                     
-                     component.footprintInstance = newFootprintInstance
-                     
-                 } else {
-                     // The change was to un-assign the footprint.
-                     component.footprintInstance = nil
-                 }
-             }
-         }
-         
-         // After all changes are applied, clear the pending list.
-         syncManager.clearChanges()
-         
-         // Finally, trigger a full UI rebuild to show the committed changes.
-         rebuildActiveCanvasNodes()
-     }
+    /// This is the commit step for the Manual ECO workflow.
+    /// - Parameter records: The array of `ChangeRecord`s to apply.
+    /// - Parameter allFootprints: A complete list of available footprints to resolve UUIDs.
+    func applyChanges(_ records: [ChangeRecord], allFootprints: [FootprintDefinition]) {
+        // We process in reverse to handle cases where multiple changes affect one component.
+        // The last record in time (first in our array) should be the final state.
+        for record in records.reversed() {
+            guard let component = componentInstances.first(where: {
+                switch record.payload {
+                case .updateReferenceDesignator(let id, _, _),
+                     .assignFootprint(let id, _, _, _),
+                     .updateProperty(let id, _, _):
+                    return $0.id == id
+                }
+            }) else {
+                print("Warning: Could not find component for change record \(record.id). Skipping.")
+                continue
+            }
+            
+            // Apply the change based on its type
+            switch record.payload {
+            case .updateReferenceDesignator(_, let newIndex, _):
+                component.referenceDesignatorIndex = newIndex
+                
+            case .updateProperty(_, let newProperty, _):
+                component.apply(newProperty)
+                
+            case .assignFootprint(_, let newFootprintUUID, _, _):
+                if let newFootprintUUID = newFootprintUUID {
+                    // Find the full footprint definition from the provided list.
+                    guard let footprintDef = allFootprints.first(where: { $0.uuid == newFootprintUUID }) else {
+                        print("Warning: Could not find footprint definition for UUID \(newFootprintUUID). Skipping.")
+                        continue
+                    }
+                    
+                    // --- "Smart Sync" Logic ---
+                    // Preserve the existing placement if one exists.
+                    let oldPlacement = component.footprintInstance?.placement ?? .unplaced
+                    let oldPosition = component.footprintInstance?.position ?? .zero
+                    let oldRotation = component.footprintInstance?.rotation ?? 0
+                    
+                    let newFootprintInstance = FootprintInstance(
+                        definitionUUID: footprintDef.uuid,
+                        definition: footprintDef,
+                        placement: oldPlacement
+                    )
+                    newFootprintInstance.position = oldPosition
+                    newFootprintInstance.rotation = oldRotation
+                    
+                    component.footprintInstance = newFootprintInstance
+                    
+                } else {
+                    // The change was to un-assign the footprint.
+                    component.footprintInstance = nil
+                }
+            }
+        }
+        
+        // After all changes are applied, clear the pending list.
+        syncManager.clearChanges()
+        
+        // Finally, trigger a full UI rebuild to show the committed changes.
+        rebuildActiveCanvasNodes()
+    }
     
     /// Applies a specific subset of pending changes identified by their IDs.
     func applyChanges(withIDs ids: Set<UUID>, allFootprints: [FootprintDefinition]) {
@@ -294,27 +305,26 @@ final class ProjectManager {
 
     // MARK: - Other Component Actions
     
-    func updateReferenceDesignator(for component: ComponentInstance, newIndex: Int) {
+    /// Records a reference designator change. In Manual ECO, uses the resolved current index as "old".
+    func updateReferenceDesignator(for component: ComponentInstance, newIndex: Int, sessionID: UUID? = nil) {
         switch syncManager.syncMode {
         case .automatic:
             component.referenceDesignatorIndex = newIndex
             rebuildActiveCanvasNodes()
         case .manualECO:
-            let record = ChangeRecord(
-                  source: selectedEditor.changeSource,
-                  payload: .updateReferenceDesignator(
-                      componentID: component.id,
-                      newIndex: newIndex,
-                      // IMPORTANT: The "oldIndex" should be the *original* value, not the last pending one.
-                      oldIndex: component.referenceDesignatorIndex
-                  )
-              )
-              // --- MODIFIED: Call upsertChange instead of addChange ---
-              syncManager.upsertChange(record)
+            let oldIndex = resolvedReferenceDesignator(for: component) // resolved baseline
+            guard newIndex != oldIndex else { return }
+            let payload = ChangeType.updateReferenceDesignator(
+                componentID: component.id,
+                newIndex: newIndex,
+                oldIndex: oldIndex
+            )
+            syncManager.recordChange(source: selectedEditor.changeSource, payload: payload, sessionID: sessionID)
         }
     }
     
-    func assignFootprint(to component: ComponentInstance, footprint: FootprintDefinition?) {
+    /// Records a footprint assignment change. In Manual ECO, uses the resolved current name as "old".
+    func assignFootprint(to component: ComponentInstance, footprint: FootprintDefinition?, sessionID: UUID? = nil) {
         switch syncManager.syncMode {
         case .automatic:
             if let footprint = footprint {
@@ -329,18 +339,14 @@ final class ProjectManager {
             }
             rebuildActiveCanvasNodes()
         case .manualECO:
-            let record = ChangeRecord(
-                  source: selectedEditor.changeSource,
-                  payload: .assignFootprint(
-                      componentID: component.id,
-                      newFootprintUUID: footprint?.uuid,
-                      newFootprintName: footprint?.name,
-                      // IMPORTANT: The "oldFootprintName" should be the *original* value.
-                      oldFootprintName: component.footprintInstance?.definition?.name
-                  )
-              )
-              // --- MODIFIED: Call upsertChange instead of addChange ---
-              syncManager.upsertChange(record)
+            let oldName = resolvedFootprintName(for: component) // resolved baseline
+            let payload = ChangeType.assignFootprint(
+                componentID: component.id,
+                newFootprintUUID: footprint?.uuid,
+                newFootprintName: footprint?.name,
+                oldFootprintName: oldName
+            )
+            syncManager.recordChange(source: selectedEditor.changeSource, payload: payload, sessionID: sessionID)
         }
     }
 

@@ -8,12 +8,16 @@
 import SwiftUI
 
 private struct ProjectManagerKey: EnvironmentKey {
-    static let defaultValue: ProjectManager = ProjectManager(
-        project: .init(name: "Untitled", designs: [])
-    )
+    @MainActor
+    static var defaultValue: ProjectManager {
+        ProjectManager(
+            project: .init(name: "Untitled", designs: [])
+        )
+    }
 }
 
 extension EnvironmentValues {
+    @MainActor
     var projectManager: ProjectManager {
         get { self[ProjectManagerKey.self] }
         set { self[ProjectManagerKey.self] = newValue }

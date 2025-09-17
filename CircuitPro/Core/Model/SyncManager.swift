@@ -8,130 +8,123 @@
 import Foundation
 import Observation
 
-/// Manages the application's data synchronization mode and holds pending changes.
-///
-/// This observable class acts as the source of truth for whether changes should be
-/// applied instantly (`.automatic`) or queued for later review (`.manualECO`).
+/// Manages synchronization mode and the list of pending changes (Manual ECO).
+/// In Manual ECO, changes are recorded as `ChangeRecord`s instead of being
+/// immediately applied to the model. Records are appended per user "commit"
+/// (e.g., pressing Enter), and may be coalesced within that single commit by session.
+@MainActor
 @Observable
 final class SyncManager {
-    
+
     /// The current operational mode for data synchronization.
     var syncMode: SyncMode = .manualECO
-    
-    /// An array of changes that have been made but not yet applied to the main data model.
-    /// This array is populated only when `syncMode` is `.manualECO`.
+
+    /// Newest-first list of pending changes. Each element represents one user commit.
     var pendingChanges: [ChangeRecord] = []
-    
-    /// Adds a new change to the pending changes list.
-    /// - Parameter record: The `ChangeRecord` to add.
+
+    // MARK: - Sessions
+
+    /// Start a logical "user commit" session. Use this when a user confirms an edit
+    /// (e.g., presses Enter, chooses a menu item, loses focus).
+    /// Multiple setter calls that occur during the same commit should share this ID.
+    func beginSession() -> UUID { UUID() }
+
+    /// End a previously started session. Currently a no-op; used to demarcate boundaries.
+    func endSession(_ id: UUID) { /* no-op; boundary marker for commit */ }
+
+    // MARK: - Change list management
+
+    /// Inserts a new change at the front (newest-first).
     func addChange(_ record: ChangeRecord) {
-        // Prepending the change so the latest appears at the top of a list.
         pendingChanges.insert(record, at: 0)
-        
-        // In a complete implementation, this would likely trigger a UI update,
-        // such as showing a badge indicating the number of pending changes.
         print("Change recorded. Total pending changes: \(pendingChanges.count)")
     }
-    
-    /// Clears all pending changes from the list.
-    /// This would be called after a user explicitly applies or discards the changes.
+
+    /// Remove all pending changes (used on Apply/Discard).
     func clearChanges() {
         pendingChanges.removeAll()
     }
-    
+
+    /// Remove a specific subset of pending changes by their IDs.
     func removeChanges(withIDs ids: Set<UUID>) {
         pendingChanges.removeAll { ids.contains($0.id) }
     }
 }
 
+// MARK: - Lookup utilities (used by resolvers)
+
 extension SyncManager {
-    /// Finds the most recent pending change for a specific component that matches a given payload type.
-    /// - Parameter componentID: The UUID of the component to search for.
-    /// - Parameter changeIdentifier: A closure that returns true if the payload is the type we're looking for.
-    /// - Returns: The `ChangeRecord` if a matching pending change is found, otherwise `nil`.
-    func findLatestPendingChange(for componentID: UUID, matching changeIdentifier: (ChangeType) -> Bool) -> ChangeRecord? {
-        // pendingChanges is sorted with the newest first, so the first match is the latest.
+    /// Finds the most recent pending change for a specific component that matches the given payload type.
+    /// - Parameters:
+    ///   - componentID: The UUID of the component to search for.
+    ///   - changeIdentifier: A predicate that returns true for the payload type we care about.
+    /// - Returns: The latest `ChangeRecord` if found, else `nil`.
+    func findLatestPendingChange(
+        for componentID: UUID,
+        matching changeIdentifier: (ChangeType) -> Bool
+    ) -> ChangeRecord? {
+        // `pendingChanges` is newest-first; the first match is the latest.
         return pendingChanges.first { record in
             switch record.payload {
             case .updateReferenceDesignator(let id, _, _),
                  .assignFootprint(let id, _, _, _),
                  .updateProperty(let id, _, _):
-                
-                // Check if the change is for the correct component
-                guard id == componentID else { return false }
-                
-                // Check if it's the correct type of change
-                return changeIdentifier(record.payload)
+                return id == componentID && changeIdentifier(record.payload)
             }
         }
     }
 }
 
+// MARK: - Session-aware recording
+
 extension SyncManager {
-    /// A helper to identify the "type" of a change, ignoring its associated values.
-    /// This is used to find if a change for the same property already exists.
-    private enum ChangeIdentifier {
-        case refdes, footprint, property(id: UUID)
+    /// A lightweight identifier for "which field" is being changed,
+    /// used to coalesce duplicate writes within the same session.
+    private enum ChangeIdentifier: Hashable {
+        case refdes(UUID)             // component
+        case footprint(UUID)          // component
+        case property(UUID, UUID)     // component, property
     }
-    
-    private func getIdentifier(for payload: ChangeType) -> ChangeIdentifier {
+
+    /// Compute a coalescing key for a given change payload.
+    private func identifier(for payload: ChangeType) -> ChangeIdentifier {
         switch payload {
-        case .updateReferenceDesignator:
-            return .refdes
-        case .assignFootprint:
-            return .footprint
-        case .updateProperty(_, let newProperty, _):
-            return .property(id: newProperty.id)
+        case .updateReferenceDesignator(let cid, _, _):
+            return .refdes(cid)
+        case .assignFootprint(let cid, _, _, _):
+            return .footprint(cid)
+        case .updateProperty(let cid, let prop, _):
+            return .property(cid, prop.id)
         }
     }
 
-    /// Updates an existing pending change for the same property, or inserts the record if none exists.
-    /// This prevents duplicate change records for the same action.
-    /// - Parameter record: The `ChangeRecord` to upsert.
-    func upsertChange(_ record: ChangeRecord) {
-        let newPayload = record.payload
-        let (componentID, newIdentifier) = {
-            switch newPayload {
-            case .updateReferenceDesignator(let id, _, _):
-                return (id, getIdentifier(for: newPayload))
-            case .assignFootprint(let id, _, _, _):
-                return (id, getIdentifier(for: newPayload))
-            case .updateProperty(let id, _, _):
-                return (id, getIdentifier(for: newPayload))
-            }
-        }()
+    /// Append-only across sessions. Within the SAME session, keep only the last record
+    /// for the same identifier (final value wins for that single user commit).
+    /// Across different sessions, always append a new record (to preserve full history).
+    ///
+    /// - Parameters:
+    ///   - source: Where the change originated (schematic/layout).
+    ///   - payload: The specific change (with old/new values).
+    ///   - sessionID: The current commit session ID; if nil, no coalescing occurs.
+    func recordChange(source: ChangeSource, payload: ChangeType, sessionID: UUID?) {
+        let rec = ChangeRecord(source: source, payload: payload, sessionID: sessionID)
 
-        // Attempt to find an existing change for this exact component and property type.
-        if let existingIndex = pendingChanges.firstIndex(where: { existingRecord in
-            // Check if the component ID matches
-            let sameComponent = switch existingRecord.payload {
-            case .updateReferenceDesignator(let id, _, _),
-                 .assignFootprint(let id, _, _, _),
-                 .updateProperty(let id, _, _):
-                id == componentID
-            }
-            
-            guard sameComponent else { return false }
-            
-            // Check if the property identifier matches
-            let existingIdentifier = getIdentifier(for: existingRecord.payload)
-            
-            switch (newIdentifier, existingIdentifier) {
-            case (.refdes, .refdes), (.footprint, .footprint):
-                return true
-            case (.property(let newID), .property(let oldID)):
-                return newID == oldID
-            default:
-                return false
-            }
-        }) {
-            // If we found one, replace it with the new record.
-            // This preserves the timestamp of the latest edit.
-            pendingChanges[existingIndex] = record
-            print("Change updated. Total pending changes: \(pendingChanges.count)")
+        if let s = sessionID,
+           let idx = pendingChanges.firstIndex(where: {
+               $0.sessionID == s && identifier(for: $0.payload) == identifier(for: rec.payload)
+           }) {
+            // Same session + same field: replace the earlier record (final value wins for this commit).
+            pendingChanges[idx] = rec
+            print("Change updated (same session). Total pending changes: \(pendingChanges.count)")
         } else {
-            // Otherwise, insert the new record at the front.
-            addChange(record)
+            // New session or different field: append as a new record (preserve full history).
+            addChange(rec)
         }
+    }
+
+    /// Deprecated—use `recordChange(source:payload:sessionID:)` and pass a session.
+    @available(*, deprecated, message: "Use recordChange(source:payload:sessionID:) with sessions.")
+    func upsertChange(_ record: ChangeRecord) {
+        recordChange(source: record.source, payload: record.payload, sessionID: record.sessionID)
     }
 }

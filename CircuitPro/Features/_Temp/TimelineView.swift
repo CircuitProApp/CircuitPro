@@ -8,16 +8,28 @@
 import SwiftUI
 import SwiftData
 
-// A helper struct to represent a group of changes for the List.
-// It's Identifiable by the component's UUID.
-struct TimelineGroup: Identifiable {
-    let id: UUID // This is the componentID
-    let changes: [ChangeRecord]
-    
-    // A computed property to get all change IDs in this group easily.
-    var allChangeIDsInGroup: Set<UUID> {
-        Set(changes.map { $0.id })
-    }
+// Field key within a component: one entry per edited field, with history
+private enum FieldKey: Hashable {
+    case refdes
+    case footprint
+    case property(UUID) // propertyID
+}
+
+// Top-level group: per-component
+private struct TimelineComponentGroup: Identifiable {
+    let id: UUID // componentID
+    let fields: [TimelineFieldGroup]
+}
+
+// One row in a component group: one field, with its history (newest-first)
+private struct TimelineFieldGroup: Identifiable {
+    let id: String                 // componentID + fieldKey composite
+    let fieldKey: FieldKey
+    let history: [ChangeRecord]    // newest-first
+
+    var latest: ChangeRecord { history.first! }
+    var stageCount: Int { history.count }
+    var allChangeIDsInField: Set<UUID> { Set(history.map(\.id)) }
 }
 
 struct TimelineView: View {
@@ -26,41 +38,89 @@ struct TimelineView: View {
     
     @Query private var allFootprints: [FootprintDefinition]
     
-    // State to hold the set of selected ChangeRecord IDs.
+    // Selection holds ChangeRecord IDs. Field toggles add/remove all IDs in that field.
     @State private var selection: Set<ChangeRecord.ID> = []
-    // --- ADDED: State to track the expansion of each group ---
-    @State private var expandedGroups: [UUID: Bool] = [:]
-    
-    // We compute an array of TimelineGroup structs to drive the UI.
-    private var timelineGroups: [TimelineGroup] {
-        let groupedDictionary = Dictionary(grouping: projectManager.syncManager.pendingChanges) { record in
-            // Group by the componentID from the payload.
-            switch record.payload {
+    @State private var expandedComponents: [UUID: Bool] = [:]
+
+    // Build groups: Component -> Field -> History
+    private var timelineGroups: [TimelineComponentGroup] {
+        let records = projectManager.syncManager.pendingChanges
+
+        // Group by component
+        let byComponent = Dictionary(grouping: records) { (rec: ChangeRecord) -> UUID in
+            switch rec.payload {
             case .updateReferenceDesignator(let id, _, _),
                  .assignFootprint(let id, _, _, _),
                  .updateProperty(let id, _, _):
                 return id
             }
         }
-        
-        // Map the dictionary to an array of our TimelineGroup structs and sort them.
-        return groupedDictionary.map { (componentID, changes) in
-            TimelineGroup(id: componentID, changes: changes)
-        }.sorted { componentName(for: $0.id) < componentName(for: $1.id) }
+
+        // Map to component groups
+        let componentGroups: [TimelineComponentGroup] = byComponent.map { (componentID, componentRecords) in
+            // For each component, group by field key
+            let byField: [FieldKey: [ChangeRecord]] = Dictionary(grouping: componentRecords) { rec in
+                switch rec.payload {
+                case .updateReferenceDesignator:
+                    return .refdes
+                case .assignFootprint:
+                    return .footprint
+                case .updateProperty(_, let newProp, _):
+                    return .property(newProp.id)
+                }
+            }
+
+            // Build TimelineFieldGroup per field, newest-first history
+            let fieldGroups: [TimelineFieldGroup] = byField.map { (key, recs) in
+                let sorted = recs.sorted(by: { $0.timestamp > $1.timestamp })
+                return TimelineFieldGroup(
+                    id: fieldGroupID(componentID: componentID, key: key),
+                    fieldKey: key,
+                    history: sorted
+                )
+            }
+            // Sort fields by human-readable label
+            .sorted { fieldLabel(for: $0) < fieldLabel(for: $1) }
+
+            return TimelineComponentGroup(id: componentID, fields: fieldGroups)
+        }
+        // Sort components by their display name
+        .sorted { componentName(for: $0.id) < componentName(for: $1.id) }
+
+        return componentGroups
     }
-    
+
+    private func fieldGroupID(componentID: UUID, key: FieldKey) -> String {
+        switch key {
+        case .refdes:             return "refdes:\(componentID.uuidString)"
+        case .footprint:          return "footprint:\(componentID.uuidString)"
+        case .property(let pid):  return "prop:\(componentID.uuidString):\(pid.uuidString)"
+        }
+    }
+
     /// A helper to get the human-readable name for a component, including its pending state.
     private func componentName(for id: UUID) -> String {
         if let component = projectManager.componentInstances.first(where: { $0.id == id }) {
             let prefix = component.definition?.referenceDesignatorPrefix ?? "COMP"
             let index = projectManager.resolvedReferenceDesignator(for: component)
-            
             if index != component.referenceDesignatorIndex {
                 return "\(prefix)\(index) (Pending)"
             }
             return "\(prefix)\(index)"
         }
         return "Unknown Component"
+    }
+
+    /// Human-readable field label from the latest record of a field group.
+    private func fieldLabel(for group: TimelineFieldGroup) -> String {
+        switch group.latest.payload {
+        case .updateReferenceDesignator:
+            return "Reference Designator"
+        case .assignFootprint:
+            return "Footprint"
+        case .updateProperty(_, let newProperty, _):
+            return newProperty.key.label
+        }
     }
 
     var body: some View {
@@ -72,17 +132,23 @@ struct TimelineView: View {
                 ContentUnavailableView("No Pending Changes", systemImage: "checklist")
             } else {
                 List {
-                    ForEach(timelineGroups) { group in
-                        // --- MODIFIED: Use the DisclosureGroup initializer that takes a binding ---
-                        DisclosureGroup(isExpanded: bindingForGroup(id: group.id)) {
-                            ForEach(group.changes) { record in
-                                ChangeRecordRowView(record: record, selection: $selection)
+                    ForEach(timelineGroups) { comp in
+                        DisclosureGroup(isExpanded: bindingForComponent(id: comp.id)) {
+                            ForEach(comp.fields) { field in
+                                FieldGroupRow(
+                                    componentID: comp.id,
+                                    field: field,
+                                    fieldLabel: fieldLabel(for: field),
+                                    selection: $selection
+                                )
                             }
                         } label: {
                             GroupSelectionRow(
-                                title: componentName(for: group.id),
-                                changeCount: group.changes.count,
-                                allChangeIDsInGroup: group.allChangeIDsInGroup,
+                                title: componentName(for: comp.id),
+                                // Count fields, not records
+                                changeCount: comp.fields.count,
+                                // Component-level "select all fields"
+                                allChangeIDsInGroup: Set(comp.fields.flatMap { $0.allChangeIDsInField }),
                                 selection: $selection
                             )
                         }
@@ -95,26 +161,18 @@ struct TimelineView: View {
             footer
         }
         .frame(minWidth: 600, minHeight: 500, idealHeight: 700)
-        // --- ADDED: onAppear modifier to set the default expansion state ---
         .onAppear {
-            // When the view first appears, iterate through all groups and set them to be expanded.
-            for group in timelineGroups {
-                expandedGroups[group.id] = true
+            // Expand all components on first show
+            for comp in timelineGroups {
+                expandedComponents[comp.id] = true
             }
         }
     }
     
-    /// A helper function to create a Binding to our state dictionary for each group.
-    private func bindingForGroup(id: UUID) -> Binding<Bool> {
-        return Binding(
-            get: {
-                // If a value exists in the dictionary, use it. Otherwise, default to false (collapsed).
-                expandedGroups[id, default: false]
-            },
-            set: { newValue in
-                // When the user clicks the disclosure triangle, update the state in our dictionary.
-                expandedGroups[id] = newValue
-            }
+    private func bindingForComponent(id: UUID) -> Binding<Bool> {
+        Binding(
+            get: { expandedComponents[id, default: false] },
+            set: { expandedComponents[id] = $0 }
         )
     }
     
@@ -150,7 +208,7 @@ struct TimelineView: View {
                 .buttonStyle(.borderedProminent)
                 
             } else {
-                Button("Discard \(selection.count) Selected ", role: .destructive) {
+                Button("Discard \(selection.count) Selected", role: .destructive) {
                     projectManager.discardChanges(withIDs: selection)
                     selection.removeAll()
                 }
@@ -168,17 +226,18 @@ struct TimelineView: View {
     }
 }
 
-// MARK: - Subviews for the List (Unchanged)
+// MARK: - Subviews
 
+// Component-level selection header row
 private struct GroupSelectionRow: View {
     let title: String
-    let changeCount: Int
-    let allChangeIDsInGroup: Set<UUID>
+    let changeCount: Int                 // number of fields edited in this component
+    let allChangeIDsInGroup: Set<UUID>   // all record IDs belonging to all fields in this component
     @Binding var selection: Set<UUID>
     
     private var isSelected: Binding<Bool> {
         Binding(
-            get: { allChangeIDsInGroup.isSubset(of: selection) },
+            get: { allChangeIDsInGroup.isSubset(of: selection) && !allChangeIDsInGroup.isEmpty },
             set: { shouldBeSelected in
                 if shouldBeSelected {
                     selection.formUnion(allChangeIDsInGroup)
@@ -206,37 +265,86 @@ private struct GroupSelectionRow: View {
     }
 }
 
-private struct ChangeRecordRowView: View {
-    let record: ChangeRecord
+// Field-level row: shows latest change and how many stages (history length).
+private struct FieldGroupRow: View {
+    let componentID: UUID
+    let field: TimelineFieldGroup
+    let fieldLabel: String
     @Binding var selection: Set<UUID>
 
-    var body: some View {
-        HStack(alignment: .top) {
-            Toggle(isOn: Binding(
-                get: { selection.contains(record.id) },
-                set: { isSelected in
-                    if isSelected {
-                        selection.insert(record.id)
-                    } else {
-                        selection.remove(record.id)
-                    }
-                }
-            )) {}
-                .toggleStyle(.checkbox)
-                .padding(.trailing, 4)
-
-            VStack(alignment: .leading, spacing: 8) {
-                switch record.payload {
-                case .updateReferenceDesignator(_, let newIndex, let oldIndex):
-                    ComparisonView(label: "RefDes Index", oldValue: "\(oldIndex)", newValue: "\(newIndex)")
-                case .assignFootprint(_, _, let newName, let oldName):
-                    ComparisonView(label: "Footprint", oldValue: oldName ?? "None", newValue: newName ?? "None")
-                case .updateProperty(_, let newProperty, let oldProperty):
-                    ComparisonView(label: newProperty.key.label, oldValue: oldProperty.value.description, newValue: newProperty.value.description)
+    private var isSelected: Binding<Bool> {
+        Binding(
+            get: { field.allChangeIDsInField.isSubset(of: selection) && !field.allChangeIDsInField.isEmpty },
+            set: { shouldBeSelected in
+                if shouldBeSelected {
+                    selection.formUnion(field.allChangeIDsInField)
+                } else {
+                    selection.subtract(field.allChangeIDsInField)
                 }
             }
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top) {
+                Toggle(isOn: isSelected) {}
+                    .toggleStyle(.checkbox)
+                    .padding(.trailing, 4)
+
+                // Render the latest change for this field
+                VStack(alignment: .leading, spacing: 4) {
+                    switch field.latest.payload {
+                    case .updateReferenceDesignator(_, let newIndex, let oldIndex):
+                        ComparisonView(label: fieldLabel, oldValue: "\(oldIndex)", newValue: "\(newIndex)")
+                    case .assignFootprint(_, _, let newName, let oldName):
+                        ComparisonView(label: fieldLabel, oldValue: oldName ?? "None", newValue: newName ?? "None")
+                    case .updateProperty(_, let newProperty, let oldProperty):
+                        ComparisonView(label: fieldLabel, oldValue: oldProperty.value.description, newValue: newProperty.value.description)
+                    }
+
+                    // Stages indicator
+                    if field.stageCount > 1 {
+                        Text("\(field.stageCount) stages")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+            }
+
+            // Optional: show per-stage history collapsed; uncomment to visualize every stage.
+            /*
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(field.history) { rec in
+                    StageRow(record: rec)
+                }
+            }
+            .padding(.leading, 24)
+            */
         }
         .padding(.vertical, 6)
+    }
+}
+
+// Optional per-stage row (if you want to show the entire history inside a field row)
+private struct StageRow: View {
+    let record: ChangeRecord
+    var body: some View {
+        switch record.payload {
+        case .updateReferenceDesignator(_, let newIndex, let oldIndex):
+            Text("• \(oldIndex) → \(newIndex)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .assignFootprint(_, _, let newName, let oldName):
+            Text("• \(oldName ?? "None") → \(newName ?? "None")")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .updateProperty(_, let newProperty, let oldProperty):
+            Text("• \(oldProperty.value.description) → \(newProperty.value.description)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

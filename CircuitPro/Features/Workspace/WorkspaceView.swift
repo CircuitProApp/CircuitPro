@@ -26,9 +26,37 @@ struct WorkspaceView: View {
     @State private var showDiscardChangesAlert: Bool = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     
-    private var pendingChangesCount: String {
-        let count = syncManager.pendingChanges.count
+    // Count UNIQUE fields being edited, not total history records
+    private var pendingFieldEditsCount: Int {
+        uniqueFieldKeys(syncManager.pendingChanges).count
+    }
+    
+    private var pendingChangesCountBadge: String {
+        let count = pendingFieldEditsCount
         return count > 99 ? "99+" : "\(count)"
+    }
+    
+    private var hasPendingFieldEdits: Bool {
+        pendingFieldEditsCount > 0
+    }
+    
+    // Builds a set of unique "field keys" across all pending records:
+    // - RefDes per component
+    // - Footprint per component
+    // - Property per (component, propertyID)
+    private func uniqueFieldKeys(_ changes: [ChangeRecord]) -> Set<String> {
+        var keys: Set<String> = []
+        for r in changes {
+            switch r.payload {
+            case .updateReferenceDesignator(let cid, _, _):
+                keys.insert("refdes:\(cid.uuidString)")
+            case .assignFootprint(let cid, _, _, _):
+                keys.insert("footprint:\(cid.uuidString)")
+            case .updateProperty(let cid, let newProp, _):
+                keys.insert("prop:\(cid.uuidString):\(newProp.id.uuidString)")
+            }
+        }
+        return keys
     }
     
     private var syncModeBinding: Binding<SyncMode> {
@@ -59,40 +87,28 @@ struct WorkspaceView: View {
                     TimelineView()
                 }
                 .libraryPanel(isPresented: $isShowingLibrary)
-                // --- CORRECTED ALERT STRUCTURE ---
                 .alert("Discard Unapplied Changes?", isPresented: $showDiscardChangesAlert) {
-                    // 1. "Review Changes" is the default action (no role = blue).
                     Button("Review Changes") {
                         isShowingTimeline = true
                     }
-                    
-                    // 2. "Discard Changes" is the destructive action.
                     Button("Discard Changes", role: .destructive) {
                         projectManager.discardPendingChanges()
                         syncManager.syncMode = .automatic
                     }
-                    
-                    // 3. "Cancel" is the explicit cancel action.
                     Button("Cancel", role: .cancel) {}
-                    
                 } message: {
-                    Text("Switching to Automatic Sync will discard all \(pendingChangesCount) pending changes in your timeline.")
+                    Text("Switching to Automatic Sync will discard all \(pendingChangesCountBadge) pending field edits in your timeline.")
                 }
                 .toolbar {
-                    // (Picker | Timeline) — one combined item
                     ToolbarItem(placement: .primaryAction) {
                         syncPickerCluster()
                     }
-
-                    // (Plus) — its own item
                     ToolbarItem(placement: .primaryAction) {
                         Button { isShowingLibrary.toggle() } label: {
                             Image(systemName: "plus")
                         }
                         .help("Add")
                     }
-
-                    // (Feedback) — its own item
                     ToolbarItem(placement: .primaryAction) {
                         Button { showFeedbackSheet.toggle() } label: {
                             Image(systemName: "bubble.left.and.bubble.right")
@@ -126,7 +142,6 @@ struct WorkspaceView: View {
     @ViewBuilder
     private func syncPickerCluster() -> some View {
         let isEcoMode = syncManager.syncMode == .manualECO
-        let hasPendingChanges = !syncManager.pendingChanges.isEmpty
 
         HStack(spacing: 0) {
             Menu {
@@ -148,12 +163,12 @@ struct WorkspaceView: View {
                 } label: {
                     Image(systemName: "text.and.command.macwindow")
                         .symbolRenderingMode(.hierarchical)
-                        .if(hasPendingChanges) {
-                            $0.badge(pendingChangesCount)
+                        .if(hasPendingFieldEdits) {
+                            $0.badge(pendingChangesCountBadge)
                         }
                 }
-                .help("Show Timeline (\(pendingChangesCount) Pending Changes)")
-                .disabled(!hasPendingChanges)
+                .help("Show Timeline (\(pendingChangesCountBadge) Pending Field Edits)")
+                .disabled(!hasPendingFieldEdits)
             }
         }
         .animation(.snappy, value: isEcoMode)
