@@ -108,7 +108,7 @@ final class ElementsRenderLayer: RenderLayer {
             if let unifiedHaloPath = parent.makeHaloPath(context: context) {
                 
                 // The unified path is an outline that should be FILLED to create the halo effect.
-                let haloColor = NSColor.selectedControlColor.withAlphaComponent(0.3).cgColor
+                let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
                 let haloPrimitive = DrawingPrimitive.fill(path: unifiedHaloPath, color: haloColor)
                 
                 // Add the primitive to the list. Unlayered halos go in the 'nil' key group.
