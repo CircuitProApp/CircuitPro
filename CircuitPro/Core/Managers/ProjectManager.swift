@@ -1,6 +1,18 @@
 import SwiftUI
 import Observation
 
+/// A helper to map the editor context to the change source for recording.
+extension EditorType {
+    var changeSource: ChangeSource {
+        switch self {
+        case .schematic:
+            return .schematic
+        case .layout:
+            return .layout
+        }
+    }
+}
+
 /// A temporary struct that pairs the resolved data model with its generated display string,
 /// for use during a single canvas rebuild operation.
 struct RenderableText {
@@ -31,15 +43,19 @@ final class ProjectManager {
     
     var activeLayerId: UUID? = nil
     
-    // --- MODIFIED: This is now a stored property to allow binding from the UI. ---
+    // The new SyncManager to orchestrate change handling.
+    var syncManager: SyncManager
+    
     var activeCanvasLayers: [CanvasLayer] = []
     
     init(
         project: CircuitProject,
-        selectedDesign: CircuitDesign? = nil
+        selectedDesign: CircuitDesign? = nil,
+        syncManager: SyncManager = SyncManager() // Injected with a default
     ) {
         self.project        = project
         self.selectedDesign = selectedDesign
+        self.syncManager    = syncManager
     }
     
     var activeCanvasNodes: [BaseNode] {
@@ -87,24 +103,126 @@ final class ProjectManager {
         }
     }
     
-    // MARK: - Property Management (Unchanged)
+    // MARK: - Property Management
     
     func updateProperty(for component: ComponentInstance, with editedProperty: Property.Resolved) {
-        component.apply(editedProperty)
-        rebuildActiveCanvasNodes()
+        switch syncManager.syncMode {
+        case .automatic:
+            component.apply(editedProperty)
+            rebuildActiveCanvasNodes()
+        case .manualECO:
+            guard let oldProperty = component.displayedProperties.first(where: { $0.id == editedProperty.id }) else {
+                print("Error: Could not find original property state to create change record for \(editedProperty.key.label).")
+                return
+            }
+            let record = ChangeRecord(
+                source: selectedEditor.changeSource,
+                payload: .updateProperty(componentID: component.id, newProperty: editedProperty, oldProperty: oldProperty)
+            )
+            syncManager.upsertChange(record)
+        }
     }
     
+    /// Applies a list of pending changes to the main data model.
+     /// This is the commit step for the Manual ECO workflow.
+     /// - Parameter records: The array of `ChangeRecord`s to apply.
+     /// - Parameter allFootprints: A complete list of available footprints to resolve UUIDs.
+     func applyChanges(_ records: [ChangeRecord], allFootprints: [FootprintDefinition]) {
+         // We process in reverse to handle cases where multiple changes affect one component.
+         // The last record in time (first in our array) should be the final state.
+         for record in records.reversed() {
+             guard let component = componentInstances.first(where: {
+                 switch record.payload {
+                 case .updateReferenceDesignator(let id, _, _),
+                      .assignFootprint(let id, _, _, _),
+                      .updateProperty(let id, _, _):
+                     return $0.id == id
+                 }
+             }) else {
+                 print("Warning: Could not find component for change record \(record.id). Skipping.")
+                 continue
+             }
+             
+             // Apply the change based on its type
+             switch record.payload {
+             case .updateReferenceDesignator(_, let newIndex, _):
+                 component.referenceDesignatorIndex = newIndex
+                 
+             case .updateProperty(_, let newProperty, _):
+                 component.apply(newProperty)
+                 
+             case .assignFootprint(_, let newFootprintUUID, _, _):
+                 if let newFootprintUUID = newFootprintUUID {
+                     // Find the full footprint definition from the provided list.
+                     guard let footprintDef = allFootprints.first(where: { $0.uuid == newFootprintUUID }) else {
+                         print("Warning: Could not find footprint definition for UUID \(newFootprintUUID). Skipping.")
+                         continue
+                     }
+                     
+                     // --- "Smart Sync" Logic ---
+                     // Preserve the existing placement if one exists.
+                     let oldPlacement = component.footprintInstance?.placement ?? .unplaced
+                     let oldPosition = component.footprintInstance?.position ?? .zero
+                     let oldRotation = component.footprintInstance?.rotation ?? 0
+                     
+                     let newFootprintInstance = FootprintInstance(
+                         definitionUUID: footprintDef.uuid,
+                         definition: footprintDef,
+                         placement: oldPlacement
+                     )
+                     newFootprintInstance.position = oldPosition
+                     newFootprintInstance.rotation = oldRotation
+                     
+                     component.footprintInstance = newFootprintInstance
+                     
+                 } else {
+                     // The change was to un-assign the footprint.
+                     component.footprintInstance = nil
+                 }
+             }
+         }
+         
+         // After all changes are applied, clear the pending list.
+         syncManager.clearChanges()
+         
+         // Finally, trigger a full UI rebuild to show the committed changes.
+         rebuildActiveCanvasNodes()
+     }
+
+    
     func addProperty(_ newProperty: Property.Instance, to component: ComponentInstance) {
-        component.add(newProperty)
-        rebuildActiveCanvasNodes()
+        switch syncManager.syncMode {
+        case .automatic:
+            component.add(newProperty)
+            rebuildActiveCanvasNodes()
+        case .manualECO:
+            // TODO: Requires a new ChangeType case, e.g., `.addProperty(componentID: UUID, property: Property.Instance)`
+            print("MANUAL ECO: Add property action recorded (conceptual).")
+        }
     }
     
     func removeProperty(_ propertyToRemove: Property.Resolved, from component: ComponentInstance) {
-        component.remove(propertyToRemove)
+        switch syncManager.syncMode {
+        case .automatic:
+            component.remove(propertyToRemove)
+            rebuildActiveCanvasNodes()
+        case .manualECO:
+            // TODO: Requires a new ChangeType case, e.g., `.removeProperty(componentID: UUID, property: Property.Resolved)`
+            print("MANUAL ECO: Remove property action recorded (conceptual).")
+        }
+    }
+    
+    func discardPendingChanges() {
+        // Step 1: Tell the SyncManager to clear its list of pending changes.
+        syncManager.clearChanges()
+        
+        // Step 2: Force a full UI rebuild. This is critical to ensure that
+        // inspector views revert from showing "pending" values back to the
+        // original values from the main data model.
         rebuildActiveCanvasNodes()
     }
 
-    // MARK: - Text Management (Unchanged)
+    // MARK: - Text Management
     
     func toggleDynamicTextVisibility(for component: ComponentInstance, content: CircuitTextContent) {
         if let textToToggle = component.symbolInstance.resolvedItems.first(where: { $0.content.isSameType(as: content) }) {
@@ -140,16 +258,19 @@ final class ProjectManager {
     }
     
     func updateText(for component: ComponentInstance, with editedText: CircuitText.Resolved) {
+        // MODIFIED: Text changes are visual and should always be applied directly, bypassing the ECO system.
         component.apply(editedText)
         rebuildActiveCanvasNodes()
     }
 
     func addText(_ newText: CircuitText.Instance, to component: ComponentInstance) {
+        // MODIFIED: Adding text is a visual change and should always be applied directly.
         component.add(newText)
         rebuildActiveCanvasNodes()
     }
 
     func removeText(_ textToRemove: CircuitText.Resolved, from component: ComponentInstance) {
+        // MODIFIED: Removing text is a visual change and should always be applied directly.
         component.remove(textToRemove)
         rebuildActiveCanvasNodes()
     }
@@ -157,11 +278,75 @@ final class ProjectManager {
     // MARK: - Other Component Actions
     
     func updateReferenceDesignator(for component: ComponentInstance, newIndex: Int) {
-        component.referenceDesignatorIndex = newIndex
-        rebuildActiveCanvasNodes()
+        switch syncManager.syncMode {
+        case .automatic:
+            component.referenceDesignatorIndex = newIndex
+            rebuildActiveCanvasNodes()
+        case .manualECO:
+            let record = ChangeRecord(
+                  source: selectedEditor.changeSource,
+                  payload: .updateReferenceDesignator(
+                      componentID: component.id,
+                      newIndex: newIndex,
+                      // IMPORTANT: The "oldIndex" should be the *original* value, not the last pending one.
+                      oldIndex: component.referenceDesignatorIndex
+                  )
+              )
+              // --- MODIFIED: Call upsertChange instead of addChange ---
+              syncManager.upsertChange(record)
+        }
     }
     
-    // MARK: - Canvas and Graph Management
+    func assignFootprint(to component: ComponentInstance, footprint: FootprintDefinition?) {
+        switch syncManager.syncMode {
+        case .automatic:
+            if let footprint = footprint {
+                let newFootprintInstance = FootprintInstance(
+                    definitionUUID: footprint.uuid,
+                    definition: footprint,
+                    placement: .unplaced
+                )
+                component.footprintInstance = newFootprintInstance
+            } else {
+                component.footprintInstance = nil
+            }
+            rebuildActiveCanvasNodes()
+        case .manualECO:
+            let record = ChangeRecord(
+                  source: selectedEditor.changeSource,
+                  payload: .assignFootprint(
+                      componentID: component.id,
+                      newFootprintUUID: footprint?.uuid,
+                      newFootprintName: footprint?.name,
+                      // IMPORTANT: The "oldFootprintName" should be the *original* value.
+                      oldFootprintName: component.footprintInstance?.definition?.name
+                  )
+              )
+              // --- MODIFIED: Call upsertChange instead of addChange ---
+              syncManager.upsertChange(record)
+        }
+    }
+
+    func placeComponent(instanceID: UUID, at location: CGPoint, on side: BoardSide) {
+        guard let component = componentInstances.first(where: { $0.id == instanceID }) else {
+            print("Error: Could not find component instance with ID \(instanceID) to place.")
+            return
+        }
+
+        switch syncManager.syncMode {
+        case .automatic:
+            if let footprint = component.footprintInstance {
+                footprint.placement = .placed(side: side)
+                footprint.position = location
+            }
+            rebuildLayoutNodes()
+        case .manualECO:
+            // TODO: Requires a new ChangeType case, e.g., `.updatePlacement(componentID: UUID, newPlacement: Placement, oldPlacement: Placement)`
+            print("MANUAL ECO: Place component action for \(component.id) recorded (conceptual).")
+        }
+    }
+    
+    // MARK: - Canvas and Graph Management (Unchanged)
     
     private func makeGraph(from design: CircuitDesign) -> WireGraph {
         let newGraph = WireGraph()
@@ -194,7 +379,6 @@ final class ProjectManager {
         guard let design = selectedDesign else {
             self.schematicCanvasNodes = []
             self.schematicGraph = WireGraph()
-            // --- ADDED: Ensure layers are cleared for the schematic view. ---
             self.activeCanvasLayers = []
             return
         }
@@ -211,7 +395,6 @@ final class ProjectManager {
         graphNode.syncChildNodesFromModel()
         
         self.schematicCanvasNodes = symbolNodes + [graphNode]
-        // --- ADDED: Ensure layers are cleared for the schematic view. ---
         self.activeCanvasLayers = []
     }
     
@@ -222,9 +405,6 @@ final class ProjectManager {
             return
         }
         
-        // --- THIS IS THE FIX ---
-
-        // 1. Generate the canvas layers from the project's source of truth.
         let unsortedCanvasLayers = design.layers.map { layerType in
             CanvasLayer(
                 id: layerType.id,
@@ -232,59 +412,36 @@ final class ProjectManager {
                 isVisible: true,
                 color: NSColor(layerType.defaultColor).cgColor,
                 zIndex: layerType.kind.zIndex,
-                kind: layerType // Keep the original LayerType for sorting
+                kind: layerType
             )
         }
 
-        // 2. Sort the layers to establish the correct global drawing order (bottom-to-top).
         let sortedCanvasLayers = unsortedCanvasLayers.sorted { (layerA, layerB) -> Bool in
-            // Primary sort key: zIndex (e.g., copper is drawn before silkscreen).
             if layerA.zIndex != layerB.zIndex {
                 return layerA.zIndex < layerB.zIndex
             }
-            
-            // Secondary sort key: Physical side (e.g., back copper is drawn before front copper).
             guard let typeA = layerA.kind as? LayerType, let sideA = typeA.side,
                   let typeB = layerB.kind as? LayerType, let sideB = typeB.side else {
-                // Fallback for layers without a side (like board outline)
                 return false
             }
-            
             return sideA.drawingOrder < sideB.drawingOrder
         }
         
-        // 3. Store the correctly sorted layers. This is now the source of truth for rendering.
         self.activeCanvasLayers = sortedCanvasLayers
         
-        // The rest of the function remains the same, but now uses the correctly ordered layers.
         let footprintNodes: [FootprintNode] = design.componentInstances.compactMap { inst in
             guard let footprintInst = inst.footprintInstance,
                   case .placed = footprintInst.placement,
                   footprintInst.definition != nil else {
                 return nil
             }
-            // Pass the sorted layers to the footprint node
             return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: self.activeCanvasLayers)
         }
         
         let traceGraphNode = TraceGraphNode(graph: self.traceGraph)
-        // Pass the sorted layers to the trace graph node
         traceGraphNode.syncChildNodesFromModel(canvasLayers: self.activeCanvasLayers)
         
         self.layoutCanvasNodes = footprintNodes + [traceGraphNode]
-    }
-
-    func assignFootprint(to component: ComponentInstance, footprint: FootprintDefinition?) {
-        if let footprint = footprint {
-            let newFootprintInstance = FootprintInstance(
-                definitionUUID: footprint.uuid,
-                definition: footprint,
-                placement: .unplaced
-            )
-            component.footprintInstance = newFootprintInstance
-        } else {
-            component.footprintInstance = nil
-        }
     }
 
     func upsertSymbolNode(for inst: ComponentInstance) {
@@ -304,32 +461,15 @@ final class ProjectManager {
             schematicCanvasNodes = [node, graphNode]
         }
     }
-    
-    func placeComponent(instanceID: UUID, at location: CGPoint, on side: BoardSide) {
-        guard let component = componentInstances.first(where: { $0.id == instanceID }) else {
-            print("Error: Could not find component instance with ID \(instanceID) to place.")
-            return
-        }
         
-        if let footprint = component.footprintInstance {
-            footprint.placement = .placed(side: side)
-            footprint.position = location
-        }
-        
-        rebuildLayoutNodes()
-    }
-    
     func generateString(for resolvedText: CircuitText.Resolved, component: ComponentInstance) -> String {
         switch resolvedText.content {
         case .static(let text):
             return text
-            
         case .componentName:
             return component.definition?.name ?? "???"
-            
         case .componentReferenceDesignator:
             return (component.definition?.referenceDesignatorPrefix ?? "REF?") + component.referenceDesignatorIndex.description
-            
         case .componentProperty(let definitionID, let options):
             guard let property = component.displayedProperties.first(where: { $0.id == definitionID }) else {
                 return ""
@@ -344,6 +484,8 @@ final class ProjectManager {
     }
 }
 
+
+// MARK: - Helper Extensions (Restored)
 
 extension ComponentInstance {
     func apply(_ editedText: CircuitText.Resolved) {
@@ -365,5 +507,96 @@ extension CircuitTextContent {
             return options
         }
         return nil
+    }
+}
+
+// MARK: - Value Resolvers for UI
+
+extension ProjectManager {
+    
+    /// Resolves the reference designator index for a component, considering any pending changes.
+    func resolvedReferenceDesignator(for component: ComponentInstance) -> Int {
+        // If we are in automatic mode, always return the model's true value.
+        guard syncManager.syncMode == .manualECO else {
+            return component.referenceDesignatorIndex
+        }
+        
+        // Look for a pending change for this specific component's refdes.
+        let pendingChange = syncManager.findLatestPendingChange(for: component.id) { payload in
+            if case .updateReferenceDesignator = payload { return true }
+            return false
+        }
+        
+        // If a pending change was found, extract and return the new value.
+        if let pendingChange, case .updateReferenceDesignator(_, let newIndex, _) = pendingChange.payload {
+            return newIndex
+        }
+        
+        // Otherwise, return the original value from the model.
+        return component.referenceDesignatorIndex
+    }
+    
+    /// Resolves the footprint name for a component, considering any pending changes.
+    func resolvedFootprintName(for component: ComponentInstance) -> String? {
+        guard syncManager.syncMode == .manualECO else {
+            return component.footprintInstance?.definition?.name
+        }
+        
+        let pendingChange = syncManager.findLatestPendingChange(for: component.id) { payload in
+            if case .assignFootprint = payload { return true }
+            return false
+        }
+        
+        if let pendingChange, case .assignFootprint(_, _, let newFootprintName, _) = pendingChange.payload {
+            return newFootprintName
+        }
+        
+        return component.footprintInstance?.definition?.name
+    }
+
+    /// Resolves a specific property for a component, considering any pending changes.
+    func resolvedProperty(for component: ComponentInstance, propertyID: UUID) -> Property.Resolved? {
+        // Find the original property from the component's actual data model.
+        guard let originalProperty = component.displayedProperties.first(where: { $0.id == propertyID }) else {
+            return nil
+        }
+        
+        // In automatic mode, just return the original.
+        guard syncManager.syncMode == .manualECO else {
+            return originalProperty
+        }
+
+        // Search for a pending change that affects this specific property.
+        let pendingChange = syncManager.findLatestPendingChange(for: component.id) { payload in
+            if case .updateProperty(_, let newProperty, _) = payload, newProperty.id == propertyID {
+                return true
+            }
+            return false
+        }
+        
+        // If a change was found, return the new property from the change record.
+        if let pendingChange, case .updateProperty(_, let newProperty, _) = pendingChange.payload {
+            return newProperty
+        }
+        
+        // Otherwise, return the original.
+        return originalProperty
+    }
+    
+    func resolvedFootprintUUID(for component: ComponentInstance) -> UUID? {
+        guard syncManager.syncMode == .manualECO else {
+            return component.footprintInstance?.definitionUUID
+        }
+        
+        let pendingChange = syncManager.findLatestPendingChange(for: component.id) { payload in
+            if case .assignFootprint = payload { return true }
+            return false
+        }
+        
+        if let pendingChange, case .assignFootprint(_, let newFootprintUUID, _, _) = pendingChange.payload {
+            return newFootprintUUID
+        }
+        
+        return component.footprintInstance?.definitionUUID
     }
 }

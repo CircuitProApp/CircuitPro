@@ -18,7 +18,7 @@ struct SymbolNodeAttributesView: View {
     
     @State private var selectedProperty: Property.Resolved.ID?
     
-    // MARK: - Computed Properties for Footprint Sections
+    // MARK: - Computed Properties for Footprint Sections (Unchanged)
     
     private var compatibleFootprints: [FootprintDefinition] {
         component.definition?.footprints.sorted(by: { $0.name < $1.name }) ?? []
@@ -30,37 +30,31 @@ struct SymbolNodeAttributesView: View {
     }
     
     /// The display name of the currently selected footprint.
-    // --- MODIFIED: This is now more robust ---
+    // --- MODIFIED: This now uses the resolver ---
     private var selectedFootprintName: String {
-        // First, try to get the name from the hydrated definition directly. This is fast and reliable.
-        if let hydratedName = component.footprintInstance?.definition?.name {
-            return hydratedName
-        }
-        
-        // If the definition isn't hydrated for some reason (e.g., during a state transition),
-        // fall back to searching the full list. This makes the UI resilient.
-        if let selectedUUID = component.footprintInstance?.definitionUUID {
-            return allFootprints.first { $0.uuid == selectedUUID }?.name ?? "Invalid Footprint"
-        }
-        
-        // If there's no footprint instance at all.
-        return "None"
+        return projectManager.resolvedFootprintName(for: component) ?? "None"
     }
 
-    // MARK: - Bindings (No changes needed here)
+    // MARK: - Bindings
 
     private var propertiesBinding: Binding<[Property.Resolved]> {
         Binding(
-            get: { return component.displayedProperties },
+            // --- MODIFIED: The 'get' now resolves each property individually ---
+            get: {
+                // Return a new array where each original property has been resolved
+                // against any pending changes.
+                return component.displayedProperties.compactMap { originalProperty in
+                    projectManager.resolvedProperty(for: component, propertyID: originalProperty.id)
+                }
+            },
             set: { newPropertiesArray in
-                guard let componentDefinition = component.definition else { return }
-                for (index, newProperty) in newPropertiesArray.enumerated() {
-                    let oldProperty = component.displayedProperties[index]
-                    let valueChanged = (newProperty.value != oldProperty.value)
-                    let unitChanged = (newProperty.unit.prefix != oldProperty.unit.prefix)
-                    if valueChanged || unitChanged {
-                        projectManager.updateProperty(for: component, with: newProperty)
-                        break
+                // The 'set' logic is correct and remains unchanged.
+                for newProperty in newPropertiesArray {
+                    // Find the original property to check if the value actually changed.
+                    if let oldProperty = component.displayedProperties.first(where: { $0.id == newProperty.id }) {
+                        if newProperty.value != oldProperty.value || newProperty.unit.prefix != oldProperty.unit.prefix {
+                            projectManager.updateProperty(for: component, with: newProperty)
+                        }
                     }
                 }
             }
@@ -69,8 +63,10 @@ struct SymbolNodeAttributesView: View {
     
     private var refdesIndexBinding: Binding<Int> {
         Binding(
-            get: { self.component.referenceDesignatorIndex },
+            // --- MODIFIED: The 'get' now uses the resolver ---
+            get: { projectManager.resolvedReferenceDesignator(for: self.component) },
             set: { newIndex in
+                // The 'set' logic is correct and remains unchanged.
                 projectManager.updateReferenceDesignator(for: self.component, newIndex: newIndex)
             }
         )
@@ -78,7 +74,8 @@ struct SymbolNodeAttributesView: View {
 
     private var footprintBinding: Binding<UUID?> {
         Binding(
-            get: { return component.footprintInstance?.definitionUUID },
+            // This was already correct from your last update!
+            get: { projectManager.resolvedFootprintUUID(for: component) },
             set: { newUUID in
                 if let newUUID = newUUID {
                     if let selectedFootprint = allFootprints.first(where: { $0.uuid == newUUID }) {
@@ -102,7 +99,7 @@ struct SymbolNodeAttributesView: View {
                 InspectorRow("Refdes", style: .leading) {
                     InspectorNumericField(
                         label: component.definition?.referenceDesignatorPrefix,
-                        value: refdesIndexBinding,
+                        value: refdesIndexBinding, // This now gets the resolved value
                         placeholder: "?",
                         labelStyle: .prominent
                     )
@@ -117,6 +114,7 @@ struct SymbolNodeAttributesView: View {
                         Button("None") {
                             footprintBinding.wrappedValue = nil
                         }
+                        // ... menu sections remain the same ...
                         if !compatibleFootprints.isEmpty {
                             Section("Compatible") {
                                 ForEach(compatibleFootprints) { footprint in
@@ -139,7 +137,7 @@ struct SymbolNodeAttributesView: View {
                             }
                         }
                     } label: {
-                        Text(selectedFootprintName)
+                        Text(selectedFootprintName) // This now gets the resolved name
                     }
                     .menuStyle(.automatic)
                     .controlSize(.small)
@@ -159,6 +157,7 @@ struct SymbolNodeAttributesView: View {
             
             InspectorSection("Properties") {
                 VStack(spacing: 0) {
+                    // This table is now bound to the resolved properties array
                     Table(propertiesBinding, selection: $selectedProperty) {
                         TableColumn("Key") { $property in Text(property.key.label) }
                         TableColumn("Value") { $property in InspectorValueColumn(property: $property) }
