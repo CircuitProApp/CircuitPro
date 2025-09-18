@@ -22,3 +22,12 @@ enum CircuitTextContent: Codable, Hashable {
     /// The text is linked to a specific component property by its definition ID.
     case componentProperty(definitionID: UUID, options: TextDisplayOptions)
 }
+
+extension CircuitTextContent {
+    var displayOptions: TextDisplayOptions? {
+        if case .componentProperty(_, let options) = self {
+            return options
+        }
+        return nil
+    }
+}

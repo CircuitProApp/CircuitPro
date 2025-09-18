@@ -105,7 +105,7 @@ struct TimelineView: View {
     private func componentName(for id: UUID) -> String {
         if let component = projectManager.componentInstances.first(where: { $0.id == id }) {
             let prefix = component.definition?.referenceDesignatorPrefix ?? "COMP"
-            let index = projectManager.resolvedReferenceDesignator(for: component)
+            let index = projectManager.syncManager.resolvedReferenceDesignator(for: component)
             if index != component.referenceDesignatorIndex {
                 return "\(prefix)\(index) (Pending)"
             }

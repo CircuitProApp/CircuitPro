@@ -48,7 +48,7 @@ struct SymbolNavigatorView: View {
                         Spacer()
                         // Show schematic-resolved RefDes (pending schematic edits become “truth” here)
                         let prefix = instance.definition?.referenceDesignatorPrefix ?? "?"
-                        let idx = projectManager.resolvedReferenceDesignator(for: instance, onlyFrom: .schematic)
+                        let idx = projectManager.syncManager.resolvedReferenceDesignator(for: instance, onlyFrom: .schematic)
                         Text(prefix + String(idx))
                             .foregroundStyle(.secondary)
                             .monospaced()

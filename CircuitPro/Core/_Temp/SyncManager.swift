@@ -9,9 +9,6 @@ import Foundation
 import Observation
 
 /// Manages synchronization mode and the list of pending changes (Manual ECO).
-/// In Manual ECO, changes are recorded as `ChangeRecord`s instead of being
-/// immediately applied to the model. Records are appended per user "commit"
-/// (e.g., pressing Enter), and may be coalesced within that single commit by session.
 @MainActor
 @Observable
 final class SyncManager {
@@ -24,53 +21,93 @@ final class SyncManager {
 
     // MARK: - Sessions
 
-    /// Start a logical "user commit" session. Use this when a user confirms an edit
-    /// (e.g., presses Enter, chooses a menu item, loses focus).
-    /// Multiple setter calls that occur during the same commit should share this ID.
     func beginSession() -> UUID { UUID() }
-
-    /// End a previously started session. Currently a no-op; used to demarcate boundaries.
-    func endSession(_ id: UUID) { /* no-op; boundary marker for commit */ }
+    func endSession(_ id: UUID) { /* no-op */ }
 
     // MARK: - Change list management
 
-    /// Inserts a new change at the front (newest-first).
     func addChange(_ record: ChangeRecord) {
         pendingChanges.insert(record, at: 0)
         print("Change recorded. Total pending changes: \(pendingChanges.count)")
     }
 
-    /// Remove all pending changes (used on Apply/Discard).
     func clearChanges() {
         pendingChanges.removeAll()
     }
 
-    /// Remove a specific subset of pending changes by their IDs.
     func removeChanges(withIDs ids: Set<UUID>) {
         pendingChanges.removeAll { ids.contains($0.id) }
     }
-}
+    
+    // --- (Phase 1): Value Resolver Logic now lives here ---
+    
+    func resolvedReferenceDesignator(for component: ComponentInstance, onlyFrom source: ChangeSource? = nil) -> Int {
+        if syncMode == .automatic { return component.referenceDesignatorIndex }
+        
+        if let change = findLatestPendingChange(for: component.id, onlyFrom: source, matches: {
+            if case .updateReferenceDesignator = $0 { return true }
+            return false
+        }),
+           case .updateReferenceDesignator(_, let newIndex, _) = change.payload {
+            return newIndex
+        }
+        return component.referenceDesignatorIndex
+    }
 
-// MARK: - Lookup utilities (used by resolvers)
+    func resolvedFootprintName(for component: ComponentInstance, onlyFrom source: ChangeSource? = nil) -> String? {
+        if syncMode == .automatic { return component.footprintInstance?.definition?.name }
 
-extension SyncManager {
-    /// Finds the most recent pending change for a specific component that matches the given payload type.
-    /// - Parameters:
-    ///   - componentID: The UUID of the component to search for.
-    ///   - changeIdentifier: A predicate that returns true for the payload type we care about.
-    /// - Returns: The latest `ChangeRecord` if found, else `nil`.
-    func findLatestPendingChange(
+        if let change = findLatestPendingChange(for: component.id, onlyFrom: source, matches: {
+            if case .assignFootprint = $0 { return true }
+            return false
+        }),
+           case .assignFootprint(_, _, let newName, _) = change.payload {
+            return newName
+        }
+        return component.footprintInstance?.definition?.name
+    }
+
+    func resolvedFootprintUUID(for component: ComponentInstance, onlyFrom source: ChangeSource? = nil) -> UUID? {
+        if syncMode == .automatic { return component.footprintInstance?.definitionUUID }
+        
+        if let change = findLatestPendingChange(for: component.id, onlyFrom: source, matches: {
+            if case .assignFootprint = $0 { return true }
+            return false
+        }),
+           case .assignFootprint(_, let newUUID, _, _) = change.payload {
+            return newUUID
+        }
+        return component.footprintInstance?.definitionUUID
+    }
+
+    func resolvedProperty(for component: ComponentInstance, propertyID: UUID, onlyFrom source: ChangeSource? = nil) -> Property.Resolved? {
+        guard let original = component.displayedProperties.first(where: { $0.id == propertyID }) else { return nil }
+        if syncMode == .automatic { return original }
+
+        if let change = findLatestPendingChange(for: component.id, onlyFrom: source, matches: {
+            if case .updateProperty(_, let newProperty, _) = $0, newProperty.id == propertyID { return true }
+            return false
+        }),
+           case .updateProperty(_, let newProperty, _) = change.payload {
+            return newProperty
+        }
+        return original
+    }
+    
+    /// Finds the most recent pending change for a specific component that matches the given payload type and optional source.
+    private func findLatestPendingChange(
         for componentID: UUID,
-        matching changeIdentifier: (ChangeType) -> Bool
+        onlyFrom source: ChangeSource?,
+        matches: (ChangeType) -> Bool
     ) -> ChangeRecord? {
         // `pendingChanges` is newest-first; the first match is the latest.
         return pendingChanges.first { record in
-            switch record.payload {
-            case .updateReferenceDesignator(let id, _, _),
-                 .assignFootprint(let id, _, _, _),
-                 .updateProperty(let id, _, _):
-                return id == componentID && changeIdentifier(record.payload)
-            }
+            // Use the new computed property for a clean check
+            guard record.payload.componentID == componentID else { return false }
+            // Optional source filter
+            if let source, record.source != source { return false }
+            // Payload match
+            return matches(record.payload)
         }
     }
 }
@@ -78,34 +115,20 @@ extension SyncManager {
 // MARK: - Session-aware recording
 
 extension SyncManager {
-    /// A lightweight identifier for "which field" is being changed,
-    /// used to coalesce duplicate writes within the same session.
     private enum ChangeIdentifier: Hashable {
-        case refdes(UUID)             // component
-        case footprint(UUID)          // component
-        case property(UUID, UUID)     // component, property
+        case refdes(UUID)
+        case footprint(UUID)
+        case property(UUID, UUID)
     }
 
-    /// Compute a coalescing key for a given change payload.
     private func identifier(for payload: ChangeType) -> ChangeIdentifier {
         switch payload {
-        case .updateReferenceDesignator(let cid, _, _):
-            return .refdes(cid)
-        case .assignFootprint(let cid, _, _, _):
-            return .footprint(cid)
-        case .updateProperty(let cid, let prop, _):
-            return .property(cid, prop.id)
+        case .updateReferenceDesignator(let cid, _, _): return .refdes(cid)
+        case .assignFootprint(let cid, _, _, _): return .footprint(cid)
+        case .updateProperty(let cid, let prop, _): return .property(cid, prop.id)
         }
     }
 
-    /// Append-only across sessions. Within the SAME session, keep only the last record
-    /// for the same identifier (final value wins for that single user commit).
-    /// Across different sessions, always append a new record (to preserve full history).
-    ///
-    /// - Parameters:
-    ///   - source: Where the change originated (schematic/layout).
-    ///   - payload: The specific change (with old/new values).
-    ///   - sessionID: The current commit session ID; if nil, no coalescing occurs.
     func recordChange(source: ChangeSource, payload: ChangeType, sessionID: UUID?) {
         let rec = ChangeRecord(source: source, payload: payload, sessionID: sessionID)
 
@@ -113,18 +136,11 @@ extension SyncManager {
            let idx = pendingChanges.firstIndex(where: {
                $0.sessionID == s && identifier(for: $0.payload) == identifier(for: rec.payload)
            }) {
-            // Same session + same field: replace the earlier record (final value wins for this commit).
             pendingChanges[idx] = rec
             print("Change updated (same session). Total pending changes: \(pendingChanges.count)")
         } else {
-            // New session or different field: append as a new record (preserve full history).
             addChange(rec)
         }
     }
-
-    /// Deprecated—use `recordChange(source:payload:sessionID:)` and pass a session.
-    @available(*, deprecated, message: "Use recordChange(source:payload:sessionID:) with sessions.")
-    func upsertChange(_ record: ChangeRecord) {
-        recordChange(source: record.source, payload: record.payload, sessionID: record.sessionID)
-    }
 }
+

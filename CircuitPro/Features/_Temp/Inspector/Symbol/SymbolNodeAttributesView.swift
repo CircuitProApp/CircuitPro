@@ -40,7 +40,7 @@ struct SymbolNodeAttributesView: View {
     /// The display name of the currently selected footprint.
     // --- MODIFIED: This now uses the resolver ---
     private var selectedFootprintName: String {
-        return projectManager.resolvedFootprintName(for: component) ?? "None"
+        return projectManager.syncManager.resolvedFootprintName(for: component) ?? "None"
     }
     
     @State private var commitSessionID: UUID? // NEW
@@ -66,9 +66,9 @@ struct SymbolNodeAttributesView: View {
     // Refdes
     private var refdesIndexBinding: Binding<Int> {
         Binding(
-            get: { projectManager.resolvedReferenceDesignator(for: self.component) },
+            get: { projectManager.syncManager.resolvedReferenceDesignator(for: self.component) },
             set: { newIndex in
-                let current = projectManager.resolvedReferenceDesignator(for: self.component)
+                let current = projectManager.syncManager.resolvedReferenceDesignator(for: self.component)
                 guard newIndex != current else { return }
                 withCommitSession { session in
                     projectManager.updateReferenceDesignator(for: self.component, newIndex: newIndex, sessionID: session)
@@ -80,9 +80,9 @@ struct SymbolNodeAttributesView: View {
     // Footprint
     private var footprintBinding: Binding<UUID?> {
         Binding(
-            get: { projectManager.resolvedFootprintUUID(for: component) },
+            get: { projectManager.syncManager.resolvedFootprintUUID(for: component) },
             set: { newUUID in
-                let current = projectManager.resolvedFootprintUUID(for: component)
+                let current = projectManager.syncManager.resolvedFootprintUUID(for: component)
                 guard newUUID != current else { return }
                 withCommitSession { session in
                     if let id = newUUID, let fp = allFootprints.first(where: { $0.uuid == id }) {
@@ -100,14 +100,14 @@ struct SymbolNodeAttributesView: View {
         Binding(
             get: {
                 component.displayedProperties.compactMap { original in
-                    projectManager.resolvedProperty(for: component, propertyID: original.id)
+                    projectManager.syncManager.resolvedProperty(for: component, propertyID: original.id)
                 }
             },
             set: { newArray in
                 // Build resolved-current map once
                 let currentByID: [UUID: Property.Resolved] = Dictionary(
                     uniqueKeysWithValues: component.displayedProperties.compactMap { original in
-                        guard let resolved = projectManager.resolvedProperty(for: component, propertyID: original.id) else { return nil }
+                        guard let resolved = projectManager.syncManager.resolvedProperty(for: component, propertyID: original.id) else { return nil }
                         return (original.id, resolved)
                     }
                 )

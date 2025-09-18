@@ -24,6 +24,18 @@ enum ChangeType: Codable, Hashable {
     
     /// Records a change to a specific property of a component (e.g., updating resistance).
     case updateProperty(componentID: UUID, newProperty: Property.Resolved, oldProperty: Property.Resolved)
+
+    /// Provides access to the componentID associated with any ChangeType.
+    var componentID: UUID {
+        switch self {
+        case .updateReferenceDesignator(let componentID, _, _):
+            return componentID
+        case .assignFootprint(let componentID, _, _, _):
+            return componentID
+        case .updateProperty(let componentID, _, _):
+            return componentID
+        }
+    }
 }
 
 /// A struct that encapsulates a single, discrete change made by the user in Manual ECO mode.

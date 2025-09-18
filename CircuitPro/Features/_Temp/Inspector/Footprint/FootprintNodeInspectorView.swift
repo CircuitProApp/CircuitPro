@@ -68,9 +68,9 @@ struct FootprintNodeInspectorView: View {
     
     private var refdesIndexBinding: Binding<Int> {
         Binding(
-            get: { projectManager.resolvedReferenceDesignator(for: component, onlyFrom: .layout) },
+            get: { projectManager.syncManager.resolvedReferenceDesignator(for: component, onlyFrom: .layout) },
             set: { newIndex in
-                let current = projectManager.resolvedReferenceDesignator(for: component, onlyFrom: .layout)
+                let current = projectManager.syncManager.resolvedReferenceDesignator(for: component, onlyFrom: .layout)
                 guard newIndex != current else { return }
                 withCommitSession { session in
                     projectManager.updateReferenceDesignator(for: component, newIndex: newIndex, sessionID: session)

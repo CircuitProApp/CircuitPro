@@ -82,3 +82,17 @@ extension ComponentInstance {
         )
     }
 }
+
+extension ComponentInstance {
+    func apply(_ editedText: CircuitText.Resolved) {
+        symbolInstance.apply(editedText)
+    }
+
+    func add(_ newInstance: CircuitText.Instance) {
+        symbolInstance.add(newInstance)
+    }
+
+    func remove(_ textToRemove: CircuitText.Resolved) {
+        symbolInstance.remove(textToRemove)
+    }
+}
