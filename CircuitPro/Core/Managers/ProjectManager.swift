@@ -482,13 +482,14 @@ final class ProjectManager {
         
         self.activeCanvasLayers = sortedCanvasLayers
         
-        let footprintNodes: [FootprintNode] = design.componentInstances.compactMap { inst in
+        let footprintNodes: [FootprintNode] = design.componentInstances.compactMap { inst -> FootprintNode? in
             guard let footprintInst = inst.footprintInstance,
                   case .placed = footprintInst.placement,
                   footprintInst.definition != nil else {
                 return nil
             }
-            return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: self.activeCanvasLayers)
+            let renderableTexts = self.generateRenderableTexts(for: inst)
+            return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: self.activeCanvasLayers, renderableTexts: renderableTexts)
         }
         
         let traceGraphNode = TraceGraphNode(graph: self.traceGraph)
@@ -712,3 +713,4 @@ extension ProjectManager {
         return original
     }
 }
+
