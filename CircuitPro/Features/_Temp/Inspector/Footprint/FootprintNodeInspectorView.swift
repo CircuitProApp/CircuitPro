@@ -9,6 +9,9 @@ import SwiftUI
 
 struct FootprintNodeInspectorView: View {
     
+    @Environment(\.projectManager)
+    private var projectManager
+    
     /// The component instance that this footprint belongs to.
     /// This is used for displaying contextual information, like the RefDes.
     var component: ComponentInstance
@@ -18,6 +21,24 @@ struct FootprintNodeInspectorView: View {
     
     @State private var selectedTab: InspectorTab = .attributes
     private var availableTabs: [InspectorTab] = [.attributes]
+    
+    @State private var commitSessionID: UUID? // NEW
+
+    private func withCommitSession(_ perform: (UUID) -> Void) {
+        let id: UUID
+        if let s = commitSessionID {
+            id = s
+        } else {
+            id = projectManager.syncManager.beginSession()
+            commitSessionID = id
+            // End the session after the current commit burst settles.
+            DispatchQueue.main.async { [weak projectManager] in
+                projectManager?.syncManager.endSession(id)
+                commitSessionID = nil
+            }
+        }
+        perform(id)
+    }
     
     /// A custom binding to safely get and set the board side from the `PlacementState` enum.
     private var placementSideBinding: Binding<BoardSide> {
@@ -37,6 +58,19 @@ struct FootprintNodeInspectorView: View {
         )
     }
     
+    private var refdesIndexBinding: Binding<Int> {
+        Binding(
+            get: { projectManager.resolvedReferenceDesignator(for: component, onlyFrom: .layout) },
+            set: { newIndex in
+                let current = projectManager.resolvedReferenceDesignator(for: component, onlyFrom: .layout)
+                guard newIndex != current else { return }
+                withCommitSession { session in
+                    projectManager.updateReferenceDesignator(for: component, newIndex: newIndex, sessionID: session)
+                }
+            }
+        )
+    }
+    
     init(component: ComponentInstance, footprintNode: FootprintNode) {
         self.component = component
         self.footprintNode = footprintNode
@@ -47,15 +81,17 @@ struct FootprintNodeInspectorView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 5) {
                     InspectorSection("Identity") {
-                        InspectorRow("Refdes") {
-                            // Display the reference designator from the parent component.
-                            Text(component.referenceDesignator)
+                        InspectorRow("Name") {
+                            Text(component.definition?.name ?? "n/a")
                                 .foregroundStyle(.secondary)
                         }
-                        InspectorRow("Footprint") {
-                            // Display the name of the footprint definition.
-                            Text(footprintNode.instance.definition?.name ?? "n/a")
-                                .foregroundStyle(.secondary)
+                        InspectorRow("Refdes", style: .leading) {
+                            InspectorNumericField(
+                                label: component.definition?.referenceDesignatorPrefix,
+                                value: refdesIndexBinding, // This now gets the resolved value
+                                placeholder: "?",
+                                labelStyle: .prominent
+                            )
                         }
                     }
                     

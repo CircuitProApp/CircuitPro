@@ -15,6 +15,7 @@ struct RotationControlView<T: Transformable>: View {
     var tickStepDegrees: CGFloat?
     var snapsToTicks: Bool = false
     
+    
     private var rotationInDegrees: Binding<CGFloat> {
         Binding(
             get: {

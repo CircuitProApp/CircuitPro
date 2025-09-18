@@ -85,7 +85,6 @@ struct InspectorView: View {
     /// The view content to display when the Layout editor is active.
     @ViewBuilder
     private var layoutInspectorView: some View {
-        // --- MODIFIED: Display the Footprint inspector when a FootprintNode is selected ---
         if let context = selectedFootprintContext {
             FootprintNodeInspectorView(
                 component: context.component,
@@ -98,15 +97,12 @@ struct InspectorView: View {
             ScrollView {
                 PrimitivePropertiesView(primitive: $primitive.primitive)
             }
+        } else if let anchoredText = singleSelectedNode as? AnchoredTextNode {
+            AnchoredTextInspectorView(anchoredText: anchoredText)
+            
         } else {
-            // Handle no selection or multi-selection for layout.
             selectionStatusView
         }
-    }
-    
-    @ViewBuilder
-    private var primitiveInspectorView: some View {
-        
     }
     
     /// A shared view for displaying the current selection status (none, or multiple).
@@ -122,8 +118,6 @@ struct InspectorView: View {
     }
 }
 
-// --- HELPER EXTENSION (Assuming this exists, if not, it should be added) ---
-// This helper makes finding a node in a tree structure cleaner.
 extension Array where Element == BaseNode {
     func findNode(with id: UUID) -> BaseNode? {
         for node in self {

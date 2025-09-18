@@ -31,7 +31,7 @@ struct InspectorRow<Content: View>: View {
                 if let title {
                     Text(title)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.primary)
                         .lineLimit(1)
                 } else {
                     Color.clear

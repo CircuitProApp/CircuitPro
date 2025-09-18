@@ -22,6 +22,7 @@ struct InspectorSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)
+                .foregroundStyle(.secondary)
 
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 10) {
                 content()

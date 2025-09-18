@@ -35,7 +35,7 @@ struct AnchoredTextInspectorView: View {
                             point: $anchoredText.resolvedText.relativePosition
                         )
                         
-//                        RotationControlView(object: $anchoredText.textModel)
+//                        RotationControlView(object: $anchoredText)
                         
                     }
                     Divider()

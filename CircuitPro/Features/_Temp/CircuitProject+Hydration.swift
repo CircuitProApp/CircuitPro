@@ -14,8 +14,6 @@ extension CircuitProject {
     func hydrate(using container: ModelContainer) throws {
         let context = ModelContext(container)
         
-        // --- STEP 1: HYDRATE COMPONENT & SYMBOL DEFINITIONS ---
-        
         // Collect all unique component definition IDs.
         var allComponentIDs: Set<UUID> = []
         for design in self.designs {
@@ -47,8 +45,6 @@ extension CircuitProject {
                 }
             }
         }
-        
-        // --- STEP 2: HYDRATE FOOTPRINT DEFINITIONS (NEWLY ADDED) ---
         
         // Collect all unique footprint definition IDs from all component instances.
         var allFootprintIDs: Set<UUID> = []

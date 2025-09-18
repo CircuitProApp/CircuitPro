@@ -12,10 +12,8 @@ struct SymbolNodeAppearanceView: View {
     @Environment(\.projectManager) private var projectManager
     @PackManager private var packManager
     
-    // Using @Bindable on component is correct as it's an Observable class.
     @Bindable var component: ComponentInstance
-    // SymbolNode is an @Observable class, but it might not need @Bindable here
-    // unless you are directly binding to its properties, which we are not.
+
     let symbolNode: SymbolNode
     
     var body: some View {
@@ -37,7 +35,6 @@ struct SymbolNodeAppearanceView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             textVisibilityListRow(label: property.key.label, content: content)
                             if isVisible {
-                                // Pass the same search template to the options row builder.
                                 displayOptionsRow(for: content)
                             }
                         }
