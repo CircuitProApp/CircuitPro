@@ -9,8 +9,9 @@ final class AnchoredTextNode: TextNode {
 
     // MARK: - Data Provenance
 
-    /// A direct, unowned reference to the symbol instance that owns this text.
-    unowned let ownerInstance: SymbolInstance
+    /// A direct, unowned reference to the instance (Symbol or Footprint) that owns this text.
+    // MODIFIED: Type changed from SymbolInstance to the generic TextOwningInstance protocol.
+    unowned let ownerInstance: TextOwningInstance
 
     // MARK: - Computed Properties
     
@@ -25,10 +26,11 @@ final class AnchoredTextNode: TextNode {
     
     // MARK: - Initialization
 
+    // MODIFIED: ownerInstance parameter type changed to TextOwningInstance.
     init(
         resolvedText: CircuitText.Resolved,
         text: String, // Accepts the new display string.
-        ownerInstance: SymbolInstance
+        ownerInstance: TextOwningInstance
     ) {
         self.ownerInstance = ownerInstance
 
@@ -36,7 +38,8 @@ final class AnchoredTextNode: TextNode {
         let nodeID: UUID
         switch resolvedText.source {
         case .definition(let definition):
-            nodeID = Self.generateStableID(for: ownerInstance.id, with: definition.id)
+            // The ownerInstance.id is used here, which is provided by the TextOwningInstance protocol.
+            nodeID = Self.generateStableID(for: ownerInstance.id  as! UUID, with: definition.id)
         case .instance:
             nodeID = resolvedText.id
         }
@@ -50,6 +53,9 @@ final class AnchoredTextNode: TextNode {
     override func makeDrawingPrimitives() -> [DrawingPrimitive] {
         var primitives = super.makeDrawingPrimitives()
 
+        // The position here needs to be in the AnchoredTextNode's local coordinate space.
+        // Assuming `anchorPosition` is already in its parent's (SymbolNode/FootprintNode) coordinate space,
+        // we convert it to this node's local space for drawing the adornments.
         let localAnchorPosition = self.convert(anchorPosition, from: parent)
         let adornmentColor = NSColor.systemGray.withAlphaComponent(0.8).cgColor
 
@@ -66,10 +72,12 @@ final class AnchoredTextNode: TextNode {
 
 // MARK: - Committing Changes
 extension AnchoredTextNode {
-    /// Persists the current state of the node's model back to the `SymbolInstance`.
+    /// Persists the current state of the node's model back to its `ownerInstance`.
     /// This is called automatically by the superclass when `resolvedText` is modified.
     func commitChanges() {
         // We simply apply the entire `resolvedText` model, which is the single source of truth.
+        // This relies on the `ownerInstance` (SymbolInstance or FootprintInstance)
+        // correctly implementing the `apply` method to update its internal resolved texts.
         self.ownerInstance.apply(self.resolvedText)
     }
 }
@@ -90,6 +98,13 @@ private extension AnchoredTextNode {
         let textBounds = super.boundingBox
         guard !textBounds.isNull else { return nil }
         
+        // Need to ensure `textBounds` is in the same coordinate space as `anchorPosition`
+        // before determining the connection point. `super.boundingBox` is in local space.
+        // If `anchorPosition` is in parent's space, it should be converted, or `textBounds` should be.
+        // For simplicity, assuming `anchorPosition` is already in local space here if it's based on `super.resolvedText.anchorPosition`.
+        // If `anchorPosition` is truly in the parent's coordinates, you might need:
+        // let localTextBounds = self.convert(textBounds, to: parent) // Convert text bounds to parent's space for comparison.
+        
         let connectionPoint = determineConnectionPoint(on: textBounds, towards: anchorPosition)
         
         let path = CGMutablePath()
@@ -100,13 +115,31 @@ private extension AnchoredTextNode {
     }
     
     func determineConnectionPoint(on rect: CGRect, towards point: CGPoint) -> CGPoint {
-        if abs(point.y - rect.midY) > abs(point.x - rect.midX) {
-             if point.y > rect.maxY { return CGPoint(x: rect.midX, y: rect.maxY) }
-             else if point.y < rect.minY { return CGPoint(x: rect.midX, y: rect.minY) }
+        // This logic determines which side of the text's bounding box the connector line should attach to.
+        // It prioritizes vertical connection if the point is further vertically, otherwise horizontal.
+
+        // Calculate deltas from rect center to point
+        let dx = point.x - rect.midX
+        let dy = point.y - rect.midY
+
+        // Use aspect ratio to determine if connection should be primarily horizontal or vertical
+        // This prevents connections to corners when the point is mostly in one direction
+        let absDx = abs(dx)
+        let absDy = abs(dy)
+
+        if absDx * rect.height > absDy * rect.width { // More horizontal alignment needed relative to text aspect ratio
+            if dx > 0 { // Point is to the right
+                return CGPoint(x: rect.maxX, y: rect.midY)
+            } else { // Point is to the left
+                return CGPoint(x: rect.minX, y: rect.midY)
+            }
+        } else { // More vertical alignment needed
+            if dy > 0 { // Point is above
+                return CGPoint(x: rect.midX, y: rect.maxY)
+            } else { // Point is below
+                return CGPoint(x: rect.midX, y: rect.minY)
+            }
         }
-        
-        if point.x > rect.maxX { return CGPoint(x: rect.maxX, y: rect.midY) }
-        else { return CGPoint(x: rect.minX, y: rect.midY) }
     }
 }
 

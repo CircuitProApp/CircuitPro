@@ -41,7 +41,8 @@ final class FootprintNode: BaseNode {
     
     // MARK: - Initialization
     
-    init?(id: UUID, instance: FootprintInstance, canvasLayers: [CanvasLayer]) {
+    // MODIFIED: Added renderableTexts parameter to initializer
+    init?(id: UUID, instance: FootprintInstance, canvasLayers: [CanvasLayer], renderableTexts: [RenderableText]) {
         guard let footprintDefinition = instance.definition else { return nil }
         
         self.instance = instance
@@ -50,7 +51,17 @@ final class FootprintNode: BaseNode {
         let padNodes = footprintDefinition.pads.map { PadNode(pad: $0) }
         let primitiveNodes = footprintDefinition.primitives.map { PrimitiveNode(primitive: $0) }
         
-        self.children = padNodes + primitiveNodes
+        // NEW: Loop over the renderable texts to create fully hydrated `AnchoredTextNode`s.
+        let textNodes: [AnchoredTextNode] = renderableTexts.map { renderable in
+            AnchoredTextNode(
+                resolvedText: renderable.model,
+                text: renderable.text,
+                ownerInstance: self.instance // FootprintInstance is the owner of its texts
+            )
+        }
+        
+        // MODIFIED: Assign all children at once, including text nodes.
+        self.children = padNodes + primitiveNodes + textNodes
         
         // Resolve the generic layer IDs on child primitives to specific board layer IDs.
         resolveChildLayerIDs(canvasLayers: canvasLayers)
@@ -66,9 +77,8 @@ final class FootprintNode: BaseNode {
     private func resolveChildLayerIDs(canvasLayers: [CanvasLayer]) {
         guard case .placed(let side) = instance.placement else { return }
         
-        // --- THIS LOGIC IS NOW ROBUST AND TYPE-SAFE ---
-        
         for child in children {
+            // Only primitives have layer IDs to resolve
             guard let primitiveNode = child as? PrimitiveNode,
                   let genericLayerID = primitiveNode.layerId else { continue }
             
@@ -102,7 +112,7 @@ final class FootprintNode: BaseNode {
     
     // MARK: - Overridden Interaction and Drawing Methods
     
-    /// Creates a unified halo path that combines the halos of all child nodes (pads and primitives).
+    /// Creates a unified halo path that combines the halos of all child nodes (pads, primitives, and texts).
     override func makeHaloPath() -> CGPath? {
         let compositePath = CGMutablePath()
         
@@ -119,28 +129,37 @@ final class FootprintNode: BaseNode {
         return compositePath.isEmpty ? nil : compositePath
     }
     
-    /// Determines if a point hits any part of the footprint. If it does, it returns
-    /// a hit target for the `FootprintNode` itself, not its children.
+    /// Determines if a point hits any part of the footprint or its children.
+    // MODIFIED: Hit test logic to match SymbolNode (check children first)
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
-        // We do NOT call super.hitTest here because we do not want to return a child node.
-        // We only want to know if the click was inside our overall boundary.
-        
-        // The interactionBounds rectangle is already in our local coordinate space.
+        // First, delegate to the base implementation to hit-test all children.
+        // This correctly finds hits on selectable children (like text nodes)
+        // and returns a target pointing to that specific child.
+        if let childHit = super.hitTest(point, tolerance: tolerance) {
+            return childHit
+        }
+
+        // If no children were hit, check if the point intersects with this footprint's
+        // own "body" geometry (which excludes text nodes in its `interactionBounds`).
         if interactionBounds.contains(point) {
-            // The hit was successful. Return a target pointing to *this* node.
             return CanvasHitTarget(node: self, partIdentifier: nil, position: self.convert(point, to: nil))
         }
-        
-        // If the point is not within our bounds, there's no hit.
+
+        // If neither children nor the body were hit, there's no hit.
         return nil
     }
     
-    /// Calculates the bounding box that encloses all child nodes (pads and primitives).
+    /// Calculates the bounding box that encloses all child nodes (pads and primitives), excluding text nodes.
+    // MODIFIED: Exclude AnchoredTextNode from interactionBounds
     override var interactionBounds: CGRect {
         var combinedBox = CGRect.null
         
-        // Iterate over all children to create a single interaction boundary.
+        // Iterate over children, but only include "core" geometry.
         for child in children {
+            if child is AnchoredTextNode { // Exclude text nodes from the core interaction bounds, matching SymbolNode
+                continue
+            }
+            
             guard child.isVisible else { continue }
             let childBox = child.interactionBounds
             let transformedChildBox = childBox.applying(child.localTransform)
