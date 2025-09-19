@@ -93,18 +93,6 @@ final class ProjectManager {
     func persistTraceGraph() {
         print("Fake persisting TraceGraph...")
     }
-
-    func handleNewNode(_ node: BaseNode) {
-        if let traceRequest = node as? TraceRequestNode {
-            traceGraph.addTrace(
-                path: traceRequest.points,
-                width: traceRequest.width,
-                layerId: traceRequest.layerId
-            )
-            persistTraceGraph()
-            rebuildLayoutNodes()
-        }
-    }
     
     // MARK: - Property Management
     
