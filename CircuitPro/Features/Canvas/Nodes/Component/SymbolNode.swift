@@ -14,9 +14,7 @@ final class SymbolNode: BaseNode {
 
     // MARK: - Properties
 
-    var instance: SymbolInstance {
-        didSet { onNeedsRedraw?() }
-    }
+    var instance: SymbolInstance
     
     weak var graph: WireGraph?
 
@@ -28,7 +26,7 @@ final class SymbolNode: BaseNode {
         get { instance.position }
         set {
             instance.position = newValue
-            onNeedsRedraw?()
+          
         }
     }
 
@@ -36,7 +34,7 @@ final class SymbolNode: BaseNode {
         get { instance.rotation }
         set {
             instance.rotation = newValue
-            onNeedsRedraw?()
+            
         }
     }
 
@@ -72,7 +70,7 @@ final class SymbolNode: BaseNode {
         // Configure parent-child relationships.
         for child in self.children {
             child.parent = self
-            child.onNeedsRedraw = { [weak self] in self?.onNeedsRedraw?() }
+         
         }
     }
 

@@ -24,12 +24,6 @@ final class CanvasHostView: NSView {
         
         self.wantsLayer = true
         self.layer?.backgroundColor = NSColor.white.cgColor
-
-        self.controller.onNeedsRedraw = { [weak self] in
-            DispatchQueue.main.async {
-                self?.performLayerUpdate()
-            }
-        }
         
         self.registerForDraggedTypes(registeredDraggedTypes)
 

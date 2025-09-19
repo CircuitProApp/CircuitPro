@@ -7,10 +7,7 @@ import AppKit
 class PadNode: BaseNode {
 
     var pad: Pad {
-        didSet {
-            invalidateContentBoundingBox()
-            onNeedsRedraw?()
-        }
+        didSet { invalidateContentBoundingBox() }
     }
 
     // --- THIS IS THE CORRECTED LOGIC ---

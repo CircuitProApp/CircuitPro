@@ -30,7 +30,6 @@ final class SchematicGraphNode: BaseNode {
                     vertexNode.isInDebugMode = showAllVertices
                 }
             }
-            onNeedsRedraw?()
         }
     }
 
@@ -69,10 +68,6 @@ final class SchematicGraphNode: BaseNode {
             let wireNode = WireNode(edgeID: edge.id, graph: graph)
             self.addChild(wireNode)
         }
-        
-        // 3. Crucially, signal to the canvas that this part of the scene has changed
-        // and needs to be redrawn in the next render pass.
-        self.onNeedsRedraw?()
     }
     
     override func nodes(intersecting rect: CGRect) -> [BaseNode] {

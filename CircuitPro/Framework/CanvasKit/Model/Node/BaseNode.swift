@@ -21,10 +21,6 @@ class BaseNode: CanvasNode {
     weak var parent: BaseNode?
     var children: [BaseNode] = []
     
-    /// A callback closure that the node can trigger to notify the canvas that it needs to be redrawn.
-    /// This is set by the CanvasController when the node is added to the scene.
-    var onNeedsRedraw: (() -> Void)?
-    
     var isVisible: Bool = true
     
     private var _cachedLocalContentBoundingBox: CGRect?

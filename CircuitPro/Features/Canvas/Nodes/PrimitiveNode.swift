@@ -10,11 +10,7 @@ import SwiftUI
 @Observable
 class PrimitiveNode: BaseNode, Layerable {
     
-    var primitive: AnyCanvasPrimitive {
-        didSet {
-            onNeedsRedraw?()
-        }
-    }
+    var primitive: AnyCanvasPrimitive
     
     // MARK: - Protocol Conformances
     
@@ -96,8 +92,5 @@ extension PrimitiveNode: HandleEditable {
         // AnyPrimitive is a value type (enum), so calling a mutating method
         // on the 'primitive' property modifies it in place.
         primitive.updateHandle(kind, to: position, opposite: frozenOpposite)
-        
-        // Trigger a redraw to reflect the change.
-        self.onNeedsRedraw?()
     }
 }

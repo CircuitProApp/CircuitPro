@@ -36,7 +36,6 @@ final class CanvasController {
     
     // MARK: - Callbacks to Owner
     
-    var onNeedsRedraw: (() -> Void)?
     var onSelectionChanged: ((Set<UUID>) -> Void)?
     var onNodesChanged: (([BaseNode]) -> Void)?
     
@@ -74,10 +73,6 @@ final class CanvasController {
         layers: [CanvasLayer],
         activeLayerId: UUID?
     ) {
-        
-        nodes.forEach { node in
-            node.onNeedsRedraw = self.redraw
-        }
         
         let currentNodeIDs = Set(self.sceneRoot.children.map { $0.id })
         let newNodeIDs = Set(nodes.map { $0.id })
@@ -135,11 +130,6 @@ final class CanvasController {
         )
     }
     
-    /// Notifies the owner that the view needs to be redrawn.
-    func redraw() {
-        onNeedsRedraw?()
-    }
-    
     /// Allows interactions to update the current selection.
     func setSelection(to nodes: [BaseNode]) {
         self.selectedNodes = nodes
@@ -149,13 +139,11 @@ final class CanvasController {
     /// Allows interactions to update the temporary highlight state.
     func setInteractionHighlight(nodeIDs: Set<UUID>) {
         self.interactionHighlightedNodeIDs = nodeIDs
-        redraw()
     }
     
     /// Allows interactions to modify the environment and trigger a redraw.
     func updateEnvironment(_ block: (inout CanvasEnvironmentValues) -> Void) {
         block(&environment)
-        redraw()
     }
     
     /// Recursively finds a node in the scene graph.

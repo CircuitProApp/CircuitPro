@@ -55,9 +55,6 @@ final class ProjectManager {
         return LayoutEditorController(projectManager: self)
     }()
     
-    /// A temporary placeholder for layout nodes until the LayoutEditorController is created.
-    var layoutCanvasNodes: [BaseNode] = [] // Will be removed
-
     // MARK: - Global UI State
     
     var selectedNodeIDs: Set<UUID> = []

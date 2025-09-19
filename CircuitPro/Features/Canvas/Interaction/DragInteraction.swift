@@ -117,7 +117,7 @@ final class DragInteraction: CanvasInteraction {
             }
         }
 
-        controller.redraw()
+ 
     }
     
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {

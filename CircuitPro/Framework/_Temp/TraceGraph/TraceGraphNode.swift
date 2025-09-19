@@ -38,8 +38,6 @@ final class TraceGraphNode: BaseNode {
         for node in sortedNodes {
             self.addChild(node)
         }
-        
-        self.onNeedsRedraw?()
     }
     
     override func nodes(intersecting rect: CGRect) -> [BaseNode] {

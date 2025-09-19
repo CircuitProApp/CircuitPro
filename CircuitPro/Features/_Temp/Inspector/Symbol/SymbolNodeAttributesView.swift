@@ -210,8 +210,5 @@ struct SymbolNodeAttributesView: View {
                 .clipAndStroke(with: .rect(cornerRadius: 8))
             }
         }
-        .onChange(of: component) {
-            symbolNode.onNeedsRedraw?()
-        }
     }
 }

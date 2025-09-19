@@ -43,11 +43,9 @@ final class CanvasInputHandler {
             
             // MODIFIED: Pass the `event` to the mouseDown method.
             if interaction.mouseDown(with: event, at: pointToUse, context: context, controller: controller) {
-                controller.redraw()
                 return // Event consumed.
             }
         }
-        controller.redraw()
     }
 
     func mouseDragged(_ event: NSEvent, in host: CanvasHostView) {
@@ -63,7 +61,6 @@ final class CanvasInputHandler {
 
             interaction.mouseDragged(to: pointToUse, context: context, controller: controller)
         }
-        controller.redraw()
     }
 
     func mouseUp(_ event: NSEvent, in host: CanvasHostView) {
@@ -79,7 +76,6 @@ final class CanvasInputHandler {
 
             interaction.mouseUp(at: pointToUse, context: context, controller: controller)
         }
-        controller.redraw()
     }
     
     // MARK: - Passthrough Events
@@ -89,11 +85,9 @@ final class CanvasInputHandler {
         // Render layers that need a processed version (like a preview) can get it
         // from the context during their update pass.
         controller.mouseLocation = host.convert(event.locationInWindow, from: nil)
-        controller.redraw()
     }
 
     func mouseExited() {
-        controller.redraw()
     }
     
     func keyDown(_ event: NSEvent, in host: CanvasHostView) -> Bool {
@@ -102,7 +96,7 @@ final class CanvasInputHandler {
         for interaction in controller.interactions {
             if interaction.keyDown(with: event, context: context, controller: controller) {
                 // The interaction handled the key.
-                controller.redraw()
+       
                 return true // Report that the event WAS handled.
             }
         }

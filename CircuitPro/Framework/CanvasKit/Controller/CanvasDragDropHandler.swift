@@ -39,14 +39,12 @@ final class CanvasDragDropHandler {
         let rawPoint = host.convert(sender.draggingLocation, from: nil)
 
         controller.mouseLocation = rawPoint
-        controller.redraw()
         
         return .copy
     }
 
     func draggingExited(_ sender: NSDraggingInfo?, in host: CanvasHostView) {
         controller.mouseLocation = nil
-        controller.redraw()
     }
 
     func performDragOperation(_ sender: NSDraggingInfo, in host: CanvasHostView) -> Bool {
@@ -60,7 +58,6 @@ final class CanvasDragDropHandler {
         let success = controller.onPasteboardDropped?(sender.draggingPasteboard, processedPoint) ?? false
         
         controller.mouseLocation = nil
-        controller.redraw()
         
         return success
     }

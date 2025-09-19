@@ -14,9 +14,7 @@ final class FootprintNode: BaseNode {
     
     // MARK: - Properties
     
-    var instance: FootprintInstance {
-        didSet { onNeedsRedraw?() }
-    }
+    var instance: FootprintInstance
     
     // The FootprintNode itself is the selectable entity.
     override var isSelectable: Bool { true }
@@ -25,18 +23,12 @@ final class FootprintNode: BaseNode {
     
     override var position: CGPoint {
         get { instance.position }
-        set {
-            instance.position = newValue
-            onNeedsRedraw?()
-        }
+        set { instance.position = newValue }
     }
     
     override var rotation: CGFloat {
         get { instance.rotation }
-        set {
-            instance.rotation = newValue
-            onNeedsRedraw?()
-        }
+        set { instance.rotation = newValue }
     }
     
     // MARK: - Initialization
@@ -68,7 +60,6 @@ final class FootprintNode: BaseNode {
         
         for child in self.children {
             child.parent = self
-            child.onNeedsRedraw = { [weak self] in self?.onNeedsRedraw?() }
         }
     }
     

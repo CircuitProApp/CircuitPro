@@ -127,14 +127,10 @@ struct CanvasView: NSViewRepresentable {
     // MARK: - NSViewRepresentable Lifecycle
 
     func makeNSView(context: Context) -> NSScrollView {
-        // ... (This function is unchanged) ...
         let coordinator = context.coordinator
         let canvasHostView = CanvasHostView(controller: coordinator.canvasController, registeredDraggedTypes: self.registeredDraggedTypes)
         let scrollView = CenteringNSScrollView()
         
-        coordinator.canvasController.onNeedsRedraw = { [weak canvasHostView] in
-            canvasHostView?.performLayerUpdate()
-        }
         
         scrollView.documentView = canvasHostView
         scrollView.hasHorizontalScroller = true
