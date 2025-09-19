@@ -1,9 +1,4 @@
-//
-//  NetNavigatorView.swift
-//  CircuitPro
-//
-//  Created by Giorgi Tchelidze on 7/22/25.
-//
+// Features/Workspace/Navigator/NetNavigatorView.swift (Corrected)
 
 import SwiftUI
 
@@ -14,7 +9,10 @@ struct NetNavigatorView: View {
     
     var body: some View {
         
-        let sortedNets = projectManager.schematicGraph.nets().sorted {
+        // MODIFICATION: Access schematicGraph through the new controller.
+        let graph = projectManager.schematicController.schematicGraph
+        
+        let sortedNets = graph.nets().sorted {
             $0.name.localizedStandardCompare($1.name) == .orderedAscending
         }
         
@@ -26,8 +24,6 @@ struct NetNavigatorView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            
-            
             List(sortedNets, id: \.id, selection: $projectManager.selectedNetIDs) { net in
                 Text(net.name)
                     .frame(height: 14)
@@ -37,14 +33,14 @@ struct NetNavigatorView: View {
             .scrollContentBackground(.hidden)
             .environment(\.defaultMinListRowHeight, 14)
             .onChange(of: projectManager.selectedNetIDs) { _, newSelection in
-                // 2. Use the new `component(for:)` helper for a cleaner implementation.
+                // MODIFICATION: Use the same `graph` variable for consistency.
                 let allEdgesOfSelectedNets = newSelection.flatMap { netID in
-                    projectManager.schematicGraph.component(for: netID).edges
+                    graph.component(for: netID).edges
                 }
                 
                 // Preserve any selected symbols (which are not edges).
                 let currentSymbolSelection = projectManager.selectedNodeIDs.filter {
-                    projectManager.schematicGraph.edges[$0] == nil
+                    graph.edges[$0] == nil
                 }
                 
                 // Set the main selection to be the selected symbols plus the edges from the selected nets.

@@ -26,7 +26,7 @@ struct SchematicCanvasView: View {
     var body: some View {
         CanvasView(
             viewport: $canvasManager.viewport,
-            nodes: $projectManager.activeCanvasNodes,
+            nodes: projectManager.activeCanvasNodes,
             selection: $projectManager.selectedNodeIDs,
             tool: $selectedTool.unwrapping(withDefault: defaultTool),
             environment: canvasManager.environment,
@@ -58,34 +58,6 @@ struct SchematicCanvasView: View {
             SchematicToolbarView(selectedSchematicTool: $selectedTool)
                 .padding(16)
         }
-        .onAppear {
-            projectManager.rebuildActiveCanvasNodes()
-            projectManager.schematicGraph.onModelDidChange = {
-                projectManager.persistSchematicGraph()
-                projectManager.document.scheduleAutosave()
-            }
-        }
-        .onChange(of: projectManager.componentInstances) {
-            for instance in projectManager.componentInstances {
-                guard let symbolDef = instance.definition?.symbol else { continue }
-                projectManager.schematicGraph.syncPins(
-                    for: instance.symbolInstance,
-                    of: symbolDef,
-                    ownerID: instance.id
-                )
-            }
-            projectManager.persistSchematicGraph()
-            projectManager.document.scheduleAutosave()
-        }
-        .onChange(of: projectManager.activeCanvasNodes) {
-            syncProjectManagerFromNodes()
-        }
-        // Rebuild the schematic canvas when pending manual-ECO changes are recorded/updated
-        .onChange(of: pendingStamp) { _ in
-            if projectManager.selectedEditor == .schematic {
-                projectManager.rebuildActiveCanvasNodes()
-            }
-        }
     }
     
     private func syncProjectManagerFromNodes() {
@@ -98,7 +70,7 @@ struct SchematicCanvasView: View {
         
         if !missingComponentIDs.isEmpty {
             for componentID in missingComponentIDs {
-                projectManager.schematicGraph.releasePins(for: componentID)
+                projectManager.schematicController.schematicGraph.releasePins(for: componentID)
             }
             projectManager.selectedDesign?.componentInstances.removeAll { missingComponentIDs.contains($0.id) }
         }
@@ -143,15 +115,15 @@ struct SchematicCanvasView: View {
         projectManager.componentInstances = currentInstances
         
         // Update the wire graph immediately so pins exist at the right place
-        projectManager.schematicGraph.syncPins(
+        projectManager.schematicController.schematicGraph.syncPins(
             for: newSymbolInstance,
             of: symbolDefinition,
             ownerID: newComponentInstance.id
         )
         
         // Put a SymbolNode into canvasNodes right away (no full rebuild needed)
-        projectManager.upsertSymbolNode(for: newComponentInstance)
-        
+//        projectManager.schematicController.upsertSymbolNode(for: newComponentInstance)
+//        
         projectManager.document.scheduleAutosave()
         return true
     }

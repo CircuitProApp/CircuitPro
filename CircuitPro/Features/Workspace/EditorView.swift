@@ -60,9 +60,6 @@ struct EditorView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(selectedCanvasManager)
-        .onChange(of: projectManager.selectedEditor) {
-            projectManager.rebuildActiveCanvasNodes()
-        }
     }
 
     private var editorSelection: some View {

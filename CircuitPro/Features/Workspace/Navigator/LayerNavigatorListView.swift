@@ -24,10 +24,10 @@ struct LayerNavigatorListView: View {
     // 1) Gate selection writes so invalid IDs never land
     private var validatedSelection: Binding<UUID?> {
         Binding(
-            get: { projectManager.activeLayerId },
+            get: { projectManager.layoutController.activeLayerId },
             set: { newValue in
                 guard shouldAcceptSelection(newValue) else { return }
-                projectManager.activeLayerId = newValue
+                projectManager.layoutController.activeLayerId = newValue
             }
         )
     }
@@ -97,11 +97,11 @@ struct LayerNavigatorListView: View {
         guard isTraceToolActive else { return }
         let allLayers = groupedLayers.values.flatMap { $0 }
 
-        if let activeId = projectManager.activeLayerId,
+        if let activeId = projectManager.layoutController.activeLayerId,
            let activeLayer = allLayers.first(where: { $0.id == activeId }),
            activeLayer.isTraceable {
             return
         }
-        projectManager.activeLayerId = allLayers.first(where: { $0.isTraceable })?.id
+        projectManager.layoutController.activeLayerId = allLayers.first(where: { $0.isTraceable })?.id
     }
 }

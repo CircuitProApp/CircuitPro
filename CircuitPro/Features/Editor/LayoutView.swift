@@ -6,23 +6,14 @@ struct LayoutView: View {
     
     @Bindable var canvasManager: CanvasManager
     
-    // --- REMOVED: Local state for the selected tool. ---
-    // @State private var selectedTool: CanvasTool = CursorTool()
-    let defaultTool: CanvasTool = CursorTool()
-    
-    // --- REMOVED: Local state for canvas layers. ---
-    // @State private var canvasLayers: [CanvasLayer] = []
-    
     var body: some View {
         CanvasView(
             viewport: $canvasManager.viewport,
-            nodes: $projectManager.activeCanvasNodes,
+            nodes: projectManager.activeCanvasNodes,
             selection: $projectManager.selectedNodeIDs,
-            // --- MODIFIED: Bind the tool directly to the project manager. ---
-            tool: $projectManager.selectedTool.unwrapping(withDefault: defaultTool),
-            // --- MODIFIED: Bind layers directly to the project manager. ---
-            layers: $projectManager.activeCanvasLayers,
-            activeLayerId: $projectManager.activeLayerId,
+            tool: $projectManager.selectedTool.unwrapping(withDefault: CursorTool()),
+            layers: $projectManager.layoutController.canvasLayers,
+            activeLayerId: $projectManager.layoutController.activeLayerId,
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
@@ -57,15 +48,6 @@ struct LayoutView: View {
   
             
         }
-        .onAppear {
-              // This call now rebuilds both nodes AND layers inside the project manager.
-              projectManager.rebuildActiveCanvasNodes()
-          }
-          .onChange(of: projectManager.selectedDesign) {
-              // This triggers a rebuild for the new design.
-              projectManager.rebuildActiveCanvasNodes()
-          }
-        // --- REMOVED: The onChange for the local selectedTool is no longer needed. ---
     }
     
     private func handlePlacementDrop(pasteboard: NSPasteboard, location: CGPoint) -> Bool {

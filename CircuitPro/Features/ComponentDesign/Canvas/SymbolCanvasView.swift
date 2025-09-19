@@ -26,7 +26,7 @@ struct SymbolCanvasView: View {
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
                 viewport: $canvasManager.viewport,
-                nodes: $symbolEditor.canvasNodes,
+                nodes: symbolEditor.canvasNodes,
                 selection: $symbolEditor.selectedElementIDs,
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
                 environment: canvasManager.environment,

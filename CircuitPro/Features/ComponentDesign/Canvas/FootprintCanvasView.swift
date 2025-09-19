@@ -21,7 +21,7 @@ struct FootprintCanvasView: View {
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
                 viewport: $canvasManager.viewport,
-                nodes: $footprintEditor.canvasNodes,
+                nodes: footprintEditor.canvasNodes,
                 selection: $footprintEditor.selectedElementIDs,
                 tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
                 layers: $footprintEditor.layers,
