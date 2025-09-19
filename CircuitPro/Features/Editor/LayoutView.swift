@@ -4,8 +4,6 @@ struct LayoutView: View {
     @BindableEnvironment(\.projectManager)
     private var projectManager
     
-    var document: CircuitProjectFileDocument
-    
     @Bindable var canvasManager: CanvasManager
     
     // --- REMOVED: Local state for the selected tool. ---
@@ -47,7 +45,7 @@ struct LayoutView: View {
             snapProvider: CircuitProSnapProvider(),
             registeredDraggedTypes: [.transferablePlacement],
             onPasteboardDropped: handlePlacementDrop,
-            onModelDidChange: { document.scheduleAutosave() }
+            onModelDidChange: { projectManager.document.scheduleAutosave() }
         )
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero

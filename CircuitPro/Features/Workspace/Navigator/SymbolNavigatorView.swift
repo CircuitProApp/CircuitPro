@@ -9,8 +9,6 @@ struct SymbolNavigatorView: View {
     
     @BindableEnvironment(\.projectManager)
     private var projectManager
-    
-    var document: CircuitProjectFileDocument
 
     // Stamp changes when pending records are added/updated/removed
     private var pendingStamp: Int {
@@ -23,7 +21,7 @@ struct SymbolNavigatorView: View {
         idsToRemove = isMultiSelect ? selected : [componentInstance.id]
         projectManager.selectedDesign?.componentInstances.removeAll { idsToRemove.contains($0.id) }
         selected.subtract(idsToRemove)
-        document.scheduleAutosave()
+        projectManager.document.scheduleAutosave()
     }
     
     var body: some View {

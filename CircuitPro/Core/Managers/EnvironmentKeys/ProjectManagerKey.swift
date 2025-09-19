@@ -11,7 +11,7 @@ private struct ProjectManagerKey: EnvironmentKey {
     @MainActor
     static var defaultValue: ProjectManager {
         ProjectManager(
-            project: .init(name: "Untitled", designs: [])
+            document: .init(newWithName: "")
         )
     }
 }

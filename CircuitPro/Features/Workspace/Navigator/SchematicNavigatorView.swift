@@ -9,8 +9,6 @@ import SwiftUI
 
 struct SchematicNavigatorView: View {
 
-    var document: CircuitProjectFileDocument
-
     enum SchematicNavigatorTab: CaseIterable, Displayable {
         case symbols
         case nets
@@ -60,11 +58,11 @@ struct SchematicNavigatorView: View {
 
             switch selectedTab {
             case .symbols:
-                SymbolNavigatorView(document: document)
+                SymbolNavigatorView()
                     .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .leading)))
        
             case .nets:
-                NetNavigatorView(document: document)
+                NetNavigatorView()
                     .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .trailing)))
             }
         }

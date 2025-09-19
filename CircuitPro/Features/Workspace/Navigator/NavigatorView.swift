@@ -10,13 +10,12 @@ import SwiftUI
 struct NavigatorView: View {
 
     @State private var selectedTab: NavigatorTab = .projectNavigator
-    var document: CircuitProjectFileDocument
 
     var body: some View {
         SidebarView(selectedTab: $selectedTab, availableTabs: [.projectNavigator]) {
             switch selectedTab {
             case .projectNavigator:
-                ProjectNavigatorView(document: document)
+                ProjectNavigatorView()
             default:
                 Group {
                     Text("Default")

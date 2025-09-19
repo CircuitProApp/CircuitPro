@@ -16,12 +16,12 @@ public struct DesignNavigatorView: View {
 
     @State private var isExpanded: Bool = true
 
-    var document: CircuitProjectFileDocument
+
 
     public var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
             List(
-                $projectManager.project.designs,
+                $projectManager.document.model.designs,
                 id: \.self,
                 selection: $projectManager.selectedDesign
             ) { $design in
@@ -30,7 +30,7 @@ public struct DesignNavigatorView: View {
                     TextField("Design Name", text: $design.name)
                         .textFieldStyle(.plain)
                         .onSubmit {
-                            document.renameDesign(design, undoManager: undoManager)
+                            projectManager.document.renameDesign(design, undoManager: undoManager)
                         }
                 }
                 .controlSize(.small)
@@ -41,7 +41,7 @@ public struct DesignNavigatorView: View {
                         if projectManager.selectedDesign == design {
                             projectManager.selectedDesign = nil
                         }
-                        document.deleteDesign(design, undoManager: undoManager)
+                        projectManager.document.deleteDesign(design, undoManager: undoManager)
 
                     }
                 }
@@ -53,7 +53,7 @@ public struct DesignNavigatorView: View {
             .overlay {
                 if projectManager.project.designs.isEmpty {
                     Button("Create a Design") {
-                        document.addNewDesign(undoManager: undoManager)
+                        projectManager.document.addNewDesign(undoManager: undoManager)
 //                        projectManager.selectedDesign = projectManager.project.designs.first!
                     }
                 }
@@ -86,7 +86,7 @@ public struct DesignNavigatorView: View {
 
                 Spacer()
                 Button {
-                    document.addNewDesign(undoManager: undoManager)
+                    projectManager.document.addNewDesign(undoManager: undoManager)
                 } label: {
                     Image(systemName: CircuitProSymbols.Generic.plus)
                 }

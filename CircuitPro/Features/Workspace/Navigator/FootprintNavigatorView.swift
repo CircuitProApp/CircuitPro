@@ -9,9 +9,6 @@ import SwiftUI
 
 struct FootprintNavigatorView: View {
     @BindableEnvironment(\.projectManager) private var projectManager
-    // @Environment(\.editMode) var editMode // Removed: 'editMode' is unavailable on macOS
-
-    var document: CircuitProjectFileDocument // Added for autosave
 
     private var unplacedComponents: [ComponentInstance] {
         projectManager.componentInstances.filter {
@@ -44,7 +41,7 @@ struct FootprintNavigatorView: View {
         
         projectManager.selectedDesign?.componentInstances.removeAll { idsToRemove.contains($0.id) }
         selected.subtract(idsToRemove) // Clear selection for deleted items
-        document.scheduleAutosave()
+        projectManager.document.scheduleAutosave()
     }
 
     var body: some View {

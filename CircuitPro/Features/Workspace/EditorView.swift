@@ -13,8 +13,6 @@ struct EditorView: View {
     @Environment(\.projectManager)
     private var projectManager
 
-    var document: CircuitProjectFileDocument
-
     @State private var showUtilityArea: Bool = true
 
     @State private var schematicCanvasManager = CanvasManager()
@@ -47,9 +45,9 @@ struct EditorView: View {
                 } else {
                     switch selectedEditor {
                     case .schematic:
-                        SchematicCanvasView(document: document, canvasManager: selectedCanvasManager)
+                        SchematicCanvasView(canvasManager: selectedCanvasManager)
                     case .layout:
-                        LayoutView(document: document, canvasManager: selectedCanvasManager)
+                        LayoutView(canvasManager: selectedCanvasManager)
        
                     }
                 }
@@ -62,7 +60,6 @@ struct EditorView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(selectedCanvasManager)
-        // --- ADDED: Trigger rebuild when the editor changes ---
         .onChange(of: projectManager.selectedEditor) {
             projectManager.rebuildActiveCanvasNodes()
         }

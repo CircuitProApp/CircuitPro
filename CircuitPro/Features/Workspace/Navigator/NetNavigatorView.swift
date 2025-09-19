@@ -12,8 +12,6 @@ struct NetNavigatorView: View {
     @BindableEnvironment(\.projectManager)
     private var projectManager
     
-    var document: CircuitProjectFileDocument
-    
     var body: some View {
         
         let sortedNets = projectManager.schematicGraph.nets().sorted {

@@ -16,8 +16,6 @@ struct WorkspaceView: View {
     private var syncManager: SyncManager {
         projectManager.syncManager
     }
-
-    var document: CircuitProjectFileDocument
     
     @State private var showInspector: Bool = false
     @State private var showFeedbackSheet: Bool = false
@@ -74,10 +72,10 @@ struct WorkspaceView: View {
     
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            NavigatorView(document: document)
+            NavigatorView()
                 .navigationSplitViewColumnWidth(min: 240, ideal: 240, max: 320)
         } detail: {
-            EditorView(document: document)
+            EditorView()
                 .frame(minWidth: 320)
                 .sheet(isPresented: $showFeedbackSheet) {
                     FeedbackFormView()

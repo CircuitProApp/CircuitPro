@@ -24,7 +24,12 @@ struct RenderableText {
 @Observable
 final class ProjectManager {
     
-    var project: CircuitProject
+    var document: CircuitProjectFileDocument
+    
+    var project: CircuitProject {
+        document.model
+    }
+    
     var selectedDesign: CircuitDesign? {
         didSet { activeLayerId = nil }
     }
@@ -52,11 +57,11 @@ final class ProjectManager {
     /// Note: `syncManager` is optional with a nil default to avoid constructing a @MainActor
     /// type in a nonisolated default-argument context. We initialize it inside the body.
     init(
-        project: CircuitProject,
+        document: CircuitProjectFileDocument,
         selectedDesign: CircuitDesign? = nil,
         syncManager: SyncManager? = nil
     ) {
-        self.project        = project
+        self.document        = document
         self.selectedDesign = selectedDesign
         self.syncManager    = syncManager ?? SyncManager()
     }

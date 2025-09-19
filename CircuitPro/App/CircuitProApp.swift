@@ -31,9 +31,9 @@ struct CircuitProApp: App {
 
         WindowGroup(for: DocumentID.self) { $docID in
             if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {
-                WorkspaceView(document: doc)
+                WorkspaceView()
                     .packContainer(packManager)
-                    .environment(\.projectManager, ProjectManager(project: doc.model))
+                    .environment(\.projectManager, ProjectManager(document: doc))
                     .focusedSceneValue(\.activeDocumentID, id)
                     .onReceive(doc.objectWillChange) { _ in
                         doc.scheduleAutosave()

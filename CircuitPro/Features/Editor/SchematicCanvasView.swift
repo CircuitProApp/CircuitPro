@@ -13,7 +13,6 @@ struct SchematicCanvasView: View {
     @BindableEnvironment(\.projectManager) private var projectManager
     @PackManager private var packManager
     
-    var document: CircuitProjectFileDocument
     @Bindable var canvasManager: CanvasManager
     
     @State private var selectedTool: CanvasTool = CursorTool()
@@ -50,7 +49,7 @@ struct SchematicCanvasView: View {
             snapProvider: CircuitProSnapProvider(),
             registeredDraggedTypes: [.transferableComponent],
             onPasteboardDropped: handleComponentDrop,
-            onModelDidChange: { document.scheduleAutosave() }
+            onModelDidChange: { projectManager.document.scheduleAutosave() }
         )
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
@@ -63,7 +62,7 @@ struct SchematicCanvasView: View {
             projectManager.rebuildActiveCanvasNodes()
             projectManager.schematicGraph.onModelDidChange = {
                 projectManager.persistSchematicGraph()
-                document.scheduleAutosave()
+                projectManager.document.scheduleAutosave()
             }
         }
         .onChange(of: projectManager.componentInstances) {
@@ -76,7 +75,7 @@ struct SchematicCanvasView: View {
                 )
             }
             projectManager.persistSchematicGraph()
-            document.scheduleAutosave()
+            projectManager.document.scheduleAutosave()
         }
         .onChange(of: projectManager.activeCanvasNodes) {
             syncProjectManagerFromNodes()
@@ -153,7 +152,7 @@ struct SchematicCanvasView: View {
         // Put a SymbolNode into canvasNodes right away (no full rebuild needed)
         projectManager.upsertSymbolNode(for: newComponentInstance)
         
-        document.scheduleAutosave()
+        projectManager.document.scheduleAutosave()
         return true
     }
 }

@@ -9,12 +9,6 @@ import SwiftUI
 
 struct LayoutNavigatorView: View {
 
-    var document: CircuitProjectFileDocument
-
-    init(document: CircuitProjectFileDocument) {
-        self.document = document
-    }
-
     // --- MODIFIED: Renamed tabs to be more accurate ---
     enum LayoutNavigatorTab: String, Displayable, CaseIterable {
         case footprints
@@ -61,7 +55,7 @@ struct LayoutNavigatorView: View {
             // --- MODIFIED: Switch now uses the new, dedicated views ---
             switch selectedTab {
             case .footprints:
-                FootprintNavigatorView(document: document)
+                FootprintNavigatorView()
                     .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .leading)))
        
             case .layers:
