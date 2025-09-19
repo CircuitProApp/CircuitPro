@@ -40,7 +40,6 @@ struct ToolInteraction: CanvasInteraction {
             graph.connect(from: request.from, to: request.to, preferring: request.strategy)
 
             schematicGraphNode.syncChildNodesFromModel()
-            controller.onModelDidChange?()
             return true
             
         } else if let request = newNode as? TraceRequestNode {
@@ -67,15 +66,11 @@ struct ToolInteraction: CanvasInteraction {
             // new TraceNodes can have their colors resolved correctly.
             traceGraphNode.syncChildNodesFromModel(canvasLayers: context.layers)
             
-            // 5. Notify the system that the model has changed (for autosave, etc.).
-            controller.onModelDidChange?()
             return true
             
         } else {
             // Handle standard nodes that are not requests.
             controller.sceneRoot.addChild(newNode)
-            controller.onNodesChanged?(controller.sceneRoot.children)
-            controller.onModelDidChange?()
         }
         
         return true

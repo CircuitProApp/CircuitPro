@@ -27,7 +27,6 @@ struct CanvasView: NSViewRepresentable {
     
     let registeredDraggedTypes: [NSPasteboard.PasteboardType]
     let onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
-    var onModelDidChange: (() -> Void)?
     var onCanvasChange: ((CanvasChangeContext) -> Void)?
 
     // MODIFICATION 2: Updated initializer to accept a plain `[BaseNode]`.
@@ -45,7 +44,6 @@ struct CanvasView: NSViewRepresentable {
         snapProvider: any SnapProvider = NoOpSnapProvider(),
         registeredDraggedTypes: [NSPasteboard.PasteboardType] = [],
         onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil,
-        onModelDidChange: (() -> Void)? = {}
     ) {
         self._viewport = viewport
         self.nodes = nodes // Standard assignment
@@ -60,7 +58,6 @@ struct CanvasView: NSViewRepresentable {
         self.snapProvider = snapProvider
         self.registeredDraggedTypes = registeredDraggedTypes
         self.onPasteboardDropped = onPasteboardDropped
-        self.onModelDidChange = onModelDidChange
     }
 
     // MARK: - Coordinator
@@ -119,7 +116,6 @@ struct CanvasView: NSViewRepresentable {
         )
         // ... (wiring up other callbacks is unchanged) ...
         coordinator.canvasController.onPasteboardDropped = self.onPasteboardDropped
-        coordinator.canvasController.onModelDidChange = self.onModelDidChange
         coordinator.canvasController.onCanvasChange = self.onCanvasChange
         return coordinator
     }

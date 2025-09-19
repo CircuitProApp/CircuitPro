@@ -37,13 +37,9 @@ final class CanvasController {
     // MARK: - Callbacks to Owner
     
     var onSelectionChanged: ((Set<UUID>) -> Void)?
-    var onNodesChanged: (([BaseNode]) -> Void)?
     
     // New consolidated callback
     var onCanvasChange: ((CanvasChangeContext) -> Void)?
-    
-    /// A generic callback to notify the owner that a persistent model was mutated.
-    var onModelDidChange: (() -> Void)?
     
     var onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
     
@@ -85,7 +81,6 @@ final class CanvasController {
             let baseNodeChildren = sceneRoot.children.compactMap {
                 $0 as? BaseNode
             }
-            onNodesChanged?(baseNodeChildren)
         }
         
         let currentSelectedIDsInController = Set(

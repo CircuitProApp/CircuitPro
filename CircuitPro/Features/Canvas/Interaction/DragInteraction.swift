@@ -134,7 +134,6 @@ final class DragInteraction: CanvasInteraction {
                     textNode.commitChanges()
                 }
             }
-            controller.onModelDidChange?()
         }
         
         self.state = nil

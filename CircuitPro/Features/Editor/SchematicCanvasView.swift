@@ -48,8 +48,7 @@ struct SchematicCanvasView: View {
             inputProcessors: [ GridSnapProcessor() ],
             snapProvider: CircuitProSnapProvider(),
             registeredDraggedTypes: [.transferableComponent],
-            onPasteboardDropped: handleComponentDrop,
-            onModelDidChange: { projectManager.document.scheduleAutosave() }
+            onPasteboardDropped: handleComponentDrop
         )
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
@@ -123,7 +122,7 @@ struct SchematicCanvasView: View {
         
         // Put a SymbolNode into canvasNodes right away (no full rebuild needed)
 //        projectManager.schematicController.upsertSymbolNode(for: newComponentInstance)
-//        
+//
         projectManager.document.scheduleAutosave()
         return true
     }

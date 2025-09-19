@@ -24,9 +24,7 @@ final class SchematicEditorController: EditorController {
             projectManager: projectManager,
             schematicGraph: self.schematicGraph
         )
-        self.schematicGraph.onModelDidChange = { [weak self] in
-            self?.persistGraph()
-        }
+
         startTrackingModelChanges()
         
         Task {

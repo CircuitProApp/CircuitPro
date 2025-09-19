@@ -35,8 +35,7 @@ struct LayoutView: View {
             inputProcessors: [ GridSnapProcessor() ],
             snapProvider: CircuitProSnapProvider(),
             registeredDraggedTypes: [.transferablePlacement],
-            onPasteboardDropped: handlePlacementDrop,
-            onModelDidChange: { projectManager.document.scheduleAutosave() }
+            onPasteboardDropped: handlePlacementDrop
         )
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero

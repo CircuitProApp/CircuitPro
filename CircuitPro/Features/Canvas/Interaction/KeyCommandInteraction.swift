@@ -75,8 +75,6 @@ struct KeyCommandInteraction: CanvasInteraction {
         
         // Add the new node to the scene and notify the document of the change.
         controller.sceneRoot.addChild(newNode)
-        controller.onNodesChanged?(controller.sceneRoot.children)
-        controller.onModelDidChange?()
         
         return true
     }
@@ -102,10 +100,6 @@ struct KeyCommandInteraction: CanvasInteraction {
         // Clear the selection.
         controller.setSelection(to: [])
         
-        // Propagate changes back to SwiftUI state and the document.
-        controller.onNodesChanged?(controller.sceneRoot.children)
-        controller.onModelDidChange?()
-        
         return true
     }
     
@@ -129,9 +123,6 @@ struct KeyCommandInteraction: CanvasInteraction {
             // Example: Rotate by 90 degrees (π/2 radians).
             node.rotation += .pi / 2
         }
-        
-        // Notify the document that the model has changed.
-        controller.onModelDidChange?()
         
         return true
     }
