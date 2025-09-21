@@ -1,7 +1,6 @@
-// Features/Editor/SchematicEditorController.swift (Corrected)
-
 import SwiftUI
 import Observation
+import SwiftDataPacks // Add this import
 
 @MainActor
 @Observable
@@ -9,11 +8,12 @@ final class SchematicEditorController: EditorController {
     
     private(set) var nodes: [BaseNode] = []
     
+    var selectedTool: CanvasTool = CursorTool()
+    
     private let projectManager: ProjectManager
     private let document: CircuitProjectFileDocument
     private let nodeProvider: SchematicNodeProvider
     
-    // MODIFICATION 1: Made internal (by removing `private`) so other views can access it.
     let schematicGraph: WireGraph
 
     init(projectManager: ProjectManager) {
@@ -28,8 +28,8 @@ final class SchematicEditorController: EditorController {
         startTrackingModelChanges()
         
         Task {
-                await self.rebuildNodes()
-            }
+            await self.rebuildNodes()
+        }
     }
 
     private func startTrackingModelChanges() {
@@ -39,25 +39,20 @@ final class SchematicEditorController: EditorController {
             _ = projectManager.syncManager.pendingChanges
         } onChange: {
             Task { @MainActor in
-                // MODIFICATION 2: We now `await` the async rebuild function.
                 await self.rebuildNodes()
-                
-                // The recursive call must happen *after* the await is complete.
                 self.startTrackingModelChanges()
             }
         }
     }
     
-    // MODIFICATION 2: Marked the function as `async`.
     private func rebuildNodes() async {
         guard let design = projectManager.selectedDesign else {
             self.nodes = []
             return
         }
         
+        // This is where the graph is automatically synced on every rebuild.
         let context = BuildContext(activeLayers: [])
-        
-        // The `Task { }` wrapper is removed. We just `await` the call directly.
         self.nodes = await nodeProvider.buildNodes(from: design, context: context)
     }
     
@@ -69,5 +64,50 @@ final class SchematicEditorController: EditorController {
         guard let design = projectManager.selectedDesign else { return }
         design.wires = schematicGraph.toWires()
         document.scheduleAutosave()
+    }
+    
+    // MARK: - Public Actions
+    
+    /// Handles dropping a new component onto the canvas from a library.
+    /// This logic was moved from SchematicCanvasView.
+    func handleComponentDrop(
+        from transferable: TransferableComponent,
+        at location: CGPoint,
+        packManager: SwiftDataPackManager
+    ) -> Bool {
+        guard projectManager.selectedDesign != nil else { return false }
+        
+        var fetchDescriptor = FetchDescriptor<ComponentDefinition>(predicate: #Predicate { $0.uuid == transferable.componentUUID })
+        fetchDescriptor.relationshipKeyPathsForPrefetching = [\.symbol]
+        let fullLibraryContext = ModelContext(packManager.mainContainer)
+        
+        guard let componentDefinition = (try? fullLibraryContext.fetch(fetchDescriptor))?.first,
+                let symbolDefinition = componentDefinition.symbol else {
+              return false
+          }
+        
+        // 1. THE FIX for SymbolInstance
+        // We now correctly pass the `definitionUUID` from the symbol's definition.
+        let newSymbolInstance = SymbolInstance(
+            definitionUUID: symbolDefinition.uuid,
+            definition: symbolDefinition,
+            position: location
+        )
+        
+        // 2. THE FIX for ComponentInstance
+        // We now correctly pass the `definitionUUID` from the component's definition
+        // and the `symbolInstance` we just created.
+        let newComponentInstance = ComponentInstance(
+            definitionUUID: componentDefinition.uuid,
+            definition: componentDefinition,
+            symbolInstance: newSymbolInstance
+        )
+        
+        // This part is already correct. We just mutate the model.
+        projectManager.componentInstances.append(newComponentInstance)
+        
+        // The @Observable chain will automatically handle the rest.
+        projectManager.document.scheduleAutosave()
+        return true
     }
 }

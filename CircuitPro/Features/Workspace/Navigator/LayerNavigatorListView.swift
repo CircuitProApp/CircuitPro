@@ -18,7 +18,7 @@ struct LayerNavigatorListView: View {
     private var layerGroupOrder: [LayerSide] = [.front, .inner(1), .back, .none]
 
     private var isTraceToolActive: Bool {
-        projectManager.selectedTool is TraceTool
+        projectManager.layoutController.selectedTool is TraceTool
     }
 
     // 1) Gate selection writes so invalid IDs never land
@@ -66,7 +66,7 @@ struct LayerNavigatorListView: View {
                 }
             }
             .listStyle(.sidebar)
-            .onChange(of: projectManager.selectedTool, initial: true) {
+            .onChange(of: projectManager.layoutController.selectedTool, initial: true) {
                 handleToolChange()
             }
         }

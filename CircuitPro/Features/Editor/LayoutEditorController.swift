@@ -26,6 +26,8 @@ final class LayoutEditorController: EditorController {
     /// The graph model for managing traces, vias, and other layout geometry. Owned by this controller.
     private let traceGraph: TraceGraph
     
+    var selectedTool: CanvasTool = CursorTool()
+    
     // MARK: - Dependencies
     
     @ObservationIgnored private let projectManager: ProjectManager

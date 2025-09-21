@@ -47,7 +47,7 @@ struct EditorView: View {
                     case .schematic:
                         SchematicCanvasView(canvasManager: selectedCanvasManager)
                     case .layout:
-                        LayoutView(canvasManager: selectedCanvasManager)
+                        LayoutCanvasView(canvasManager: selectedCanvasManager)
        
                     }
                 }

@@ -15,20 +15,12 @@ struct SchematicCanvasView: View {
     
     @Bindable var canvasManager: CanvasManager
     
-    @State private var selectedTool: CanvasTool = CursorTool()
-    let defaultTool: CanvasTool = CursorTool()
-
-    // Rebuild trigger: changes whenever the pending log’s contents change
-    private var pendingStamp: Int {
-        projectManager.syncManager.pendingChanges.map(\.id).hashValue
-    }
-    
     var body: some View {
         CanvasView(
             viewport: $canvasManager.viewport,
             nodes: projectManager.activeCanvasNodes,
             selection: $projectManager.selectedNodeIDs,
-            tool: $selectedTool.unwrapping(withDefault: defaultTool),
+            tool: $projectManager.schematicController.selectedTool.unwrapping(withDefault: CursorTool()),
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
@@ -54,76 +46,23 @@ struct SchematicCanvasView: View {
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
         .overlay(alignment: .leading) {
-            SchematicToolbarView(selectedSchematicTool: $selectedTool)
+            SchematicToolbarView(selectedSchematicTool: $projectManager.schematicController.selectedTool)
                 .padding(16)
         }
     }
     
-    private func syncProjectManagerFromNodes() {
-        // Ensure we only perform this sync logic for the schematic editor
-        guard projectManager.selectedEditor == .schematic else { return }
-
-        let currentComponentIDs = Set(projectManager.componentInstances.map(\.id))
-        let nodeIDs = Set(projectManager.activeCanvasNodes.compactMap { $0 as? SymbolNode }.map(\.id) )
-        let missingComponentIDs = currentComponentIDs.subtracting(nodeIDs)
-        
-        if !missingComponentIDs.isEmpty {
-            for componentID in missingComponentIDs {
-                projectManager.schematicController.schematicGraph.releasePins(for: componentID)
-            }
-            projectManager.selectedDesign?.componentInstances.removeAll { missingComponentIDs.contains($0.id) }
-        }
-    }
-    
     /// Handles dropping a new component onto the canvas from a library.
+    /// The view's only job is to decode the data and delegate the action.
     private func handleComponentDrop(pasteboard: NSPasteboard, location: CGPoint) -> Bool {
         guard let data = pasteboard.data(forType: .transferableComponent),
-              let transferable = try? JSONDecoder().decode(TransferableComponent.self, from: data),
-              projectManager.selectedDesign != nil else {
+              let transferable = try? JSONDecoder().decode(TransferableComponent.self, from: data) else {
             return false
         }
         
-        var fetchDescriptor = FetchDescriptor<ComponentDefinition>(predicate: #Predicate { $0.uuid == transferable.componentUUID })
-        fetchDescriptor.relationshipKeyPathsForPrefetching = [\.symbol]
-        let fullLibraryContext = ModelContext(packManager.mainContainer)
-        
-        guard let componentDefinition = (try? fullLibraryContext.fetch(fetchDescriptor))?.first,
-              let symbolDefinition = componentDefinition.symbol else {
-            return false
-        }
-        
-        let instances = projectManager.componentInstances
-        let nextRefIndex = (
-            instances
-                .filter { $0.definitionUUID == componentDefinition.uuid }
-                .map { $0.referenceDesignatorIndex}
-                .max() ?? 0
-        ) + 1
-        // Make var so we can set definition
-        let newSymbolInstance = SymbolInstance(
-            definitionUUID: symbolDefinition.uuid, definition: symbolDefinition,
-            position: location,
-            cardinalRotation: .east
+        return projectManager.schematicController.handleComponentDrop(
+            from: transferable,
+            at: location,
+            packManager: packManager
         )
-        
-        let newComponentInstance = ComponentInstance(definitionUUID: componentDefinition.uuid, definition: componentDefinition, symbolInstance: newSymbolInstance)
-        
-        // Append to the selected design
-        var currentInstances = projectManager.componentInstances
-        currentInstances.append(newComponentInstance)
-        projectManager.componentInstances = currentInstances
-        
-        // Update the wire graph immediately so pins exist at the right place
-        projectManager.schematicController.schematicGraph.syncPins(
-            for: newSymbolInstance,
-            of: symbolDefinition,
-            ownerID: newComponentInstance.id
-        )
-        
-        // Put a SymbolNode into canvasNodes right away (no full rebuild needed)
-//        projectManager.schematicController.upsertSymbolNode(for: newComponentInstance)
-//
-        projectManager.document.scheduleAutosave()
-        return true
     }
 }

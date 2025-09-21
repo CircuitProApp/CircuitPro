@@ -60,7 +60,6 @@ final class ProjectManager {
     var selectedNodeIDs: Set<UUID> = []
     var selectedNetIDs: Set<UUID> = []
     var selectedEditor: EditorType = .schematic
-    var selectedTool: CanvasTool = CursorTool()
     
     /// A computed property that provides direct access to the nodes of the currently active editor.
     var activeCanvasNodes: [BaseNode] {

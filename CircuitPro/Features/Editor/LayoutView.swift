@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct LayoutView: View {
+struct LayoutCanvasView: View {
     @BindableEnvironment(\.projectManager)
     private var projectManager
     
@@ -11,7 +11,7 @@ struct LayoutView: View {
             viewport: $canvasManager.viewport,
             nodes: projectManager.activeCanvasNodes,
             selection: $projectManager.selectedNodeIDs,
-            tool: $projectManager.selectedTool.unwrapping(withDefault: CursorTool()),
+            tool: $projectManager.layoutController.selectedTool.unwrapping(withDefault: CursorTool()),
             layers: $projectManager.layoutController.canvasLayers,
             activeLayerId: $projectManager.layoutController.activeLayerId,
             environment: canvasManager.environment,
@@ -41,11 +41,8 @@ struct LayoutView: View {
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
         .overlay(alignment: .leading) {
-            // --- MODIFIED: The toolbar now binds directly to the project manager's tool. ---
-            LayoutToolbarView(selectedSchematicTool: $projectManager.selectedTool)
+            LayoutToolbarView(selectedSchematicTool: $projectManager.layoutController.selectedTool)
                 .padding(16)
-  
-            
         }
     }
     

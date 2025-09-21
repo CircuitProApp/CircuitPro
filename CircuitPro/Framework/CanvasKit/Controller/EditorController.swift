@@ -19,6 +19,8 @@ protocol EditorController {
     /// and automatically re-render when it changes.
     var nodes: [BaseNode] { get }
     
+    var selectedTool: CanvasTool { get set }
+    
     // For now, we'll keep the static configuration in the View. This protocol
     // will grow as we continue to refactor. The core responsibility is providing `nodes`.
     
