@@ -6,7 +6,6 @@ final class TraceGraph {
     let engine: GraphEngine
      
     var edgeMetadata: [GraphEdge.ID: TraceEdgeMetadata] = [:]
-    var onModelDidChange: (() -> Void)?
 
     init() {
         let ruleset = OctilinearGraphRuleset()
@@ -21,10 +20,6 @@ final class TraceGraph {
         )
         
         edgePolicy.traceGraph = self
-
-        engine.onChange = { [weak self] _, _ in
-            self?.onModelDidChange?()
-        }
     }
     
     func addTrace(path: [CGPoint], width: CGFloat, layerId: UUID) {

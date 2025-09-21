@@ -5,17 +5,13 @@ struct CanvasView: NSViewRepresentable {
 
     // MARK: - SwiftUI State
     
-    // The viewport binding remains two-way.
     @Binding var viewport: CanvasViewport
-    
-    // MODIFICATION 1: `nodes` is now a read-only stored property.
-    // It is no longer a @Binding because data flows one way: from the controller to the view.
     let nodes: [BaseNode]
-
-    // Other bindings for state that can be mutated by the canvas remain.
     @Binding var selection: Set<UUID>
     @Binding var tool: CanvasTool?
+    
     @Binding var layers: [CanvasLayer]
+    
     @Binding var activeLayerId: UUID?
 
     // MARK: - Callbacks & Configuration
@@ -29,10 +25,9 @@ struct CanvasView: NSViewRepresentable {
     let onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
     var onCanvasChange: ((CanvasChangeContext) -> Void)?
 
-    // MODIFICATION 2: Updated initializer to accept a plain `[BaseNode]`.
     init(
         viewport: Binding<CanvasViewport>,
-        nodes: [BaseNode], // <-- No longer a Binding
+        nodes: [BaseNode],
         selection: Binding<Set<UUID>>,
         tool: Binding<CanvasTool?> = .constant(nil),
         layers: Binding<[CanvasLayer]> = .constant([]),
@@ -43,10 +38,10 @@ struct CanvasView: NSViewRepresentable {
         inputProcessors: [any InputProcessor] = [],
         snapProvider: any SnapProvider = NoOpSnapProvider(),
         registeredDraggedTypes: [NSPasteboard.PasteboardType] = [],
-        onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil,
+        onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil
     ) {
         self._viewport = viewport
-        self.nodes = nodes // Standard assignment
+        self.nodes = nodes
         self._selection = selection
         self._tool = tool
         self._layers = layers
@@ -68,15 +63,11 @@ struct CanvasView: NSViewRepresentable {
         private var viewportBinding: Binding<CanvasViewport>
         private var selectionBinding: Binding<Set<UUID>>
         
-        // MODIFICATION 3: nodesBinding is GONE. The coordinator no longer needs to write back to it.
-        // private var nodesBinding: Binding<[BaseNode]>
-        
         private var magnificationObservation: NSKeyValueObservation?
         private var boundsChangeObserver: Any?
 
         init(
             viewport: Binding<CanvasViewport>,
-            // nodes binding is removed from here
             selection: Binding<Set<UUID>>,
             renderLayers: [any RenderLayer],
             interactions: [any CanvasInteraction],
@@ -94,27 +85,53 @@ struct CanvasView: NSViewRepresentable {
             canvasController.onSelectionChanged = { [weak self] newSelectionIDs in
                 DispatchQueue.main.async { self?.selectionBinding.wrappedValue = newSelectionIDs }
             }
-            // MODIFICATION 4: onNodesChanged callback is REMOVED.
-            // The canvas no longer mutates the external nodes array.
-            // canvasController.onNodesChanged = { ... }
         }
         
-        // ... (observeScrollView and deinit are unchanged) ...
-        func observeScrollView(_ scrollView: NSScrollView) { /* ... same as before ... */ }
-        deinit { /* ... same as before ... */ }
+        func observeScrollView(_ scrollView: NSScrollView) {
+            magnificationObservation = scrollView.observe(\.magnification, options: .new) { [weak self] _, change in
+                guard let self = self, let newValue = change.newValue else { return }
+                DispatchQueue.main.async {
+                    if !self.viewportBinding.wrappedValue.magnification.isApproximatelyEqual(to: newValue) {
+                        self.viewportBinding.wrappedValue.magnification = newValue
+                    }
+                    self.canvasController.viewportDidMagnify(to: newValue)
+                }
+            }
+    
+            guard let clipView = scrollView.contentView as? NSClipView else { return }
+            
+            clipView.postsBoundsChangedNotifications = true
+            
+            boundsChangeObserver = NotificationCenter.default.addObserver(
+                forName: NSView.boundsDidChangeNotification,
+                object: clipView,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self = self else { return }
+                DispatchQueue.main.async {
+                    self.viewportBinding.wrappedValue.visibleRect = clipView.bounds
+                    self.canvasController.viewportDidScroll(to: clipView.bounds)
+                }
+            }
+        }
+        
+        deinit {
+            magnificationObservation?.invalidate()
+            if let observer = boundsChangeObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
+        }
     }
     
     func makeCoordinator() -> Coordinator {
         let coordinator = Coordinator(
             viewport: $viewport,
-            // $nodes is removed from the coordinator's init
             selection: $selection,
             renderLayers: self.renderLayers,
             interactions: self.interactions,
             inputProcessors: self.inputProcessors,
             snapProvider: self.snapProvider
         )
-        // ... (wiring up other callbacks is unchanged) ...
         coordinator.canvasController.onPasteboardDropped = self.onPasteboardDropped
         coordinator.canvasController.onCanvasChange = self.onCanvasChange
         return coordinator
@@ -127,6 +144,7 @@ struct CanvasView: NSViewRepresentable {
         let canvasHostView = CanvasHostView(controller: coordinator.canvasController, registeredDraggedTypes: self.registeredDraggedTypes)
         let scrollView = CenteringNSScrollView()
         
+        coordinator.canvasController.view = canvasHostView
         
         scrollView.documentView = canvasHostView
         scrollView.hasHorizontalScroller = true
@@ -144,8 +162,6 @@ struct CanvasView: NSViewRepresentable {
         let controller = context.coordinator.canvasController
         controller.onCanvasChange = self.onCanvasChange
         
-        // The call to `controller.sync` is now simplified.
-        // It reads from the plain `nodes` property.
         controller.sync(
             nodes: self.nodes,
             selection: self.selection,
@@ -155,8 +171,7 @@ struct CanvasView: NSViewRepresentable {
             layers: self.layers,
             activeLayerId: self.activeLayerId
         )
-        
-        // ... (The rest of updateNSView for viewport syncing is unchanged) ...
+
         if let hostView = scrollView.documentView, hostView.frame.size != self.viewport.size {
             hostView.frame.size = self.viewport.size
         }
@@ -175,7 +190,7 @@ struct CanvasView: NSViewRepresentable {
     }
 }
 
-// ... (CGFloat extension is unchanged) ...
+
 extension CGFloat {
     func isApproximatelyEqual(to other: CGFloat, tolerance: CGFloat = 1e-9) -> Bool {
         return abs(self - other) <= tolerance

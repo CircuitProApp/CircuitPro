@@ -7,8 +7,9 @@
 
 import AppKit
 
-/// A lean input router that runs mouse events through a processing pipeline
-/// before passing them to a pluggable list of interactions.
+/// A lean input router that receives raw AppKit events, processes them, and passes
+/// them to a pluggable list of interactions. It is also responsible for triggering
+/// imperative redraws for events that only affect transient visual state.
 final class CanvasInputHandler {
 
     unowned let controller: CanvasController
@@ -18,13 +19,7 @@ final class CanvasInputHandler {
     }
     
     /// Runs a given point through the controller's ordered pipeline of input processors.
-    /// - Parameters:
-    ///   - point: The raw input point from a mouse event.
-    ///   - context: The current render context for the event.
-    /// - Returns: The final, processed CGPoint.
     private func process(point: CGPoint, context: RenderContext) -> CGPoint {
-        // Sequentially pass the point through each processor. The output of one
-        // becomes the input to the next.
         return controller.inputProcessors.reduce(point) { currentPoint, processor in
             processor.process(point: currentPoint, context: context)
         }
@@ -34,14 +29,14 @@ final class CanvasInputHandler {
     
     func mouseDown(_ event: NSEvent, in host: CanvasHostView) {
         let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
-        
         let rawPoint = host.convert(event.locationInWindow, from: nil)
         let processedPoint = process(point: rawPoint, context: context)
 
+        // Update mouse location state
+        controller.mouseLocation = rawPoint
+
         for interaction in controller.interactions {
             let pointToUse = interaction.wantsRawInput ? rawPoint : processedPoint
-            
-            // MODIFIED: Pass the `event` to the mouseDown method.
             if interaction.mouseDown(with: event, at: pointToUse, context: context, controller: controller) {
                 return // Event consumed.
             }
@@ -50,30 +45,35 @@ final class CanvasInputHandler {
 
     func mouseDragged(_ event: NSEvent, in host: CanvasHostView) {
         let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
-
-        // Calculate both points once.
         let rawPoint = host.convert(event.locationInWindow, from: nil)
+        
+        // Update mouse location state
+        controller.mouseLocation = rawPoint
+        
         let processedPoint = process(point: rawPoint, context: context)
         
         for interaction in controller.interactions {
-            // Choose which point to send based on the interaction's preference.
             let pointToUse = interaction.wantsRawInput ? rawPoint : processedPoint
-
             interaction.mouseDragged(to: pointToUse, context: context, controller: controller)
         }
+        
+        // ** THE FIX **
+        // After all interactions have processed the drag, force a redraw.
+        // This is necessary for visuals like the marquee rectangle to update live.
+        host.performLayerUpdate()
     }
 
     func mouseUp(_ event: NSEvent, in host: CanvasHostView) {
         let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
-
-        // Calculate both points once.
         let rawPoint = host.convert(event.locationInWindow, from: nil)
+        
+        // Update mouse location state
+        controller.mouseLocation = rawPoint
+        
         let processedPoint = process(point: rawPoint, context: context)
 
         for interaction in controller.interactions {
-            // Choose which point to send based on the interaction's preference.
             let pointToUse = interaction.wantsRawInput ? rawPoint : processedPoint
-
             interaction.mouseUp(at: pointToUse, context: context, controller: controller)
         }
     }
@@ -81,13 +81,22 @@ final class CanvasInputHandler {
     // MARK: - Passthrough Events
     
     func mouseMoved(_ event: NSEvent, in host: CanvasHostView) {
-        // The controller's mouseLocation should always store the RAW mouse position.
-        // Render layers that need a processed version (like a preview) can get it
-        // from the context during their update pass.
+        // 1. Update the state on the controller.
         controller.mouseLocation = host.convert(event.locationInWindow, from: nil)
+        
+        // ** THE FIX **
+        // 2. Imperatively trigger a redraw.
+        // This is necessary because moving the mouse is a transient visual change
+        // (for crosshairs, hover highlights, etc.) that does not change any
+        // SwiftUI state, so `updateNSView` will not be called automatically.
+        host.performLayerUpdate()
     }
 
     func mouseExited() {
+        // When the mouse leaves, clear its location and redraw to ensure
+        // crosshairs and other hover effects disappear correctly.
+        controller.mouseLocation = nil
+        controller.view?.performLayerUpdate()
     }
     
     func keyDown(_ event: NSEvent, in host: CanvasHostView) -> Bool {
@@ -95,13 +104,10 @@ final class CanvasInputHandler {
         
         for interaction in controller.interactions {
             if interaction.keyDown(with: event, context: context, controller: controller) {
-                // The interaction handled the key.
-       
-                return true // Report that the event WAS handled.
+                return true // Event was handled.
             }
         }
         
-        // No interaction handled the key.
-        return false // Report that the event was NOT handled.
+        return false // Event was not handled.
     }
 }

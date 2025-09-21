@@ -8,23 +8,37 @@
 import AppKit
 
 final class CanvasController {
+    
     // MARK: - Core Data Model
     
+    /// The root of the internal scene graph. Its children are the nodes displayed on the canvas.
     let sceneRoot: BaseNode = BaseNode()
     var selectedNodes: [BaseNode] = []
     var interactionHighlightedNodeIDs: Set<UUID> = []
     
+    // MARK: - View Reference
+    
+    /// A weak reference to the AppKit view this controller manages.
+    /// Used to trigger imperative redraws for transient visual state changes.
+    weak var view: CanvasHostView?
+    
     // MARK: - Universal View State
     
     var magnification: CGFloat = 1.0
-    var mouseLocation: CGPoint?
+    
+    private var _rawMouseLocation: CGPoint?
+    var mouseLocation: CGPoint? {
+        get { _rawMouseLocation }
+        set {
+            guard _rawMouseLocation != newValue else { return }
+            _rawMouseLocation = newValue
+            view?.performLayerUpdate() // Redraw for layers like Crosshairs.
+        }
+    }
+    
     var selectedTool: CanvasTool?
-    
     var environment: CanvasEnvironmentValues = .init()
-    
-    var layers: [CanvasLayer] = []
-    
-    /// The ID of the currently active layer, if any.
+    var layers: [CanvasLayer]?
     var activeLayerId: UUID?
     
     // MARK: - Pluggable Pipelines
@@ -37,10 +51,7 @@ final class CanvasController {
     // MARK: - Callbacks to Owner
     
     var onSelectionChanged: ((Set<UUID>) -> Void)?
-    
-    // New consolidated callback
     var onCanvasChange: ((CanvasChangeContext) -> Void)?
-    
     var onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
     
     // MARK: - Init
@@ -57,7 +68,7 @@ final class CanvasController {
         self.snapProvider = snapProvider
     }
     
-    // MARK: - Public API
+    // MARK: - State Syncing API
     
     /// The primary entry point for SwiftUI to push state updates *into* the controller.
     func sync(
@@ -66,36 +77,39 @@ final class CanvasController {
         tool: CanvasTool?,
         magnification: CGFloat,
         environment: CanvasEnvironmentValues,
-        layers: [CanvasLayer],
+        layers: [CanvasLayer]?,
         activeLayerId: UUID?
     ) {
+        // --- Smart Node Syncing Logic ---
+        // This diffing approach is the perfect balance of performance and simplicity.
+        // It avoids destroying/recreating existing nodes if they haven't changed,
+        // but doesn't require a complex `update(from:)` method on the nodes themselves.
+        let newNodesByID = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
+        let oldNodeIDs = Set(sceneRoot.children.map { $0.id })
+        let newNodeIDs = Set(newNodesByID.keys)
         
-        let currentNodeIDs = Set(self.sceneRoot.children.map { $0.id })
-        let newNodeIDs = Set(nodes.map { $0.id })
-        
-        if currentNodeIDs != newNodeIDs {
-            sceneRoot.children.forEach { $0.removeFromParent() }
-            nodes.forEach { node in
-                sceneRoot.addChild(node)
-            }
-            let baseNodeChildren = sceneRoot.children.compactMap {
-                $0 as? BaseNode
-            }
+        // 1. Remove nodes that are no longer in the new set.
+        if oldNodeIDs != newNodeIDs {
+            let nodesToRemove = oldNodeIDs.subtracting(newNodeIDs)
+            sceneRoot.children.removeAll { nodesToRemove.contains($0.id) }
+        }
+
+        // 2. Add new nodes that weren't there before and re-order all children.
+        //    By re-assigning the whole array, we ensure the render order is correct.
+        sceneRoot.children = nodes.map { newNode in
+            // Re-parent the node to our sceneRoot.
+            newNode.parent = sceneRoot
+            return newNode
         }
         
-        let currentSelectedIDsInController = Set(
-            self.selectedNodes.map { $0.id
-            })
-        
-        if currentSelectedIDsInController != selection {
-            self.selectedNodes = selection.compactMap { id in
-                findNode(with: id, in: sceneRoot)
-            }
+        // --- Selection Syncing ---
+        let currentSelectedIDs = Set(self.selectedNodes.map { $0.id })
+        if currentSelectedIDs != selection {
+            self.selectedNodes = selection.compactMap { id in findNode(with: id, in: sceneRoot) }
         }
         
-        if self.selectedTool?.id != tool?.id {
-            self.selectedTool = tool
-        }
+        // --- Other State ---
+        if self.selectedTool?.id != tool?.id { self.selectedTool = tool }
         self.magnification = magnification
         self.environment.configuration = environment.configuration
         self.layers = layers
@@ -105,7 +119,6 @@ final class CanvasController {
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
     func currentContext(for hostViewBounds: CGRect, visibleRect: CGRect) -> RenderContext {
         let selectedIDs = Set(self.selectedNodes.map { $0.id })
-        
         let allHighlightedIDs = selectedIDs.union(interactionHighlightedNodeIDs)
         
         return RenderContext(
@@ -116,79 +129,52 @@ final class CanvasController {
             highlightedNodeIDs: allHighlightedIDs,
             hostViewBounds: hostViewBounds,
             visibleRect: visibleRect,
-            layers: self.layers,
+            layers: self.layers ?? [],
             activeLayerId: self.activeLayerId,
             snapProvider: snapProvider,
             environment: self.environment,
             inputProcessors: self.inputProcessors
-            
         )
     }
     
-    /// Allows interactions to update the current selection.
+    // MARK: - Viewport Event Handlers
+    
+    func viewportDidScroll(to newVisibleRect: CGRect) {
+        view?.performLayerUpdate() // Redraw for layers like Grid.
+    }
+    
+    func viewportDidMagnify(to newMagnification: CGFloat) {
+        self.magnification = newMagnification
+        view?.performLayerUpdate() // Redraw for magnification-dependent layers.
+    }
+    
+    // MARK: - Interaction API
+    
     func setSelection(to nodes: [BaseNode]) {
         self.selectedNodes = nodes
         self.onSelectionChanged?(Set(nodes.map { $0.id }))
     }
     
-    /// Allows interactions to update the temporary highlight state.
     func setInteractionHighlight(nodeIDs: Set<UUID>) {
+        guard self.interactionHighlightedNodeIDs != nodeIDs else { return }
         self.interactionHighlightedNodeIDs = nodeIDs
+        view?.performLayerUpdate() // Redraw for transient highlights.
     }
     
-    /// Allows interactions to modify the environment and trigger a redraw.
     func updateEnvironment(_ block: (inout CanvasEnvironmentValues) -> Void) {
         block(&environment)
+        view?.performLayerUpdate() // Redraw for transient state like Marquee.
     }
     
     /// Recursively finds a node in the scene graph.
     func findNode(with id: UUID, in root: BaseNode) -> BaseNode? {
         if root.id == id { return root }
-        
         for child in root.children {
             if let childNode = child as? BaseNode,
                let found = findNode(with: id, in: childNode) {
                 return found
             }
         }
-        return nil
-    }
-}
-
-// In a new file like `BaseNode+Extensions.swift`
-
-import Foundation
-
-extension Collection where Element == BaseNode {
-    /// Recursively finds the first node in the collection or its descendants that has the specified ID.
-    ///
-    /// - Parameter id: The `UUID` of the node to find.
-    /// - Returns: The `BaseNode` if found; otherwise, `nil`.
-    func findNode(with id: UUID) -> BaseNode? {
-        for node in self {
-            if let found = findNodeRecursive(with: id, in: node) {
-                return found
-            }
-        }
-        return nil
-    }
-
-    /// The recursive helper function that performs the depth-first search.
-    private func findNodeRecursive(with id: UUID, in node: BaseNode) -> BaseNode? {
-        if node.id == id {
-            return node
-        }
-        
-        // Search through the children of the current node.
-        // This assumes `BaseNode` has a `children` property as implied by CanvasController.
-        for child in node.children {
-            if let childNode = child as? BaseNode {
-                if let found = findNodeRecursive(with: id, in: childNode) {
-                    return found
-                }
-            }
-        }
-        
         return nil
     }
 }

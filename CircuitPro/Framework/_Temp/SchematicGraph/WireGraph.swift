@@ -27,9 +27,6 @@ final class WireGraph {
     // MARK: - UI-only drag state (no normalization during drag)
     private var dragHandler: DragHandler?
 
-    // Called whenever engine publishes a change
-    var onModelDidChange: (() -> Void)?
-
     // MARK: - Init
     init() {
           // Build policy without capturing self
@@ -88,8 +85,6 @@ final class WireGraph {
               for vid in delta.deletedVertices {
                   self.lastPosition.removeValue(forKey: vid)
               }
-
-              self.onModelDidChange?()
           }
       }
 
