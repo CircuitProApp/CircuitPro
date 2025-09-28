@@ -84,15 +84,69 @@ extension ComponentInstance {
 }
 
 extension ComponentInstance {
-    func apply(_ editedText: CircuitText.Resolved) {
-        symbolInstance.apply(editedText)
+
+    // MARK: Lookup
+    private func resolvedText(
+        matching content: CircuitTextContent,
+        in target: TextTarget
+    ) -> CircuitText.Resolved? {
+        switch target {
+        case .symbol:
+            return symbolInstance.resolvedItems.first { $0.content.isSameType(as: content) }
+        case .footprint:
+            return footprintInstance?.resolvedItems.first { $0.content.isSameType(as: content) }
+        }
     }
 
-    func add(_ newInstance: CircuitText.Instance) {
-        symbolInstance.add(newInstance)
+    // MARK: Visibility
+    func isTextVisible(_ content: CircuitTextContent, for target: TextTarget) -> Bool {
+        resolvedText(matching: content, in: target)?.isVisible ?? false
     }
 
-    func remove(_ textToRemove: CircuitText.Resolved) {
-        symbolInstance.remove(textToRemove)
+    func toggleTextVisibility(_ content: CircuitTextContent, for target: TextTarget) {
+        switch target {
+        case .symbol:
+            guard var r = symbolInstance.resolvedItems.first(where: { $0.content.isSameType(as: content) }) else { return }
+            r.isVisible.toggle()
+            symbolInstance.apply(r)     // <- ResolvableBacked.apply
+        case .footprint:
+            guard let fp = footprintInstance,
+                  var r = fp.resolvedItems.first(where: { $0.content.isSameType(as: content) }) else { return }
+            r.isVisible.toggle()
+            fp.apply(r)
+        }
     }
+
+    // MARK: Apply full edits / add / remove
+    func apply(_ editedText: CircuitText.Resolved, for target: TextTarget) {
+        switch target {
+        case .symbol:
+            symbolInstance.apply(editedText)
+        case .footprint:
+            footprintInstance?.apply(editedText)
+        }
+    }
+
+    func add(_ newText: CircuitText.Instance, for target: TextTarget) {
+        switch target {
+        case .symbol:
+            symbolInstance.add(newText)
+        case .footprint:
+            footprintInstance?.add(newText)
+        }
+    }
+
+    func remove(_ text: CircuitText.Resolved, for target: TextTarget) {
+        switch target {
+        case .symbol:
+            symbolInstance.remove(text)
+        case .footprint:
+            footprintInstance?.remove(text)
+        }
+    }
+
+    // MARK: Convenience for schematic (keeps existing call sites working)
+    func apply(_ editedText: CircuitText.Resolved) { apply(editedText, for: .symbol) }
+    func add(_ newInstance: CircuitText.Instance)   { add(newInstance, for: .symbol) }
+    func remove(_ textToRemove: CircuitText.Resolved) { remove(textToRemove, for: .symbol) }
 }
