@@ -216,6 +216,7 @@ struct TimelineView: View {
                 Button("Apply \(selection.count) Selected") {
                     projectManager.applyChanges(withIDs: selection, allFootprints: allFootprints)
                     selection.removeAll()
+                    dismiss()
                 }
                 .buttonStyle(.borderedProminent)
             }
