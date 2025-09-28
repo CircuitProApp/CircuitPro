@@ -10,10 +10,13 @@ import UniformTypeIdentifiers
 import SwiftData
 
 @Observable
+@MainActor
 final class CircuitProjectFileDocument: ReferenceFileDocument {
     typealias Snapshot = CircuitProject
 
     static var readableContentTypes: [UTType] { [.circuitProject] }
+    
+    let syncManager = SyncManager()
     
     private var autosaveWorkItem: DispatchWorkItem?
     var autosaveDelay: TimeInterval = 2 // tune as needed

@@ -19,11 +19,10 @@ final class ProjectManager {
     /// Convenience accessor for the underlying data model.
     var project: CircuitProject { document.model }
     
+    var syncManager: SyncManager { document.syncManager }
+    
     /// The currently active design within the project.
     var selectedDesign: CircuitDesign?
-    
-    /// The orchestrator for change handling and resolving pending UI state (Manual ECO).
-    var syncManager: SyncManager
 
     // MARK: - Editor Controllers
     
@@ -62,14 +61,9 @@ final class ProjectManager {
 
     // MARK: - Init
 
-    init(
-        document: CircuitProjectFileDocument,
-        selectedDesign: CircuitDesign? = nil,
-        syncManager: SyncManager? = nil
-    ) {
+    init(document: CircuitProjectFileDocument, selectedDesign: CircuitDesign? = nil) {
         self.document = document
         self.selectedDesign = selectedDesign ?? document.model.designs.first
-        self.syncManager = syncManager ?? SyncManager()
     }
     
     var componentInstances: [ComponentInstance] {
