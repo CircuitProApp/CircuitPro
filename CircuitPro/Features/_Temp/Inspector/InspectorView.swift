@@ -108,13 +108,13 @@ struct InspectorView: View {
     /// A shared view for displaying the current selection status (none, or multiple).
     @ViewBuilder
     private var selectionStatusView: some View {
-        VStack {
-            Spacer()
+        ZStack {
             Text(projectManager.selectedNodeIDs.isEmpty ? "No Selection" : "Multiple Items Selected")
                 .foregroundColor(.secondary)
-            Spacer()
+                .multilineTextAlignment(.center)
+                .padding()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

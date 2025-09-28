@@ -24,8 +24,6 @@ struct SymbolNodeAttributesView: View {
     
     @Query(sort: \FootprintDefinition.name) private var allFootprints: [FootprintDefinition]
     
-    @State private var selectedProperty: Property.Resolved.ID?
-    
     // MARK: - Computed Properties for Footprint Sections (Unchanged)
     
     private var compatibleFootprints: [FootprintDefinition] {
@@ -125,7 +123,7 @@ struct SymbolNodeAttributesView: View {
             }
         )
     }
-    
+
     // Body of the view (No changes needed here)
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -194,21 +192,33 @@ struct SymbolNodeAttributesView: View {
             Divider()
             
             InspectorSection("Properties") {
-                VStack(spacing: 0) {
-                    // This table is now bound to the resolved properties array
-                    Table(propertiesBinding, selection: $selectedProperty) {
-                        TableColumn("Key") { $property in Text(property.key.label) }
-                        TableColumn("Value") { $property in InspectorValueColumn(property: $property) }
-                        TableColumn("Unit") { $property in InspectorUnitColumn(property: $property) }
+                ForEach(propertiesBinding.wrappedValue, id: \.id) { property in
+                    let propertyBinding = binding(for: property)
+
+                    InspectorRow(property.key.label, style: .leading) {
+                        InspectorValueColumn(property: propertyBinding)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+
+                        InspectorUnitColumn(property: propertyBinding)
                     }
-                    .font(.caption)
-                    .tableStyle(.bordered)
-                    .border(.white.blendMode(.destinationOut), width: 1)
-                    .compositingGroup()
                 }
-                .frame(height: 220)
-                .clipAndStroke(with: .rect(cornerRadius: 8))
             }
         }
+    }
+
+    private func binding(for property: Property.Resolved) -> Binding<Property.Resolved> {
+        Binding(
+            get: {
+                let properties = propertiesBinding.wrappedValue
+                return properties.first(where: { $0.id == property.id }) ?? property
+            },
+            set: { newValue in
+                var properties = propertiesBinding.wrappedValue
+                if let index = properties.firstIndex(where: { $0.id == property.id }) {
+                    properties[index] = newValue
+                    propertiesBinding.wrappedValue = properties
+                }
+            }
+        )
     }
 }

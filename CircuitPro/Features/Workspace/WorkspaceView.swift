@@ -73,10 +73,10 @@ struct WorkspaceView: View {
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             NavigatorView()
-                .navigationSplitViewColumnWidth(min: 240, ideal: 240, max: 320)
+                .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 320)
         } detail: {
             EditorView()
-                .frame(minWidth: 320)
+                .frame(minWidth: 300)
                 .sheet(isPresented: $showFeedbackSheet) {
                     FeedbackFormView()
                         .frame(minWidth: 400, minHeight: 300)
@@ -115,10 +115,10 @@ struct WorkspaceView: View {
                     }
                 }
         }
-        .frame(minWidth: 820, minHeight: 600)
+        .frame(minWidth: 780, minHeight: 600)
         .inspector(isPresented: $showInspector) {
             InspectorView()
-            .inspectorColumnWidth(min: 260, ideal: 300, max: 500)
+            .inspectorColumnWidth(min: 220, ideal: 300, max: 500)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
