@@ -37,6 +37,14 @@ final class SchematicEditorController: EditorController {
             _ = projectManager.selectedDesign
             _ = projectManager.componentInstances
             _ = projectManager.syncManager.pendingChanges
+
+            // NEW: observe nested symbol/footprint text collections (visibility, overrides, instances)
+            for comp in projectManager.componentInstances {
+                _ = comp.symbolInstance.resolvedItems
+                if let fp = comp.footprintInstance {
+                    _ = fp.resolvedItems
+                }
+            }
         } onChange: {
             Task { @MainActor in
                 await self.rebuildNodes()

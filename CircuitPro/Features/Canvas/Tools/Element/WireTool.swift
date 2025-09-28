@@ -6,7 +6,7 @@ import AppKit
 final class WireTool: CanvasTool {
 
     // MARK: - UI Representation
-    override var symbolName: String { CircuitProSymbols.Schematic.schematicWire }
+    override var symbolName: String { CircuitProSymbols.Schematic.wire }
     override var label: String { "Wire" }
 
     // MARK: - Internal State

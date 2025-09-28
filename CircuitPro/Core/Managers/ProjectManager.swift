@@ -140,55 +140,32 @@ final class ProjectManager {
     }
 
     // MARK: - TEXT VISIBILITY / TEXT EDITS (schematic + layout)
-
-    /// Toggle visibility of a dynamic text item (name, refdes, property text, etc.)
-    /// Routes to Symbol (schematic) or Footprint (layout) based on the active editor.
-    func toggleDynamicTextVisibility(for component: ComponentInstance, content: CircuitTextContent) {
-        switch selectedEditor {
-        case .schematic:
-            // Symbol text
-            if var resolved = component.symbolInstance.resolvedItems.first(where: { $0.content.isSameType(as: content) }) {
-                resolved.isVisible.toggle()
-                component.symbolInstance.apply(resolved)
-            }
-        case .layout:
-            // Footprint text
-            if let fp = component.footprintInstance,
-               var resolved = fp.resolvedItems.first(where: { $0.content.isSameType(as: content) }) {
-                resolved.isVisible.toggle()
-                fp.apply(resolved)
-            }
-        }
-        document.scheduleAutosave()
-    }
-    
-    /// Toggle visibility for a specific **property** text on the **symbol** (schematic only concept).
-    func togglePropertyVisibility(for component: ComponentInstance, property: Property.Resolved) {
-        guard case .definition(let propertyDef) = property.source else { return }
-        // Get the default options defined on the symbol (used to build the content key).
-        let defaultOptions = component.definition?.symbol?.textDefinitions
-            .first(where: { $0.content.isSameType(as: .componentProperty(definitionID: propertyDef.id, options: .default)) })?
-            .content.displayOptions ?? .default
-        
-        let contentToToggle = CircuitTextContent.componentProperty(definitionID: propertyDef.id, options: defaultOptions)
-        
-        // Always operate on the symbol for property visibility (schematic concept).
-        if var resolved = component.symbolInstance.resolvedItems.first(where: { $0.content.isSameType(as: contentToToggle) }) {
-            resolved.isVisible.toggle()
-            component.symbolInstance.apply(resolved)
-            document.scheduleAutosave()
-        }
-    }
     
     /// Apply a full edit to a resolved text item (e.g., changing display options).
     func updateText(for component: ComponentInstance, with editedText: CircuitText.Resolved) {
-        switch selectedEditor {
-        case .schematic:
-            component.symbolInstance.apply(editedText)
-        case .layout:
-            component.footprintInstance?.apply(editedText)
-        }
+        component.apply(editedText)              // writes into SymbolInstance (overrides/instances)
         document.scheduleAutosave()
+    }
+
+    // Toggle Name / RefDes / any non-property text
+    func toggleDynamicTextVisibility(for component: ComponentInstance, content: CircuitTextContent) {
+        guard let current = component.symbolInstance.resolvedItems.first(where: {
+            $0.content.isSameType(as: content)
+        }) else { return }
+        var edited = current
+        edited.isVisible.toggle()
+        updateText(for: component, with: edited)
+    }
+
+    // Toggle a property text (key/value/unit bubble)
+    func togglePropertyVisibility(for component: ComponentInstance, property: Property.Resolved) {
+        guard let current = component.symbolInstance.resolvedItems.first(where: {
+            if case .componentProperty(let defID, _) = $0.content { return defID == property.id }
+            return false
+        }) else { return }
+        var edited = current
+        edited.isVisible.toggle()
+        updateText(for: component, with: edited)
     }
     
     // MARK: - Reference Designator

@@ -72,7 +72,7 @@ extension CircuitProSymbols {
     }
     
     enum Schematic {
-        static let schematicWire = "schematic.wire"
+        static let wire = "schematic.wire"
     }
     
     enum Text {
