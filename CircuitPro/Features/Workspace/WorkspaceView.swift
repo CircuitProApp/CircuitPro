@@ -98,10 +98,8 @@ struct WorkspaceView: View {
                     Text("Switching to Automatic Sync will discard all \(pendingChangesCountBadge) pending field edits in your timeline.")
                 }
                 .toolbar {
-                    if projectManager.selectedDesign != nil {
-                        ToolbarItem(placement: .principal) {
-                            editorPicker()
-                        }
+                    ToolbarItem(placement: .principal) {
+                        editorPicker()
                     }
                     ToolbarItem(placement: .primaryAction) {
                         syncPickerCluster()
@@ -133,11 +131,6 @@ struct WorkspaceView: View {
                             .imageScale(.large)
                     }
                 }
-            }
-        }
-        .onAppear {
-            if let firstDesign = projectManager.project.designs.first {
-                projectManager.selectedDesign = firstDesign
             }
         }
     }

@@ -15,9 +15,9 @@ final class CircuitProjectFileDocument: ReferenceFileDocument {
     typealias Snapshot = CircuitProject
 
     static var readableContentTypes: [UTType] { [.circuitProject] }
-    
+
     let syncManager = SyncManager()
-    
+
     private var autosaveWorkItem: DispatchWorkItem?
     var autosaveDelay: TimeInterval = 2 // tune as needed
 
@@ -49,7 +49,7 @@ final class CircuitProjectFileDocument: ReferenceFileDocument {
 
     // Programmatic initializers (not used by DocumentGroup)
     init(newWithName name: String) {
-        self.model = CircuitProject(name: name, designs: [])
+        self.model = CircuitProject(name: name, designs: [CircuitDesign(name: "Design 1")])
     }
 
     convenience init(fileURL url: URL, container: ModelContainer) throws {

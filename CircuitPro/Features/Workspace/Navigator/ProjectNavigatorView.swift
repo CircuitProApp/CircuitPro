@@ -11,12 +11,9 @@ struct ProjectNavigatorView: View {
 
     @Environment(\.projectManager)
     private var projectManager
-    
+
     var body: some View {
         VStack(spacing: 0) {
-            DesignNavigatorView()
-
-            Divider().foregroundStyle(.quaternary)
             switch projectManager.selectedEditor {
             case .schematic:
                 SchematicNavigatorView()

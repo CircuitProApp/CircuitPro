@@ -35,17 +35,11 @@ struct EditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             SplitPaneView(isCollapsed: $showUtilityArea) {
-                if projectManager.selectedDesign == nil {
-                    Text("Select a design")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    switch selectedEditor {
-                    case .schematic:
-                        SchematicCanvasView(canvasManager: selectedCanvasManager)
-                    case .layout:
-                        LayoutCanvasView(canvasManager: selectedCanvasManager)
-
-                    }
+                switch selectedEditor {
+                case .schematic:
+                    SchematicCanvasView(canvasManager: selectedCanvasManager)
+                case .layout:
+                    LayoutCanvasView(canvasManager: selectedCanvasManager)
                 }
 
             } handle: {

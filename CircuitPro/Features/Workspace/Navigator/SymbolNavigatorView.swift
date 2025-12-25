@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct SymbolNavigatorView: View {
-    
+
     @BindableEnvironment(\.projectManager)
     private var projectManager
 
@@ -14,19 +14,19 @@ struct SymbolNavigatorView: View {
     private var pendingStamp: Int {
         projectManager.syncManager.pendingChanges.map(\.id).hashValue
     }
-    
+
     private func performDelete(on componentInstance: ComponentInstance, selected: inout Set<UUID>) {
         let idsToRemove: Set<UUID>
         let isMultiSelect = selected.contains(componentInstance.id) && selected.count > 1
         idsToRemove = isMultiSelect ? selected : [componentInstance.id]
-        projectManager.selectedDesign?.componentInstances.removeAll { idsToRemove.contains($0.id) }
+        projectManager.selectedDesign.componentInstances.removeAll { idsToRemove.contains($0.id) }
         selected.subtract(idsToRemove)
         projectManager.document.scheduleAutosave()
     }
-    
+
     var body: some View {
         let componentInstances = projectManager.componentInstances
-        
+
         VStack(spacing: 0) {
             if componentInstances.isEmpty {
                 Spacer()

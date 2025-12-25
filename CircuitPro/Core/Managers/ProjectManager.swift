@@ -10,39 +10,39 @@ struct RenderableText {
 @MainActor
 @Observable
 final class ProjectManager {
-    
+
     // MARK: - Core Properties & State
-    
+
     /// The document representing the file on disk. The single source of truth for the project model.
     var document: CircuitProjectFileDocument
-    
+
     /// Convenience accessor for the underlying data model.
     var project: CircuitProject { document.model }
-    
+
     var syncManager: SyncManager { document.syncManager }
-    
+
     /// The currently active design within the project.
-    var selectedDesign: CircuitDesign?
+    var selectedDesign: CircuitDesign
 
     // MARK: - Editor Controllers
-    
+
     /// The dedicated controller for the schematic editor. It manages all schematic-specific view state.
     @ObservationIgnored
     lazy var schematicController: SchematicEditorController = {
         SchematicEditorController(projectManager: self)
     }()
-    
+
     @ObservationIgnored
     lazy var layoutController: LayoutEditorController = {
         LayoutEditorController(projectManager: self)
     }()
-    
+
     // MARK: - Global UI State
-    
+
     var selectedNodeIDs: Set<UUID> = []
     var selectedNetIDs: Set<UUID> = []
     var selectedEditor: EditorType = .schematic
-    
+
     /// Nodes for the currently active editor.
     var activeCanvasNodes: [BaseNode] {
         switch selectedEditor {
@@ -50,7 +50,7 @@ final class ProjectManager {
         case .layout:    return layoutController.nodes
         }
     }
-    
+
     /// Controller for the active editor (used e.g. by Inspector).
     var activeEditorController: EditorController? {
         switch selectedEditor {
@@ -63,16 +63,20 @@ final class ProjectManager {
 
     init(document: CircuitProjectFileDocument, selectedDesign: CircuitDesign? = nil) {
         self.document = document
-        self.selectedDesign = selectedDesign ?? document.model.designs.first
+        if document.model.designs.isEmpty {
+            document.model.designs = [CircuitDesign(name: "Design 1")]
+            document.scheduleAutosave()
+        }
+        self.selectedDesign = selectedDesign ?? document.model.designs[0]
     }
-    
+
     var componentInstances: [ComponentInstance] {
-        get { selectedDesign?.componentInstances ?? [] }
-        set { selectedDesign?.componentInstances = newValue }
+        get { selectedDesign.componentInstances }
+        set { selectedDesign.componentInstances = newValue }
     }
-    
+
     // MARK: - Action Methods (Mutate the Data Model)
-    
+
     func updateProperty(for component: ComponentInstance, with editedProperty: Property.Resolved, sessionID: UUID? = nil) {
         switch syncManager.syncMode {
         case .automatic:
@@ -91,7 +95,7 @@ final class ProjectManager {
             syncManager.recordChange(source: selectedEditor.changeSource, payload: payload, sessionID: sessionID)
         }
     }
-    
+
     func applyChanges(_ records: [ChangeRecord], allFootprints: [FootprintDefinition]) {
         for record in records.reversed() {
             guard let component = componentInstances.first(where: { $0.id == record.payload.componentID }) else { continue }
@@ -100,7 +104,7 @@ final class ProjectManager {
         syncManager.clearChanges()
         document.scheduleAutosave()
     }
-    
+
     func applyChanges(withIDs ids: Set<UUID>, allFootprints: [FootprintDefinition]) {
         let recordsToApply = syncManager.pendingChanges.filter { ids.contains($0.id) }
         applyChanges(recordsToApply, allFootprints: allFootprints)
@@ -127,7 +131,7 @@ final class ProjectManager {
             print("MANUAL ECO: Add property action not yet implemented.")
         }
     }
-    
+
     func removeProperty(_ propertyToRemove: Property.Resolved, from component: ComponentInstance) {
         switch syncManager.syncMode {
         case .automatic:
@@ -140,7 +144,7 @@ final class ProjectManager {
     }
 
     // MARK: - TEXT VISIBILITY / TEXT EDITS (schematic + layout)
-    
+
     /// Apply a full edit to a resolved text item (e.g., changing display options).
     func updateText(for component: ComponentInstance, with editedText: CircuitText.Resolved) {
         component.apply(editedText)              // writes into SymbolInstance (overrides/instances)
@@ -167,7 +171,7 @@ final class ProjectManager {
         edited.isVisible.toggle()
         updateText(for: component, with: edited)
     }
-    
+
     // MARK: - Reference Designator
 
     func updateReferenceDesignator(
@@ -221,9 +225,9 @@ final class ProjectManager {
         }
         document.scheduleAutosave()
     }
-    
+
     // MARK: - Layout placement
-    
+
     func assignFootprint(to component: ComponentInstance, footprint: FootprintDefinition?, sessionID: UUID? = nil) {
         switch syncManager.syncMode {
         case .automatic:
@@ -231,7 +235,7 @@ final class ProjectManager {
                 let oldPlacement = component.footprintInstance?.placement ?? .unplaced
                 let oldPosition  = component.footprintInstance?.position  ?? .zero
                 let oldRotation  = component.footprintInstance?.rotation  ?? 0
-                
+
                 let newFootprintInstance = FootprintInstance(
                     definitionUUID: footprint.uuid,
                     definition: footprint,
@@ -274,9 +278,9 @@ final class ProjectManager {
             print("MANUAL ECO: Place component action not yet implemented.")
         }
     }
-    
+
     // MARK: - String Generation (Shared Utility)
-    
+
     /// Generates the display string for a given text model. Uses the SyncManager's resolvers
     /// to overlay pending values when in Manual ECO mode.
     func generateString(for resolvedText: CircuitText.Resolved, component: ComponentInstance) -> String {

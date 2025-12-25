@@ -11,10 +11,9 @@ struct LayerNavigatorListView: View {
     @BindableEnvironment(\.projectManager) private var projectManager
 
     private var groupedLayers: [LayerSide: [LayerType]] {
-        guard let layers = projectManager.selectedDesign?.layers else { return [:] }
-        return Dictionary(grouping: layers, by: { $0.side ?? .none })
+        Dictionary(grouping: projectManager.selectedDesign.layers, by: { $0.side ?? .none })
     }
-    
+
     private var layerGroupOrder: [LayerSide] = [.front, .inner(1), .back, .none]
 
     private var isTraceToolActive: Bool {
@@ -39,39 +38,35 @@ struct LayerNavigatorListView: View {
     }
 
     var body: some View {
-        if groupedLayers.isEmpty {
-            ContentUnavailableView("No Design Selected", systemImage: "doc.text.magnifyingglass")
-        } else {
-            List(selection: validatedSelection) {
-                ForEach(layerGroupOrder.filter { groupedLayers.keys.contains($0) }, id: \.self) { side in
-                    Section(header: Text(side.headerTitle)) {
-                        ForEach(sortedLayers(for: side)) { layer in
-                            let isDisabled = isTraceToolActive && !layer.isTraceable
+        List(selection: validatedSelection) {
+            ForEach(layerGroupOrder.filter { groupedLayers.keys.contains($0) }, id: \.self) { side in
+                Section(header: Text(side.headerTitle)) {
+                    ForEach(sortedLayers(for: side)) { layer in
+                        let isDisabled = isTraceToolActive && !layer.isTraceable
 
-                            if isDisabled {
-                                // 2) No .tag on invalid rows => List cannot select them
-                                // 3) Block selection + block hit testing to remove highlight/press feedback
-                                layerRow(for: layer)
-                                    .opacity(0.5)
-                                    .selectionDisabled(true)     // macOS 13+/iOS 16+
-                                    .allowsHitTesting(false)     // prevents any click
-                                    .contentShape(Rectangle())   // define row shape explicitly
-                            } else {
-                                layerRow(for: layer)
-                                    .tag(layer.id)               // only valid rows are selectable
-                                    .selectionDisabled(false)
-                            }
+                        if isDisabled {
+                            // 2) No .tag on invalid rows => List cannot select them
+                            // 3) Block selection + block hit testing to remove highlight/press feedback
+                            layerRow(for: layer)
+                                .opacity(0.5)
+                                .selectionDisabled(true)     // macOS 13+/iOS 16+
+                                .allowsHitTesting(false)     // prevents any click
+                                .contentShape(Rectangle())   // define row shape explicitly
+                        } else {
+                            layerRow(for: layer)
+                                .tag(layer.id)               // only valid rows are selectable
+                                .selectionDisabled(false)
                         }
                     }
                 }
             }
-            .listStyle(.sidebar)
-            .onChange(of: projectManager.layoutController.selectedTool, initial: true) {
-                handleToolChange()
-            }
+        }
+        .listStyle(.sidebar)
+        .onChange(of: projectManager.layoutController.selectedTool, initial: true) {
+            handleToolChange()
         }
     }
-    
+
     @ViewBuilder
     private func layerRow(for layer: LayerType) -> some View {
         HStack(spacing: 8) {
@@ -82,7 +77,7 @@ struct LayerNavigatorListView: View {
             Spacer()
         }
     }
-    
+
     private func sortedLayers(for side: LayerSide) -> [LayerType] {
         let layers = groupedLayers[side] ?? []
         return layers.sorted {

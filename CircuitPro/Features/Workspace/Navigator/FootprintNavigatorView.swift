@@ -15,7 +15,7 @@ struct FootprintNavigatorView: View {
             $0.footprintInstance?.placement == .unplaced
         }
     }
-    
+
     private func placedComponents(on side: BoardSide) -> [ComponentInstance] {
         projectManager.componentInstances.filter { component in
             guard let footprint = component.footprintInstance else { return false }
@@ -30,16 +30,16 @@ struct FootprintNavigatorView: View {
     // This function is identical to the one in SymbolNavigatorView.
     private func performDelete(on componentInstance: ComponentInstance, selected: inout Set<UUID>) {
         let idsToRemove: Set<UUID>
-        
+
         let isMultiSelect = selected.contains(componentInstance.id) && selected.count > 1
-        
+
         if isMultiSelect {
             idsToRemove = selected
         } else {
             idsToRemove = [componentInstance.id]
         }
-        
-        projectManager.selectedDesign?.componentInstances.removeAll { idsToRemove.contains($0.id) }
+
+        projectManager.selectedDesign.componentInstances.removeAll { idsToRemove.contains($0.id) }
         selected.subtract(idsToRemove) // Clear selection for deleted items
         projectManager.document.scheduleAutosave()
     }
@@ -79,7 +79,7 @@ struct FootprintNavigatorView: View {
                             }
                         }
                     }
-                    
+
                     Section("Placed on Front") {
                         let frontComponents = placedComponents(on: .front)
                         if frontComponents.isEmpty {
@@ -103,7 +103,7 @@ struct FootprintNavigatorView: View {
                             }
                         }
                     }
-                    
+
                     Section("Placed on Back") {
                         let backComponents = placedComponents(on: .back)
                         if backComponents.isEmpty {
@@ -134,7 +134,7 @@ struct FootprintNavigatorView: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private func componentRow(for component: ComponentInstance) -> some View {
         HStack {
@@ -146,4 +146,3 @@ struct FootprintNavigatorView: View {
         .frame(height: 14) // Applied frame height for the row
     }
 }
-
