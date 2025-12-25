@@ -7,60 +7,47 @@
 
 import SwiftUI
 
-enum SettingsTab: String, CaseIterable {
-    case board
-    case schematic
-    case layout
-
-    var icon: String {
-        switch self {
-        case .board:
-            return CircuitProSymbols.Project.board
-        case .schematic:
-            return CircuitProSymbols.Project.schematic
-        case .layout:
-            return CircuitProSymbols.Project.layout
-        }
-    }
+private enum SettingsRoute: Hashable {
+    case test
 }
 
 struct SettingsView: View {
-
-    @State private var selectedTab: SettingsTab = .board
+    @State private var selection: SettingsRoute? = .test
 
     var body: some View {
-        VStack {
-            switch selectedTab {
-            case .board:
-                BoardSettingsView()
-            case .schematic:
-                Text("Schematic Settings")
-            case .layout:
-                Text("Layout Settings")
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                HStack(spacing: 40) {
-                    ForEach(SettingsTab.allCases, id: \.self) { tab in
-                        Button {
-                            selectedTab = tab
-                        } label: {
-                            VStack {
-                                Image(systemName: tab.icon)
-                                Text(tab.rawValue.capitalized)
-                                    .font(.subheadline)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .font(.title2)
-                    }
+        NavigationSplitView {
+            List(selection: $selection) {
+                NavigationLink(value: SettingsRoute.test) {
+                    Label("Test", systemImage: "gearshape")
                 }
             }
+            .listStyle(.sidebar)
+        } detail: {
+            NavigationStack {
+                TestSettingsView()
+                    .navigationDestination(for: SettingsRoute.self) { route in
+                        switch route {
+                        case .test:
+                            TestSettingsView()
+                        }
+                    }
+            }
         }
+        .frame(minWidth: 700, minHeight: 500)
     }
 }
 
-#Preview {
-    SettingsView()
+private struct TestSettingsView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Test Settings")
+                .font(.title2)
+                .fontWeight(.semibold)
+            Text("This is a placeholder screen for the settings navigation.")
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(24)
+        .navigationTitle("Test")
+    }
 }

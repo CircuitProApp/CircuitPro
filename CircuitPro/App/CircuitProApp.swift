@@ -10,7 +10,7 @@ import SwiftDataPacks
 
 @main
 struct CircuitProApp: App {
-    
+
     @State private var packManager: SwiftDataPackManager
 
      init() {
@@ -21,8 +21,8 @@ struct CircuitProApp: App {
          ])
          _packManager = State(initialValue: manager)
      }
-     
-    
+
+
     var body: some Scene {
         WelcomeWindowScene(packManager: packManager)
             .commands {
@@ -44,13 +44,18 @@ struct CircuitProApp: App {
         .defaultSize(width: 1340, height: 800)
         .restorationBehavior(.disabled)
         .defaultLaunchBehavior(.suppressed)
-        
+
         Window("Component Design", id: "ComponentDesignWindow") {
             ComponentDesignView()
                 .frame(minWidth: 800, minHeight: 600)
                 .packContainer(packManager)
         }
-        
+
+        Window("Settings", id: "SettingsWindow") {
+            SettingsView()
+                .frame(minWidth: 700, minHeight: 500)
+        }
+
         AboutWindowScene()
     }
 }
