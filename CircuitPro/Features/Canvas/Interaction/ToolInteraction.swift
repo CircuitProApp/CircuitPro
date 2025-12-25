@@ -3,17 +3,17 @@ import AppKit
 /// An application-specific interaction handler that knows how to process results from schematic tools.
 /// It acts as the orchestrator that translates tool intents into concrete model mutations.
 struct ToolInteraction: CanvasInteraction {
-    
+
     // MODIFIED: The method signature now matches the CanvasInteraction protocol.
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         // This interaction is only interested in actions from drawing tools.
         guard let tool = controller.selectedTool, !(tool is CursorTool) else {
             return false
         }
-        
+
         let tolerance = 5.0 / context.magnification
         let hitTarget = context.sceneRoot.hitTest(point, tolerance: tolerance)
-        
+
         // MODIFIED: It's safer to get the click count from the passed-in event.
         let interactionContext = ToolInteractionContext(
             clickCount: event.clickCount,
@@ -41,7 +41,7 @@ struct ToolInteraction: CanvasInteraction {
 
             schematicGraphNode.syncChildNodesFromModel()
             return true
-            
+
         } else if let request = newNode as? TraceRequestNode {
             // --- ADDED: Handle layout trace requests ---
             // 1. Find the TraceGraphNode in the scene, which holds our data model.
@@ -52,7 +52,7 @@ struct ToolInteraction: CanvasInteraction {
 
             // 2. Get a reference to the actual TraceGraph model.
             let graph = traceGraphNode.graph
-            
+
             // 3. Use the data from the request node to update the model.
             graph.addTrace(
                 path: request.points,
@@ -61,18 +61,22 @@ struct ToolInteraction: CanvasInteraction {
             )
 
             // 4. Tell the graph node to update its visual children from the model.
-            // --- THIS IS THE FIX ---
             // We now pass the canvas layers from the render context, so the
             // new TraceNodes can have their colors resolved correctly.
             traceGraphNode.syncChildNodesFromModel(canvasLayers: context.layers)
-            
+
             return true
-            
+
         } else {
             // Handle standard nodes that are not requests.
+            if let store = context.environment.canvasStore {
+                Task { @MainActor in
+                    store.addNode(newNode)
+                }
+            }
             controller.sceneRoot.addChild(newNode)
         }
-        
+
         return true
     }
 }

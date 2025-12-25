@@ -14,9 +14,9 @@ struct SymbolCanvasView: View {
 
     @BindableEnvironment(CanvasEditorManager.self)
     private var symbolEditor
-    
+
     @State private var isCollapsed: Bool = true
-    
+
     @State private var tool: CanvasTool? = CursorTool()
 
     var body: some View {
@@ -26,8 +26,7 @@ struct SymbolCanvasView: View {
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
                 viewport: $canvasManager.viewport,
-                nodes: symbolEditor.canvasNodes,
-                selection: $symbolEditor.selectedElementIDs,
+                store: symbolEditor.canvasStore,
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
                 environment: canvasManager.environment,
                 renderLayers: [

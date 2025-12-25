@@ -13,7 +13,9 @@ final class LayoutEditorController: EditorController {
     // MARK: - EditorController Conformance
 
     /// The final, renderable scene graph for the layout canvas.
-    private(set) var nodes: [BaseNode] = []
+    let canvasStore = CanvasStore()
+
+    var nodes: [BaseNode] { canvasStore.nodes }
 
     // MARK: - Layout-Specific State
 
@@ -49,8 +51,6 @@ final class LayoutEditorController: EditorController {
             // Rebuild layout nodes if the design or its components change.
             _ = projectManager.selectedDesign
             _ = projectManager.componentInstances
-            // Also rebuild if the active layer changes, as this can affect visuals.
-            _ = self.activeLayerId
             // Also watch for changes from the sync manager for pending ECOs.
             _ = projectManager.syncManager.pendingChanges
         } onChange: {
@@ -106,12 +106,12 @@ final class LayoutEditorController: EditorController {
         traceGraphNode.syncChildNodesFromModel(canvasLayers: self.canvasLayers)
 
         // 4. Combine all nodes into the final scene graph.
-        self.nodes = footprintNodes + [traceGraphNode]
+        canvasStore.setNodes(footprintNodes + [traceGraphNode])
     }
 
     /// Finds a node (and its children) recursively by its ID.
     func findNode(with id: UUID) -> BaseNode? {
-        return nodes.findNode(with: id)
+        return canvasStore.nodes.findNode(with: id)
     }
 
     // MARK: - Private Helpers

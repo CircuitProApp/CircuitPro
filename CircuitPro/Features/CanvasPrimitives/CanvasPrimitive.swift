@@ -43,7 +43,7 @@ extension CanvasPrimitive {
     /// The renderer will be responsible for resolving the halo's color and applying it.
     func makeHaloPath() -> CGPath? {
         let path = makePath()
-        
+
         // This constant defines the extra width for the halo. A value of 4.0 means the
         // visible halo will extend 2.0 points from the edge of the primitive.
         let haloPadding: CGFloat = 0.5
@@ -71,7 +71,7 @@ extension CanvasPrimitive {
         // --- LOGGING --- (This part remains the same)
         let shortID = self.id.uuidString.prefix(4)
         // The point is still local to the primitive's own geometry (position = 0,0).
-        
+
         if filled {
             wasHit = path.contains(point)
         } else {
@@ -85,11 +85,10 @@ extension CanvasPrimitive {
             )
             wasHit = stroke.contains(point)
         }
-        
+
         // If the geometry wasn't hit, we return nil as before.
         guard wasHit else { return nil }
-        
-        // --- THIS IS THE FIX ---
+
         // Instead of constructing a graphics-specific CanvasHitTarget, we now return
         // the primitive's own unique ID. This serves as the `partIdentifier` for the
         // consuming PrimitiveNode, which will then build the final, generic hit target.

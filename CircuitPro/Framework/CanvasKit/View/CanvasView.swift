@@ -4,14 +4,13 @@ import AppKit
 struct CanvasView: NSViewRepresentable {
 
     // MARK: - SwiftUI State
-    
+
     @Binding var viewport: CanvasViewport
-    let nodes: [BaseNode]
-    @Binding var selection: Set<UUID>
+    @Bindable var store: CanvasStore
     @Binding var tool: CanvasTool?
-    
+
     @Binding var layers: [CanvasLayer]
-    
+
     @Binding var activeLayerId: UUID?
 
     // MARK: - Callbacks & Configuration
@@ -20,15 +19,14 @@ struct CanvasView: NSViewRepresentable {
     let interactions: [any CanvasInteraction]
     let inputProcessors: [any InputProcessor]
     let snapProvider: any SnapProvider
-    
+
     let registeredDraggedTypes: [NSPasteboard.PasteboardType]
     let onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
     var onCanvasChange: ((CanvasChangeContext) -> Void)?
 
     init(
         viewport: Binding<CanvasViewport>,
-        nodes: [BaseNode],
-        selection: Binding<Set<UUID>>,
+        store: CanvasStore,
         tool: Binding<CanvasTool?> = .constant(nil),
         layers: Binding<[CanvasLayer]> = .constant([]),
         activeLayerId: Binding<UUID?> = .constant(nil),
@@ -41,12 +39,11 @@ struct CanvasView: NSViewRepresentable {
         onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil
     ) {
         self._viewport = viewport
-        self.nodes = nodes
-        self._selection = selection
+        self.store = store
         self._tool = tool
         self._layers = layers
         self._activeLayerId = activeLayerId
-        self.environment = environment
+        self.environment = environment.withCanvasStore(store)
         self.renderLayers = renderLayers
         self.interactions = interactions
         self.inputProcessors = inputProcessors
@@ -56,26 +53,26 @@ struct CanvasView: NSViewRepresentable {
     }
 
     // MARK: - Coordinator
-    
+
     final class Coordinator: NSObject {
         let canvasController: CanvasController
-        
+
         private var viewportBinding: Binding<CanvasViewport>
-        private var selectionBinding: Binding<Set<UUID>>
-        
+        private let store: CanvasStore
+
         private var magnificationObservation: NSKeyValueObservation?
         private var boundsChangeObserver: Any?
 
         init(
             viewport: Binding<CanvasViewport>,
-            selection: Binding<Set<UUID>>,
+            store: CanvasStore,
             renderLayers: [any RenderLayer],
             interactions: [any CanvasInteraction],
             inputProcessors: [any InputProcessor],
             snapProvider: any SnapProvider
         ) {
             self.viewportBinding = viewport
-            self.selectionBinding = selection
+            self.store = store
             self.canvasController = CanvasController(renderLayers: renderLayers, interactions: interactions, inputProcessors: inputProcessors, snapProvider: snapProvider)
             super.init()
             setupControllerCallbacks()
@@ -83,10 +80,13 @@ struct CanvasView: NSViewRepresentable {
 
         private func setupControllerCallbacks() {
             canvasController.onSelectionChanged = { [weak self] newSelectionIDs in
-                DispatchQueue.main.async { self?.selectionBinding.wrappedValue = newSelectionIDs }
+                guard let self else { return }
+                Task { @MainActor in
+                    self.store.selection = newSelectionIDs
+                }
             }
         }
-        
+
         func observeScrollView(_ scrollView: NSScrollView) {
             magnificationObservation = scrollView.observe(\.magnification, options: .new) { [weak self] _, change in
                 guard let self = self, let newValue = change.newValue else { return }
@@ -97,11 +97,11 @@ struct CanvasView: NSViewRepresentable {
                     self.canvasController.viewportDidMagnify(to: newValue)
                 }
             }
-    
+
             guard let clipView = scrollView.contentView as? NSClipView else { return }
-            
+
             clipView.postsBoundsChangedNotifications = true
-            
+
             boundsChangeObserver = NotificationCenter.default.addObserver(
                 forName: NSView.boundsDidChangeNotification,
                 object: clipView,
@@ -114,7 +114,7 @@ struct CanvasView: NSViewRepresentable {
                 }
             }
         }
-        
+
         deinit {
             magnificationObservation?.invalidate()
             if let observer = boundsChangeObserver {
@@ -122,11 +122,11 @@ struct CanvasView: NSViewRepresentable {
             }
         }
     }
-    
+
     func makeCoordinator() -> Coordinator {
         let coordinator = Coordinator(
             viewport: $viewport,
-            selection: $selection,
+            store: store,
             renderLayers: self.renderLayers,
             interactions: self.interactions,
             inputProcessors: self.inputProcessors,
@@ -143,28 +143,28 @@ struct CanvasView: NSViewRepresentable {
         let coordinator = context.coordinator
         let canvasHostView = CanvasHostView(controller: coordinator.canvasController, registeredDraggedTypes: self.registeredDraggedTypes)
         let scrollView = CenteringNSScrollView()
-        
+
         coordinator.canvasController.view = canvasHostView
-        
+
         scrollView.documentView = canvasHostView
         scrollView.hasHorizontalScroller = true
         scrollView.hasVerticalScroller = true
         scrollView.allowsMagnification = true
         scrollView.minMagnification = 0.1
         scrollView.maxMagnification = 10.0
-        
+
         coordinator.observeScrollView(scrollView)
-        
+
         return scrollView
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
         controller.onCanvasChange = self.onCanvasChange
-        
+
         controller.sync(
-            nodes: self.nodes,
-            selection: self.selection,
+            nodes: self.store.nodes,
+            selection: self.store.selection,
             tool: self.tool,
             magnification: self.viewport.magnification,
             environment: self.environment,
@@ -175,17 +175,17 @@ struct CanvasView: NSViewRepresentable {
         if let hostView = scrollView.documentView, hostView.frame.size != self.viewport.size {
             hostView.frame.size = self.viewport.size
         }
-        
+
         if !scrollView.magnification.isApproximatelyEqual(to: self.viewport.magnification) {
             scrollView.magnification = self.viewport.magnification
         }
-        
+
         if let clipView = scrollView.contentView as? NSClipView {
             if self.viewport.visibleRect != CanvasViewport.autoCenter && clipView.bounds.origin != self.viewport.visibleRect.origin {
                 clipView.bounds.origin = self.viewport.visibleRect.origin
             }
         }
-        
+
         scrollView.documentView?.needsDisplay = true
     }
 }

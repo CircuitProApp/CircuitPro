@@ -39,23 +39,25 @@ final class ProjectManager {
 
     // MARK: - Global UI State
 
-    var selectedNodeIDs: Set<UUID> = []
+    var selectedNodeIDs: Set<UUID> {
+        get { activeCanvasStore.selection }
+        set { activeCanvasStore.selection = newValue }
+    }
     var selectedNetIDs: Set<UUID> = []
     var selectedEditor: EditorType = .schematic
 
-    /// Nodes for the currently active editor.
-    var activeCanvasNodes: [BaseNode] {
-        switch selectedEditor {
-        case .schematic: return schematicController.nodes
-        case .layout:    return layoutController.nodes
-        }
-    }
-
     /// Controller for the active editor (used e.g. by Inspector).
-    var activeEditorController: EditorController? {
+    var activeEditorController: EditorController {
         switch selectedEditor {
         case .schematic: return schematicController
         case .layout:    return layoutController
+        }
+    }
+
+    var activeCanvasStore: CanvasStore {
+        switch selectedEditor {
+        case .schematic: return schematicController.canvasStore
+        case .layout: return layoutController.canvasStore
         }
     }
 

@@ -8,21 +8,20 @@
 import SwiftUI
 
 struct FootprintCanvasView: View {
-    
+
     @BindableEnvironment(CanvasManager.self)
     private var canvasManager
 
     @BindableEnvironment(CanvasEditorManager.self)
     private var footprintEditor
-    
+
     @State private var isCollapsed: Bool = true
-    
+
     var body: some View {
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
                 viewport: $canvasManager.viewport,
-                nodes: footprintEditor.canvasNodes,
-                selection: $footprintEditor.selectedElementIDs,
+                store: footprintEditor.canvasStore,
                 tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
                 layers: $footprintEditor.layers,
                 activeLayerId: $footprintEditor.activeLayerId,

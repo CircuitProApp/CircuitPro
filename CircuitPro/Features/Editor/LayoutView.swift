@@ -3,14 +3,13 @@ import SwiftUI
 struct LayoutCanvasView: View {
     @BindableEnvironment(\.projectManager)
     private var projectManager
-    
+
     @Bindable var canvasManager: CanvasManager
-    
+
     var body: some View {
         CanvasView(
             viewport: $canvasManager.viewport,
-            nodes: projectManager.activeCanvasNodes,
-            selection: $projectManager.selectedNodeIDs,
+            store: projectManager.layoutController.canvasStore,
             tool: $projectManager.layoutController.selectedTool.unwrapping(withDefault: CursorTool()),
             layers: $projectManager.layoutController.canvasLayers,
             activeLayerId: $projectManager.layoutController.activeLayerId,
@@ -45,19 +44,19 @@ struct LayoutCanvasView: View {
                 .padding(16)
         }
     }
-    
+
     private func handlePlacementDrop(pasteboard: NSPasteboard, location: CGPoint) -> Bool {
         guard let data = pasteboard.data(forType: .transferablePlacement),
               let transferable = try? JSONDecoder().decode(TransferablePlacement.self, from: data) else {
             return false
         }
-        
+
         projectManager.placeComponent(
             instanceID: transferable.componentInstanceID,
             at: location,
             on: .front
         )
-        
+
         return true
     }
 }

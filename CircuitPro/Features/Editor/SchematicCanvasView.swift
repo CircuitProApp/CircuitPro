@@ -9,17 +9,16 @@ import SwiftUI
 import SwiftDataPacks
 
 struct SchematicCanvasView: View {
-    
+
     @BindableEnvironment(\.projectManager) private var projectManager
     @PackManager private var packManager
-    
+
     @Bindable var canvasManager: CanvasManager
-    
+
     var body: some View {
         CanvasView(
             viewport: $canvasManager.viewport,
-            nodes: projectManager.activeCanvasNodes,
-            selection: $projectManager.selectedNodeIDs,
+            store: projectManager.schematicController.canvasStore,
             tool: $projectManager.schematicController.selectedTool.unwrapping(withDefault: CursorTool()),
             environment: canvasManager.environment,
             renderLayers: [
@@ -50,7 +49,7 @@ struct SchematicCanvasView: View {
                 .padding(16)
         }
     }
-    
+
     /// Handles dropping a new component onto the canvas from a library.
     /// The view's only job is to decode the data and delegate the action.
     private func handleComponentDrop(pasteboard: NSPasteboard, location: CGPoint) -> Bool {
@@ -58,7 +57,7 @@ struct SchematicCanvasView: View {
               let transferable = try? JSONDecoder().decode(TransferableComponent.self, from: data) else {
             return false
         }
-        
+
         return projectManager.schematicController.handleComponentDrop(
             from: transferable,
             at: location,

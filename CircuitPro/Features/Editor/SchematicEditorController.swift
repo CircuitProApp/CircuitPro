@@ -6,7 +6,9 @@ import SwiftDataPacks // Add this import
 @Observable
 final class SchematicEditorController: EditorController {
 
-    private(set) var nodes: [BaseNode] = []
+    let canvasStore = CanvasStore()
+
+    var nodes: [BaseNode] { canvasStore.nodes }
 
     var selectedTool: CanvasTool = CursorTool()
 
@@ -58,11 +60,11 @@ final class SchematicEditorController: EditorController {
 
         // This is where the graph is automatically synced on every rebuild.
         let context = BuildContext(activeLayers: [])
-        self.nodes = await nodeProvider.buildNodes(from: design, context: context)
+        canvasStore.setNodes(await nodeProvider.buildNodes(from: design, context: context))
     }
 
     func findNode(with id: UUID) -> BaseNode? {
-        return nodes.findNode(with: id)
+        return canvasStore.nodes.findNode(with: id)
     }
 
     private func persistGraph() {

@@ -7,14 +7,15 @@
 
 import Foundation
 
+@MainActor
 struct ComponentValidator {
-    
+
     private let manager: ComponentDesignManager
-    
+
     init(manager: ComponentDesignManager) {
         self.manager = manager
     }
-    
+
     func validate() -> ValidationSummary {
         var summary = ValidationSummary()
 
@@ -32,7 +33,7 @@ struct ComponentValidator {
 
         return summary
     }
-    
+
     private func validate(stage: ComponentDesignStage) -> (errors: [StageValidationError], warnings: [StageValidationError]) {
         var errors: [StageValidationError] = []
         var warnings: [StageValidationError] = []
@@ -64,12 +65,12 @@ struct ComponentValidator {
             if manager.footprintDrafts.isEmpty && manager.assignedFootprints.isEmpty {
                 errors.append(.init(message: "At least one footprint must be created or assigned.", requirement: ComponentDesignStage.FootprintRequirement.pads))
             }
-            
+
             // CORRECTED: Iterate over the `footprintDrafts` array.
             for draft in manager.footprintDrafts {
                 // The editor is now directly and safely accessible on the draft object.
                 let editor = draft.editor
-                
+
                 let footprintPrimitives = editor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
                 if footprintPrimitives.isEmpty {
                     // Use the draft's name for the error message.

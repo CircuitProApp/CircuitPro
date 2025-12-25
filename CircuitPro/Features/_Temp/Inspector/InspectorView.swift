@@ -8,30 +8,30 @@
 import SwiftUI
 
 struct InspectorView: View {
-    
+
     @BindableEnvironment(\.projectManager) private var projectManager
 
     @State private var selectedTab: InspectorTab = .attributes
-    
+
     /// A computed property that attempts to find the selected node from the currently active canvas.
     private var singleSelectedNode: BaseNode? {
         guard projectManager.selectedNodeIDs.count == 1,
               let selectedID = projectManager.selectedNodeIDs.first else {
             return nil
         }
-        return projectManager.activeCanvasNodes.findNode(with: selectedID)
+        return projectManager.activeCanvasStore.nodes.findNode(with: selectedID)
     }
-    
+
     /// A computed property that finds the ComponentInstance for a selected SymbolNode.
     private var selectedComponentContext: (component: ComponentInstance, node: SymbolNode)? {
         guard let symbolNode = singleSelectedNode as? SymbolNode else {
             return nil
         }
-        
+
         if let componentInstance = projectManager.componentInstances.first(where: { $0.id == symbolNode.id }) {
             return (componentInstance, symbolNode)
         }
-        
+
         return nil
     }
 
@@ -49,11 +49,11 @@ struct InspectorView: View {
 
         return nil
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             switch projectManager.selectedEditor {
-            
+
             case .schematic:
                 schematicInspectorView
 
@@ -76,7 +76,7 @@ struct InspectorView: View {
 
         } else if let anchoredText = singleSelectedNode as? AnchoredTextNode {
             AnchoredTextInspectorView(anchoredText: anchoredText)
-            
+
         } else {
             selectionStatusView
         }
@@ -91,7 +91,7 @@ struct InspectorView: View {
                 footprintNode: context.node
             )
             .id(context.component.id)
-            
+
         } else if let primitive = singleSelectedNode as? PrimitiveNode {
             @Bindable var primitive = primitive
             ScrollView {
@@ -99,12 +99,12 @@ struct InspectorView: View {
             }
         } else if let anchoredText = singleSelectedNode as? AnchoredTextNode {
             AnchoredTextInspectorView(anchoredText: anchoredText)
-            
+
         } else {
             selectionStatusView
         }
     }
-    
+
     /// A shared view for displaying the current selection status (none, or multiple).
     @ViewBuilder
     private var selectionStatusView: some View {
