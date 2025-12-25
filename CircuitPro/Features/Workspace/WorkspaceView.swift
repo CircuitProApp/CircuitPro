@@ -9,35 +9,35 @@ import SwiftUI
 import SwiftData
 
 struct WorkspaceView: View {
-    
+
     @BindableEnvironment(\.projectManager)
     private var projectManager
 
     private var syncManager: SyncManager {
         projectManager.syncManager
     }
-    
+
     @State private var showInspector: Bool = false
     @State private var showFeedbackSheet: Bool = false
     @State private var isShowingLibrary: Bool = false
     @State private var isShowingTimeline: Bool = false
     @State private var showDiscardChangesAlert: Bool = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
-    
+
     // Count UNIQUE fields being edited, not total history records
     private var pendingFieldEditsCount: Int {
         uniqueFieldKeys(syncManager.pendingChanges).count
     }
-    
+
     private var pendingChangesCountBadge: String {
         let count = pendingFieldEditsCount
         return count > 99 ? "99+" : "\(count)"
     }
-    
+
     private var hasPendingFieldEdits: Bool {
         pendingFieldEditsCount > 0
     }
-    
+
     // Builds a set of unique "field keys" across all pending records:
     // - RefDes per component
     // - Footprint per component
@@ -56,7 +56,7 @@ struct WorkspaceView: View {
         }
         return keys
     }
-    
+
     private var syncModeBinding: Binding<SyncMode> {
         Binding(
             get: { self.syncManager.syncMode },
@@ -69,7 +69,7 @@ struct WorkspaceView: View {
             }
         )
     }
-    
+
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             NavigatorView()
@@ -98,6 +98,11 @@ struct WorkspaceView: View {
                     Text("Switching to Automatic Sync will discard all \(pendingChangesCountBadge) pending field edits in your timeline.")
                 }
                 .toolbar {
+                    if projectManager.selectedDesign != nil {
+                        ToolbarItem(placement: .principal) {
+                            editorPicker()
+                        }
+                    }
                     ToolbarItem(placement: .primaryAction) {
                         syncPickerCluster()
                     }
@@ -135,6 +140,18 @@ struct WorkspaceView: View {
                 projectManager.selectedDesign = firstDesign
             }
         }
+    }
+
+    @ViewBuilder
+    private func editorPicker() -> some View {
+        Picker("Editor", selection: $projectManager.selectedEditor) {
+            Text("Schematic")
+                .tag(EditorType.schematic)
+            Text("Layout")
+                .tag(EditorType.layout)
+        }
+        .pickerStyle(.segmented)
+        .help("Switch Editor")
     }
 
     @ViewBuilder
