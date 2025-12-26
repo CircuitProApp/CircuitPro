@@ -26,7 +26,10 @@ struct FootprintCanvasView: View {
                 graph: footprintEditor.graph,
                 layers: $footprintEditor.layers,
                 activeLayerId: $footprintEditor.activeLayerId,
-                environment: canvasManager.environment,
+                environment: canvasManager.environment
+                    .withGraphRenderProviders([GraphTextRenderProvider()])
+                    .withGraphHaloProviders([GraphTextHaloProvider()])
+                    .withGraphHitTestProviders([GraphTextHitTestProvider()]),
                 renderLayers: [
                     GridRenderLayer(),
                     AxesRenderLayer(),

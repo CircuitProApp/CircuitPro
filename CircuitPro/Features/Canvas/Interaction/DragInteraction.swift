@@ -16,6 +16,8 @@ final class DragInteraction: CanvasInteraction {
     private struct GraphDraggingState {
         let origin: CGPoint
         let originalPrimitives: [NodeID: AnyCanvasPrimitive]
+        let originalTexts: [NodeID: GraphTextComponent]
+        let isAnchorDrag: Bool
     }
 
     private var state: DraggingState?
@@ -33,18 +35,31 @@ final class DragInteraction: CanvasInteraction {
 
         if controller.selectedNodes.isEmpty, let graph = context.graph {
             if let graphHit = GraphHitTester().hitTest(point: point, context: context, scope: .graphOnly),
-               graph.selection.contains(graphHit),
-               let primitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) {
-                let selectedIDs = graph.selection
-                var originals: [NodeID: AnyCanvasPrimitive] = [:]
-                for id in selectedIDs {
-                    if let original = graph.component(AnyCanvasPrimitive.self, for: id) {
-                        originals[id] = original
+               graph.selection.contains(graphHit) {
+                let hitIsPrimitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) != nil
+                let hitIsText = graph.component(GraphTextComponent.self, for: graphHit) != nil
+                if hitIsPrimitive || hitIsText {
+                    let selectedIDs = graph.selection
+                    var originalPrimitives: [NodeID: AnyCanvasPrimitive] = [:]
+                    var originalTexts: [NodeID: GraphTextComponent] = [:]
+                    for id in selectedIDs {
+                        if let original = graph.component(AnyCanvasPrimitive.self, for: id) {
+                            originalPrimitives[id] = original
+                        }
+                        if let original = graph.component(GraphTextComponent.self, for: id) {
+                            originalTexts[id] = original
+                        }
                     }
+                    let isAnchorDrag = event.modifierFlags.contains(.control)
+                    self.graphState = GraphDraggingState(
+                        origin: point,
+                        originalPrimitives: originalPrimitives,
+                        originalTexts: originalTexts,
+                        isAnchorDrag: isAnchorDrag
+                    )
+                    self.didMove = false
+                    return true
                 }
-                self.graphState = GraphDraggingState(origin: point, originalPrimitives: originals)
-                self.didMove = false
-                return true
             }
 
             if let wireEngine = context.environment.wireEngine,
@@ -120,6 +135,17 @@ final class DragInteraction: CanvasInteraction {
             for (id, original) in currentGraphState.originalPrimitives {
                 var updated = original
                 updated.position = original.position + deltaPoint
+                graph.setComponent(updated, for: id)
+            }
+            for (id, original) in currentGraphState.originalTexts {
+                var updated = original
+                updated.worldPosition = original.worldPosition + deltaPoint
+                let inverseOwner = original.ownerTransform.inverted()
+                updated.resolvedText.relativePosition = updated.worldPosition.applying(inverseOwner)
+                if currentGraphState.isAnchorDrag {
+                    updated.worldAnchorPosition = original.worldAnchorPosition + deltaPoint
+                    updated.resolvedText.anchorPosition = updated.worldAnchorPosition.applying(inverseOwner)
+                }
                 graph.setComponent(updated, for: id)
             }
             return

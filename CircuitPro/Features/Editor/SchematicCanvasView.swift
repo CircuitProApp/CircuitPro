@@ -23,9 +23,9 @@ struct SchematicCanvasView: View {
             graph: projectManager.schematicController.graph,
             environment: canvasManager.environment
                 .withWireEngine(projectManager.schematicController.wireEngine)
-                .withGraphRenderProviders([GraphWireRenderAdapter()])
-                .withGraphHaloProviders([WireGraphHaloProvider()])
-                .withGraphHitTestProviders([WireGraphHitTestProvider()]),
+                .withGraphRenderProviders([GraphWireRenderAdapter(), GraphTextRenderProvider()])
+                .withGraphHaloProviders([WireGraphHaloProvider(), GraphTextHaloProvider()])
+                .withGraphHitTestProviders([WireGraphHitTestProvider(), GraphTextHitTestProvider()]),
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),

@@ -1,12 +1,6 @@
 import SwiftUI
 import Observation
 
-// MARK: - Schematic render helper (used by SchematicNodeProvider)
-struct RenderableText {
-    let model: CircuitText.Resolved
-    let text: String
-}
-
 @MainActor
 @Observable
 final class ProjectManager {

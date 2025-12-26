@@ -23,6 +23,8 @@ final class LayoutEditorController: EditorController {
     private var activeDesignID: UUID?
     private var isSyncingTracesFromModel = false
     private var isApplyingTraceChangesToModel = false
+    private var isSyncingTextFromModel = false
+    private var isApplyingTextChangesToModel = false
 
     // MARK: - Layout-Specific State
 
@@ -95,6 +97,8 @@ final class LayoutEditorController: EditorController {
                     _ = fp.textOverrides
                     _ = fp.textInstances
                     _ = fp.resolvedItems
+                    _ = fp.position
+                    _ = fp.cardinalRotation
                 }
             }
         } onChange: {
@@ -158,43 +162,72 @@ final class LayoutEditorController: EditorController {
                   footprintInst.definition != nil else {
                 return nil
             }
-            let renderableTexts = self.generateRenderableTexts(for: inst)
-            return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: self.canvasLayers, renderableTexts: renderableTexts)
+            return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: self.canvasLayers)
         }
 
         // 3. Combine all nodes into the final scene graph.
         canvasStore.setNodes(footprintNodes)
         syncTracesFromModel()
+        refreshFootprintTextNodes()
     }
 
     func refreshFootprintTextNodes() {
         let design = projectManager.selectedDesign
-        var didChange = false
+        isSyncingTextFromModel = true
+        var updatedIDs = Set<NodeID>()
 
         for inst in design.componentInstances {
             guard let footprintInst = inst.footprintInstance,
-                  case .placed = footprintInst.placement,
-                  let footprintNode = canvasStore.nodes.findNode(with: inst.id) as? FootprintNode else {
+                  case .placed = footprintInst.placement else {
                 continue
             }
 
-            let renderableTexts = footprintInst.resolvedItems.map { resolvedModel in
+            let ownerPosition = footprintInst.position
+            let ownerRotation = footprintInst.rotation
+            let ownerTransform = CGAffineTransform(translationX: ownerPosition.x, y: ownerPosition.y)
+                .rotated(by: ownerRotation)
+
+            for resolvedModel in footprintInst.resolvedItems {
                 let displayString = projectManager.generateString(for: resolvedModel, component: inst)
-                return RenderableText(model: resolvedModel, text: displayString)
-            }
+                let textID = GraphTextID.makeID(for: resolvedModel.source, ownerID: inst.id, fallback: resolvedModel.id)
+                let nodeID = NodeID(textID)
 
-            if AnchoredTextNodeSync.sync(
-                parent: footprintNode,
-                owner: footprintInst,
-                renderableTexts: renderableTexts
-            ) {
-                didChange = true
+                let worldPosition = resolvedModel.relativePosition.applying(ownerTransform)
+                let worldAnchorPosition = resolvedModel.anchorPosition.applying(ownerTransform)
+                let worldRotation = ownerRotation + resolvedModel.cardinalRotation.radians
+
+                let component = GraphTextComponent(
+                    resolvedText: resolvedModel,
+                    displayText: displayString,
+                    ownerID: inst.id,
+                    target: .footprint,
+                    ownerPosition: ownerPosition,
+                    ownerRotation: ownerRotation,
+                    worldPosition: worldPosition,
+                    worldRotation: worldRotation,
+                    worldAnchorPosition: worldAnchorPosition,
+                    layerId: nil,
+                    showsAnchorGuides: true
+                )
+
+                if !graph.nodes.contains(nodeID) {
+                    graph.addNode(nodeID)
+                }
+                graph.setComponent(component, for: nodeID)
+                updatedIDs.insert(nodeID)
             }
         }
 
-        if didChange {
-            canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
+        let existingIDs = Set(graph.nodeIDs(with: GraphTextComponent.self))
+        for id in existingIDs.subtracting(updatedIDs) {
+            graph.removeComponent(GraphTextComponent.self, for: id)
+            if !graph.hasAnyComponent(for: id) {
+                graph.removeNode(id)
+            }
         }
+
+        isSyncingTextFromModel = false
+        canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
     }
 
     /// Finds a node (and its children) recursively by its ID.
@@ -226,20 +259,6 @@ final class LayoutEditorController: EditorController {
                 self.graph.setComponent($0, for: nodeID)
             }
         )
-    }
-
-    /// Generates an array of `RenderableText` objects for a single `ComponentInstance`.
-    private func generateRenderableTexts(for inst: ComponentInstance) -> [RenderableText] {
-        // This logic is specific to the text defined on a footprint, which might differ from a symbol.
-        // For now, we assume it uses the same `resolvedItems` as the symbol instance for properties.
-        guard let footprintInst = inst.footprintInstance else { return [] }
-
-        return footprintInst.resolvedItems.map { resolvedModel in
-            // Use the ProjectManager's shared utility to get the final display string,
-            // which correcly handles pending ECO values.
-            let displayString = projectManager.generateString(for: resolvedModel, component: inst)
-            return RenderableText(model: resolvedModel, text: displayString)
-        }
     }
 
     private func resetGraphIfNeeded(for design: CircuitDesign) {
@@ -290,6 +309,10 @@ final class LayoutEditorController: EditorController {
             if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self),
                let primitive = graph.component(AnyCanvasPrimitive.self, for: id) {
                 primitiveCache[id] = primitive
+            } else if componentKey == ObjectIdentifier(GraphTextComponent.self),
+                      let component = graph.component(GraphTextComponent.self, for: id),
+                      !isSyncingTextFromModel {
+                applyGraphTextChange(component)
             }
         case .nodeRemoved(let id):
             primitiveCache.removeValue(forKey: id)
@@ -300,6 +323,16 @@ final class LayoutEditorController: EditorController {
         default:
             break
         }
+    }
+
+    private func applyGraphTextChange(_ component: GraphTextComponent) {
+        guard !isApplyingTextChangesToModel else { return }
+        guard let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }) else { return }
+
+        isApplyingTextChangesToModel = true
+        inst.apply(component.resolvedText, for: component.target)
+        document.scheduleAutosave()
+        isApplyingTextChangesToModel = false
     }
 
     private func handleTraceEngineChange() {

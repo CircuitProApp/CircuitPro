@@ -8,7 +8,7 @@
 import AppKit
 
 /// A scene graph node that represents an instance of a library `Symbol`.
-/// It acts as a parent for `PinNode`, `PrimitiveNode`, and `AnchoredTextNode` children.
+/// It acts as a parent for `PinNode` and `PrimitiveNode` children.
 @Observable
 final class SymbolNode: BaseNode {
 
@@ -40,7 +40,7 @@ final class SymbolNode: BaseNode {
 
     // MARK: - Initialization
 
-    init?(id: UUID, instance: SymbolInstance, renderableTexts: [RenderableText], wireEngine: WireEngine? = nil) {
+    init?(id: UUID, instance: SymbolInstance, wireEngine: WireEngine? = nil) {
         guard let symbolDefinition = instance.definition else {
             print("Error: SymbolNode cannot be initialized without a hydrated SymbolInstance.definition.")
             return nil
@@ -51,21 +51,10 @@ final class SymbolNode: BaseNode {
 
         super.init(id: id)
 
-        // Create child nodes from the symbol's definition and the renderable text data.
+        // Create child nodes from the symbol's definition.
         let primitiveNodes = symbolDefinition.primitives.map { PrimitiveNode(primitive: $0) }
         let pinNodes = symbolDefinition.pins.map { PinNode(pin: $0, wireEngine: wireEngine) }
-
-        // Loop over the renderable texts to create fully hydrated `AnchoredTextNode`s.
-        let textNodes: [AnchoredTextNode] = renderableTexts.map { renderable in
-            AnchoredTextNode(
-                resolvedText: renderable.model,
-                text: renderable.text, // Pass the pre-generated string.
-                ownerInstance: self.instance
-            )
-        }
-
-        // Assign all children at once.
-        self.children = primitiveNodes + pinNodes + textNodes
+        self.children = primitiveNodes + pinNodes
 
         // Configure parent-child relationships.
         for child in self.children {
@@ -112,10 +101,6 @@ final class SymbolNode: BaseNode {
 
         // Iterate over children, but only include "core" geometry.
         for child in children {
-            if child is AnchoredTextNode {
-                continue
-            }
-
             guard child.isVisible else { continue }
             let childBox = child.interactionBounds
             let transformedChildBox = childBox.applying(child.localTransform)

@@ -21,15 +21,14 @@ final class SchematicEditorController: EditorController {
     private var suppressGraphSelectionSync = false
     private var isSyncingWiresFromModel = false
     private var isApplyingWireChangesToModel = false
+    private var isSyncingTextFromModel = false
+    private var isApplyingTextChangesToModel = false
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
         self.document = projectManager.document
         self.wireEngine = WireEngine(graph: graph)
-        self.nodeProvider = SchematicNodeProvider(
-            projectManager: projectManager,
-            wireEngine: self.wireEngine
-        )
+        self.nodeProvider = SchematicNodeProvider(wireEngine: self.wireEngine)
         self.wireEngine.onChange = { [weak self] in
             Task { @MainActor in
                 self?.persistGraph()
@@ -73,6 +72,8 @@ final class SchematicEditorController: EditorController {
                 _ = comp.symbolInstance.textOverrides
                 _ = comp.symbolInstance.textInstances
                 _ = comp.symbolInstance.resolvedItems
+                _ = comp.symbolInstance.position
+                _ = comp.symbolInstance.cardinalRotation
             }
         } onChange: {
             Task { @MainActor in
@@ -105,34 +106,61 @@ final class SchematicEditorController: EditorController {
         let context = BuildContext(activeLayers: [])
         canvasStore.setNodes(await nodeProvider.buildNodes(from: design, context: context))
         syncWiresFromModel()
+        refreshSymbolTextNodes()
     }
 
     func refreshSymbolTextNodes() {
         let design = projectManager.selectedDesign
-        var didChange = false
+        isSyncingTextFromModel = true
+        var updatedIDs = Set<NodeID>()
 
         for inst in design.componentInstances {
-            guard let symbolNode = canvasStore.nodes.findNode(with: inst.id) as? SymbolNode else {
-                continue
-            }
+            let ownerPosition = inst.symbolInstance.position
+            let ownerRotation = inst.symbolInstance.rotation
+            let ownerTransform = CGAffineTransform(translationX: ownerPosition.x, y: ownerPosition.y)
+                .rotated(by: ownerRotation)
 
-            let renderableTexts = inst.symbolInstance.resolvedItems.map { resolvedModel in
+            for resolvedModel in inst.symbolInstance.resolvedItems {
                 let displayString = projectManager.generateString(for: resolvedModel, component: inst)
-                return RenderableText(model: resolvedModel, text: displayString)
-            }
+                let textID = GraphTextID.makeID(for: resolvedModel.source, ownerID: inst.id, fallback: resolvedModel.id)
+                let nodeID = NodeID(textID)
 
-            if AnchoredTextNodeSync.sync(
-                parent: symbolNode,
-                owner: inst.symbolInstance,
-                renderableTexts: renderableTexts
-            ) {
-                didChange = true
+                let worldPosition = resolvedModel.relativePosition.applying(ownerTransform)
+                let worldAnchorPosition = resolvedModel.anchorPosition.applying(ownerTransform)
+                let worldRotation = ownerRotation + resolvedModel.cardinalRotation.radians
+
+                let component = GraphTextComponent(
+                    resolvedText: resolvedModel,
+                    displayText: displayString,
+                    ownerID: inst.id,
+                    target: .symbol,
+                    ownerPosition: ownerPosition,
+                    ownerRotation: ownerRotation,
+                    worldPosition: worldPosition,
+                    worldRotation: worldRotation,
+                    worldAnchorPosition: worldAnchorPosition,
+                    layerId: nil,
+                    showsAnchorGuides: true
+                )
+
+                if !graph.nodes.contains(nodeID) {
+                    graph.addNode(nodeID)
+                }
+                graph.setComponent(component, for: nodeID)
+                updatedIDs.insert(nodeID)
             }
         }
 
-        if didChange {
-            canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
+        let existingIDs = Set(graph.nodeIDs(with: GraphTextComponent.self))
+        for id in existingIDs.subtracting(updatedIDs) {
+            graph.removeComponent(GraphTextComponent.self, for: id)
+            if !graph.hasAnyComponent(for: id) {
+                graph.removeNode(id)
+            }
         }
+
+        isSyncingTextFromModel = false
+        canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
     }
 
     private func handleStoreDelta(_ delta: CanvasStoreDelta) {
@@ -169,9 +197,25 @@ final class SchematicEditorController: EditorController {
                     self.suppressGraphSelectionSync = false
                 }
             }
+        case .componentSet(let id, let componentKey):
+            if componentKey == ObjectIdentifier(GraphTextComponent.self),
+               let component = graph.component(GraphTextComponent.self, for: id),
+               !isSyncingTextFromModel {
+                applyGraphTextChange(component)
+            }
         default:
             break
         }
+    }
+
+    private func applyGraphTextChange(_ component: GraphTextComponent) {
+        guard !isApplyingTextChangesToModel else { return }
+        guard let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }) else { return }
+
+        isApplyingTextChangesToModel = true
+        inst.apply(component.resolvedText, for: component.target)
+        document.scheduleAutosave()
+        isApplyingTextChangesToModel = false
     }
 
     func findNode(with id: UUID) -> BaseNode? {

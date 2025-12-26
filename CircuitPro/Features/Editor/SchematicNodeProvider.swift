@@ -17,19 +17,12 @@ struct SchematicNodeProvider: NodeProvider {
 
     // MARK: - Dependencies
 
-    /// A reference to the ProjectManager is needed to access shared services,
-    /// primarily the `generateString` utility which can resolve pending ECO values.
-    private let projectManager: ProjectManager
-
     /// The schematic wire engine that the generated nodes can query.
     private let wireEngine: WireEngine
 
     /// Initializes the provider with the dependencies it needs to build the scene graph.
-    /// - Parameters:
-    ///   - projectManager: The central project manager.
-    ///   - wireEngine: The wire engine for the schematic editor.
-    init(projectManager: ProjectManager, wireEngine: WireEngine) {
-        self.projectManager = projectManager
+    /// - Parameter wireEngine: The wire engine for the schematic editor.
+    init(wireEngine: WireEngine) {
         self.wireEngine = wireEngine
     }
 
@@ -62,11 +55,9 @@ struct SchematicNodeProvider: NodeProvider {
         for inst in design.componentInstances {
             guard inst.symbolInstance.definition != nil else { continue }
 
-            let renderableTexts = generateRenderableTexts(for: inst)
             if let node = SymbolNode(
                 id: inst.id,
                 instance: inst.symbolInstance,
-                renderableTexts: renderableTexts,
                 wireEngine: wireEngine
             ) {
                 symbolNodes.append(node)
@@ -74,15 +65,5 @@ struct SchematicNodeProvider: NodeProvider {
         }
 
         return symbolNodes
-    }
-
-    /// Generates an array of `RenderableText` objects for a single `ComponentInstance`.
-    /// This involves creating the final display string for each piece of dynamic text.
-    @MainActor
-    private func generateRenderableTexts(for inst: ComponentInstance) -> [RenderableText] {
-        inst.symbolInstance.resolvedItems.map { resolvedModel in
-            let displayString = projectManager.generateString(for: resolvedModel, component: inst)
-            return RenderableText(model: resolvedModel, text: displayString)
-        }
     }
 }
