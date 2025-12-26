@@ -21,10 +21,12 @@ final class CanvasStore {
     var onNodesChanged: (([BaseNode]) -> Void)?
     var onDelta: ((CanvasStoreDelta) -> Void)?
 
-    func setNodes(_ nodes: [BaseNode]) {
+    func setNodes(_ nodes: [BaseNode], emitDelta: Bool = true) {
         self.nodes = nodes
         onNodesChanged?(nodes)
-        onDelta?(.reset(nodes: nodes))
+        if emitDelta {
+            onDelta?(.reset(nodes: nodes))
+        }
     }
 
     func addNode(_ node: BaseNode) {

@@ -54,20 +54,31 @@ final class LayoutEditorController: EditorController {
             self?.handleGraphDelta(delta)
         }
 
-        // Start the automatic observation loop upon initialization.
-        startTrackingModelChanges()
+        // Start the automatic observation loops upon initialization.
+        startTrackingStructureChanges()
+        startTrackingTextChanges()
 
         Task {
             await self.rebuildNodes()
         }
     }
 
-    private func startTrackingModelChanges() {
+    private func startTrackingStructureChanges() {
         withObservationTracking {
             // Rebuild layout nodes if the design or its components change.
             _ = projectManager.selectedDesign
             _ = projectManager.componentInstances
-            // Also watch for changes from the sync manager for pending ECOs.
+            _ = projectManager.selectedDesign.layers
+        } onChange: {
+            Task { @MainActor in
+                await self.rebuildNodes()
+                self.startTrackingStructureChanges()
+            }
+        }
+    }
+
+    private func startTrackingTextChanges() {
+        withObservationTracking {
             _ = projectManager.syncManager.pendingChanges
             // Track nested data that affects footprint text rendering.
             for comp in projectManager.componentInstances {
@@ -82,8 +93,8 @@ final class LayoutEditorController: EditorController {
             }
         } onChange: {
             Task { @MainActor in
-                await self.rebuildNodes()
-                self.startTrackingModelChanges()
+                self.refreshFootprintTextNodes()
+                self.startTrackingTextChanges()
             }
         }
     }
@@ -135,6 +146,36 @@ final class LayoutEditorController: EditorController {
 
         // 4. Combine all nodes into the final scene graph.
         canvasStore.setNodes(footprintNodes + [traceGraphNode])
+    }
+
+    private func refreshFootprintTextNodes() {
+        let design = projectManager.selectedDesign
+        var didChange = false
+
+        for inst in design.componentInstances {
+            guard let footprintInst = inst.footprintInstance,
+                  case .placed = footprintInst.placement,
+                  let footprintNode = canvasStore.nodes.findNode(with: inst.id) as? FootprintNode else {
+                continue
+            }
+
+            let renderableTexts = footprintInst.resolvedItems.map { resolvedModel in
+                let displayString = projectManager.generateString(for: resolvedModel, component: inst)
+                return RenderableText(model: resolvedModel, text: displayString)
+            }
+
+            if AnchoredTextNodeSync.sync(
+                parent: footprintNode,
+                owner: footprintInst,
+                renderableTexts: renderableTexts
+            ) {
+                didChange = true
+            }
+        }
+
+        if didChange {
+            canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
+        }
     }
 
     /// Finds a node (and its children) recursively by its ID.

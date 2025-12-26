@@ -39,20 +39,30 @@ final class SchematicEditorController: EditorController {
             self?.handleGraphDelta(delta)
         }
 
-        startTrackingModelChanges()
+        startTrackingStructureChanges()
+        startTrackingTextChanges()
 
         Task {
             await self.rebuildNodes()
         }
     }
 
-    private func startTrackingModelChanges() {
+    private func startTrackingStructureChanges() {
         withObservationTracking {
             _ = projectManager.selectedDesign
             _ = projectManager.componentInstances
-            _ = projectManager.syncManager.pendingChanges
+            _ = projectManager.selectedDesign.wires
+        } onChange: {
+            Task { @MainActor in
+                await self.rebuildNodes()
+                self.startTrackingStructureChanges()
+            }
+        }
+    }
 
-            // NEW: observe nested symbol/footprint text collections (visibility, overrides, instances)
+    private func startTrackingTextChanges() {
+        withObservationTracking {
+            _ = projectManager.syncManager.pendingChanges
             for comp in projectManager.componentInstances {
                 _ = comp.propertyOverrides
                 _ = comp.propertyInstances
@@ -60,16 +70,11 @@ final class SchematicEditorController: EditorController {
                 _ = comp.symbolInstance.textOverrides
                 _ = comp.symbolInstance.textInstances
                 _ = comp.symbolInstance.resolvedItems
-                if let fp = comp.footprintInstance {
-                    _ = fp.textOverrides
-                    _ = fp.textInstances
-                    _ = fp.resolvedItems
-                }
             }
         } onChange: {
             Task { @MainActor in
-                await self.rebuildNodes()
-                self.startTrackingModelChanges()
+                self.refreshSymbolTextNodes()
+                self.startTrackingTextChanges()
             }
         }
     }
@@ -84,6 +89,34 @@ final class SchematicEditorController: EditorController {
         for inst in design.componentInstances {
             guard let symbolDef = inst.definition?.symbol else { continue }
             wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
+        }
+    }
+
+    private func refreshSymbolTextNodes() {
+        let design = projectManager.selectedDesign
+        var didChange = false
+
+        for inst in design.componentInstances {
+            guard let symbolNode = canvasStore.nodes.findNode(with: inst.id) as? SymbolNode else {
+                continue
+            }
+
+            let renderableTexts = inst.symbolInstance.resolvedItems.map { resolvedModel in
+                let displayString = projectManager.generateString(for: resolvedModel, component: inst)
+                return RenderableText(model: resolvedModel, text: displayString)
+            }
+
+            if AnchoredTextNodeSync.sync(
+                parent: symbolNode,
+                owner: inst.symbolInstance,
+                renderableTexts: renderableTexts
+            ) {
+                didChange = true
+            }
+        }
+
+        if didChange {
+            canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
         }
     }
 

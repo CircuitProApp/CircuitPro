@@ -14,16 +14,16 @@ final class AnchoredTextNode: TextNode {
     unowned let ownerInstance: TextOwningInstance
 
     // MARK: - Computed Properties
-    
+
     var anchorPosition: CGPoint {
         get { super.resolvedText.anchorPosition }
         set { super.resolvedText.anchorPosition = newValue }
     }
-    
+
     var source: CircuitText.Source {
         super.resolvedText.source
     }
-    
+
     // MARK: - Initialization
 
     // MODIFIED: ownerInstance parameter type changed to TextOwningInstance.
@@ -39,11 +39,11 @@ final class AnchoredTextNode: TextNode {
         switch resolvedText.source {
         case .definition(let definition):
             // The ownerInstance.id is used here, which is provided by the TextOwningInstance protocol.
-            nodeID = Self.generateStableID(for: ownerInstance.id  as! UUID, with: definition.id)
+            nodeID = Self.stableID(for: ownerInstance.id  as! UUID, definitionID: definition.id)
         case .instance:
             nodeID = resolvedText.id
         }
-        
+
         // Pass both the model and the final string to the superclass initializer.
         super.init(id: nodeID, resolvedText: resolvedText, text: text)
     }
@@ -93,27 +93,27 @@ private extension AnchoredTextNode {
         path.addLine(to: CGPoint(x: center.x, y: center.y + halfSize))
         return path
     }
-    
+
     func makeConnectorPath(from anchorPosition: CGPoint) -> CGPath? {
         let textBounds = super.boundingBox
         guard !textBounds.isNull else { return nil }
-        
+
         // Need to ensure `textBounds` is in the same coordinate space as `anchorPosition`
         // before determining the connection point. `super.boundingBox` is in local space.
         // If `anchorPosition` is in parent's space, it should be converted, or `textBounds` should be.
         // For simplicity, assuming `anchorPosition` is already in local space here if it's based on `super.resolvedText.anchorPosition`.
         // If `anchorPosition` is truly in the parent's coordinates, you might need:
         // let localTextBounds = self.convert(textBounds, to: parent) // Convert text bounds to parent's space for comparison.
-        
+
         let connectionPoint = determineConnectionPoint(on: textBounds, towards: anchorPosition)
-        
+
         let path = CGMutablePath()
         path.move(to: anchorPosition)
         path.addLine(to: connectionPoint)
-        
+
         return path
     }
-    
+
     func determineConnectionPoint(on rect: CGRect, towards point: CGPoint) -> CGPoint {
         // This logic determines which side of the text's bounding box the connector line should attach to.
         // It prioritizes vertical connection if the point is further vertically, otherwise horizontal.
@@ -144,8 +144,8 @@ private extension AnchoredTextNode {
 }
 
 // MARK: - ID Generation
-private extension AnchoredTextNode {
-    static func generateStableID(for ownerID: UUID, with definitionID: UUID) -> UUID {
+extension AnchoredTextNode {
+    static func stableID(for ownerID: UUID, definitionID: UUID) -> UUID {
         var ownerBytes = ownerID.uuid
         var definitionBytes = definitionID.uuid
         var resultBytes = ownerBytes
