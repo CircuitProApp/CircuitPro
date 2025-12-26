@@ -27,7 +27,7 @@ final class WireTool: CanvasTool {
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         switch self.state {
         case .idle:
-            let graphHit = GraphHitTester().hitTest(point: location, context: context.renderContext)
+            let graphHit = GraphHitTester().hitTest(point: location, context: context.renderContext, scope: .graphOnly)
             let initialDirection = determineInitialDirection(from: context.hitTarget, graphHit: graphHit, context: context.renderContext)
             self.state = .drawing(startPoint: location, direction: initialDirection)
             return .noResult
@@ -87,7 +87,7 @@ final class WireTool: CanvasTool {
         if let node = hit?.node, node is PinNode {
             return true
         }
-        if let graphHit = GraphHitTester().hitTest(point: location, context: context),
+        if let graphHit = GraphHitTester().hitTest(point: location, context: context, scope: .graphOnly),
            context.graph?.component(WireEdgeComponent.self, for: graphHit) != nil {
             return true
         }

@@ -47,7 +47,7 @@ class LibraryPanelManager {
         panel.isMovableByWindowBackground = true
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false
 
         let rootView = LibraryPanelView()
             .packContainer(for: [ComponentDefinition.self, SymbolDefinition.self, FootprintDefinition.self])

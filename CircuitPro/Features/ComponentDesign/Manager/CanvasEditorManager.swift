@@ -41,6 +41,7 @@ final class CanvasEditorManager {
     private var suppressPrimitiveRemoval = false
     private var suppressGraphSelectionSync = false
     private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]
+    private var graphNodeProxyIDs: Set<NodeID> = []
 
     /// NEW: Since placeholder text is now view-state, not model-state, this map
     /// holds the currently displayed string for each text node.
@@ -92,6 +93,7 @@ final class CanvasEditorManager {
         )
         let currentNodeIDs = Set(nodes.map(\.id))
         displayTextMap = displayTextMap.filter { currentNodeIDs.contains($0.key) }
+        syncGraphNodeProxies(from: nodes)
     }
 
     private func handleStoreDelta(_ delta: CanvasStoreDelta) {
@@ -112,7 +114,7 @@ final class CanvasEditorManager {
             guard !suppressGraphSelectionSync else { return }
             let graphSelection = Set(selection.compactMap { id -> NodeID? in
                 let nodeID = NodeID(id)
-                return graph.nodes.contains(nodeID) ? nodeID : nil
+                return graph.hasAnyComponent(for: nodeID) ? nodeID : nil
             })
             if graph.selection != graphSelection {
                 graph.selection = graphSelection
@@ -265,6 +267,30 @@ final class CanvasEditorManager {
         layers = []
         activeLayerId = nil
         graph.reset()
+    }
+
+    private func syncGraphNodeProxies(from nodes: [BaseNode]) {
+        let selectableNodes = nodes.flattened().filter { $0.isSelectable }
+        let newIDs = Set(selectableNodes.map { NodeID($0.id) })
+
+        let removedIDs = graphNodeProxyIDs.subtracting(newIDs)
+        for id in removedIDs {
+            graph.removeComponent(GraphNodeComponent.self, for: id)
+            if !graph.hasAnyComponent(for: id) {
+                graph.removeNode(id)
+            }
+        }
+
+        for node in selectableNodes {
+            let nodeID = NodeID(node.id)
+            if !graph.nodes.contains(nodeID) {
+                graph.addNode(nodeID)
+            }
+            let kind: GraphNodeComponent.Kind = (node is TextNode) ? .text : .node
+            graph.setComponent(GraphNodeComponent(kind: kind), for: nodeID)
+        }
+
+        graphNodeProxyIDs = newIDs
     }
 }
 

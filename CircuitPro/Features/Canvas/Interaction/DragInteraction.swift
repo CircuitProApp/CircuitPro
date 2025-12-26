@@ -32,7 +32,7 @@ final class DragInteraction: CanvasInteraction {
         let tolerance = 5.0 / context.magnification
 
         if controller.selectedNodes.isEmpty, let graph = context.graph {
-            if let graphHit = GraphHitTester().hitTest(point: point, context: context),
+            if let graphHit = GraphHitTester().hitTest(point: point, context: context, scope: .graphOnly),
                graph.selection.contains(graphHit),
                let primitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) {
                 let selectedIDs = graph.selection
@@ -48,7 +48,7 @@ final class DragInteraction: CanvasInteraction {
             }
 
             if let wireEngine = context.environment.wireEngine,
-               let graphHit = GraphHitTester().hitTest(point: point, context: context),
+               let graphHit = GraphHitTester().hitTest(point: point, context: context, scope: .graphOnly),
                graph.selection.contains(graphHit),
                graph.component(WireEdgeComponent.self, for: graphHit) != nil {
                 if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {

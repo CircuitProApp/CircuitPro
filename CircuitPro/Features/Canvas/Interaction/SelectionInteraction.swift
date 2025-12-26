@@ -10,30 +10,38 @@ struct SelectionInteraction: CanvasInteraction {
             return false
         }
 
-        let currentSelection: [BaseNode] = controller.selectedNodes
-        let tolerance = 5.0 / context.magnification
         let modifierFlags = event.modifierFlags
 
+        if let graph = context.graph {
+            let currentSelectionIDs = graph.selection
+            var newSelectionIDs = currentSelectionIDs
+
+            if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
+                if modifierFlags.contains(.shift) {
+                    if newSelectionIDs.contains(graphHit) {
+                        newSelectionIDs.remove(graphHit)
+                    } else {
+                        newSelectionIDs.insert(graphHit)
+                    }
+                } else {
+                    newSelectionIDs = [graphHit]
+                }
+            } else if !modifierFlags.contains(.shift) {
+                newSelectionIDs = []
+            }
+
+            if newSelectionIDs != currentSelectionIDs {
+                graph.selection = newSelectionIDs
+            }
+
+            return false
+        }
+
+        let currentSelection: [BaseNode] = controller.selectedNodes
+        let tolerance = 5.0 / context.magnification
         var newSelection: [BaseNode] = currentSelection
 
-        if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
-            let currentSelectionIDs = context.graph.map { Set($0.selection.map { $0.rawValue }) }
-                ?? Set(currentSelection.map { $0.id })
-            var newSelectionIDs = currentSelectionIDs
-            if modifierFlags.contains(.shift) {
-                if newSelectionIDs.contains(graphHit.rawValue) {
-                    newSelectionIDs.remove(graphHit.rawValue)
-                } else {
-                    newSelectionIDs.insert(graphHit.rawValue)
-                }
-            } else {
-                newSelectionIDs = [graphHit.rawValue]
-            }
-            if newSelectionIDs != currentSelectionIDs, let graph = context.graph {
-                graph.selection = Set(newSelectionIDs.map(NodeID.init))
-            }
-            return false
-        } else if let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) {
+        if let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) {
 
             var nodeToSelect: BaseNode? = hit.node
             while let currentNode = nodeToSelect {

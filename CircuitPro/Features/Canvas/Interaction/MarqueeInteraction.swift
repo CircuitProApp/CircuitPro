@@ -26,18 +26,22 @@ final class MarqueeInteraction: CanvasInteraction {
 
         let tolerance = 5.0 / context.magnification
         // This interaction starts only if the click was on an empty area.
-        if context.sceneRoot.hitTest(point, tolerance: tolerance) == nil {
-            // MODIFIED: Use the passed-in event instead of the global NSApp.currentEvent.
-            let isAdditive = event.modifierFlags.contains(.shift)
-
-            // Store the selection state at the beginning of the drag.
-            let initialSelection = controller.selectedNodes
-
-            self.state = .dragging(origin: point, isAdditive: isAdditive, initialSelection: initialSelection)
-            return true
+        if context.graph != nil {
+            if GraphHitTester().hitTest(point: point, context: context) != nil {
+                return false
+            }
+        } else if context.sceneRoot.hitTest(point, tolerance: tolerance) != nil {
+            return false
         }
 
-        return false
+        // MODIFIED: Use the passed-in event instead of the global NSApp.currentEvent.
+        let isAdditive = event.modifierFlags.contains(.shift)
+
+        // Store the selection state at the beginning of the drag.
+        let initialSelection = controller.selectedNodes
+
+        self.state = .dragging(origin: point, isAdditive: isAdditive, initialSelection: initialSelection)
+        return true
     }
 
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
@@ -54,7 +58,9 @@ final class MarqueeInteraction: CanvasInteraction {
         if context.graph != nil {
             let hitTester = GraphHitTester()
             graphHitIDs = Set(hitTester.hitTestAll(in: marqueeRect, context: context).map { $0.rawValue })
-            intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
+            intersectingNodes = graphHitIDs.compactMap { id in
+                controller.findNode(with: id, in: context.sceneRoot)
+            }
         } else {
             graphHitIDs = []
             // Get all nodes that intersect the marquee rectangle.
@@ -71,16 +77,19 @@ final class MarqueeInteraction: CanvasInteraction {
         let textNodesInMarquee = finalHighlightableNodes.compactMap { $0 as? AnchoredTextNode }
         let symbolsInMarquee = finalHighlightableNodes.compactMap { $0 as? SymbolNode }
 
+        var suppressedTextIDs = Set<UUID>()
+
         // If a text node's parent symbol is also in the marquee, remove the text node
         // from the highlight set to create a single, unified highlight on the symbol.
         for textNode in textNodesInMarquee {
             if let parentSymbol = textNode.parent as? SymbolNode, symbolsInMarquee.contains(parentSymbol) {
                 finalHighlightableNodes.remove(textNode)
+                suppressedTextIDs.insert(textNode.id)
             }
         }
 
         var highlightedIDs = Set(finalHighlightableNodes.map { $0.id })
-        highlightedIDs.formUnion(graphHitIDs)
+        highlightedIDs.formUnion(graphHitIDs.subtracting(suppressedTextIDs))
         controller.setInteractionHighlight(nodeIDs: highlightedIDs)
     }
 

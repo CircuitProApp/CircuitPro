@@ -75,4 +75,13 @@ final class Graph {
             return (id, typed)
         }
     }
+
+    func hasAnyComponent(for id: NodeID) -> Bool {
+        for storage in componentStorage.values {
+            if storage[id] != nil {
+                return true
+            }
+        }
+        return false
+    }
 }
