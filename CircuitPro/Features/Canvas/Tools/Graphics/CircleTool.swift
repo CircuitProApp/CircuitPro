@@ -23,7 +23,7 @@ final class CircleTool: CanvasTool {
         if let centerPoint = center {
             // Second tap: Define the radius and finalize the circle.
             let radius = hypot(location.x - centerPoint.x, location.y - centerPoint.y)
-            
+
             // 1. Create the primitive data model, preserving the original signature.
             let circlePrimitive = CanvasCircle(
                 id: UUID(),
@@ -35,14 +35,10 @@ final class CircleTool: CanvasTool {
                 layerId: context.activeLayerId
             )
 
-            // 2. Wrap it in a scene graph node.
-            // This assumes your AnyPrimitive enum has a case like `.circle(CirclePrimitive)`.
-            let node = PrimitiveNode(primitive: .circle(circlePrimitive))
-
-            // 3. Reset the tool's state and return the new node.
+            // 2. Reset the tool's state and return the new primitive.
             self.center = nil
-            return .newNode(node)
-            
+            return .newPrimitive(.circle(circlePrimitive))
+
         } else {
             // First tap: Record the center point and wait for the second tap.
             self.center = location
@@ -52,7 +48,7 @@ final class CircleTool: CanvasTool {
 
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard let centerPoint = center else { return [] }
-        
+
         // Create the preview path for the rubber-band effect.
         let radius = hypot(mouse.x - centerPoint.x, mouse.y - centerPoint.y)
         let rect = CGRect(x: centerPoint.x - radius, y: centerPoint.y - radius, width: radius * 2, height: radius * 2)

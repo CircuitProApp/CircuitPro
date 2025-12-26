@@ -159,7 +159,9 @@ final class CanvasController {
 
     func setSelection(to nodes: [BaseNode]) {
         self.selectedNodes = nodes
-        self.onSelectionChanged?(Set(nodes.map { $0.id }))
+        let nodeIDs = Set(nodes.map { $0.id })
+        let graphIDs = Set(graph?.selection.map { $0.rawValue } ?? [])
+        self.onSelectionChanged?(nodeIDs.union(graphIDs))
     }
 
     func setInteractionHighlight(nodeIDs: Set<UUID>) {

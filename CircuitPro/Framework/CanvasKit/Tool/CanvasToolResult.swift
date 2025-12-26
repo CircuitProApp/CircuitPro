@@ -10,4 +10,5 @@ import Foundation
 enum CanvasToolResult: Equatable {
     case noResult
     case newNode(BaseNode)
+    case newPrimitive(AnyCanvasPrimitive)
 }

@@ -15,11 +15,11 @@ final class RectangleTool: CanvasTool {
     override var label: String { "Rectangle" }
 
     // MARK: - Overridden Methods
-    
+
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         if let startPoint = start {
             let rect = CGRect(origin: startPoint, size: .zero).union(CGRect(origin: location, size: .zero))
-            
+
             // --- MODIFIED ---
             // Create the primitive, assigning the active layer ID from the context.
             // If `activeLayerId` is nil (e.g., in a schematic view), the primitive
@@ -33,20 +33,19 @@ final class RectangleTool: CanvasTool {
                 filled: false,
                 layerId: context.activeLayerId // Assign the active layer!
             )
-            
-            let node = PrimitiveNode(primitive: .rectangle(primitive))
+
             self.start = nil
-            return .newNode(node)
-            
+            return .newPrimitive(.rectangle(primitive))
+
         } else {
             self.start = location
             return .noResult
         }
     }
-    
+
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard let startPoint = start else { return [] }
-        
+
         // Calculate the rectangle's frame for the rubber-band preview.
         let worldRect = CGRect(origin: startPoint, size: .zero).union(CGRect(origin: mouse, size: .zero))
         let path = CGPath(rect: worldRect, transform: nil)

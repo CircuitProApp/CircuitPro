@@ -23,50 +23,73 @@ struct ToolInteraction: CanvasInteraction {
 
         let result = tool.handleTap(at: point, context: interactionContext)
 
-        guard case .newNode(let newNode) = result else {
+        switch result {
+        case .noResult:
             // If the tool handled the tap but didn't create a new node (e.g., the
             // first click of a line tool), we should still consume the mouse event.
             return true
-        }
 
-        if let request = newNode as? WireRequestNode {
-            // Handle schematic wire requests (existing logic)
-            guard let wireEngine = context.environment.wireEngine else {
+        case .newNode(let newNode):
+            if let request = newNode as? WireRequestNode {
+                // Handle schematic wire requests (existing logic)
+                guard let wireEngine = context.environment.wireEngine else {
+                    return true
+                }
+
+                wireEngine.connect(from: request.from, to: request.to, preferring: request.strategy)
                 return true
+
+            } else if let request = newNode as? TraceRequestNode {
+                guard let traceEngine = context.environment.traceEngine else {
+                    assertionFailure("A trace was requested, but no TraceEngine exists in the environment.")
+                    return true
+                }
+
+                traceEngine.addTrace(
+                    path: request.points,
+                    width: request.width,
+                    layerId: request.layerId
+                )
+
+                return true
+            } else {
+                // Handle standard nodes that are not requests.
+                if let primitiveNode = newNode as? PrimitiveNode, let graph = context.graph {
+                    let nodeID = NodeID(primitiveNode.id)
+                    if !graph.nodes.contains(nodeID) {
+                        graph.addNode(nodeID)
+                    }
+                    graph.setComponent(primitiveNode.primitive, for: nodeID)
+                    return true
+                }
+                if let store = context.environment.canvasStore {
+                    Task { @MainActor in
+                        store.addNode(newNode)
+                    }
+                }
+                controller.sceneRoot.addChild(newNode)
             }
 
-            wireEngine.connect(from: request.from, to: request.to, preferring: request.strategy)
             return true
 
-        } else if let request = newNode as? TraceRequestNode {
-            guard let traceEngine = context.environment.traceEngine else {
-                assertionFailure("A trace was requested, but no TraceEngine exists in the environment.")
+        case .newPrimitive(let primitive):
+            if let graph = context.graph {
+                let nodeID = NodeID(primitive.id)
+                if !graph.nodes.contains(nodeID) {
+                    graph.addNode(nodeID)
+                }
+                graph.setComponent(primitive, for: nodeID)
                 return true
             }
 
-            traceEngine.addTrace(
-                path: request.points,
-                width: request.width,
-                layerId: request.layerId
-            )
-
-            return true
-        } else {
-            // Handle standard nodes that are not requests.
-            if let primitiveNode = newNode as? PrimitiveNode, let graph = context.graph {
-                let nodeID = NodeID(primitiveNode.id)
-                graph.addNode(nodeID)
-                graph.setComponent(primitiveNode.primitive, for: nodeID)
-                return true
-            }
+            let node = PrimitiveNode(primitive: primitive)
             if let store = context.environment.canvasStore {
                 Task { @MainActor in
-                    store.addNode(newNode)
+                    store.addNode(node)
                 }
             }
-            controller.sceneRoot.addChild(newNode)
+            controller.sceneRoot.addChild(node)
+            return true
         }
-
-        return true
     }
 }

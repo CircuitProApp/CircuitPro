@@ -19,7 +19,7 @@ final class LineTool: CanvasTool {
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         if let startPoint = self.start {
             // Second tap: Finalize the line.
-            
+
             // 1. Create the line using the new convenience initializer.
             //    All the complex math is now cleanly encapsulated in the model itself.
             let line = CanvasLine(
@@ -28,14 +28,11 @@ final class LineTool: CanvasTool {
                 strokeWidth: 1.0,
                 layerId: context.activeLayerId
             )
-            
-            // 2. Wrap it in a scene graph node.
-            let node = PrimitiveNode(primitive: .line(line))
-            
-            // 3. Reset tool state and return the new node.
+
+            // 2. Reset tool state and return the new primitive.
             self.start = nil
-            return .newNode(node)
-            
+            return .newPrimitive(.line(line))
+
         } else {
             // First tap: Record the start point.
             self.start = location
@@ -50,7 +47,7 @@ final class LineTool: CanvasTool {
         let path = CGMutablePath()
         path.move(to: startPoint)
         path.addLine(to: mouse)
-        
+
         let previewColor = context.layers.first { $0.id == context.activeLayerId }?.color ?? NSColor.systemBlue.withAlphaComponent(0.8).cgColor
 
 

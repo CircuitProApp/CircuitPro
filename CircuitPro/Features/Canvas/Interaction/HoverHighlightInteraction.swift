@@ -10,10 +10,8 @@ final class HoverHighlightInteraction: CanvasInteraction {
         if context.graph != nil {
             if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
                 controller.setInteractionHighlight(nodeIDs: [graphHit.rawValue])
-            } else {
-                controller.setInteractionHighlight(nodeIDs: [])
+                return
             }
-            return
         }
 
         let tolerance = 5.0 / context.magnification

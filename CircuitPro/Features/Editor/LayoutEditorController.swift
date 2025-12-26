@@ -22,7 +22,6 @@ final class LayoutEditorController: EditorController {
     private var suppressPrimitiveRemoval = false
     private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]
     private var activeDesignID: UUID?
-    private var graphNodeProxyIDs: Set<NodeID> = []
     private var isSyncingTracesFromModel = false
     private var isApplyingTraceChangesToModel = false
 
@@ -53,9 +52,6 @@ final class LayoutEditorController: EditorController {
                 guard let self else { return }
                 self.handleTraceEngineChange()
             }
-        }
-        self.canvasStore.onNodesChanged = { [weak self] nodes in
-            self?.syncGraphNodeProxies(from: nodes)
         }
         self.canvasStore.onDelta = { [weak self] delta in
             self?.handleStoreDelta(delta)
@@ -289,11 +285,15 @@ final class LayoutEditorController: EditorController {
         switch delta {
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
-            let selectionIDs = Set(selection.map { $0.rawValue })
-            if canvasStore.selection != selectionIDs {
+            let graphSelectionIDs = Set(selection.map { $0.rawValue })
+            let nonGraphSelection = canvasStore.selection.filter { id in
+                !graph.hasAnyComponent(for: NodeID(id))
+            }
+            let mergedSelection = Set(nonGraphSelection).union(graphSelectionIDs)
+            if canvasStore.selection != mergedSelection {
                 suppressGraphSelectionSync = true
                 Task { @MainActor in
-                    self.canvasStore.selection = selectionIDs
+                    self.canvasStore.selection = mergedSelection
                     self.suppressGraphSelectionSync = false
                 }
             }
@@ -311,30 +311,6 @@ final class LayoutEditorController: EditorController {
         default:
             break
         }
-    }
-
-    private func syncGraphNodeProxies(from nodes: [BaseNode]) {
-        let selectableNodes = nodes.flattened().filter { $0.isSelectable }
-        let newIDs = Set(selectableNodes.map { NodeID($0.id) })
-
-        let removedIDs = graphNodeProxyIDs.subtracting(newIDs)
-        for id in removedIDs {
-            graph.removeComponent(GraphNodeComponent.self, for: id)
-            if !graph.hasAnyComponent(for: id) {
-                graph.removeNode(id)
-            }
-        }
-
-        for node in selectableNodes {
-            let nodeID = NodeID(node.id)
-            if !graph.nodes.contains(nodeID) {
-                graph.addNode(nodeID)
-            }
-            let kind: GraphNodeComponent.Kind = (node is TextNode) ? .text : .node
-            graph.setComponent(GraphNodeComponent(kind: kind), for: nodeID)
-        }
-
-        graphNodeProxyIDs = newIDs
     }
 
     private func syncPrimitiveCacheFromGraph() {

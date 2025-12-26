@@ -18,17 +18,7 @@ struct GraphHitTester {
         let tolerance = 5.0 / context.magnification
         var best: GraphHitCandidate?
 
-        if scope == .all {
-            for (id, component) in graph.components(GraphNodeComponent.self) {
-                guard let node = findNode(id: id, in: context.sceneRoot),
-                      node.isVisible else { continue }
-                let localPoint = point.applying(node.worldTransform.inverted())
-                guard node.hitTest(localPoint, tolerance: tolerance) != nil else { continue }
-                let bounds = node.interactionBounds.applying(node.worldTransform)
-                let area = bounds.width * bounds.height
-                considerHit(id: id, priority: component.kind.priority, area: area, best: &best)
-            }
-        }
+        _ = scope
 
         for (id, primitive) in graph.components(AnyCanvasPrimitive.self) {
             let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
@@ -53,16 +43,7 @@ struct GraphHitTester {
 
         var hits = Set<NodeID>()
 
-        if scope == .all {
-            for (id, _) in graph.components(GraphNodeComponent.self) {
-                guard let node = findNode(id: id, in: context.sceneRoot),
-                      node.isVisible else { continue }
-                let bounds = node.interactionBounds.applying(node.worldTransform)
-                if rect.intersects(bounds) {
-                    hits.insert(id)
-                }
-            }
-        }
+        _ = scope
 
         for (id, primitive) in graph.components(AnyCanvasPrimitive.self) {
             let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
@@ -95,15 +76,4 @@ struct GraphHitTester {
         }
     }
 
-    private func findNode(id: NodeID, in root: BaseNode) -> BaseNode? {
-        if root.id == id.rawValue {
-            return root
-        }
-        for child in root.children {
-            if let found = findNode(id: id, in: child) {
-                return found
-            }
-        }
-        return nil
-    }
 }

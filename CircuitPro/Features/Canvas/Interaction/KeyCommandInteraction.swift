@@ -68,26 +68,44 @@ struct KeyCommandInteraction: CanvasInteraction {
 
         // This logic is similar to ToolInteraction's mouseDown, handling the case
         // where a tool's action results in a new node.
-        guard case .newNode(let newNode) = result else {
-            // The tool handled the key but didn't produce a new node.
-            return result != .noResult
-        }
-
-        if let primitiveNode = newNode as? PrimitiveNode, let graph = context.graph {
-            let nodeID = NodeID(primitiveNode.id)
-            graph.addNode(nodeID)
-            graph.setComponent(primitiveNode.primitive, for: nodeID)
-        } else {
-            // Add the new node to the scene and notify the document of the change.
-            if let store = context.environment.canvasStore {
-                Task { @MainActor in
-                    store.addNode(newNode)
+        switch result {
+        case .noResult:
+            return false
+        case .newNode(let newNode):
+            if let primitiveNode = newNode as? PrimitiveNode, let graph = context.graph {
+                let nodeID = NodeID(primitiveNode.id)
+                if !graph.nodes.contains(nodeID) {
+                    graph.addNode(nodeID)
                 }
+                graph.setComponent(primitiveNode.primitive, for: nodeID)
+            } else {
+                // Add the new node to the scene and notify the document of the change.
+                if let store = context.environment.canvasStore {
+                    Task { @MainActor in
+                        store.addNode(newNode)
+                    }
+                }
+                controller.sceneRoot.addChild(newNode)
             }
-            controller.sceneRoot.addChild(newNode)
+            return true
+        case .newPrimitive(let primitive):
+            if let graph = context.graph {
+                let nodeID = NodeID(primitive.id)
+                if !graph.nodes.contains(nodeID) {
+                    graph.addNode(nodeID)
+                }
+                graph.setComponent(primitive, for: nodeID)
+            } else {
+                let node = PrimitiveNode(primitive: primitive)
+                if let store = context.environment.canvasStore {
+                    Task { @MainActor in
+                        store.addNode(node)
+                    }
+                }
+                controller.sceneRoot.addChild(node)
+            }
+            return true
         }
-
-        return true
     }
 
     /// Handles the Delete/Backspace key.
