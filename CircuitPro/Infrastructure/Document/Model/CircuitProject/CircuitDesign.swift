@@ -15,6 +15,7 @@ class CircuitDesign: Codable, Identifiable {
     var name: String
     var componentInstances: [ComponentInstance] = []
     var wires: [Wire] = []
+    var traces: [TraceSegment] = []
     // --- ADDED: Each design now has its own layer stackup ---
     var layers: [LayerType] = []
 
@@ -23,11 +24,12 @@ class CircuitDesign: Codable, Identifiable {
     }
 
     // --- MODIFIED: The initializer now creates a default layer stackup ---
-    init(id: UUID = UUID(), name: String, componentInstances: [ComponentInstance] = [], wires: [Wire] = []) {
+    init(id: UUID = UUID(), name: String, componentInstances: [ComponentInstance] = [], wires: [Wire] = [], traces: [TraceSegment] = []) {
         self.id = id
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.componentInstances = componentInstances
         self.wires = wires
+        self.traces = traces
         // When a new design is created, generate its standard layers.
         self.layers = LayerType.defaultStackup(layerCount: .two)
     }
@@ -38,9 +40,10 @@ class CircuitDesign: Codable, Identifiable {
         case _name = "name"
         case _componentInstances = "componentInstances"
         case _wires = "wires"
+        case _traces = "traces"
         case _layers = "layers"
     }
-    
+
     // This initializer is used when decoding from a file
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -48,18 +51,20 @@ class CircuitDesign: Codable, Identifiable {
         self.name = try container.decode(String.self, forKey: ._name)
         self.componentInstances = try container.decode([ComponentInstance].self, forKey: ._componentInstances)
         self.wires = try container.decode([Wire].self, forKey: ._wires)
-        
+        self.traces = try container.decodeIfPresent([TraceSegment].self, forKey: ._traces) ?? []
+
         // For backward compatibility: if the 'layers' key doesn't exist in an old project file,
         // decode it as nil and then generate the default stackup.
         self.layers = try container.decodeIfPresent([LayerType].self, forKey: ._layers) ?? LayerType.defaultStackup(layerCount: .two)
     }
-    
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.id, forKey: ._id)
         try container.encode(self.name, forKey: ._name)
         try container.encode(self.componentInstances, forKey: ._componentInstances)
         try container.encode(self.wires, forKey: ._wires)
+        try container.encode(self.traces, forKey: ._traces)
         try container.encode(self.layers, forKey: ._layers)
     }
 }

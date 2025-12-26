@@ -41,6 +41,10 @@ final class ElementsRenderLayer: RenderLayer {
             for (layerId, primitives) in graphWireHalos {
                 haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
             }
+            let graphTraceHalos = gatherGraphTraceHaloPrimitives(from: graph, context: context)
+            for (layerId, primitives) in graphTraceHalos {
+                haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
+            }
         }
 
         if let graph = context.graph {
@@ -52,6 +56,11 @@ final class ElementsRenderLayer: RenderLayer {
             let wireAdapter = GraphWireRenderAdapter()
             let wirePrimitivesByLayer = wireAdapter.primitivesByLayer(from: graph, context: context)
             for (layerId, primitives) in wirePrimitivesByLayer {
+                bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
+            }
+            let traceAdapter = GraphTraceRenderAdapter()
+            let tracePrimitivesByLayer = traceAdapter.primitivesByLayer(from: graph, context: context)
+            for (layerId, primitives) in tracePrimitivesByLayer {
                 bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
             }
         }
@@ -131,7 +140,6 @@ final class ElementsRenderLayer: RenderLayer {
 
         for parent in parentNodes {
             // Ask the parent to generate a single, pre-stroked halo path for ALL of its selected children.
-            // TraceGraphNode overrides this method.
             if let unifiedHaloPath = parent.makeHaloPath(context: context) {
 
                 // The unified path is an outline that should be FILLED to create the halo effect.
@@ -238,6 +246,37 @@ final class ElementsRenderLayer: RenderLayer {
         primitivesByLayer[nil, default: []].append(haloPrimitive)
 
         return primitivesByLayer
+    }
+
+    private func gatherGraphTraceHaloPrimitives(from graph: Graph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+        let haloIDs = context.highlightedNodeIDs
+        var selectedEdges: [(TraceEdgeComponent, TraceVertexComponent, TraceVertexComponent)] = []
+        var maxWidth: CGFloat = 0.0
+
+        for (id, edge) in graph.components(TraceEdgeComponent.self) {
+            guard haloIDs.contains(id.rawValue),
+                  let start = graph.component(TraceVertexComponent.self, for: edge.start),
+                  let end = graph.component(TraceVertexComponent.self, for: edge.end) else {
+                continue
+            }
+            selectedEdges.append((edge, start, end))
+            maxWidth = max(maxWidth, edge.width)
+        }
+
+        guard !selectedEdges.isEmpty else { return [:] }
+
+        let compositePath = CGMutablePath()
+        for (_, start, end) in selectedEdges {
+            compositePath.move(to: start.point)
+            compositePath.addLine(to: end.point)
+        }
+
+        let haloPadding: CGFloat = 2.0
+        let haloWidth = maxWidth + haloPadding
+        let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
+        let haloPath = compositePath.copy(strokingWithWidth: haloWidth, lineCap: .round, lineJoin: .round, miterLimit: 0)
+        let haloPrimitive = DrawingPrimitive.fill(path: haloPath, color: haloColor)
+        return [nil: [haloPrimitive]]
     }
 
     /// Renders a list of already-transformed primitives onto a target CALayer.

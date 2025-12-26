@@ -118,6 +118,20 @@ struct KeyCommandInteraction: CanvasInteraction {
                 return true
             }
 
+            let hasTraceSelection = graph.selection.contains { id in
+                graph.component(TraceEdgeComponent.self, for: id) != nil ||
+                graph.component(TraceVertexComponent.self, for: id) != nil
+            }
+
+            if hasTraceSelection, let traceEngine = context.environment.traceEngine {
+                traceEngine.delete(items: selectedIDs)
+                graph.selection = []
+                Task { @MainActor in
+                    context.environment.canvasStore?.selection.subtract(selectedIDs)
+                }
+                return true
+            }
+
             for id in graph.selection {
                 graph.removeNode(id)
             }

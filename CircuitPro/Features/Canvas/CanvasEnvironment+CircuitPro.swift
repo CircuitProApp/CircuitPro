@@ -41,6 +41,10 @@ private struct WireEngineKey: CanvasEnvironmentKey {
     static let defaultValue: WireEngine? = nil
 }
 
+private struct TraceEngineKey: CanvasEnvironmentKey {
+    static let defaultValue: TraceEngine? = nil
+}
+
 extension CanvasEnvironmentValues {
     var configuration: CanvasConfiguration {
         get { self[ConfigurationKey.self] }
@@ -57,9 +61,20 @@ extension CanvasEnvironmentValues {
         set { self[WireEngineKey.self] = newValue }
     }
 
+    var traceEngine: TraceEngine? {
+        get { self[TraceEngineKey.self] }
+        set { self[TraceEngineKey.self] = newValue }
+    }
+
     func withWireEngine(_ engine: WireEngine?) -> CanvasEnvironmentValues {
         var copy = self
         copy.wireEngine = engine
+        return copy
+    }
+
+    func withTraceEngine(_ engine: TraceEngine?) -> CanvasEnvironmentValues {
+        var copy = self
+        copy.traceEngine = engine
         return copy
     }
 }

@@ -2,39 +2,44 @@
 //  LibraryPanelManager.swift
 //  CircuitPro
 //
-//  Created by Giorgi Tchelidze on 8/11/25.
-//
-//
 
 import SwiftUI
 import SwiftDataPacks
+import AppKit
 
-class LibraryPanelManager {
+final class LibraryPanelManager {
     private static var libraryPanel: NSPanel?
     private static let panelDelegate = PanelDelegate()
     private static var resignKeyObserver: Any?
-    
-    // This closure will be called when the panel is dismissed.
     private static var onDismiss: (() -> Void)?
 
-    // Shows the panel if it's not already visible.
     public static func show(onDismiss: @escaping () -> Void) {
-        guard libraryPanel == nil else { return }
+        // If already created, just bring to front.
+        if let panel = libraryPanel {
+            self.onDismiss = onDismiss
+            panel.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
 
         self.onDismiss = onDismiss
 
-        let initialSize = NSSize(width: 600, height: 400) // pick a reasonable default
-        let screenFrame = NSScreen.main?.frame ?? .zero
+        let initialSize = NSSize(width: 682, height: 373)
+        let screenFrame = NSScreen.main?.visibleFrame ?? .zero
         let initialRect = NSRect(
-            x: (screenFrame.width - initialSize.width) / 2,
-            y: (screenFrame.height - initialSize.height) / 2,
+            x: screenFrame.midX - initialSize.width / 2,
+            y: screenFrame.midY - initialSize.height / 2,
             width: initialSize.width,
             height: initialSize.height
         )
 
         let panel = KeyActivatingPanel(
             contentRect: initialRect,
-            styleMask: [.hudWindow, .resizable],
+            styleMask: [
+                .titled,
+                .resizable,
+                .fullSizeContentView
+            ],
             backing: .buffered,
             defer: false
         )
@@ -44,17 +49,46 @@ class LibraryPanelManager {
         panel.level = .floating
         panel.delegate = panelDelegate
         panel.isReleasedWhenClosed = false
-        panel.isMovableByWindowBackground = true
+
+        // Titlebar chrome off (clean glass sheet look)
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.standardWindowButton(.closeButton)?.isHidden = true
+        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        panel.standardWindowButton(.zoomButton)?.isHidden = true
+
+        // Important for glass/material windows
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = false
+        panel.hasShadow = true
+        panel.isMovableByWindowBackground = true
 
         let rootView = LibraryPanelView()
             .packContainer(for: [ComponentDefinition.self, SymbolDefinition.self, FootprintDefinition.self])
 
         let hostingController = NSHostingController(rootView: rootView)
-        panel.contentViewController = hostingController
 
+        // Content container: NSGlassEffectView on macOS 26, otherwise a visual/material fallback.
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = 20
+            glass.tintColor = nil
+
+            // Make edge treatment smooth and ensure clipping matches radius.
+            glass.wantsLayer = true
+            glass.layer?.masksToBounds = true
+            glass.layer?.cornerRadius = 20
+            glass.layer?.cornerCurve = .continuous
+
+            // Put SwiftUI inside the glass container.
+            glass.contentView = hostingController.view
+            panel.contentView = glass
+        } else {
+            // Keep your existing fallback behavior (material + clipping in SwiftUI)
+            panel.contentViewController = hostingController
+        }
+
+        // Close when it loses key, like a palette.
         self.resignKeyObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
             object: panel,
@@ -63,43 +97,36 @@ class LibraryPanelManager {
             panel.close()
         }
 
-        // Make sure it's centered after layout is known
         panel.center()
         panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
 
         self.libraryPanel = panel
     }
 
-    // Hides the panel if it's currently visible.
     public static func hide() {
-        guard let panel = libraryPanel, panel.isVisible else { return }
+        guard let panel = libraryPanel else { return }
         panel.close()
     }
-    
-    // Toggles the visibility of the panel.
+
     public static func toggle() {
         if let panel = libraryPanel, panel.isVisible {
             hide()
-        } else if libraryPanel == nil {
-            // When toggling, there's no specific view state to update on dismiss,
-            // so we pass an empty closure.
+        } else {
             show(onDismiss: {})
         }
     }
-    
-    private class PanelDelegate: NSObject, NSWindowDelegate {
+
+    private final class PanelDelegate: NSObject, NSWindowDelegate {
         func windowWillClose(_ notification: Notification) {
             if let observer = LibraryPanelManager.resignKeyObserver {
                 NotificationCenter.default.removeObserver(observer)
                 LibraryPanelManager.resignKeyObserver = nil
             }
-            
-            // Call the dismiss handler to update the binding in SwiftUI if it was provided.
-            LibraryPanelManager.onDismiss?()
 
-            // Clean up static properties.
-            LibraryPanelManager.libraryPanel = nil
+            LibraryPanelManager.onDismiss?()
             LibraryPanelManager.onDismiss = nil
+            LibraryPanelManager.libraryPanel = nil
         }
     }
 }

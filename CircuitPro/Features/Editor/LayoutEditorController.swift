@@ -23,6 +23,8 @@ final class LayoutEditorController: EditorController {
     private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]
     private var activeDesignID: UUID?
     private var graphNodeProxyIDs: Set<NodeID> = []
+    private var isSyncingTracesFromModel = false
+    private var isApplyingTraceChangesToModel = false
 
     // MARK: - Layout-Specific State
 
@@ -32,21 +34,24 @@ final class LayoutEditorController: EditorController {
     /// The list of layers relevant to the current design's layout, sorted for rendering.
     var canvasLayers: [CanvasLayer] = []
 
-    /// The graph model for managing traces, vias, and other layout geometry. Owned by this controller.
-    private let traceGraph: TraceGraph
+    /// The engine for managing layout traces in the unified graph.
+    let traceEngine: TraceEngine
 
     var selectedTool: CanvasTool = CursorTool()
 
     // MARK: - Dependencies
 
     @ObservationIgnored private let projectManager: ProjectManager
+    @ObservationIgnored private let document: CircuitProjectFileDocument
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
-        self.traceGraph = TraceGraph()
-        self.traceGraph.engine.onChange = { [weak self] _, _ in
+        self.document = projectManager.document
+        self.traceEngine = TraceEngine(graph: graph)
+        self.traceEngine.onChange = { [weak self] in
             Task { @MainActor in
-                self?.refreshTraceGraphNode()
+                guard let self else { return }
+                self.handleTraceEngineChange()
             }
         }
         self.canvasStore.onNodesChanged = { [weak self] nodes in
@@ -62,6 +67,7 @@ final class LayoutEditorController: EditorController {
         // Start the automatic observation loops upon initialization.
         startTrackingStructureChanges()
         startTrackingTextChanges()
+        startTrackingTraceChanges()
 
         Task {
             await self.rebuildNodes()
@@ -100,6 +106,22 @@ final class LayoutEditorController: EditorController {
             Task { @MainActor in
                 self.refreshFootprintTextNodes()
                 self.startTrackingTextChanges()
+            }
+        }
+    }
+
+    private func startTrackingTraceChanges() {
+        withObservationTracking {
+            _ = projectManager.selectedDesign.traces
+        } onChange: {
+            Task { @MainActor in
+                if self.isApplyingTraceChangesToModel {
+                    self.isApplyingTraceChangesToModel = false
+                    self.startTrackingTraceChanges()
+                    return
+                }
+                self.syncTracesFromModel()
+                self.startTrackingTraceChanges()
             }
         }
     }
@@ -145,20 +167,9 @@ final class LayoutEditorController: EditorController {
             return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: self.canvasLayers, renderableTexts: renderableTexts)
         }
 
-        // 3. Build the node representing the trace graph.
-        let traceGraphNode = TraceGraphNode(graph: self.traceGraph)
-        traceGraphNode.syncChildNodesFromModel(canvasLayers: self.canvasLayers)
-
-        // 4. Combine all nodes into the final scene graph.
-        canvasStore.setNodes(footprintNodes + [traceGraphNode])
-    }
-
-    private func refreshTraceGraphNode() {
-        guard let traceGraphNode = canvasStore.nodes.first(where: { $0 is TraceGraphNode }) as? TraceGraphNode else {
-            return
-        }
-        traceGraphNode.syncChildNodesFromModel(canvasLayers: canvasLayers)
-        canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
+        // 3. Combine all nodes into the final scene graph.
+        canvasStore.setNodes(footprintNodes)
+        syncTracesFromModel()
     }
 
     private func refreshFootprintTextNodes() {
@@ -240,6 +251,9 @@ final class LayoutEditorController: EditorController {
         guard activeDesignID != design.id else { return }
         activeDesignID = design.id
         primitiveCache.removeAll()
+        isSyncingTracesFromModel = true
+        traceEngine.reset()
+        isSyncingTracesFromModel = false
         graph.reset()
     }
 
@@ -345,5 +359,31 @@ final class LayoutEditorController: EditorController {
         suppressPrimitiveRemoval = true
         canvasStore.removeNodes(ids: primitiveIDs, emitDelta: false)
         suppressPrimitiveRemoval = false
+    }
+
+    private func handleTraceEngineChange() {
+        persistTraces()
+        canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
+    }
+
+    private func persistTraces() {
+        guard !isSyncingTracesFromModel else { return }
+        let design = projectManager.selectedDesign
+        let newTraces = traceEngine.toTraceSegments()
+        let existing = design.traces.map { $0.normalized() }.sorted { $0.sortKey < $1.sortKey }
+        if newTraces == existing {
+            return
+        }
+        isApplyingTraceChangesToModel = true
+        design.traces = newTraces
+        document.scheduleAutosave()
+    }
+
+    private func syncTracesFromModel() {
+        isSyncingTracesFromModel = true
+        let design = projectManager.selectedDesign
+        let normalized = design.traces.map { $0.normalized() }
+        traceEngine.build(from: normalized)
+        isSyncingTracesFromModel = false
     }
 }

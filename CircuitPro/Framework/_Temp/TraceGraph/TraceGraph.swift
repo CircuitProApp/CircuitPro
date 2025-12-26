@@ -2,26 +2,26 @@ import Foundation
 import SwiftUI
 
 @Observable
-final class TraceGraph {
+final class TraceGraph: TraceMetadataStore {
     let engine: GraphEngine
-     
+
     var edgeMetadata: [GraphEdge.ID: TraceEdgeMetadata] = [:]
 
     init() {
         let ruleset = OctilinearGraphRuleset()
         let geometry = OctilinearGeometry(step: 1)
         let edgePolicy = TraceEdgePolicy()
-        
+
         self.engine = GraphEngine(
             initialState: .empty,
             ruleset: ruleset,
             geometry: geometry,
             edgePolicy: edgePolicy
         )
-        
-        edgePolicy.traceGraph = self
+
+        edgePolicy.store = self
     }
-    
+
     func addTrace(path: [CGPoint], width: CGFloat, layerId: UUID) {
         var tx = AddTraceTransaction(
             path: path,

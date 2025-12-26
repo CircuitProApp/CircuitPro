@@ -39,30 +39,18 @@ struct ToolInteraction: CanvasInteraction {
             return true
 
         } else if let request = newNode as? TraceRequestNode {
-            // --- ADDED: Handle layout trace requests ---
-            // 1. Find the TraceGraphNode in the scene, which holds our data model.
-            guard let traceGraphNode = controller.sceneRoot.children.first(where: { $0 is TraceGraphNode }) as? TraceGraphNode else {
-                assertionFailure("A trace was requested, but no TraceGraphNode exists in the scene.")
+            guard let traceEngine = context.environment.traceEngine else {
+                assertionFailure("A trace was requested, but no TraceEngine exists in the environment.")
                 return true
             }
 
-            // 2. Get a reference to the actual TraceGraph model.
-            let graph = traceGraphNode.graph
-
-            // 3. Use the data from the request node to update the model.
-            graph.addTrace(
+            traceEngine.addTrace(
                 path: request.points,
                 width: request.width,
                 layerId: request.layerId
             )
 
-            // 4. Tell the graph node to update its visual children from the model.
-            // We now pass the canvas layers from the render context, so the
-            // new TraceNodes can have their colors resolved correctly.
-            traceGraphNode.syncChildNodesFromModel(canvasLayers: context.layers)
-
             return true
-
         } else {
             // Handle standard nodes that are not requests.
             if let primitiveNode = newNode as? PrimitiveNode, let graph = context.graph {
