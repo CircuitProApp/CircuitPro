@@ -93,14 +93,11 @@ final class MarqueeInteraction: CanvasInteraction {
         }
 
         // 2. Calculate the final selection.
-        if let store = context.environment.canvasStore, let graph = context.graph {
+        if let graph = context.graph {
             let highlightedIDs = controller.interactionHighlightedNodeIDs
             let initialIDs = Set(graph.selection.map { $0.rawValue })
             let finalIDs = isAdditive ? initialIDs.union(highlightedIDs) : highlightedIDs
             graph.selection = Set(finalIDs.map(NodeID.init))
-            Task { @MainActor in
-                store.selection = finalIDs
-            }
         } else {
             if isAdditive {
                 // Additive mode: Union of the initial selection and the marquee selection.

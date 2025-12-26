@@ -29,13 +29,8 @@ struct SelectionInteraction: CanvasInteraction {
             } else {
                 newSelectionIDs = [graphHit.rawValue]
             }
-            if newSelectionIDs != currentSelectionIDs {
-                if let graph = context.graph {
-                    graph.selection = Set(newSelectionIDs.map(NodeID.init))
-                }
-                Task { @MainActor in
-                    context.environment.canvasStore?.selection = newSelectionIDs
-                }
+            if newSelectionIDs != currentSelectionIDs, let graph = context.graph {
+                graph.selection = Set(newSelectionIDs.map(NodeID.init))
             }
             return false
         } else if let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) {

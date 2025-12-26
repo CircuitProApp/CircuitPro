@@ -39,6 +39,7 @@ final class CanvasEditorManager {
     private var elementIndexMap: [UUID: Int] = [:]
     let graph = Graph()
     private var suppressPrimitiveRemoval = false
+    private var suppressGraphSelectionSync = false
 
     /// NEW: Since placeholder text is now view-state, not model-state, this map
     /// holds the currently displayed string for each text node.
@@ -79,6 +80,9 @@ final class CanvasEditorManager {
         self.canvasStore.onDelta = { [weak self] delta in
             self?.handleStoreDelta(delta)
         }
+        self.graph.onDelta = { [weak self] delta in
+            self?.handleGraphDelta(delta)
+        }
     }
 
     private func didUpdateNodes(_ nodes: [BaseNode]) {
@@ -102,7 +106,27 @@ final class CanvasEditorManager {
                 graph.removeNode(NodeID(id))
             }
         case .selectionChanged(let selection):
-            graph.selection = Set(selection.map(NodeID.init))
+            guard !suppressGraphSelectionSync else { return }
+            let graphSelection = Set(selection.map(NodeID.init))
+            if graph.selection != graphSelection {
+                graph.selection = graphSelection
+            }
+        }
+    }
+
+    private func handleGraphDelta(_ delta: UnifiedGraphDelta) {
+        switch delta {
+        case .selectionChanged(let selection):
+            let selectionIDs = Set(selection.map { $0.rawValue })
+            if canvasStore.selection != selectionIDs {
+                suppressGraphSelectionSync = true
+                Task { @MainActor in
+                    self.canvasStore.selection = selectionIDs
+                    self.suppressGraphSelectionSync = false
+                }
+            }
+        default:
+            break
         }
     }
 
