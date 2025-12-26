@@ -38,6 +38,7 @@ final class CanvasEditorManager {
     var selectedTool: CanvasTool = CursorTool()
     private var elementIndexMap: [UUID: Int] = [:]
     let graph = Graph()
+    private var suppressPrimitiveRemoval = false
 
     /// NEW: Since placeholder text is now view-state, not model-state, this map
     /// holds the currently displayed string for each text node.
@@ -56,6 +57,10 @@ final class CanvasEditorManager {
 
     var pads: [Pad] {
         canvasNodes.compactMap { ($0 as? PadNode)?.pad }
+    }
+
+    var primitives: [AnyCanvasPrimitive] {
+        graph.components(AnyCanvasPrimitive.self).map { $0.1 }
     }
 
     /// UPDATED: This now inspects the `resolvedText.content` property.
@@ -88,8 +93,10 @@ final class CanvasEditorManager {
         switch delta {
         case .reset(let nodes):
             syncGraph(from: nodes)
+            removePrimitiveNodes(from: nodes)
         case .nodesAdded(let nodes):
             addGraphPrimitives(from: nodes)
+            removePrimitiveNodes(from: nodes)
         case .nodesRemoved(let ids):
             for id in ids {
                 graph.removeNode(NodeID(id))
@@ -111,6 +118,66 @@ final class CanvasEditorManager {
             graph.addNode(graphID)
             graph.setComponent(primitiveNode.primitive, for: graphID)
         }
+    }
+
+    private func removePrimitiveNodes(from nodes: [BaseNode]) {
+        guard !suppressPrimitiveRemoval else { return }
+        let primitiveIDs = Set(nodes.compactMap { ($0 as? PrimitiveNode)?.id })
+        guard !primitiveIDs.isEmpty else { return }
+        suppressPrimitiveRemoval = true
+        canvasStore.removeNodes(ids: primitiveIDs, emitDelta: false)
+        suppressPrimitiveRemoval = false
+    }
+
+    struct ElementItem: Identifiable {
+        enum Kind {
+            case node(BaseNode)
+            case primitive(NodeID, AnyCanvasPrimitive)
+        }
+
+        let kind: Kind
+
+        var id: UUID {
+            switch kind {
+            case .node(let node): return node.id
+            case .primitive(let id, _): return id.rawValue
+            }
+        }
+
+        var layerId: UUID? {
+            switch kind {
+            case .node(let node):
+                return (node as? Layerable)?.layerId
+            case .primitive(_, let primitive):
+                return primitive.layerId
+            }
+        }
+    }
+
+    var elementItems: [ElementItem] {
+        let nodeItems = canvasNodes
+            .filter { !($0 is PrimitiveNode) }
+            .map { ElementItem(kind: .node($0)) }
+        let primitiveItems = graph.components(AnyCanvasPrimitive.self).map { id, primitive in
+            ElementItem(kind: .primitive(id, primitive))
+        }
+        return nodeItems + primitiveItems
+    }
+
+    var singleSelectedPrimitive: (id: NodeID, primitive: AnyCanvasPrimitive)? {
+        guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else { return nil }
+        let nodeID = NodeID(id)
+        guard let primitive = graph.component(AnyCanvasPrimitive.self, for: nodeID) else { return nil }
+        return (nodeID, primitive)
+    }
+
+    func primitiveBinding(for id: UUID) -> Binding<AnyCanvasPrimitive>? {
+        let nodeID = NodeID(id)
+        guard graph.component(AnyCanvasPrimitive.self, for: nodeID) != nil else { return nil }
+        return Binding(
+            get: { self.graph.component(AnyCanvasPrimitive.self, for: nodeID)! },
+            set: { self.graph.setComponent($0, for: nodeID) }
+        )
     }
 
     func setupForFootprintEditing() {
@@ -144,6 +211,7 @@ final class CanvasEditorManager {
         displayTextMap = [:] // Reset the new map
         layers = []
         activeLayerId = nil
+        graph.reset()
     }
 }
 

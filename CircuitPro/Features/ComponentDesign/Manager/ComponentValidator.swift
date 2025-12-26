@@ -53,7 +53,7 @@ struct ComponentValidator {
                 errors.append(.init(message: "At least one property must be defined.", requirement: ComponentDesignStage.ComponentRequirement.properties))
             }
         case .symbol:
-            let symbolPrimitives = manager.symbolEditor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
+            let symbolPrimitives = manager.symbolEditor.primitives
             if symbolPrimitives.isEmpty {
                 errors.append(.init(message: "No symbol created. The symbol must contain at least one shape.", requirement: ComponentDesignStage.SymbolRequirement.primitives))
             }
@@ -71,7 +71,7 @@ struct ComponentValidator {
                 // The editor is now directly and safely accessible on the draft object.
                 let editor = draft.editor
 
-                let footprintPrimitives = editor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
+                let footprintPrimitives = editor.primitives
                 if footprintPrimitives.isEmpty {
                     // Use the draft's name for the error message.
                     errors.append(.init(message: "Footprint '\(draft.name)' must contain at least one shape.", requirement: ComponentDesignStage.SymbolRequirement.primitives))

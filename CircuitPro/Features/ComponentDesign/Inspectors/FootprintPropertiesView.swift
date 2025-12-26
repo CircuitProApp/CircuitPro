@@ -11,23 +11,23 @@ struct FootprintPropertiesView: View {
 
     @BindableEnvironment(CanvasEditorManager.self)
     private var footprintEditor
-    
+
     var body: some View {
-        
+
         ScrollView {
             if let element = footprintEditor.singleSelectedNode {
                 if let padNode = element as? PadNode {
                     @Bindable var padNode = padNode
-                    
+
                     PadPropertiesView(pad: $padNode.pad)
 
                 } else if let primitiveNode = element as? PrimitiveNode {
                     @Bindable var primitiveNode = primitiveNode
-                    
+
                     PrimitivePropertiesView(primitive: $primitiveNode.primitive)
 
                 } else if let textNode = element as? TextNode {
-                 
+
                     // TextPropertiesView will also use the manager from the environment
                     // to resolve bindings and other contextual data.
                     TextPropertiesView(textNode: textNode)
@@ -36,6 +36,9 @@ struct FootprintPropertiesView: View {
                     Text("Properties for this element type are not yet implemented.")
                         .padding()
                 }
+            } else if let selection = footprintEditor.singleSelectedPrimitive,
+                      let binding = footprintEditor.primitiveBinding(for: selection.id.rawValue) {
+                PrimitivePropertiesView(primitive: binding)
             }  else {
                 Text(footprintEditor.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
                     .foregroundColor(.secondary)

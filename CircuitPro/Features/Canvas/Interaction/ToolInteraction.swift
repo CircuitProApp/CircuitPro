@@ -69,6 +69,12 @@ struct ToolInteraction: CanvasInteraction {
 
         } else {
             // Handle standard nodes that are not requests.
+            if let primitiveNode = newNode as? PrimitiveNode, let graph = context.graph {
+                let nodeID = NodeID(primitiveNode.id)
+                graph.addNode(nodeID)
+                graph.setComponent(primitiveNode.primitive, for: nodeID)
+                return true
+            }
             if let store = context.environment.canvasStore {
                 Task { @MainActor in
                     store.addNode(newNode)

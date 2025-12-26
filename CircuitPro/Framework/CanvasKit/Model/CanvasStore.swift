@@ -33,9 +33,11 @@ final class CanvasStore {
         onDelta?(.nodesAdded([node]))
     }
 
-    func removeNodes(ids: Set<UUID>) {
+    func removeNodes(ids: Set<UUID>, emitDelta: Bool = true) {
         nodes.removeAll { ids.contains($0.id) }
         onNodesChanged?(nodes)
-        onDelta?(.nodesRemoved(ids: ids))
+        if emitDelta {
+            onDelta?(.nodesRemoved(ids: ids))
+        }
     }
 }

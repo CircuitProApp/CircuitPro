@@ -13,7 +13,13 @@ final class DragInteraction: CanvasInteraction {
         let originalAnchorPositions: [UUID: CGPoint]
     }
 
+    private struct GraphDraggingState {
+        let origin: CGPoint
+        let originalPrimitives: [NodeID: AnyCanvasPrimitive]
+    }
+
     private var state: DraggingState?
+    private var graphState: GraphDraggingState?
     private var didMove: Bool = false
     private let dragThreshold: CGFloat = 4.0
 
@@ -21,8 +27,29 @@ final class DragInteraction: CanvasInteraction {
 
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         self.state = nil
-        guard controller.selectedTool is CursorTool, !controller.selectedNodes.isEmpty else { return false }
+        self.graphState = nil
+        guard controller.selectedTool is CursorTool else { return false }
         let tolerance = 5.0 / context.magnification
+
+        if controller.selectedNodes.isEmpty, let graph = context.graph {
+            if let graphHit = GraphHitTester().hitTest(point: point, context: context),
+               graph.selection.contains(graphHit),
+               let primitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) {
+                let selectedIDs = graph.selection
+                var originals: [NodeID: AnyCanvasPrimitive] = [:]
+                for id in selectedIDs {
+                    if let original = graph.component(AnyCanvasPrimitive.self, for: id) {
+                        originals[id] = original
+                    }
+                }
+                self.graphState = GraphDraggingState(origin: point, originalPrimitives: originals)
+                self.didMove = false
+                return true
+            }
+            return false
+        }
+
+        guard !controller.selectedNodes.isEmpty else { return false }
         guard let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) else { return false }
         var nodeToDrag: BaseNode? = hit.node
         var hitNodeIsSelected = false
@@ -70,6 +97,22 @@ final class DragInteraction: CanvasInteraction {
     }
 
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
+        if let currentGraphState = graphState, let graph = context.graph {
+            let rawDelta = CGVector(dx: point.x - currentGraphState.origin.x, dy: point.y - currentGraphState.origin.y)
+            if !didMove {
+                if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }
+                didMove = true
+            }
+            let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
+            let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
+            for (id, original) in currentGraphState.originalPrimitives {
+                var updated = original
+                updated.position = original.position + deltaPoint
+                graph.setComponent(updated, for: id)
+            }
+            return
+        }
+
         guard let currentState = self.state else { return }
 
         let rawDelta = CGVector(dx: point.x - currentState.origin.x, dy: point.y - currentState.origin.y)
@@ -124,6 +167,11 @@ final class DragInteraction: CanvasInteraction {
     }
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
+        if graphState != nil {
+            graphState = nil
+            didMove = false
+            return
+        }
         if let graph = self.state?.graph {
             graph.endDrag()
             if let graphNode = context.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode {

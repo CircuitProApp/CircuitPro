@@ -17,18 +17,27 @@ struct SelectionInteraction: CanvasInteraction {
         var newSelection: [BaseNode] = currentSelection
 
         if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
-            if let node = controller.findNode(with: graphHit.rawValue, in: context.sceneRoot) {
-                let isAlreadySelected = currentSelection.contains(where: { $0.id == node.id })
-                if modifierFlags.contains(.shift) {
-                    if let index = newSelection.firstIndex(where: { $0.id == node.id }) {
-                        newSelection.remove(at: index)
-                    } else {
-                        newSelection.append(node)
-                    }
-                } else if !isAlreadySelected {
-                    newSelection = [node]
+            let currentSelectionIDs = context.graph.map { Set($0.selection.map { $0.rawValue }) }
+                ?? Set(currentSelection.map { $0.id })
+            var newSelectionIDs = currentSelectionIDs
+            if modifierFlags.contains(.shift) {
+                if newSelectionIDs.contains(graphHit.rawValue) {
+                    newSelectionIDs.remove(graphHit.rawValue)
+                } else {
+                    newSelectionIDs.insert(graphHit.rawValue)
+                }
+            } else {
+                newSelectionIDs = [graphHit.rawValue]
+            }
+            if newSelectionIDs != currentSelectionIDs {
+                if let graph = context.graph {
+                    graph.selection = Set(newSelectionIDs.map(NodeID.init))
+                }
+                Task { @MainActor in
+                    context.environment.canvasStore?.selection = newSelectionIDs
                 }
             }
+            return false
         } else if let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) {
 
             var nodeToSelect: BaseNode? = hit.node

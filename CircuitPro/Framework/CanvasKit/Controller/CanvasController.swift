@@ -123,7 +123,10 @@ final class CanvasController {
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
     func currentContext(for hostViewBounds: CGRect, visibleRect: CGRect) -> RenderContext {
         let selectedIDs = Set(self.selectedNodes.map { $0.id })
-        let allHighlightedIDs = selectedIDs.union(interactionHighlightedNodeIDs)
+        var allHighlightedIDs = selectedIDs.union(interactionHighlightedNodeIDs)
+        if let graph = graph {
+            allHighlightedIDs.formUnion(graph.selection.map { $0.rawValue })
+        }
 
         return RenderContext(
             sceneRoot: self.sceneRoot,

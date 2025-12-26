@@ -9,23 +9,23 @@ import SwiftUI
 import SwiftDataPacks
 
 struct ComponentDesignView: View {
-    
+
     @Environment(\.dismissWindow)
     private var dismissWindow
-    
+
     @UserContext private var userContext
-    
+
     @State private var componentDesignManager = ComponentDesignManager()
-    
+
     @State private var symbolCanvasManager = CanvasManager()
     @State private var footprintCanvasManager = CanvasManager()
-    
+
     @State private var showError = false
     @State private var showWarning = false
     @State private var messages = [String]()
     @State private var didCreateComponent = false
-    
-    
+
+
     var body: some View {
         Group {
             if didCreateComponent {
@@ -89,30 +89,30 @@ struct ComponentDesignView: View {
             Text(messages.joined(separator: "\n"))
         })
     }
-    
+
     private func createComponent() {
         if !componentDesignManager.validateForCreation() {
             let errorMessages = componentDesignManager.validationSummary.errors.values
                 .flatMap { $0 }
                 .map { $0.message }
-            
+
             if !errorMessages.isEmpty {
                 messages = errorMessages
                 showError = true
             }
             return
         }
-        
+
         let warningMessages = componentDesignManager.validationSummary.warnings.values
             .flatMap { $0 }
             .map { $0.message }
-        
+
         if !warningMessages.isEmpty {
             messages = warningMessages
             showWarning = true
             return
         }
-        
+
         guard let category = componentDesignManager.selectedCategory else { return }
 
         // 1. Create the base component definition
@@ -137,7 +137,7 @@ struct ComponentDesignView: View {
             copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
             return copy
         }
-        
+
         let newSymbol = SymbolDefinition(
             primitives: symbolPrimitives,
             pins: symbolPins,
@@ -169,11 +169,11 @@ struct ComponentDesignView: View {
             newFootprint.components.append(newComponent)
             finalNewFootprints.append(newFootprint)
         }
-        
+
         // 4. Combine the newly created models with any pre-assigned ones.
         let allFootprints = finalNewFootprints + componentDesignManager.assignedFootprints
         newComponent.footprints = allFootprints
-        
+
         // Also associate the component with any pre-existing, assigned footprints
         for assignedFootprint in componentDesignManager.assignedFootprints {
             assignedFootprint.components.append(newComponent)
@@ -186,7 +186,7 @@ struct ComponentDesignView: View {
     }
 
     private func createPrimitives(from editor: CanvasEditorManager, anchor: CGPoint) -> [AnyCanvasPrimitive] {
-        let rawPrimitives: [AnyCanvasPrimitive] = editor.canvasNodes.compactMap { ($0 as? PrimitiveNode)?.primitive }
+        let rawPrimitives: [AnyCanvasPrimitive] = editor.primitives
         return rawPrimitives.map { prim -> AnyCanvasPrimitive in
             var copy = prim
             copy.translate(by: CGVector(dx: -anchor.x, dy: -anchor.y))
@@ -196,20 +196,20 @@ struct ComponentDesignView: View {
 
     private func createTextDefinitions(from editor: CanvasEditorManager, anchor: CGPoint) -> [CircuitText.Definition] {
         let textNodes = editor.canvasNodes.compactMap { $0 as? TextNode }
-        
+
         return textNodes.map { textNode in
             let model = textNode.resolvedText
             let centeredPosition = CGPoint(
                 x: model.relativePosition.x - anchor.x,
                 y: model.relativePosition.y - anchor.y
             )
-            
+
             var finalContent = model.content
             if case .static = finalContent {
                 let userEnteredText = editor.displayTextMap[textNode.id] ?? ""
                 finalContent = .static(text: userEnteredText)
             }
-            
+
             return CircuitText.Definition(
                 id: model.id,
                 content: finalContent,
@@ -224,7 +224,7 @@ struct ComponentDesignView: View {
             )
         }
     }
-    
+
     private func resetForNewComponent() {
         componentDesignManager.resetAll()
         componentDesignManager.currentStage = .details

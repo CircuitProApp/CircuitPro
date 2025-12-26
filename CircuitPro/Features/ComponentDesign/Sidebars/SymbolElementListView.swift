@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SymbolElementListView: View {
-    
+
     @BindableEnvironment(CanvasEditorManager.self)
     private var symbolEditor
 
@@ -18,7 +18,7 @@ struct SymbolElementListView: View {
                 .font(.headline)
                 .padding(10)
 
-            if symbolEditor.canvasNodes.isEmpty {
+            if symbolEditor.elementItems.isEmpty {
                 ContentUnavailableView {
                     Label {
                         Text("No Symbol Elements")
@@ -34,11 +34,11 @@ struct SymbolElementListView: View {
                 .frame(maxHeight: .infinity)
             } else {
                 List(selection: $symbolEditor.selectedElementIDs) {
-                    ForEach(symbolEditor.canvasNodes) { element in
+                    ForEach(symbolEditor.elementItems) { element in
                         CanvasElementRowView(element: element, editor: symbolEditor)
                             .tag(element.id)
                     }
-                 
+
                 }
                 .listStyle(.inset)
                 .scrollContentBackground(.hidden)

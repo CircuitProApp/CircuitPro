@@ -32,6 +32,12 @@ final class ElementsRenderLayer: RenderLayer {
 
         var bodyPrimitivesByLayer = gatherBodyPrimitives(from: allNodes, in: context, skipPrimitiveNodes: context.graph != nil)
         var haloPrimitivesByLayer = gatherHaloPrimitives(from: context, allNodes: allNodes)
+        if let graph = context.graph {
+            let graphHalos = gatherGraphHaloPrimitives(from: graph, context: context)
+            for (layerId, primitives) in graphHalos {
+                haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
+            }
+        }
 
         if let graph = context.graph {
             let graphAdapter = GraphRenderAdapter()
@@ -161,6 +167,33 @@ final class ElementsRenderLayer: RenderLayer {
                 let layerId = (node as? Layerable)?.layerId
                 primitivesByLayer[layerId, default: []].append(worldPrimitive)
             }
+        }
+
+        return primitivesByLayer
+    }
+
+    private func gatherGraphHaloPrimitives(from graph: Graph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+        var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
+        let haloIDs = context.highlightedNodeIDs
+
+        for (id, primitive) in graph.components(AnyCanvasPrimitive.self) {
+            guard haloIDs.contains(id.rawValue) else { continue }
+            guard let haloPath = primitive.makeHaloPath() else { continue }
+
+            let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
+            let haloPrimitive = DrawingPrimitive.stroke(
+                path: haloPath,
+                color: haloColor,
+                lineWidth: 5.0,
+                lineCap: .round,
+                lineJoin: .round
+            )
+
+            var transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
+                .rotated(by: primitive.rotation)
+            let worldPrimitive = haloPrimitive.applying(transform: &transform)
+
+            primitivesByLayer[primitive.layerId, default: []].append(worldPrimitive)
         }
 
         return primitivesByLayer

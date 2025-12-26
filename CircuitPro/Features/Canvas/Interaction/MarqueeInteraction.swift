@@ -50,11 +50,13 @@ final class MarqueeInteraction: CanvasInteraction {
         }
 
         let intersectingNodes: [BaseNode]
-        if let graph = context.graph {
+        let graphHitIDs: Set<UUID>
+        if context.graph != nil {
             let hitTester = GraphHitTester()
-            let hitIDs = Set(hitTester.hitTestAll(in: marqueeRect, context: context).map { $0.rawValue })
-            intersectingNodes = context.sceneRoot.children.filter { hitIDs.contains($0.id) }
+            graphHitIDs = Set(hitTester.hitTestAll(in: marqueeRect, context: context).map { $0.rawValue })
+            intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
         } else {
+            graphHitIDs = []
             // Get all nodes that intersect the marquee rectangle.
             intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
         }
@@ -77,7 +79,8 @@ final class MarqueeInteraction: CanvasInteraction {
             }
         }
 
-        let highlightedIDs = Set(finalHighlightableNodes.map { $0.id })
+        var highlightedIDs = Set(finalHighlightableNodes.map { $0.id })
+        highlightedIDs.formUnion(graphHitIDs)
         controller.setInteractionHighlight(nodeIDs: highlightedIDs)
     }
 
@@ -90,13 +93,23 @@ final class MarqueeInteraction: CanvasInteraction {
         }
 
         // 2. Calculate the final selection.
-        if isAdditive {
-            // Additive mode: Union of the initial selection and the marquee selection.
-            let finalSelection = Set(initialSelection).union(Set(highlightedNodes))
-            controller.setSelection(to: Array(finalSelection))
+        if let store = context.environment.canvasStore, let graph = context.graph {
+            let highlightedIDs = controller.interactionHighlightedNodeIDs
+            let initialIDs = Set(graph.selection.map { $0.rawValue })
+            let finalIDs = isAdditive ? initialIDs.union(highlightedIDs) : highlightedIDs
+            graph.selection = Set(finalIDs.map(NodeID.init))
+            Task { @MainActor in
+                store.selection = finalIDs
+            }
         } else {
-            // Default mode: The marquee selection replaces the old selection.
-            controller.setSelection(to: highlightedNodes)
+            if isAdditive {
+                // Additive mode: Union of the initial selection and the marquee selection.
+                let finalSelection = Set(initialSelection).union(Set(highlightedNodes))
+                controller.setSelection(to: Array(finalSelection))
+            } else {
+                // Default mode: The marquee selection replaces the old selection.
+                controller.setSelection(to: highlightedNodes)
+            }
         }
 
         // 3. Clean up state.
