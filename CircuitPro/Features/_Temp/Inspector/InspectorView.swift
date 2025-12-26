@@ -92,10 +92,10 @@ struct InspectorView: View {
             )
             .id(context.component.id)
 
-        } else if let primitive = singleSelectedNode as? PrimitiveNode {
-            @Bindable var primitive = primitive
+        } else if let selection = projectManager.layoutController.singleSelectedPrimitive,
+                  let binding = projectManager.layoutController.primitiveBinding(for: selection.id.rawValue) {
             ScrollView {
-                PrimitivePropertiesView(primitive: $primitive.primitive)
+                PrimitivePropertiesView(primitive: binding)
             }
         } else if let anchoredText = singleSelectedNode as? AnchoredTextNode {
             AnchoredTextInspectorView(anchoredText: anchoredText)

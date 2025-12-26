@@ -17,6 +17,12 @@ final class LayoutEditorController: EditorController {
 
     var nodes: [BaseNode] { canvasStore.nodes }
 
+    let graph = Graph()
+    private var suppressGraphSelectionSync = false
+    private var suppressPrimitiveRemoval = false
+    private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]
+    private var activeDesignID: UUID?
+
     // MARK: - Layout-Specific State
 
     /// The ID of the currently active layer for editing (e.g., for routing traces).
@@ -37,13 +43,19 @@ final class LayoutEditorController: EditorController {
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
         self.traceGraph = TraceGraph()
+        self.canvasStore.onDelta = { [weak self] delta in
+            self?.handleStoreDelta(delta)
+        }
+        self.graph.onDelta = { [weak self] delta in
+            self?.handleGraphDelta(delta)
+        }
 
         // Start the automatic observation loop upon initialization.
         startTrackingModelChanges()
 
         Task {
-                await self.rebuildNodes()
-            }
+            await self.rebuildNodes()
+        }
     }
 
     private func startTrackingModelChanges() {
@@ -66,6 +78,7 @@ final class LayoutEditorController: EditorController {
     /// The primary method to rebuild the node graph. It's called automatically by the tracking system.
     private func rebuildNodes() async {
         let design = projectManager.selectedDesign
+        resetGraphIfNeeded(for: design)
 
         // 1. Rebuild and sort the canvas layers for this design.
         let unsortedCanvasLayers = design.layers.map { layerType in
@@ -116,6 +129,30 @@ final class LayoutEditorController: EditorController {
 
     // MARK: - Private Helpers
 
+    var primitives: [AnyCanvasPrimitive] {
+        graph.components(AnyCanvasPrimitive.self).map { $0.1 }
+    }
+
+    var singleSelectedPrimitive: (id: NodeID, primitive: AnyCanvasPrimitive)? {
+        guard canvasStore.selection.count == 1, let id = canvasStore.selection.first else { return nil }
+        let nodeID = NodeID(id)
+        guard let primitive = graph.component(AnyCanvasPrimitive.self, for: nodeID) else { return nil }
+        return (nodeID, primitive)
+    }
+
+    func primitiveBinding(for id: UUID) -> Binding<AnyCanvasPrimitive>? {
+        let nodeID = NodeID(id)
+        guard graph.component(AnyCanvasPrimitive.self, for: nodeID) != nil else { return nil }
+        let fallback = primitiveCache[nodeID] ?? AnyCanvasPrimitive.line(CanvasLine(start: .zero, end: .zero, strokeWidth: 1, layerId: nil))
+        return Binding(
+            get: { self.graph.component(AnyCanvasPrimitive.self, for: nodeID) ?? self.primitiveCache[nodeID] ?? fallback },
+            set: {
+                self.primitiveCache[nodeID] = $0
+                self.graph.setComponent($0, for: nodeID)
+            }
+        )
+    }
+
     /// Generates an array of `RenderableText` objects for a single `ComponentInstance`.
     private func generateRenderableTexts(for inst: ComponentInstance) -> [RenderableText] {
         // This logic is specific to the text defined on a footprint, which might differ from a symbol.
@@ -128,5 +165,92 @@ final class LayoutEditorController: EditorController {
             let displayString = projectManager.generateString(for: resolvedModel, component: inst)
             return RenderableText(model: resolvedModel, text: displayString)
         }
+    }
+
+    private func resetGraphIfNeeded(for design: CircuitDesign) {
+        guard activeDesignID != design.id else { return }
+        activeDesignID = design.id
+        primitiveCache.removeAll()
+        graph.reset()
+    }
+
+    private func handleStoreDelta(_ delta: CanvasStoreDelta) {
+        switch delta {
+        case .reset(let nodes):
+            addGraphPrimitives(from: nodes)
+            removePrimitiveNodes(from: nodes)
+            syncPrimitiveCacheFromGraph()
+        case .nodesAdded(let nodes):
+            addGraphPrimitives(from: nodes)
+            removePrimitiveNodes(from: nodes)
+            syncPrimitiveCacheFromGraph()
+        case .nodesRemoved(let ids):
+            for id in ids {
+                graph.removeNode(NodeID(id))
+            }
+        case .selectionChanged(let selection):
+            guard !suppressGraphSelectionSync else { return }
+            let graphSelection = Set(selection.compactMap { id -> NodeID? in
+                let nodeID = NodeID(id)
+                return graph.component(AnyCanvasPrimitive.self, for: nodeID) != nil ? nodeID : nil
+            })
+            if graph.selection != graphSelection {
+                suppressGraphSelectionSync = true
+                graph.selection = graphSelection
+                suppressGraphSelectionSync = false
+            }
+        }
+    }
+
+    private func handleGraphDelta(_ delta: UnifiedGraphDelta) {
+        switch delta {
+        case .selectionChanged(let selection):
+            guard !suppressGraphSelectionSync else { return }
+            let selectionIDs = Set(selection.map { $0.rawValue })
+            if canvasStore.selection != selectionIDs {
+                suppressGraphSelectionSync = true
+                Task { @MainActor in
+                    self.canvasStore.selection = selectionIDs
+                    self.suppressGraphSelectionSync = false
+                }
+            }
+        case .componentSet(let id, let componentKey):
+            if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self),
+               let primitive = graph.component(AnyCanvasPrimitive.self, for: id) {
+                primitiveCache[id] = primitive
+            }
+        case .nodeRemoved(let id):
+            primitiveCache.removeValue(forKey: id)
+        case .componentRemoved(let id, let componentKey):
+            if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self) {
+                primitiveCache.removeValue(forKey: id)
+            }
+        default:
+            break
+        }
+    }
+
+    private func syncPrimitiveCacheFromGraph() {
+        primitiveCache = Dictionary(
+            uniqueKeysWithValues: graph.components(AnyCanvasPrimitive.self).map { ($0.0, $0.1) }
+        )
+    }
+
+    private func addGraphPrimitives(from nodes: [BaseNode]) {
+        for node in nodes {
+            guard let primitiveNode = node as? PrimitiveNode else { continue }
+            let graphID = NodeID(primitiveNode.id)
+            graph.addNode(graphID)
+            graph.setComponent(primitiveNode.primitive, for: graphID)
+        }
+    }
+
+    private func removePrimitiveNodes(from nodes: [BaseNode]) {
+        guard !suppressPrimitiveRemoval else { return }
+        let primitiveIDs = Set(nodes.compactMap { ($0 as? PrimitiveNode)?.id })
+        guard !primitiveIDs.isEmpty else { return }
+        suppressPrimitiveRemoval = true
+        canvasStore.removeNodes(ids: primitiveIDs, emitDelta: false)
+        suppressPrimitiveRemoval = false
     }
 }

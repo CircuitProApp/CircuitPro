@@ -11,6 +11,7 @@ struct LayoutCanvasView: View {
             viewport: $canvasManager.viewport,
             store: projectManager.layoutController.canvasStore,
             tool: $projectManager.layoutController.selectedTool.unwrapping(withDefault: CursorTool()),
+            graph: projectManager.layoutController.graph,
             layers: $projectManager.layoutController.canvasLayers,
             activeLayerId: $projectManager.layoutController.activeLayerId,
             environment: canvasManager.environment,

@@ -82,7 +82,8 @@ final class ElementsRenderLayer: RenderLayer {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
         for node in nodes where node.isVisible {
-            if skipPrimitiveNodes, node is PrimitiveNode {
+            if skipPrimitiveNodes, node is PrimitiveNode,
+               let parent = node.parent, parent === context.sceneRoot {
                 continue
             }
             var primitives: [DrawingPrimitive] = []
