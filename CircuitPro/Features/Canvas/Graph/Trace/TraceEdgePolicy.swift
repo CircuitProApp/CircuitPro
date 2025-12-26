@@ -18,7 +18,7 @@ struct TraceEdgeMetadata: Hashable {
     let layerId: UUID
 }
 
-/// The concrete implementation of EdgePolicy for our TraceGraph.
+/// The concrete implementation of EdgePolicy for the trace engine.
 /// It knows how to interact with the `edgeMetadata` dictionary.
 class TraceEdgePolicy: EdgePolicy {
     // Weak reference back to the domain model to avoid retain cycles.

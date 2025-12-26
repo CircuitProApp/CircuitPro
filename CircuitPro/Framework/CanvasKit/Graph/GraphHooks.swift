@@ -6,6 +6,7 @@
 //
 
 import CoreGraphics
+import Foundation
 
 struct GraphHitCandidate {
     let id: NodeID
