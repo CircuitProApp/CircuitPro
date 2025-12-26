@@ -46,6 +46,17 @@ final class DragInteraction: CanvasInteraction {
                 self.didMove = false
                 return true
             }
+
+            if let wireGraph = context.environment.wireGraph,
+               let graphHit = GraphHitTester().hitTest(point: point, context: context),
+               graph.selection.contains(graphHit),
+               graph.component(WireEdgeComponent.self, for: graphHit) != nil {
+                if wireGraph.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
+                    self.state = DraggingState(origin: point, originalNodePositions: [:], graph: wireGraph, isAnchorDrag: false, originalAnchorPositions: [:])
+                    self.didMove = false
+                    return true
+                }
+            }
             return false
         }
 
@@ -74,17 +85,18 @@ final class DragInteraction: CanvasInteraction {
         }
 
         // Prime pin vertices for selected symbols so beginDrag has something to move
-        if let graphNode = context.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode {
+        if let wireGraph = context.environment.wireGraph {
             for node in controller.selectedNodes {
                 if let sym = node as? SymbolNode, let symbolDef = sym.instance.definition {
-                    graphNode.graph.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
+                    wireGraph.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
                 }
             }
 
-            // Now try to activate graph drag
-            let selectedIDs = Set(controller.selectedNodes.map { $0.id })
-            if graphNode.graph.beginDrag(selectedIDs: selectedIDs) {
-                self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: graphNode.graph, isAnchorDrag: isAnchorDrag, originalAnchorPositions: originalAnchorPositions)
+            let nodeSelection = Set(controller.selectedNodes.map { $0.id })
+            let graphSelection = Set(context.graph?.selection.map { $0.rawValue } ?? [])
+            let selectedIDs = nodeSelection.union(graphSelection)
+            if wireGraph.beginDrag(selectedIDs: selectedIDs) {
+                self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: wireGraph, isAnchorDrag: isAnchorDrag, originalAnchorPositions: originalAnchorPositions)
             } else {
                 self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: nil, isAnchorDrag: isAnchorDrag, originalAnchorPositions: originalAnchorPositions)
             }
@@ -145,21 +157,12 @@ final class DragInteraction: CanvasInteraction {
 
         if let graph = currentState.graph {
             graph.updateDrag(by: deltaPoint)
-            if let graphNode = context.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode {
-                graphNode.syncChildNodesFromModel()
-            }
-        } else {
+        } else if let wireGraph = context.environment.wireGraph {
             // Fallback: graph drag not active, do live pin sync for moved symbols
-            if let graphNode = context.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode {
-                for node in controller.selectedNodes {
-                    // --- UPDATED LOGIC ---
-                    // Apply the same fix here for consistency.
-                    if let sym = node as? SymbolNode, let symbolDef = sym.instance.definition {
-                        // The node's position has already been updated, so its instance is up-to-date.
-                        graphNode.graph.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
-                    }
+            for node in controller.selectedNodes {
+                if let sym = node as? SymbolNode, let symbolDef = sym.instance.definition {
+                    wireGraph.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
                 }
-                graphNode.syncChildNodesFromModel()
             }
         }
 
@@ -174,9 +177,6 @@ final class DragInteraction: CanvasInteraction {
         }
         if let graph = self.state?.graph {
             graph.endDrag()
-            if let graphNode = context.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode {
-                graphNode.syncChildNodesFromModel()
-            }
         }
 
         if didMove {

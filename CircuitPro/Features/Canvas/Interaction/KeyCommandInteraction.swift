@@ -104,6 +104,20 @@ struct KeyCommandInteraction: CanvasInteraction {
         // If no tool handled it, perform the standard "delete selection" action.
         if let graph = context.graph, !graph.selection.isEmpty {
             let selectedIDs = Set(graph.selection.map { $0.rawValue })
+            let hasWireSelection = graph.selection.contains { id in
+                graph.component(WireEdgeComponent.self, for: id) != nil ||
+                graph.component(WireVertexComponent.self, for: id) != nil
+            }
+
+            if hasWireSelection, let wireGraph = context.environment.wireGraph {
+                wireGraph.delete(items: selectedIDs)
+                graph.selection = []
+                Task { @MainActor in
+                    context.environment.canvasStore?.selection.subtract(selectedIDs)
+                }
+                return true
+            }
+
             for id in graph.selection {
                 graph.removeNode(id)
             }

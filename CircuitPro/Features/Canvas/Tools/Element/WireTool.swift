@@ -27,7 +27,8 @@ final class WireTool: CanvasTool {
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         switch self.state {
         case .idle:
-            let initialDirection = determineInitialDirection(from: context.hitTarget)
+            let graphHit = GraphHitTester().hitTest(point: location, context: context.renderContext)
+            let initialDirection = determineInitialDirection(from: context.hitTarget, graphHit: graphHit, context: context.renderContext)
             self.state = .drawing(startPoint: location, direction: initialDirection)
             return .noResult
 
@@ -48,7 +49,7 @@ final class WireTool: CanvasTool {
             let requestNode = WireRequestNode(from: startPoint, to: location, strategy: strategy)
 
             // Finish only when hitting a pin or anything in the schematic graph subtree
-            if shouldFinish(on: context.hitTarget) {
+            if shouldFinish(on: context.hitTarget, at: location, context: context.renderContext) {
                 self.state = .idle
             } else {
                 // Continue drawing from the new point, toggling direction only for straight lines
@@ -63,16 +64,16 @@ final class WireTool: CanvasTool {
 
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard case .drawing(let startPoint, let direction) = state else { return [] }
-        
+
         // Calculate the corner point for the two-segment orthogonal line.
         let corner = (direction == .horizontal) ? CGPoint(x: mouse.x, y: startPoint.y) : CGPoint(x: startPoint.x, y: mouse.y)
-        
+
         // Create the path for the preview.
         let path = CGMutablePath()
         path.move(to: startPoint)
         path.addLine(to: corner)
         path.addLine(to: mouse)
-        
+
         // Return a single stroke primitive with the specified styling.
         return [.stroke(
             path: path,
@@ -81,13 +82,18 @@ final class WireTool: CanvasTool {
             lineDash: [4, 4]
         )]
     }
-    
-    private func shouldFinish(on hit: CanvasHitTarget?) -> Bool {
-        guard let node = hit?.node else { return false }
-        if node is PinNode { return true }
-        return belongsToSchematicGraph(node)
+
+    private func shouldFinish(on hit: CanvasHitTarget?, at location: CGPoint, context: RenderContext) -> Bool {
+        if let node = hit?.node, node is PinNode {
+            return true
+        }
+        if let graphHit = GraphHitTester().hitTest(point: location, context: context),
+           context.graph?.component(WireEdgeComponent.self, for: graphHit) != nil {
+            return true
+        }
+        return false
     }
-    
+
     // MARK: - Keyboard Actions
     override func handleEscape() -> Bool {
         if case .drawing = self.state {
@@ -96,20 +102,13 @@ final class WireTool: CanvasTool {
         }
         return false
     }
-    
-    private func belongsToSchematicGraph(_ node: BaseNode) -> Bool {
-        var current: BaseNode? = node
-        while let c = current {
-            if c is SchematicGraphNode { return true }
-            current = c.parent
-        }
-        return false
-    }
-    
+
     // MARK: - Private Helpers
-    private func determineInitialDirection(from hitTarget: CanvasHitTarget?) -> DrawingDirection {
+    private func determineInitialDirection(from hitTarget: CanvasHitTarget?, graphHit: NodeID?, context: RenderContext) -> DrawingDirection {
         guard let hitTarget = hitTarget else {
-            // Clicked in empty space, default to horizontal.
+            if let graphHit, let orientation = wireOrientation(for: graphHit, in: context) {
+                return orientation == .horizontal ? .vertical : .horizontal
+            }
             return .horizontal
         }
 
@@ -118,8 +117,23 @@ final class WireTool: CanvasTool {
             // We hit a wire! Start drawing perpendicular to it.
             return orientation == .horizontal ? .vertical : .horizontal
         }
-        
-        // We hit something else (a vertex, a pin, etc.). Default to horizontal.
+
+        if let graphHit, let orientation = wireOrientation(for: graphHit, in: context) {
+            return orientation == .horizontal ? .vertical : .horizontal
+        }
+
         return .horizontal
+    }
+
+    private func wireOrientation(for id: NodeID, in context: RenderContext) -> EdgeOrientation? {
+        guard let graph = context.graph,
+              let edge = graph.component(WireEdgeComponent.self, for: id),
+              let start = graph.component(WireVertexComponent.self, for: edge.start),
+              let end = graph.component(WireVertexComponent.self, for: edge.end) else {
+            return nil
+        }
+        let dx = abs(start.point.x - end.point.x)
+        let dy = abs(start.point.y - end.point.y)
+        return dx < 1e-6 ? .vertical : .horizontal
     }
 }

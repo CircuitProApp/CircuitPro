@@ -17,6 +17,7 @@ final class SchematicEditorController: EditorController {
     private let nodeProvider: SchematicNodeProvider
 
     let schematicGraph: WireGraph
+    let graph = Graph()
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
@@ -26,6 +27,9 @@ final class SchematicEditorController: EditorController {
             projectManager: projectManager,
             schematicGraph: self.schematicGraph
         )
+        self.schematicGraph.onChange = { [weak self] _, _ in
+            self?.syncGraphFromWireGraph()
+        }
 
         startTrackingModelChanges()
 
@@ -61,6 +65,7 @@ final class SchematicEditorController: EditorController {
         // This is where the graph is automatically synced on every rebuild.
         let context = BuildContext(activeLayers: [])
         canvasStore.setNodes(await nodeProvider.buildNodes(from: design, context: context))
+        syncGraphFromWireGraph()
     }
 
     func findNode(with id: UUID) -> BaseNode? {
@@ -71,6 +76,33 @@ final class SchematicEditorController: EditorController {
         let design = projectManager.selectedDesign
         design.wires = schematicGraph.toWires()
         document.scheduleAutosave()
+    }
+
+    private func syncGraphFromWireGraph() {
+        let previousSelection = graph.selection
+        graph.reset()
+        for vertex in schematicGraph.vertices.values {
+            let nodeID = NodeID(vertex.id)
+            graph.addNode(nodeID)
+            let ownership = schematicGraph.ownership[vertex.id] ?? .free
+            let component = WireVertexComponent(point: vertex.point, clusterID: vertex.clusterID, ownership: ownership)
+            graph.setComponent(component, for: nodeID)
+        }
+
+        for edge in schematicGraph.edges.values {
+            let nodeID = NodeID(edge.id)
+            let startID = NodeID(edge.start)
+            let endID = NodeID(edge.end)
+            graph.addNode(nodeID)
+            let clusterID = schematicGraph.vertices[edge.start]?.clusterID ?? schematicGraph.vertices[edge.end]?.clusterID
+            let component = WireEdgeComponent(start: startID, end: endID, clusterID: clusterID)
+            graph.setComponent(component, for: nodeID)
+        }
+
+        let restoredSelection = previousSelection.filter { graph.nodes.contains($0) }
+        if graph.selection != restoredSelection {
+            graph.selection = restoredSelection
+        }
     }
 
     // MARK: - Public Actions

@@ -115,6 +115,7 @@ final class CanvasController {
         self.magnification = magnification
         self.environment.configuration = environment.configuration
         self.environment.canvasStore = environment.canvasStore
+        self.environment.wireGraph = environment.wireGraph
         self.layers = layers
         self.activeLayerId = activeLayerId
         self.graph = graph

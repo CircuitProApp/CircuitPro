@@ -21,11 +21,13 @@ final class WireGraph {
     // Domain metadata: schematic ownership (pins, detached pins, free)
     private(set) var ownership: [UUID: VertexOwnership] = [:]
     private var lastPosition: [UUID: CGPoint] = [:]
-    
+
     private(set) var groupLabels: [UUID: String] = [:]
 
     // MARK: - UI-only drag state (no normalization during drag)
     private var dragHandler: DragHandler?
+
+    var onChange: ((GraphDelta, GraphState) -> Void)?
 
     // MARK: - Init
     init() {
@@ -85,6 +87,8 @@ final class WireGraph {
               for vid in delta.deletedVertices {
                   self.lastPosition.removeValue(forKey: vid)
               }
+
+              self.onChange?(delta, final)
           }
       }
 
@@ -186,7 +190,7 @@ final class WireGraph {
         }
         return wires
     }
-    
+
     public func setGroupLabel(_ label: String, for groupID: UUID) {
         var tx = SetGroupLabelTransaction(
             groupID: groupID,
@@ -195,7 +199,7 @@ final class WireGraph {
         )
         _ = engine.execute(transaction: &tx) // metadata-only; rules skipped
     }
-    
+
     public func nets() -> [Net] {
         var nets: [Net] = []
         var processed = Set<UUID>()
@@ -203,7 +207,7 @@ final class WireGraph {
 
         for vID in s.vertices.keys {
             guard !processed.contains(vID) else { continue }
-            
+
             let (compV, compE) = net(startingFrom: vID, in: s)
             processed.formUnion(compV)
 

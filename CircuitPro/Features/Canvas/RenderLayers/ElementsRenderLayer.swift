@@ -37,12 +37,21 @@ final class ElementsRenderLayer: RenderLayer {
             for (layerId, primitives) in graphHalos {
                 haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
             }
+            let graphWireHalos = gatherGraphWireHaloPrimitives(from: graph, context: context)
+            for (layerId, primitives) in graphWireHalos {
+                haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
+            }
         }
 
         if let graph = context.graph {
             let graphAdapter = GraphRenderAdapter()
             let graphPrimitivesByLayer = graphAdapter.primitivesByLayer(from: graph, context: context)
             for (layerId, primitives) in graphPrimitivesByLayer {
+                bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
+            }
+            let wireAdapter = GraphWireRenderAdapter()
+            let wirePrimitivesByLayer = wireAdapter.primitivesByLayer(from: graph, context: context)
+            for (layerId, primitives) in wirePrimitivesByLayer {
                 bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
             }
         }
@@ -196,6 +205,37 @@ final class ElementsRenderLayer: RenderLayer {
 
             primitivesByLayer[primitive.layerId, default: []].append(worldPrimitive)
         }
+
+        return primitivesByLayer
+    }
+
+    private func gatherGraphWireHaloPrimitives(from graph: Graph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+        var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
+        let haloIDs = context.highlightedNodeIDs
+
+        let compositePath = CGMutablePath()
+
+        for (id, edge) in graph.components(WireEdgeComponent.self) {
+            guard haloIDs.contains(id.rawValue),
+                  let start = graph.component(WireVertexComponent.self, for: edge.start),
+                  let end = graph.component(WireVertexComponent.self, for: edge.end) else {
+                continue
+            }
+            compositePath.move(to: start.point)
+            compositePath.addLine(to: end.point)
+        }
+
+        guard !compositePath.isEmpty else { return primitivesByLayer }
+
+        let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
+        let haloPrimitive = DrawingPrimitive.stroke(
+            path: compositePath,
+            color: haloColor,
+            lineWidth: 5.0,
+            lineCap: .round,
+            lineJoin: .round
+        )
+        primitivesByLayer[nil, default: []].append(haloPrimitive)
 
         return primitivesByLayer
     }

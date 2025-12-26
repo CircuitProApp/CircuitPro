@@ -31,15 +31,11 @@ struct ToolInteraction: CanvasInteraction {
 
         if let request = newNode as? WireRequestNode {
             // Handle schematic wire requests (existing logic)
-            guard let schematicGraphNode = controller.sceneRoot.children.first(where: { $0 is SchematicGraphNode }) as? SchematicGraphNode else {
-                assertionFailure("A wire connection was requested, but no SchematicGraphNode exists in the scene.")
+            guard let wireGraph = context.environment.wireGraph else {
                 return true
             }
 
-            let graph = schematicGraphNode.graph
-            graph.connect(from: request.from, to: request.to, preferring: request.strategy)
-
-            schematicGraphNode.syncChildNodesFromModel()
+            wireGraph.connect(from: request.from, to: request.to, preferring: request.strategy)
             return true
 
         } else if let request = newNode as? TraceRequestNode {

@@ -37,6 +37,10 @@ private struct MarqueeRectKey: CanvasEnvironmentKey {
     static let defaultValue: CGRect? = nil
 }
 
+private struct WireGraphKey: CanvasEnvironmentKey {
+    static let defaultValue: WireGraph? = nil
+}
+
 extension CanvasEnvironmentValues {
     var configuration: CanvasConfiguration {
         get { self[ConfigurationKey.self] }
@@ -46,5 +50,16 @@ extension CanvasEnvironmentValues {
     var marqueeRect: CGRect? {
         get { self[MarqueeRectKey.self] }
         set { self[MarqueeRectKey.self] = newValue }
+    }
+
+    var wireGraph: WireGraph? {
+        get { self[WireGraphKey.self] }
+        set { self[WireGraphKey.self] = newValue }
+    }
+
+    func withWireGraph(_ graph: WireGraph?) -> CanvasEnvironmentValues {
+        var copy = self
+        copy.wireGraph = graph
+        return copy
     }
 }

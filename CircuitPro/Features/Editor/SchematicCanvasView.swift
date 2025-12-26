@@ -20,7 +20,8 @@ struct SchematicCanvasView: View {
             viewport: $canvasManager.viewport,
             store: projectManager.schematicController.canvasStore,
             tool: $projectManager.schematicController.selectedTool.unwrapping(withDefault: CursorTool()),
-            environment: canvasManager.environment,
+            graph: projectManager.schematicController.graph,
+            environment: canvasManager.environment.withWireGraph(projectManager.schematicController.schematicGraph),
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),
