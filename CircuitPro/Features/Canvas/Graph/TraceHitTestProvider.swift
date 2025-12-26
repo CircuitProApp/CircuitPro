@@ -1,5 +1,5 @@
 //
-//  TraceGraphHitTestProvider.swift
+//  TraceHitTestProvider.swift
 //  CircuitPro
 //
 //  Created by Codex on 9/22/25.
@@ -7,7 +7,7 @@
 
 import CoreGraphics
 
-struct TraceGraphHitTestProvider: GraphHitTestProvider {
+struct TraceHitTestProvider: GraphHitTestProvider {
     func hitTest(point: CGPoint, tolerance: CGFloat, graph: CanvasGraph, context: RenderContext) -> GraphHitCandidate? {
         var best: GraphHitCandidate?
 

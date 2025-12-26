@@ -1,5 +1,5 @@
 //
-//  TraceGraphHaloProvider.swift
+//  TraceHaloProvider.swift
 //  CircuitPro
 //
 //  Created by Codex on 9/22/25.
@@ -7,7 +7,7 @@
 
 import AppKit
 
-struct TraceGraphHaloProvider: GraphHaloProvider {
+struct TraceHaloProvider: GraphHaloProvider {
     func haloPrimitives(from graph: CanvasGraph, context: RenderContext, highlightedIDs: Set<UUID>) -> [UUID?: [DrawingPrimitive]] {
         var selectedEdges: [(TraceEdgeComponent, TraceVertexComponent, TraceVertexComponent)] = []
         var maxWidth: CGFloat = 0.0

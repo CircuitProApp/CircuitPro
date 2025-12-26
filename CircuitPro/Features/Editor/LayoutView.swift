@@ -17,8 +17,8 @@ struct LayoutCanvasView: View {
             environment: canvasManager.environment
                 .withTraceEngine(projectManager.layoutController.traceEngine)
                 .withGraphRenderProviders([GraphTraceRenderAdapter()])
-                .withGraphHaloProviders([TraceGraphHaloProvider()])
-                .withGraphHitTestProviders([TraceGraphHitTestProvider()]),
+                .withGraphHaloProviders([TraceHaloProvider()])
+                .withGraphHitTestProviders([TraceHitTestProvider()]),
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),
