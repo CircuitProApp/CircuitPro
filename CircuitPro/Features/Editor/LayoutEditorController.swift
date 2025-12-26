@@ -203,7 +203,7 @@ final class LayoutEditorController: EditorController {
             guard !suppressGraphSelectionSync else { return }
             let graphSelection = Set(selection.compactMap { id -> NodeID? in
                 let nodeID = NodeID(id)
-                return graph.component(AnyCanvasPrimitive.self, for: nodeID) != nil ? nodeID : nil
+                return graph.nodes.contains(nodeID) ? nodeID : nil
             })
             if graph.selection != graphSelection {
                 suppressGraphSelectionSync = true

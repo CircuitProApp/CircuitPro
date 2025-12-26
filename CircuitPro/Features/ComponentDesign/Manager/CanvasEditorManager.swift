@@ -110,7 +110,10 @@ final class CanvasEditorManager {
             }
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
-            let graphSelection = Set(selection.map(NodeID.init))
+            let graphSelection = Set(selection.compactMap { id -> NodeID? in
+                let nodeID = NodeID(id)
+                return graph.nodes.contains(nodeID) ? nodeID : nil
+            })
             if graph.selection != graphSelection {
                 graph.selection = graphSelection
             }

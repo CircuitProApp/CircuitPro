@@ -18,6 +18,7 @@ final class SchematicEditorController: EditorController {
 
     let graph = Graph()
     let wireEngine: WireEngine
+    private var suppressGraphSelectionSync = false
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
@@ -27,6 +28,12 @@ final class SchematicEditorController: EditorController {
             projectManager: projectManager,
             wireEngine: self.wireEngine
         )
+        self.canvasStore.onDelta = { [weak self] delta in
+            self?.handleStoreDelta(delta)
+        }
+        self.graph.onDelta = { [weak self] delta in
+            self?.handleGraphDelta(delta)
+        }
 
         startTrackingModelChanges()
 
@@ -73,6 +80,41 @@ final class SchematicEditorController: EditorController {
         for inst in design.componentInstances {
             guard let symbolDef = inst.definition?.symbol else { continue }
             wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
+        }
+    }
+
+    private func handleStoreDelta(_ delta: CanvasStoreDelta) {
+        switch delta {
+        case .selectionChanged(let selection):
+            guard !suppressGraphSelectionSync else { return }
+            let graphSelection = Set(selection.compactMap { id -> NodeID? in
+                let nodeID = NodeID(id)
+                return graph.nodes.contains(nodeID) ? nodeID : nil
+            })
+            if graph.selection != graphSelection {
+                suppressGraphSelectionSync = true
+                graph.selection = graphSelection
+                suppressGraphSelectionSync = false
+            }
+        default:
+            break
+        }
+    }
+
+    private func handleGraphDelta(_ delta: UnifiedGraphDelta) {
+        switch delta {
+        case .selectionChanged(let selection):
+            guard !suppressGraphSelectionSync else { return }
+            let selectionIDs = Set(selection.map { $0.rawValue })
+            if canvasStore.selection != selectionIDs {
+                suppressGraphSelectionSync = true
+                Task { @MainActor in
+                    self.canvasStore.selection = selectionIDs
+                    self.suppressGraphSelectionSync = false
+                }
+            }
+        default:
+            break
         }
     }
 
