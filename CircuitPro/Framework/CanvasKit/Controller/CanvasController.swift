@@ -113,9 +113,7 @@ final class CanvasController {
         // --- Other State ---
         if self.selectedTool?.id != tool?.id { self.selectedTool = tool }
         self.magnification = magnification
-        self.environment.configuration = environment.configuration
-        self.environment.canvasStore = environment.canvasStore
-        self.environment.wireEngine = environment.wireEngine
+        self.environment.merge(environment)
         self.layers = layers
         self.activeLayerId = activeLayerId
         self.graph = graph

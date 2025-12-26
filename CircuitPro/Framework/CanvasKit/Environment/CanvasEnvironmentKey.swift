@@ -30,4 +30,16 @@ public struct CanvasEnvironmentValues {
             storage[ObjectIdentifier(key)] = newValue
         }
     }
+
+    mutating func merge(_ other: CanvasEnvironmentValues) {
+        for (key, value) in other.storage {
+            storage[key] = value
+        }
+    }
+
+    func merged(with other: CanvasEnvironmentValues) -> CanvasEnvironmentValues {
+        var copy = self
+        copy.merge(other)
+        return copy
+    }
 }

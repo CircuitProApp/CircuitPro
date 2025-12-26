@@ -43,3 +43,5 @@ struct GraphTraceRenderAdapter {
         return NSColor.systemBlue.cgColor
     }
 }
+
+extension GraphTraceRenderAdapter: GraphRenderProvider {}

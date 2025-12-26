@@ -14,7 +14,11 @@ struct LayoutCanvasView: View {
             graph: projectManager.layoutController.graph,
             layers: $projectManager.layoutController.canvasLayers,
             activeLayerId: $projectManager.layoutController.activeLayerId,
-            environment: canvasManager.environment.withTraceEngine(projectManager.layoutController.traceEngine),
+            environment: canvasManager.environment
+                .withTraceEngine(projectManager.layoutController.traceEngine)
+                .withGraphRenderProviders([GraphTraceRenderAdapter()])
+                .withGraphHaloProviders([TraceGraphHaloProvider()])
+                .withGraphHitTestProviders([TraceGraphHitTestProvider()]),
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),

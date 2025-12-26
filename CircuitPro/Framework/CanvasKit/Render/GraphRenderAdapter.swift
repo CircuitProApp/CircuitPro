@@ -37,3 +37,5 @@ struct GraphRenderAdapter {
         return NSColor.systemBlue.cgColor
     }
 }
+
+extension GraphRenderAdapter: GraphRenderProvider {}

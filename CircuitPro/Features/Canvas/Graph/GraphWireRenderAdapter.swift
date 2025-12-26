@@ -48,3 +48,5 @@ struct GraphWireRenderAdapter {
         return primitivesByLayer
     }
 }
+
+extension GraphWireRenderAdapter: GraphRenderProvider {}

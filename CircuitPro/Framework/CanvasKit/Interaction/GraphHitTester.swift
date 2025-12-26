@@ -16,7 +16,7 @@ struct GraphHitTester {
     func hitTest(point: CGPoint, context: RenderContext, scope: Scope = .all) -> NodeID? {
         guard let graph = context.graph else { return nil }
         let tolerance = 5.0 / context.magnification
-        var best: (id: NodeID, priority: Int, area: CGFloat)?
+        var best: GraphHitCandidate?
 
         if scope == .all {
             for (id, component) in graph.components(GraphNodeComponent.self) {
@@ -39,24 +39,9 @@ struct GraphHitTester {
             }
         }
 
-        for (id, edge) in graph.components(WireEdgeComponent.self) {
-            guard let start = graph.component(WireVertexComponent.self, for: edge.start),
-                  let end = graph.component(WireVertexComponent.self, for: edge.end) else {
-                continue
-            }
-            if isPoint(point, onSegmentBetween: start.point, p2: end.point, tolerance: tolerance, strokeWidth: 0) {
-                considerHit(id: id, priority: 0, area: 0.0, best: &best)
-            }
-        }
-
-        for (id, edge) in graph.components(TraceEdgeComponent.self) {
-            guard let start = graph.component(TraceVertexComponent.self, for: edge.start),
-                  let end = graph.component(TraceVertexComponent.self, for: edge.end) else {
-                continue
-            }
-            if isPoint(point, onSegmentBetween: start.point, p2: end.point, tolerance: tolerance, strokeWidth: edge.width) {
-                let length = hypot(end.point.x - start.point.x, end.point.y - start.point.y)
-                considerHit(id: id, priority: 1, area: length * max(edge.width, 1.0), best: &best)
+        for provider in context.environment.graphHitTestProviders {
+            if let candidate = provider.hitTest(point: point, tolerance: tolerance, graph: graph, context: context) {
+                considerHit(candidate: candidate, best: &best)
             }
         }
 
@@ -88,68 +73,25 @@ struct GraphHitTester {
             }
         }
 
-        for (id, edge) in graph.components(WireEdgeComponent.self) {
-            guard let start = graph.component(WireVertexComponent.self, for: edge.start),
-                  let end = graph.component(WireVertexComponent.self, for: edge.end) else {
-                continue
-            }
-            let bounds = CGRect(
-                x: min(start.point.x, end.point.x),
-                y: min(start.point.y, end.point.y),
-                width: abs(start.point.x - end.point.x),
-                height: abs(start.point.y - end.point.y)
-            ).insetBy(dx: -2.0, dy: -2.0)
-            if rect.intersects(bounds) {
-                hits.insert(id)
-            }
-        }
-
-        for (id, edge) in graph.components(TraceEdgeComponent.self) {
-            guard let start = graph.component(TraceVertexComponent.self, for: edge.start),
-                  let end = graph.component(TraceVertexComponent.self, for: edge.end) else {
-                continue
-            }
-            let inset = max(2.0, edge.width / 2)
-            let bounds = CGRect(
-                x: min(start.point.x, end.point.x),
-                y: min(start.point.y, end.point.y),
-                width: abs(start.point.x - end.point.x),
-                height: abs(start.point.y - end.point.y)
-            ).insetBy(dx: -inset, dy: -inset)
-            if rect.intersects(bounds) {
-                hits.insert(id)
-            }
+        for provider in context.environment.graphHitTestProviders {
+            hits.formUnion(provider.hitTestAll(in: rect, graph: graph, context: context))
         }
 
         return Array(hits)
     }
 
-    private func isPoint(_ p: CGPoint, onSegmentBetween p1: CGPoint, p2: CGPoint, tolerance: CGFloat, strokeWidth: CGFloat) -> Bool {
-        let padding = tolerance + (strokeWidth / 2)
-        let minX = min(p1.x, p2.x) - padding, maxX = max(p1.x, p2.x) + padding
-        let minY = min(p1.y, p2.y) - padding, maxY = max(p1.y, p2.y) + padding
-
-        guard p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY else { return false }
-
-        let dx = p2.x - p1.x
-        let dy = p2.y - p1.y
-
-        let epsilon: CGFloat = 1e-6
-        if abs(dx) < epsilon { return abs(p.x - p1.x) < padding }
-        if abs(dy) < epsilon { return abs(p.y - p1.y) < padding }
-
-        let distance = abs(dy * p.x - dx * p.y + p2.y * p1.x - p2.x * p1.y) / hypot(dx, dy)
-
-        return distance < padding
+    private func considerHit(id: NodeID, priority: Int, area: CGFloat, best: inout GraphHitCandidate?) {
+        considerHit(candidate: GraphHitCandidate(id: id, priority: priority, area: area), best: &best)
     }
 
-    private func considerHit(id: NodeID, priority: Int, area: CGFloat, best: inout (id: NodeID, priority: Int, area: CGFloat)?) {
+    private func considerHit(candidate: GraphHitCandidate, best: inout GraphHitCandidate?) {
         guard let current = best else {
-            best = (id: id, priority: priority, area: area)
+            best = candidate
             return
         }
-        if priority > current.priority || (priority == current.priority && area < current.area) {
-            best = (id: id, priority: priority, area: area)
+        if candidate.priority > current.priority ||
+            (candidate.priority == current.priority && candidate.area < current.area) {
+            best = candidate
         }
     }
 

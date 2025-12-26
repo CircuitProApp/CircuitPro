@@ -21,7 +21,11 @@ struct SchematicCanvasView: View {
             store: projectManager.schematicController.canvasStore,
             tool: $projectManager.schematicController.selectedTool.unwrapping(withDefault: CursorTool()),
             graph: projectManager.schematicController.graph,
-            environment: canvasManager.environment.withWireEngine(projectManager.schematicController.wireEngine),
+            environment: canvasManager.environment
+                .withWireEngine(projectManager.schematicController.wireEngine)
+                .withGraphRenderProviders([GraphWireRenderAdapter()])
+                .withGraphHaloProviders([WireGraphHaloProvider()])
+                .withGraphHitTestProviders([WireGraphHitTestProvider()]),
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),
