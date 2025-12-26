@@ -37,7 +37,7 @@ final class CanvasEditorManager {
 
     var selectedTool: CanvasTool = CursorTool()
     private var elementIndexMap: [UUID: Int] = [:]
-    let graph = Graph()
+    let graph = CanvasGraph()
     private var suppressPrimitiveRemoval = false
     private var suppressGraphSelectionSync = false
     private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]

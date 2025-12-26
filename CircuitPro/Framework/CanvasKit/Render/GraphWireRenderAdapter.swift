@@ -8,7 +8,7 @@
 import AppKit
 
 struct GraphWireRenderAdapter {
-    func primitivesByLayer(from graph: Graph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    func primitivesByLayer(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
         var adjacency: [NodeID: Int] = [:]
 

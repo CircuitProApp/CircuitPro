@@ -1,5 +1,5 @@
 //
-//  Graph.swift
+//  CanvasGraph.swift
 //  CircuitPro
 //
 //  Created by Codex on 9/20/25.
@@ -9,7 +9,7 @@ import Foundation
 import Observation
 
 @Observable
-final class Graph {
+final class CanvasGraph {
     private(set) var nodes: Set<NodeID> = []
     var selection: Set<NodeID> = [] {
         didSet { onDelta?(.selectionChanged(selection)) }

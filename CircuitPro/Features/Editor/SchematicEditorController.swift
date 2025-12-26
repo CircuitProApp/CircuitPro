@@ -16,7 +16,7 @@ final class SchematicEditorController: EditorController {
     private let document: CircuitProjectFileDocument
     private let nodeProvider: SchematicNodeProvider
 
-    let graph = Graph()
+    let graph = CanvasGraph()
     let wireEngine: WireEngine
     private var suppressGraphSelectionSync = false
     private var graphNodeProxyIDs: Set<NodeID> = []

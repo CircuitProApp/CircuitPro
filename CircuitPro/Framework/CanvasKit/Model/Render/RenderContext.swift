@@ -25,7 +25,7 @@ struct RenderContext {
     let activeLayerId: UUID?
 
     let snapProvider: any SnapProvider
-    let graph: Graph?
+    let graph: CanvasGraph?
 
     // MARK: - Extensible Application-Specific Data
     public let environment: CanvasEnvironmentValues
@@ -42,7 +42,7 @@ struct RenderContext {
         }
     }
 
-    init(sceneRoot: BaseNode, magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedNodeIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, graph: Graph?, environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
+    init(sceneRoot: BaseNode, magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedNodeIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, graph: CanvasGraph?, environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
         self.sceneRoot = sceneRoot
         self.magnification = magnification
         self.mouseLocation = mouseLocation

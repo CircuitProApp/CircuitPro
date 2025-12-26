@@ -190,7 +190,7 @@ final class ElementsRenderLayer: RenderLayer {
         return primitivesByLayer
     }
 
-    private func gatherGraphHaloPrimitives(from graph: Graph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    private func gatherGraphHaloPrimitives(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
         let haloIDs = context.highlightedNodeIDs
 
@@ -217,7 +217,7 @@ final class ElementsRenderLayer: RenderLayer {
         return primitivesByLayer
     }
 
-    private func gatherGraphWireHaloPrimitives(from graph: Graph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    private func gatherGraphWireHaloPrimitives(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
         let haloIDs = context.highlightedNodeIDs
 
@@ -248,7 +248,7 @@ final class ElementsRenderLayer: RenderLayer {
         return primitivesByLayer
     }
 
-    private func gatherGraphTraceHaloPrimitives(from graph: Graph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    private func gatherGraphTraceHaloPrimitives(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         let haloIDs = context.highlightedNodeIDs
         var selectedEdges: [(TraceEdgeComponent, TraceVertexComponent, TraceVertexComponent)] = []
         var maxWidth: CGFloat = 0.0

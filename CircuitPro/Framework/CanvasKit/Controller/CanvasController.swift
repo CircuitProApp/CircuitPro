@@ -40,7 +40,7 @@ final class CanvasController {
     var environment: CanvasEnvironmentValues = .init()
     var layers: [CanvasLayer]?
     var activeLayerId: UUID?
-    var graph: Graph?
+    var graph: CanvasGraph?
 
     // MARK: - Pluggable Pipelines
 
@@ -80,7 +80,7 @@ final class CanvasController {
         environment: CanvasEnvironmentValues,
         layers: [CanvasLayer]?,
         activeLayerId: UUID?,
-        graph: Graph? = nil
+        graph: CanvasGraph? = nil
     ) {
         // --- Smart Node Syncing Logic ---
         // This diffing approach is the perfect balance of performance and simplicity.

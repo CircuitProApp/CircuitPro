@@ -201,7 +201,7 @@ private final class DragHandler {
 
 final class WireEngine {
     // MARK: - Engine and State
-    let graph: Graph
+    let graph: CanvasGraph
     let engine: GraphEngine
     private let geometry: GeometryPolicy
     private let ownershipBox = OwnershipLookupBox()
@@ -219,7 +219,7 @@ final class WireEngine {
     var onChange: (() -> Void)?
 
     // MARK: - Init
-    init(graph: Graph) {
+    init(graph: CanvasGraph) {
         self.graph = graph
         self.geometry = ManhattanGeometry(step: 1)
         let policy = WireVertexPolicy(box: ownershipBox)

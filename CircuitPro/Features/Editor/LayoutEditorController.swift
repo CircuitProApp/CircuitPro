@@ -17,7 +17,7 @@ final class LayoutEditorController: EditorController {
 
     var nodes: [BaseNode] { canvasStore.nodes }
 
-    let graph = Graph()
+    let graph = CanvasGraph()
     private var suppressGraphSelectionSync = false
     private var suppressPrimitiveRemoval = false
     private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]

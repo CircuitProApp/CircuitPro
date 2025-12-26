@@ -8,7 +8,7 @@
 import AppKit
 
 struct GraphRenderAdapter {
-    func primitivesByLayer(from graph: Graph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    func primitivesByLayer(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
         for (_, primitive) in graph.components(AnyCanvasPrimitive.self) {

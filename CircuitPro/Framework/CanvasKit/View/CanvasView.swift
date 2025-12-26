@@ -8,7 +8,7 @@ struct CanvasView: NSViewRepresentable {
     @Binding var viewport: CanvasViewport
     @Bindable var store: CanvasStore
     @Binding var tool: CanvasTool?
-    let graph: Graph?
+    let graph: CanvasGraph?
 
     @Binding var layers: [CanvasLayer]
 
@@ -29,7 +29,7 @@ struct CanvasView: NSViewRepresentable {
         viewport: Binding<CanvasViewport>,
         store: CanvasStore,
         tool: Binding<CanvasTool?> = .constant(nil),
-        graph: Graph? = nil,
+        graph: CanvasGraph? = nil,
         layers: Binding<[CanvasLayer]> = .constant([]),
         activeLayerId: Binding<UUID?> = .constant(nil),
         environment: CanvasEnvironmentValues = .init(),

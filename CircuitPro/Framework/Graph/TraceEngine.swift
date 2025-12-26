@@ -8,7 +8,7 @@
 import Foundation
 
 final class TraceEngine: TraceMetadataStore {
-    let graph: Graph
+    let graph: CanvasGraph
     let engine: GraphEngine
     private let geometry: GeometryPolicy
     private let edgePolicy: TraceEdgePolicy
@@ -17,7 +17,7 @@ final class TraceEngine: TraceMetadataStore {
 
     var onChange: (() -> Void)?
 
-    init(graph: Graph) {
+    init(graph: CanvasGraph) {
         self.graph = graph
         self.geometry = OctilinearGeometry(step: 1)
         let policy = TraceEdgePolicy()
