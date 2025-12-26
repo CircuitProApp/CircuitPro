@@ -18,7 +18,6 @@ struct WorkspaceView: View {
     }
 
     @State private var showInspector: Bool = false
-    @State private var showFeedbackSheet: Bool = false
     @State private var isShowingLibrary: Bool = false
     @State private var isShowingTimeline: Bool = false
     @State private var showDiscardChangesAlert: Bool = false
@@ -78,10 +77,6 @@ struct WorkspaceView: View {
             EditorView()
           //      .backgroundExtensionEffectIfAvailable()
                 .frame(minWidth: 320)
-                .sheet(isPresented: $showFeedbackSheet) {
-                    FeedbackFormView()
-                        .frame(minWidth: 400, minHeight: 300)
-                }
                 .sheet(isPresented: $isShowingTimeline) {
                     TimelineView()
                 }
@@ -110,12 +105,6 @@ struct WorkspaceView: View {
                             Image(systemName: "plus")
                         }
                         .help("Add")
-                    }
-                    ToolbarItem(placement: .primaryAction) {
-                        Button { showFeedbackSheet.toggle() } label: {
-                            Image(systemName: "bubble.left.and.bubble.right")
-                        }
-                        .help("Send Feedback")
                     }
                 }
         }
