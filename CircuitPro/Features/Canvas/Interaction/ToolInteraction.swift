@@ -32,29 +32,6 @@ struct ToolInteraction: CanvasInteraction {
             command.execute(context: interactionContext, controller: controller)
             return true
 
-        case .newNode(let newNode):
-            // Handle standard nodes that are not requests.
-            if let primitiveNode = newNode as? PrimitiveNode {
-                guard let graph = context.graph else {
-                    assertionFailure("Primitive nodes must be routed through the graph.")
-                    return true
-                }
-                let nodeID = NodeID(primitiveNode.id)
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
-                }
-                graph.setComponent(primitiveNode.primitive, for: nodeID)
-                return true
-            }
-
-            if let store = context.environment.canvasStore {
-                Task { @MainActor in
-                    store.addNode(newNode)
-                }
-            }
-            controller.sceneRoot.addChild(newNode)
-            return true
-
         case .newPrimitive(let primitive):
             guard let graph = context.graph else {
                 assertionFailure("Primitives require a graph-backed canvas.")

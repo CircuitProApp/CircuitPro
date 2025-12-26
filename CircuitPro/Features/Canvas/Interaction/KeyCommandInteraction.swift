@@ -66,35 +66,12 @@ struct KeyCommandInteraction: CanvasInteraction {
 
         let result = tool.handleReturn()
 
-        // This logic is similar to ToolInteraction's mouseDown, handling the case
-        // where a tool's action results in a new node.
+        // This logic is similar to ToolInteraction's mouseDown, handling tool results.
         switch result {
         case .noResult:
             return false
         case .command(let command):
             command.execute(context: ToolInteractionContext(clickCount: 0, hitTarget: nil, renderContext: context), controller: controller)
-            return true
-        case .newNode(let newNode):
-            if let primitiveNode = newNode as? PrimitiveNode {
-                guard let graph = context.graph else {
-                    assertionFailure("Primitive nodes must be routed through the graph.")
-                    return true
-                }
-                let nodeID = NodeID(primitiveNode.id)
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
-                }
-                graph.setComponent(primitiveNode.primitive, for: nodeID)
-                return true
-            }
-
-            // Add the new node to the scene and notify the document of the change.
-            if let store = context.environment.canvasStore {
-                Task { @MainActor in
-                    store.addNode(newNode)
-                }
-            }
-            controller.sceneRoot.addChild(newNode)
             return true
         case .newPrimitive(let primitive):
             guard let graph = context.graph else {

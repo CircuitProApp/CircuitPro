@@ -104,6 +104,7 @@ final class LayoutEditorController: EditorController {
         } onChange: {
             Task { @MainActor in
                 self.refreshFootprintTextNodes()
+                self.refreshFootprintPadComponents()
                 self.startTrackingTextChanges()
             }
         }
@@ -169,6 +170,7 @@ final class LayoutEditorController: EditorController {
         canvasStore.setNodes(footprintNodes)
         syncTracesFromModel()
         refreshFootprintTextNodes()
+        refreshFootprintPadComponents()
     }
 
     func refreshFootprintTextNodes() {
@@ -228,6 +230,49 @@ final class LayoutEditorController: EditorController {
 
         isSyncingTextFromModel = false
         canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
+    }
+
+    private func refreshFootprintPadComponents() {
+        let design = projectManager.selectedDesign
+        var updatedIDs = Set<NodeID>()
+
+        for inst in design.componentInstances {
+            guard let footprintInst = inst.footprintInstance,
+                  case .placed = footprintInst.placement,
+                  let footprintDef = footprintInst.definition else {
+                continue
+            }
+
+            let ownerPosition = footprintInst.position
+            let ownerRotation = footprintInst.rotation
+
+            for padDef in footprintDef.pads {
+                let padID = GraphPadID.makeID(ownerID: inst.id, padID: padDef.id)
+                let nodeID = NodeID(padID)
+                let component = GraphPadComponent(
+                    pad: padDef,
+                    ownerID: inst.id,
+                    ownerPosition: ownerPosition,
+                    ownerRotation: ownerRotation,
+                    layerId: nil,
+                    isSelectable: false
+                )
+
+                if !graph.nodes.contains(nodeID) {
+                    graph.addNode(nodeID)
+                }
+                graph.setComponent(component, for: nodeID)
+                updatedIDs.insert(nodeID)
+            }
+        }
+
+        let existingIDs = Set(graph.nodeIDs(with: GraphPadComponent.self))
+        for id in existingIDs.subtracting(updatedIDs) {
+            graph.removeComponent(GraphPadComponent.self, for: id)
+            if !graph.hasAnyComponent(for: id) {
+                graph.removeNode(id)
+            }
+        }
     }
 
     /// Finds a node (and its children) recursively by its ID.

@@ -8,7 +8,7 @@
 import AppKit
 
 /// A scene graph node that represents an instance of a library `Symbol`.
-/// It acts as a parent for `PinNode` and `PrimitiveNode` children.
+/// It acts as a parent for `PrimitiveNode` children.
 @Observable
 final class SymbolNode: BaseNode {
 
@@ -53,8 +53,7 @@ final class SymbolNode: BaseNode {
 
         // Create child nodes from the symbol's definition.
         let primitiveNodes = symbolDefinition.primitives.map { PrimitiveNode(primitive: $0) }
-        let pinNodes = symbolDefinition.pins.map { PinNode(pin: $0, wireEngine: wireEngine) }
-        self.children = primitiveNodes + pinNodes
+        self.children = primitiveNodes
 
         // Configure parent-child relationships.
         for child in self.children {

@@ -49,7 +49,7 @@ final class WireTool: CanvasTool {
             let toPoint = location
 
             // Finish only when hitting a pin or anything in the schematic graph subtree
-            if shouldFinish(on: context.hitTarget, at: location, context: context.renderContext) {
+            if shouldFinish(at: location, context: context.renderContext) {
                 self.state = .idle
             } else {
                 // Continue drawing from the new point, toggling direction only for straight lines
@@ -88,15 +88,17 @@ final class WireTool: CanvasTool {
         )]
     }
 
-    private func shouldFinish(on hit: CanvasHitTarget?, at location: CGPoint, context: RenderContext) -> Bool {
-        if let node = hit?.node, node is PinNode {
+    private func shouldFinish(at location: CGPoint, context: RenderContext) -> Bool {
+        guard let graph = context.graph,
+              let graphHit = GraphHitTester().hitTest(point: location, context: context, scope: .graphOnly) else {
+            return false
+        }
+
+        if graph.component(GraphPinComponent.self, for: graphHit) != nil {
             return true
         }
-        if let graphHit = GraphHitTester().hitTest(point: location, context: context, scope: .graphOnly),
-           context.graph?.component(WireEdgeComponent.self, for: graphHit) != nil {
-            return true
-        }
-        return false
+
+        return graph.component(WireEdgeComponent.self, for: graphHit) != nil
     }
 
     // MARK: - Keyboard Actions

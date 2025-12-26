@@ -78,6 +78,7 @@ final class SchematicEditorController: EditorController {
         } onChange: {
             Task { @MainActor in
                 self.refreshSymbolTextNodes()
+                self.refreshSymbolPinComponents()
                 self.startTrackingTextChanges()
             }
         }
@@ -107,6 +108,7 @@ final class SchematicEditorController: EditorController {
         canvasStore.setNodes(await nodeProvider.buildNodes(from: design, context: context))
         syncWiresFromModel()
         refreshSymbolTextNodes()
+        refreshSymbolPinComponents()
     }
 
     func refreshSymbolTextNodes() {
@@ -161,6 +163,45 @@ final class SchematicEditorController: EditorController {
 
         isSyncingTextFromModel = false
         canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
+    }
+
+    private func refreshSymbolPinComponents() {
+        let design = projectManager.selectedDesign
+        var updatedIDs = Set<NodeID>()
+
+        for inst in design.componentInstances {
+            guard let symbolDef = inst.symbolInstance.definition else { continue }
+
+            let ownerPosition = inst.symbolInstance.position
+            let ownerRotation = inst.symbolInstance.rotation
+
+            for pinDef in symbolDef.pins {
+                let pinID = GraphPinID.makeID(ownerID: inst.id, pinID: pinDef.id)
+                let nodeID = NodeID(pinID)
+                let component = GraphPinComponent(
+                    pin: pinDef,
+                    ownerID: inst.id,
+                    ownerPosition: ownerPosition,
+                    ownerRotation: ownerRotation,
+                    layerId: nil,
+                    isSelectable: false
+                )
+
+                if !graph.nodes.contains(nodeID) {
+                    graph.addNode(nodeID)
+                }
+                graph.setComponent(component, for: nodeID)
+                updatedIDs.insert(nodeID)
+            }
+        }
+
+        let existingIDs = Set(graph.nodeIDs(with: GraphPinComponent.self))
+        for id in existingIDs.subtracting(updatedIDs) {
+            graph.removeComponent(GraphPinComponent.self, for: id)
+            if !graph.hasAnyComponent(for: id) {
+                graph.removeNode(id)
+            }
+        }
     }
 
     private func handleStoreDelta(_ delta: CanvasStoreDelta) {

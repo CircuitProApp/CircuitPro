@@ -15,42 +15,60 @@ final class PinTool: CanvasTool {
     // MARK: - Overridden Methods
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
-        // This method is already correct and does not need to change.
-        let number = context.renderContext.sceneRoot.children
-            .compactMap { $0 as? PinNode }
-            .map { $0.pin.number }
-            .max()
-            .map { $0 + 1 } ?? 1
+        let number = nextPinNumber(in: context.renderContext)
         let pin = Pin(name: "", number: number, position: location, cardinalRotation: rotation, type: .unknown, lengthType: .regular)
-        let node = PinNode(pin: pin)
-        return .newNode(node)
+        return .command(CanvasToolCommand { interactionContext, _ in
+            guard let graph = interactionContext.renderContext.graph else {
+                assertionFailure("PinTool requires a graph-backed canvas.")
+                return
+            }
+            let component = GraphPinComponent(
+                pin: pin,
+                ownerID: nil,
+                ownerPosition: .zero,
+                ownerRotation: 0,
+                layerId: nil,
+                isSelectable: true
+            )
+            let nodeID = NodeID(GraphPinID.makeID(ownerID: nil, pinID: pin.id))
+            if !graph.nodes.contains(nodeID) {
+                graph.addNode(nodeID)
+            }
+            graph.setComponent(component, for: nodeID)
+        })
     }
 
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         // 1. Create a temporary pin model to represent the preview.
         // Its position can be .zero since we are describing it in a local space.
-        let number = context.sceneRoot.children
-            .compactMap { $0 as? PinNode }
-            .map { $0.pin.number }
-            .max()
-            .map { $0 + 1 } ?? 1
+        let number = nextPinNumber(in: context)
         let previewPin = Pin(name: "", number: number, position: .zero, cardinalRotation: rotation, type: .unknown, lengthType: .regular)
-        
+
         // 2. Get the model's drawing commands in its local coordinate space.
         let localPrimitives = previewPin.makeDrawingPrimitives()
-        
+
         // 3. Create a transform to move the local shape to the mouse cursor's world position.
         var worldTransform = CGAffineTransform(translationX: mouse.x, y: mouse.y)
-        
+
         // 4. Map over the local primitives, applying the transform to each one to get world-space primitives.
         // This reuses the `applying(transform:)` helper, which correctly handles paths and text.
         let worldPrimitives = localPrimitives.map { primitive in
             primitive.applying(transform: &worldTransform)
         }
-        
+
         return worldPrimitives
     }
-    
+
+    private func nextPinNumber(in context: RenderContext) -> Int {
+        guard let graph = context.graph else {
+            assertionFailure("PinTool requires a graph-backed canvas.")
+            return 1
+        }
+
+        let numbers = graph.components(GraphPinComponent.self).map { $0.1.pin.number }
+        return numbers.max().map { $0 + 1 } ?? 1
+    }
+
     override func handleEscape() -> Bool {
         return false
     }

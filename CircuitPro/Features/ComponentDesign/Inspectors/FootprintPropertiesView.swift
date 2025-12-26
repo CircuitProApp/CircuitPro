@@ -15,22 +15,14 @@ struct FootprintPropertiesView: View {
     var body: some View {
 
         ScrollView {
-            if let element = footprintEditor.singleSelectedNode {
-                if let padNode = element as? PadNode {
-                    @Bindable var padNode = padNode
-
-                    PadPropertiesView(pad: $padNode.pad)
-
-                } else if let textNode = element as? TextNode {
-
-                    // TextPropertiesView will also use the manager from the environment
-                    // to resolve bindings and other contextual data.
-                    TextPropertiesView(textNode: textNode)
-
-                } else {
-                    Text("Properties for this element type are not yet implemented.")
-                        .padding()
-                }
+            if let selection = footprintEditor.singleSelectedPad,
+               let binding = footprintEditor.padBinding(for: selection.id.rawValue) {
+                PadPropertiesView(pad: binding)
+            } else if let element = footprintEditor.singleSelectedNode,
+                      let textNode = element as? TextNode {
+                // TextPropertiesView will also use the manager from the environment
+                // to resolve bindings and other contextual data.
+                TextPropertiesView(textNode: textNode)
             } else if let selection = footprintEditor.singleSelectedPrimitive,
                       let binding = footprintEditor.primitiveBinding(for: selection.id.rawValue) {
                 PrimitivePropertiesView(primitive: binding)

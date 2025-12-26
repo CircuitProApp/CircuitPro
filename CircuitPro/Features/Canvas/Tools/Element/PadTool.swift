@@ -14,7 +14,7 @@ final class PadTool: CanvasTool {
 
     /// The cardinal rotation for the next pad to be placed.
     private var rotation: CardinalRotation = .east
-    
+
     // Note: In the future, you could add more state here to control the type
     // of pad being placed (e.g., shape, size, type), which could be set
     // via a tool properties panel in the UI.
@@ -31,11 +31,7 @@ final class PadTool: CanvasTool {
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         // 1. Create the Pad data model with the tool's current state.
-        let number = context.renderContext.sceneRoot.children
-            .compactMap { $0 as? PadNode }
-            .map { $0.pad.number }
-            .max()
-            .map { $0 + 1 } ?? 1
+        let number = nextPadNumber(in: context.renderContext)
         let pad = Pad(
             number: number,
             position: location,
@@ -44,22 +40,32 @@ final class PadTool: CanvasTool {
             type: type,
             drillDiameter: drillDiameter
         )
-        
-        // 2. Wrap the model in a PadNode.
-        let node = PadNode(pad: pad)
-        
-        // 3. Return the new node to be added to the scene.
-        return .newNode(node)
+
+        return .command(CanvasToolCommand { interactionContext, _ in
+            guard let graph = interactionContext.renderContext.graph else {
+                assertionFailure("PadTool requires a graph-backed canvas.")
+                return
+            }
+            let component = GraphPadComponent(
+                pad: pad,
+                ownerID: nil,
+                ownerPosition: .zero,
+                ownerRotation: 0,
+                layerId: nil,
+                isSelectable: true
+            )
+            let nodeID = NodeID(GraphPadID.makeID(ownerID: nil, padID: pad.id))
+            if !graph.nodes.contains(nodeID) {
+                graph.addNode(nodeID)
+            }
+            graph.setComponent(component, for: nodeID)
+        })
     }
 
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         // 1. Create a temporary Pad model to generate its local-space geometry.
         // Its position is .zero because we only care about its shape relative to its own center.
-        let number = context.sceneRoot.children
-            .compactMap { $0 as? PadNode }
-            .map { $0.pad.number }
-            .max()
-            .map { $0 + 1 } ?? 1
+        let number = nextPadNumber(in: context)
         let previewPad = Pad(
             number: number,
             position: .zero,
@@ -98,5 +104,15 @@ final class PadTool: CanvasTool {
             // Default to east if the current rotation isn't a cardinal one.
             rotation = .east
         }
+    }
+
+    private func nextPadNumber(in context: RenderContext) -> Int {
+        guard let graph = context.graph else {
+            assertionFailure("PadTool requires a graph-backed canvas.")
+            return 1
+        }
+
+        let numbers = graph.components(GraphPadComponent.self).map { $0.1.pad.number }
+        return numbers.max().map { $0 + 1 } ?? 1
     }
 }

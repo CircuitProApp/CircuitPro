@@ -23,12 +23,12 @@ struct CanvasElementRowView: View {
         switch element.kind {
         case .primitive(_, let primitive):
             Label(primitive.displayName, systemImage: primitive.symbol)
+        case .pin(_, let pin):
+            Label("Pin \(pin.pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
+        case .pad(_, let pad):
+            Label("Pad \(pad.pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
         case .node(let node):
             switch node {
-            case let pinNode as PinNode:
-                Label("Pin \(pinNode.pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
-            case let padNode as PadNode:
-                Label("Pin \(padNode.pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
             case let textNode as TextNode:
                 switch textNode.resolvedText.content {
                 case .static(let text):

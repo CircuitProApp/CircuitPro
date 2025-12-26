@@ -9,7 +9,6 @@ import Foundation
 
 enum CanvasToolResult {
     case noResult
-    case newNode(BaseNode)
     case newPrimitive(AnyCanvasPrimitive)
     case command(CanvasToolCommand)
 }

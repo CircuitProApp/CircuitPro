@@ -39,9 +39,8 @@ final class FootprintNode: BaseNode {
         self.instance = instance
         super.init(id: id)
 
-        let padNodes = footprintDefinition.pads.map { PadNode(pad: $0) }
         let primitiveNodes = footprintDefinition.primitives.map { PrimitiveNode(primitive: $0) }
-        self.children = padNodes + primitiveNodes
+        self.children = primitiveNodes
 
         // Resolve the generic layer IDs on child primitives to specific board layer IDs.
         resolveChildLayerIDs(canvasLayers: canvasLayers)

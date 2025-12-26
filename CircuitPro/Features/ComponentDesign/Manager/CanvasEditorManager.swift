@@ -53,11 +53,11 @@ final class CanvasEditorManager {
     // MARK: - Computed Properties
 
     var pins: [Pin] {
-        canvasNodes.compactMap { ($0 as? PinNode)?.pin }
+        graph.components(GraphPinComponent.self).map { $0.1.pin }
     }
 
     var pads: [Pad] {
-        canvasNodes.compactMap { ($0 as? PadNode)?.pad }
+        graph.components(GraphPadComponent.self).map { $0.1.pad }
     }
 
     var primitives: [AnyCanvasPrimitive] {
@@ -146,6 +146,8 @@ final class CanvasEditorManager {
         enum Kind {
             case node(BaseNode)
             case primitive(NodeID, AnyCanvasPrimitive)
+            case pin(NodeID, GraphPinComponent)
+            case pad(NodeID, GraphPadComponent)
         }
 
         let kind: Kind
@@ -154,6 +156,8 @@ final class CanvasEditorManager {
             switch kind {
             case .node(let node): return node.id
             case .primitive(let id, _): return id.rawValue
+            case .pin(let id, _): return id.rawValue
+            case .pad(let id, _): return id.rawValue
             }
         }
 
@@ -163,18 +167,28 @@ final class CanvasEditorManager {
                 return (node as? Layerable)?.layerId
             case .primitive(_, let primitive):
                 return primitive.layerId
+            case .pin(_, let pin):
+                return pin.layerId
+            case .pad(_, let pad):
+                return pad.layerId
             }
         }
     }
 
     var elementItems: [ElementItem] {
         let nodeItems = canvasNodes
-            .filter { !($0 is PrimitiveNode) }
+            .filter { !($0 is PrimitiveNode) && !($0 is PinNode) && !($0 is PadNode) }
             .map { ElementItem(kind: .node($0)) }
         let primitiveItems = graph.components(AnyCanvasPrimitive.self).map { id, primitive in
             ElementItem(kind: .primitive(id, primitive))
         }
-        return nodeItems + primitiveItems
+        let pinItems = graph.components(GraphPinComponent.self).map { id, pin in
+            ElementItem(kind: .pin(id, pin))
+        }
+        let padItems = graph.components(GraphPadComponent.self).map { id, pad in
+            ElementItem(kind: .pad(id, pad))
+        }
+        return nodeItems + primitiveItems + pinItems + padItems
     }
 
     var singleSelectedPrimitive: (id: NodeID, primitive: AnyCanvasPrimitive)? {
@@ -182,6 +196,20 @@ final class CanvasEditorManager {
         let nodeID = NodeID(id)
         guard let primitive = graph.component(AnyCanvasPrimitive.self, for: nodeID) else { return nil }
         return (nodeID, primitive)
+    }
+
+    var singleSelectedPin: (id: NodeID, pin: GraphPinComponent)? {
+        guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else { return nil }
+        let nodeID = NodeID(id)
+        guard let pin = graph.component(GraphPinComponent.self, for: nodeID) else { return nil }
+        return (nodeID, pin)
+    }
+
+    var singleSelectedPad: (id: NodeID, pad: GraphPadComponent)? {
+        guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else { return nil }
+        let nodeID = NodeID(id)
+        guard let pad = graph.component(GraphPadComponent.self, for: nodeID) else { return nil }
+        return (nodeID, pad)
     }
 
     func primitiveBinding(for id: UUID) -> Binding<AnyCanvasPrimitive>? {
@@ -193,6 +221,32 @@ final class CanvasEditorManager {
             set: {
                 self.primitiveCache[nodeID] = $0
                 self.graph.setComponent($0, for: nodeID)
+            }
+        )
+    }
+
+    func pinBinding(for id: UUID) -> Binding<Pin>? {
+        let nodeID = NodeID(id)
+        guard let component = graph.component(GraphPinComponent.self, for: nodeID) else { return nil }
+        return Binding(
+            get: { component.pin },
+            set: { newPin in
+                var updated = component
+                updated.pin = newPin
+                self.graph.setComponent(updated, for: nodeID)
+            }
+        )
+    }
+
+    func padBinding(for id: UUID) -> Binding<Pad>? {
+        let nodeID = NodeID(id)
+        guard let component = graph.component(GraphPadComponent.self, for: nodeID) else { return nil }
+        return Binding(
+            get: { component.pad },
+            set: { newPad in
+                var updated = component
+                updated.pad = newPad
+                self.graph.setComponent(updated, for: nodeID)
             }
         )
     }

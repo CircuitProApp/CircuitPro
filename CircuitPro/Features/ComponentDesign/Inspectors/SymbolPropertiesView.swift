@@ -15,21 +15,12 @@ struct SymbolPropertiesView: View {
     var body: some View {
         VStack {
             ScrollView {
-                if let node = symbolEditor.singleSelectedNode {
-                    if let pinNode = node as? PinNode {
-                        @Bindable var pinNode = pinNode
-
-                        PinPropertiesView(pin: $pinNode.pin)
-
-                    } else if let textNode = node as? TextNode {
-
-
-                        TextPropertiesView(textNode: textNode)
-
-                    } else {
-                        Text("Properties for this element type are not yet implemented.")
-                            .padding()
-                    }
+                if let selection = symbolEditor.singleSelectedPin,
+                   let binding = symbolEditor.pinBinding(for: selection.id.rawValue) {
+                    PinPropertiesView(pin: binding)
+                } else if let node = symbolEditor.singleSelectedNode,
+                          let textNode = node as? TextNode {
+                    TextPropertiesView(textNode: textNode)
                 } else if let selection = symbolEditor.singleSelectedPrimitive,
                           let binding = symbolEditor.primitiveBinding(for: selection.id.rawValue) {
                     PrimitivePropertiesView(primitive: binding)

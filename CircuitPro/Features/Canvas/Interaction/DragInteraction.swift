@@ -17,6 +17,8 @@ final class DragInteraction: CanvasInteraction {
         let origin: CGPoint
         let originalPrimitives: [NodeID: AnyCanvasPrimitive]
         let originalTexts: [NodeID: GraphTextComponent]
+        let originalPins: [NodeID: GraphPinComponent]
+        let originalPads: [NodeID: GraphPadComponent]
         let isAnchorDrag: Bool
     }
 
@@ -36,12 +38,18 @@ final class DragInteraction: CanvasInteraction {
         if controller.selectedNodes.isEmpty, let graph = context.graph {
             if let graphHit = GraphHitTester().hitTest(point: point, context: context, scope: .graphOnly),
                graph.selection.contains(graphHit) {
-                let hitIsPrimitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) != nil
-                let hitIsText = graph.component(GraphTextComponent.self, for: graphHit) != nil
-                if hitIsPrimitive || hitIsText {
+                let hitPrimitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) != nil
+                let hitText = graph.component(GraphTextComponent.self, for: graphHit) != nil
+                let hitPin = graph.component(GraphPinComponent.self, for: graphHit)
+                let hitPad = graph.component(GraphPadComponent.self, for: graphHit)
+                let hitSelectablePin = hitPin?.isSelectable ?? false
+                let hitSelectablePad = hitPad?.isSelectable ?? false
+                if hitPrimitive || hitText || hitSelectablePin || hitSelectablePad {
                     let selectedIDs = graph.selection
                     var originalPrimitives: [NodeID: AnyCanvasPrimitive] = [:]
                     var originalTexts: [NodeID: GraphTextComponent] = [:]
+                    var originalPins: [NodeID: GraphPinComponent] = [:]
+                    var originalPads: [NodeID: GraphPadComponent] = [:]
                     for id in selectedIDs {
                         if let original = graph.component(AnyCanvasPrimitive.self, for: id) {
                             originalPrimitives[id] = original
@@ -49,12 +57,20 @@ final class DragInteraction: CanvasInteraction {
                         if let original = graph.component(GraphTextComponent.self, for: id) {
                             originalTexts[id] = original
                         }
+                        if let original = graph.component(GraphPinComponent.self, for: id), original.isSelectable {
+                            originalPins[id] = original
+                        }
+                        if let original = graph.component(GraphPadComponent.self, for: id), original.isSelectable {
+                            originalPads[id] = original
+                        }
                     }
                     let isAnchorDrag = event.modifierFlags.contains(.control)
                     self.graphState = GraphDraggingState(
                         origin: point,
                         originalPrimitives: originalPrimitives,
                         originalTexts: originalTexts,
+                        originalPins: originalPins,
+                        originalPads: originalPads,
                         isAnchorDrag: isAnchorDrag
                     )
                     self.didMove = false
@@ -146,6 +162,20 @@ final class DragInteraction: CanvasInteraction {
                     updated.worldAnchorPosition = original.worldAnchorPosition + deltaPoint
                     updated.resolvedText.anchorPosition = updated.worldAnchorPosition.applying(inverseOwner)
                 }
+                graph.setComponent(updated, for: id)
+            }
+            for (id, original) in currentGraphState.originalPins {
+                var updated = original
+                let worldPosition = original.pin.position.applying(original.ownerTransform)
+                let newWorldPosition = worldPosition + deltaPoint
+                updated.pin.position = newWorldPosition.applying(original.ownerTransform.inverted())
+                graph.setComponent(updated, for: id)
+            }
+            for (id, original) in currentGraphState.originalPads {
+                var updated = original
+                let worldPosition = original.pad.position.applying(original.ownerTransform)
+                let newWorldPosition = worldPosition + deltaPoint
+                updated.pad.position = newWorldPosition.applying(original.ownerTransform.inverted())
                 graph.setComponent(updated, for: id)
             }
             return
