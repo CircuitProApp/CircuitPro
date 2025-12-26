@@ -33,7 +33,7 @@ struct KeyCommandInteraction: CanvasInteraction {
                 return false
             }
             if chars == "r" {
-                return handleRotate(controller: controller)
+                return handleRotate(context: context, controller: controller)
             }
             return false
         }
@@ -73,13 +73,19 @@ struct KeyCommandInteraction: CanvasInteraction {
             return result != .noResult
         }
 
-        // Add the new node to the scene and notify the document of the change.
-        if let store = context.environment.canvasStore {
-            Task { @MainActor in
-                store.addNode(newNode)
+        if let primitiveNode = newNode as? PrimitiveNode, let graph = context.graph {
+            let nodeID = NodeID(primitiveNode.id)
+            graph.addNode(nodeID)
+            graph.setComponent(primitiveNode.primitive, for: nodeID)
+        } else {
+            // Add the new node to the scene and notify the document of the change.
+            if let store = context.environment.canvasStore {
+                Task { @MainActor in
+                    store.addNode(newNode)
+                }
             }
+            controller.sceneRoot.addChild(newNode)
         }
-        controller.sceneRoot.addChild(newNode)
 
         return true
     }
@@ -96,6 +102,18 @@ struct KeyCommandInteraction: CanvasInteraction {
         }
 
         // If no tool handled it, perform the standard "delete selection" action.
+        if let graph = context.graph, !graph.selection.isEmpty {
+            let selectedIDs = Set(graph.selection.map { $0.rawValue })
+            for id in graph.selection {
+                graph.removeNode(id)
+            }
+            graph.selection = []
+            Task { @MainActor in
+                context.environment.canvasStore?.selection.subtract(selectedIDs)
+            }
+            return true
+        }
+
         guard !controller.selectedNodes.isEmpty else { return false }
 
         // Remove the selected nodes from the scene graph.
@@ -116,10 +134,19 @@ struct KeyCommandInteraction: CanvasInteraction {
     /// Handles the 'R' key for rotation.
     /// It first offers the event to the active tool. If no tool handles it,
     /// it attempts to rotate the currently selected nodes.
-    private func handleRotate(controller: CanvasController) -> Bool {
+    private func handleRotate(context: RenderContext, controller: CanvasController) -> Bool {
         // Prioritize the active tool.
         if let tool = controller.selectedTool, !(tool is CursorTool) {
             tool.handleRotate()
+            return true
+        }
+
+        if let graph = context.graph, !graph.selection.isEmpty {
+            for id in graph.selection {
+                guard var primitive = graph.component(AnyCanvasPrimitive.self, for: id) else { continue }
+                primitive.rotation += .pi / 2
+                graph.setComponent(primitive, for: id)
+            }
             return true
         }
 

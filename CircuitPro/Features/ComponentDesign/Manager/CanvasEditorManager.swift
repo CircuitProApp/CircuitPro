@@ -40,6 +40,7 @@ final class CanvasEditorManager {
     let graph = Graph()
     private var suppressPrimitiveRemoval = false
     private var suppressGraphSelectionSync = false
+    private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]
 
     /// NEW: Since placeholder text is now view-state, not model-state, this map
     /// holds the currently displayed string for each text node.
@@ -98,9 +99,11 @@ final class CanvasEditorManager {
         case .reset(let nodes):
             syncGraph(from: nodes)
             removePrimitiveNodes(from: nodes)
+            syncPrimitiveCacheFromGraph()
         case .nodesAdded(let nodes):
             addGraphPrimitives(from: nodes)
             removePrimitiveNodes(from: nodes)
+            syncPrimitiveCacheFromGraph()
         case .nodesRemoved(let ids):
             for id in ids {
                 graph.removeNode(NodeID(id))
@@ -125,9 +128,28 @@ final class CanvasEditorManager {
                     self.suppressGraphSelectionSync = false
                 }
             }
+        case .componentSet(let id, let componentKey):
+            if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self),
+               let primitive = graph.component(AnyCanvasPrimitive.self, for: id) {
+                primitiveCache[id] = primitive
+            }
+        case .nodeRemoved(let id):
+            primitiveCache.removeValue(forKey: id)
+        case .nodeAdded:
+            break
+        case .componentRemoved(let id, let componentKey):
+            if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self) {
+                primitiveCache.removeValue(forKey: id)
+            }
         default:
             break
         }
+    }
+
+    private func syncPrimitiveCacheFromGraph() {
+        primitiveCache = Dictionary(
+            uniqueKeysWithValues: graph.components(AnyCanvasPrimitive.self).map { ($0.0, $0.1) }
+        )
     }
 
     private func syncGraph(from nodes: [BaseNode]) {
@@ -198,9 +220,13 @@ final class CanvasEditorManager {
     func primitiveBinding(for id: UUID) -> Binding<AnyCanvasPrimitive>? {
         let nodeID = NodeID(id)
         guard graph.component(AnyCanvasPrimitive.self, for: nodeID) != nil else { return nil }
+        let fallback = primitiveCache[nodeID] ?? AnyCanvasPrimitive.line(CanvasLine(start: .zero, end: .zero, strokeWidth: 1, layerId: nil))
         return Binding(
-            get: { self.graph.component(AnyCanvasPrimitive.self, for: nodeID)! },
-            set: { self.graph.setComponent($0, for: nodeID) }
+            get: { self.graph.component(AnyCanvasPrimitive.self, for: nodeID) ?? self.primitiveCache[nodeID] ?? fallback },
+            set: {
+                self.primitiveCache[nodeID] = $0
+                self.graph.setComponent($0, for: nodeID)
+            }
         )
     }
 

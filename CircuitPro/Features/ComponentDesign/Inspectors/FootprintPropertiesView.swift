@@ -21,11 +21,6 @@ struct FootprintPropertiesView: View {
 
                     PadPropertiesView(pad: $padNode.pad)
 
-                } else if let primitiveNode = element as? PrimitiveNode {
-                    @Bindable var primitiveNode = primitiveNode
-
-                    PrimitivePropertiesView(primitive: $primitiveNode.primitive)
-
                 } else if let textNode = element as? TextNode {
 
                     // TextPropertiesView will also use the manager from the environment

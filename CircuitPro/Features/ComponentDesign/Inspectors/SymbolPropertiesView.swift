@@ -21,11 +21,6 @@ struct SymbolPropertiesView: View {
 
                         PinPropertiesView(pin: $pinNode.pin)
 
-                    } else if let primitiveNode = node as? PrimitiveNode {
-                        @Bindable var primitiveNode = primitiveNode
-
-                        PrimitivePropertiesView(primitive: $primitiveNode.primitive)
-
                     } else if let textNode = node as? TextNode {
 
 
