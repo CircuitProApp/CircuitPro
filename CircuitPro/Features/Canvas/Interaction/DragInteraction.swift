@@ -4,7 +4,7 @@ import AppKit
 /// This interaction can handle normal drags, wire drags via the `WireGraph`, and special
 /// anchor-repositioning drags for text nodes when the Control key is held.
 final class DragInteraction: CanvasInteraction {
-    
+
     private struct DraggingState {
         let origin: CGPoint
         let originalNodePositions: [UUID: CGPoint]
@@ -12,13 +12,13 @@ final class DragInteraction: CanvasInteraction {
         let isAnchorDrag: Bool
         let originalAnchorPositions: [UUID: CGPoint]
     }
-    
+
     private var state: DraggingState?
     private var didMove: Bool = false
     private let dragThreshold: CGFloat = 4.0
-    
+
     var wantsRawInput: Bool { true }
-    
+
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         self.state = nil
         guard controller.selectedTool is CursorTool, !controller.selectedNodes.isEmpty else { return false }
@@ -68,7 +68,7 @@ final class DragInteraction: CanvasInteraction {
         self.didMove = false
         return true
     }
-    
+
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard let currentState = self.state else { return }
 
@@ -93,6 +93,9 @@ final class DragInteraction: CanvasInteraction {
             for node in controller.selectedNodes {
                 if let originalPosition = currentState.originalNodePositions[node.id] {
                     node.position = originalPosition + deltaPoint
+                    if let primitiveNode = node as? PrimitiveNode, let graph = context.graph {
+                        graph.setComponent(primitiveNode.primitive, for: NodeID(primitiveNode.id))
+                    }
                 }
             }
         }
@@ -117,9 +120,9 @@ final class DragInteraction: CanvasInteraction {
             }
         }
 
- 
+
     }
-    
+
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         if let graph = self.state?.graph {
             graph.endDrag()
@@ -127,7 +130,7 @@ final class DragInteraction: CanvasInteraction {
                 graphNode.syncChildNodesFromModel()
             }
         }
-        
+
         if didMove {
             for node in controller.selectedNodes {
                 if let textNode = node as? AnchoredTextNode {
@@ -135,7 +138,7 @@ final class DragInteraction: CanvasInteraction {
                 }
             }
         }
-        
+
         self.state = nil
         self.didMove = false
     }

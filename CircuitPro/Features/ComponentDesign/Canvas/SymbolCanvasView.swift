@@ -28,6 +28,7 @@ struct SymbolCanvasView: View {
                 viewport: $canvasManager.viewport,
                 store: symbolEditor.canvasStore,
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
+                graph: symbolEditor.graph,
                 environment: canvasManager.environment,
                 renderLayers: [
                     GridRenderLayer(),

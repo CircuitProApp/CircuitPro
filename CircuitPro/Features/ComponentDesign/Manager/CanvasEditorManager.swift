@@ -37,6 +37,7 @@ final class CanvasEditorManager {
 
     var selectedTool: CanvasTool = CursorTool()
     private var elementIndexMap: [UUID: Int] = [:]
+    let graph = Graph()
 
     /// NEW: Since placeholder text is now view-state, not model-state, this map
     /// holds the currently displayed string for each text node.
@@ -70,6 +71,9 @@ final class CanvasEditorManager {
         self.canvasStore.onNodesChanged = { [weak self] nodes in
             self?.didUpdateNodes(nodes)
         }
+        self.canvasStore.onDelta = { [weak self] delta in
+            self?.handleStoreDelta(delta)
+        }
     }
 
     private func didUpdateNodes(_ nodes: [BaseNode]) {
@@ -78,6 +82,35 @@ final class CanvasEditorManager {
         )
         let currentNodeIDs = Set(nodes.map(\.id))
         displayTextMap = displayTextMap.filter { currentNodeIDs.contains($0.key) }
+    }
+
+    private func handleStoreDelta(_ delta: CanvasStoreDelta) {
+        switch delta {
+        case .reset(let nodes):
+            syncGraph(from: nodes)
+        case .nodesAdded(let nodes):
+            addGraphPrimitives(from: nodes)
+        case .nodesRemoved(let ids):
+            for id in ids {
+                graph.removeNode(NodeID(id))
+            }
+        case .selectionChanged:
+            break
+        }
+    }
+
+    private func syncGraph(from nodes: [BaseNode]) {
+        graph.reset()
+        addGraphPrimitives(from: nodes)
+    }
+
+    private func addGraphPrimitives(from nodes: [BaseNode]) {
+        for node in nodes {
+            guard let primitiveNode = node as? PrimitiveNode else { continue }
+            let graphID = NodeID(primitiveNode.id)
+            graph.addNode(graphID)
+            graph.setComponent(primitiveNode.primitive, for: graphID)
+        }
     }
 
     func setupForFootprintEditing() {

@@ -23,6 +23,7 @@ struct FootprintCanvasView: View {
                 viewport: $canvasManager.viewport,
                 store: footprintEditor.canvasStore,
                 tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
+                graph: footprintEditor.graph,
                 layers: $footprintEditor.layers,
                 activeLayerId: $footprintEditor.activeLayerId,
                 environment: canvasManager.environment,

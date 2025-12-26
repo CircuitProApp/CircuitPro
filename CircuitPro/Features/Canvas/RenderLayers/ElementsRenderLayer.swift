@@ -27,14 +27,22 @@ final class ElementsRenderLayer: RenderLayer {
 
         // 3. Get all nodes in the scene.
         let allNodes = context.sceneRoot.children.flatMap { flatten(node: $0) }
-        
+
         // --- 4. GATHER ALL PRIMITIVES FIRST ---
-        
-        var bodyPrimitivesByLayer = gatherBodyPrimitives(from: allNodes, in: context)
+
+        var bodyPrimitivesByLayer = gatherBodyPrimitives(from: allNodes, in: context, skipPrimitiveNodes: context.graph != nil)
         var haloPrimitivesByLayer = gatherHaloPrimitives(from: context, allNodes: allNodes)
-        
+
+        if let graph = context.graph {
+            let graphAdapter = GraphRenderAdapter()
+            let graphPrimitivesByLayer = graphAdapter.primitivesByLayer(from: graph, context: context)
+            for (layerId, primitives) in graphPrimitivesByLayer {
+                bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
+            }
+        }
+
         // --- 5. RENDER EVERYTHING ---
-        
+
         // Merge the keys from both dictionaries to ensure we visit every layer that has content.
         let allLayerIDs = Set(bodyPrimitivesByLayer.keys).union(haloPrimitivesByLayer.keys)
 
@@ -45,9 +53,9 @@ final class ElementsRenderLayer: RenderLayer {
             } else {
                 targetLayer = getOrCreateDefaultLayer(on: hostLayer)
             }
-            
+
             guard let renderLayer = targetLayer, !renderLayer.isHidden else { continue }
-            
+
             // --- FIX: RENDER HALOS FIRST ---
             // By rendering halos before bodies, the bodies will be drawn on top,
             // correctly placing the halo "behind" the element.
@@ -60,60 +68,63 @@ final class ElementsRenderLayer: RenderLayer {
             // --- END FIX ---
         }
     }
-    
+
     // MARK: - Primitive Gathering
-    
+
     /// Collects and transforms all "body" drawing primitives from the scene, grouped by layer.
-    private func gatherBodyPrimitives(from nodes: [BaseNode], in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    private func gatherBodyPrimitives(from nodes: [BaseNode], in context: RenderContext, skipPrimitiveNodes: Bool) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
         for node in nodes where node.isVisible {
+            if skipPrimitiveNodes, node is PrimitiveNode {
+                continue
+            }
             var primitives: [DrawingPrimitive] = []
-            
+
             if let primitiveNode = node as? PrimitiveNode {
                 let resolvedColor = self.resolveColor(for: primitiveNode, in: context)
                 primitives = primitiveNode.primitive.makeDrawingPrimitives(with: resolvedColor)
             } else {
                 primitives = node.makeDrawingPrimitives()
             }
-            
+
             if !primitives.isEmpty {
                 var transform = node.worldTransform
                 let worldPrimitives = primitives.map { $0.applying(transform: &transform) }
-                
+
                 let layerId = (node as? Layerable)?.layerId
                 primitivesByLayer[layerId, default: []].append(contentsOf: worldPrimitives)
             }
         }
         return primitivesByLayer
     }
-    
-    /// Collects and transforms all "halo" drawing primitives for highlighted nodes, grouped by layer. 
+
+    /// Collects and transforms all "halo" drawing primitives for highlighted nodes, grouped by layer.
     private func gatherHaloPrimitives(from context: RenderContext, allNodes: [BaseNode]) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
         let highlightedNodes = context.highlightedNodeIDs.compactMap { id in
             allNodes.first { $0.id == id }
         }
-        
+
         var handledNodeIDs = Set<UUID>()
 
         // --- PHASE 1: Generate Unified Halos from Parent Containers (THE FIX) ---
-        
+
         // Find all unique parent nodes that contain one or more selected children.
         let parentNodes = Set(highlightedNodes.compactMap { $0.parent })
-        
+
         for parent in parentNodes {
             // Ask the parent to generate a single, pre-stroked halo path for ALL of its selected children.
             // Both SchematicGraphNode and TraceGraphNode override this method.
             if let unifiedHaloPath = parent.makeHaloPath(context: context) {
-                
+
                 // The unified path is an outline that should be FILLED to create the halo effect.
                 let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
                 let haloPrimitive = DrawingPrimitive.fill(path: unifiedHaloPath, color: haloColor)
-                
+
                 // Add the primitive to the list. Unlayered halos go in the 'nil' key group.
                 primitivesByLayer[nil, default: []].append(haloPrimitive)
-                
+
                 // Mark all selected children of this parent as "handled" to prevent them
                 // from drawing their own individual halos in Phase 2.
                 for child in parent.children where context.highlightedNodeIDs.contains(child.id) {
@@ -129,12 +140,12 @@ final class ElementsRenderLayer: RenderLayer {
         for node in highlightedNodes {
             // If this node was handled by its parent in Phase 1, skip it.
             guard !handledNodeIDs.contains(node.id) else { continue }
-            
+
             // This is the original logic for nodes that draw their own halos.
             // It's important to keep this for things that aren't part of a graph.
             if let haloPath = node.makeHaloPath() {
                 let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
-                
+
                 // This assumes the node returns its centerline, which we then STROKE.
                 let haloPrimitive = DrawingPrimitive.stroke(
                     path: haloPath,
@@ -143,18 +154,18 @@ final class ElementsRenderLayer: RenderLayer {
                     lineCap: .round,
                     lineJoin: .round
                 )
-                    
+
                 var transform = node.worldTransform
                 let worldPrimitive = haloPrimitive.applying(transform: &transform)
-                
+
                 let layerId = (node as? Layerable)?.layerId
                 primitivesByLayer[layerId, default: []].append(worldPrimitive)
             }
         }
-        
+
         return primitivesByLayer
     }
-    
+
     /// Renders a list of already-transformed primitives onto a target CALayer.
     private func render(primitives: [DrawingPrimitive], onto parentLayer: CALayer) {
         for primitive in primitives {
@@ -176,25 +187,25 @@ final class ElementsRenderLayer: RenderLayer {
         // Fallback for non-primitive nodes or unlayered primitives.
         return NSColor.systemBlue.cgColor
     }
-    
+
     private func reconcileLayers(context: RenderContext, hostLayer: CALayer) {
         let currentLayerIds = Set(backingLayers.keys)
         let modelLayerIds = Set(context.layers.map { $0.id })
-        
+
         for id in currentLayerIds.subtracting(modelLayerIds) {
             backingLayers[id]?.removeFromSuperlayer()
             backingLayers.removeValue(forKey: id)
         }
-        
+
         for layerModel in context.layers where !currentLayerIds.contains(layerModel.id) {
             let newLayer = CALayer(); newLayer.zPosition = CGFloat(layerModel.zIndex); hostLayer.addSublayer(newLayer); backingLayers[layerModel.id] = newLayer
         }
-        
+
         for layerModel in context.layers {
             let backingLayer = backingLayers[layerModel.id]; backingLayer?.isHidden = !layerModel.isVisible; backingLayer?.zPosition = CGFloat(layerModel.zIndex)
         }
     }
-    
+
     private func getOrCreateDefaultLayer(on hostLayer: CALayer) -> CALayer {
         if let defaultLayer = self.defaultLayer { return defaultLayer }
         let newLayer = CALayer(); newLayer.zPosition = -1; hostLayer.addSublayer(newLayer); self.defaultLayer = newLayer; return newLayer

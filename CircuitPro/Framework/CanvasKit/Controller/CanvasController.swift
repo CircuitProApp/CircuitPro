@@ -40,6 +40,7 @@ final class CanvasController {
     var environment: CanvasEnvironmentValues = .init()
     var layers: [CanvasLayer]?
     var activeLayerId: UUID?
+    var graph: Graph?
 
     // MARK: - Pluggable Pipelines
 
@@ -78,7 +79,8 @@ final class CanvasController {
         magnification: CGFloat,
         environment: CanvasEnvironmentValues,
         layers: [CanvasLayer]?,
-        activeLayerId: UUID?
+        activeLayerId: UUID?,
+        graph: Graph? = nil
     ) {
         // --- Smart Node Syncing Logic ---
         // This diffing approach is the perfect balance of performance and simplicity.
@@ -115,6 +117,7 @@ final class CanvasController {
         self.environment.canvasStore = environment.canvasStore
         self.layers = layers
         self.activeLayerId = activeLayerId
+        self.graph = graph
     }
 
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
@@ -133,6 +136,7 @@ final class CanvasController {
             layers: self.layers ?? [],
             activeLayerId: self.activeLayerId,
             snapProvider: snapProvider,
+            graph: graph,
             environment: self.environment,
             inputProcessors: self.inputProcessors
         )

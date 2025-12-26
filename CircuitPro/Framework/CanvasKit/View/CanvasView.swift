@@ -8,6 +8,7 @@ struct CanvasView: NSViewRepresentable {
     @Binding var viewport: CanvasViewport
     @Bindable var store: CanvasStore
     @Binding var tool: CanvasTool?
+    let graph: Graph?
 
     @Binding var layers: [CanvasLayer]
 
@@ -28,6 +29,7 @@ struct CanvasView: NSViewRepresentable {
         viewport: Binding<CanvasViewport>,
         store: CanvasStore,
         tool: Binding<CanvasTool?> = .constant(nil),
+        graph: Graph? = nil,
         layers: Binding<[CanvasLayer]> = .constant([]),
         activeLayerId: Binding<UUID?> = .constant(nil),
         environment: CanvasEnvironmentValues = .init(),
@@ -41,6 +43,7 @@ struct CanvasView: NSViewRepresentable {
         self._viewport = viewport
         self.store = store
         self._tool = tool
+        self.graph = graph
         self._layers = layers
         self._activeLayerId = activeLayerId
         self.environment = environment.withCanvasStore(store)
@@ -169,7 +172,8 @@ struct CanvasView: NSViewRepresentable {
             magnification: self.viewport.magnification,
             environment: self.environment,
             layers: self.layers,
-            activeLayerId: self.activeLayerId
+            activeLayerId: self.activeLayerId,
+            graph: graph
         )
 
         if let hostView = scrollView.documentView, hostView.frame.size != self.viewport.size {
