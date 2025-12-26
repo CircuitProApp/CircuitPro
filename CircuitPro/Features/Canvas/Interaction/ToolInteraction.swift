@@ -33,30 +33,6 @@ struct ToolInteraction: CanvasInteraction {
             return true
 
         case .newNode(let newNode):
-            if let request = newNode as? WireRequestNode {
-                // Handle schematic wire requests (existing logic)
-                guard let wireEngine = context.environment.wireEngine else {
-                    return true
-                }
-
-                wireEngine.connect(from: request.from, to: request.to, preferring: request.strategy)
-                return true
-
-            } else if let request = newNode as? TraceRequestNode {
-                guard let traceEngine = context.environment.traceEngine else {
-                    assertionFailure("A trace was requested, but no TraceEngine exists in the environment.")
-                    return true
-                }
-
-                traceEngine.addTrace(
-                    path: request.points,
-                    width: request.width,
-                    layerId: request.layerId
-                )
-
-                return true
-            }
-
             // Handle standard nodes that are not requests.
             if let primitiveNode = newNode as? PrimitiveNode {
                 guard let graph = context.graph else {
