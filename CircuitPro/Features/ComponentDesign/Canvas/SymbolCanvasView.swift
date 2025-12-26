@@ -41,6 +41,7 @@ struct SymbolCanvasView: View {
                     CrosshairsRenderLayer()
                 ],
                 interactions: [
+                    HoverHighlightInteraction(),
                     KeyCommandInteraction(),
                     HandleInteraction(),
                     ToolInteraction(),

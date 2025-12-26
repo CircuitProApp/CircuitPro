@@ -30,6 +30,7 @@ struct SchematicCanvasView: View {
                 CrosshairsRenderLayer()
             ],
             interactions: [
+                HoverHighlightInteraction(),
                 KeyCommandInteraction(),
                 ToolInteraction(),
                 SelectionInteraction(),

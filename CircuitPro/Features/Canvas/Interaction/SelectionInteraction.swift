@@ -2,22 +2,35 @@ import AppKit
 
 /// Handles node selection logic when the cursor is active.
 struct SelectionInteraction: CanvasInteraction {
-    
+
     var wantsRawInput: Bool { true }
-    
+
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         guard controller.selectedTool is CursorTool else {
             return false
         }
-        
+
         let currentSelection: [BaseNode] = controller.selectedNodes
         let tolerance = 5.0 / context.magnification
         let modifierFlags = event.modifierFlags
-        
+
         var newSelection: [BaseNode] = currentSelection
-        
-        if let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) {
-            
+
+        if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
+            if let node = controller.findNode(with: graphHit.rawValue, in: context.sceneRoot) {
+                let isAlreadySelected = currentSelection.contains(where: { $0.id == node.id })
+                if modifierFlags.contains(.shift) {
+                    if let index = newSelection.firstIndex(where: { $0.id == node.id }) {
+                        newSelection.remove(at: index)
+                    } else {
+                        newSelection.append(node)
+                    }
+                } else if !isAlreadySelected {
+                    newSelection = [node]
+                }
+            }
+        } else if let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) {
+
             var nodeToSelect: BaseNode? = hit.node
             while let currentNode = nodeToSelect {
                 if currentNode.isSelectable {
@@ -28,7 +41,7 @@ struct SelectionInteraction: CanvasInteraction {
 
             if let selectableNode = nodeToSelect {
                 let isAlreadySelected = currentSelection.contains(where: { $0.id == selectableNode.id })
-                
+
                 if modifierFlags.contains(.shift) {
                     if let index = newSelection.firstIndex(where: { $0.id == selectableNode.id }) {
                         newSelection.remove(at: index)
@@ -46,17 +59,17 @@ struct SelectionInteraction: CanvasInteraction {
                     newSelection = []
                 }
             }
-            
+
         } else {
             if !modifierFlags.contains(.shift) {
                 newSelection = []
             }
         }
-        
+
         if Set(newSelection.map { $0.id }) != Set(currentSelection.map { $0.id }) {
             controller.setSelection(to: newSelection)
         }
-        
+
         return false
     }
 }

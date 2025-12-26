@@ -17,16 +17,16 @@ final class CanvasInputHandler {
     init(controller: CanvasController) {
         self.controller = controller
     }
-    
+
     /// Runs a given point through the controller's ordered pipeline of input processors.
     private func process(point: CGPoint, context: RenderContext) -> CGPoint {
         return controller.inputProcessors.reduce(point) { currentPoint, processor in
             processor.process(point: currentPoint, context: context)
         }
     }
-    
+
     // MARK: - Event Routing
-    
+
     func mouseDown(_ event: NSEvent, in host: CanvasHostView) {
         let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
         let rawPoint = host.convert(event.locationInWindow, from: nil)
@@ -47,12 +47,12 @@ final class CanvasInputHandler {
         let rawPoint = host.convert(event.locationInWindow, from: nil)
         controller.mouseLocation = rawPoint
         let processedPoint = process(point: rawPoint, context: context)
-        
+
         for interaction in controller.interactions {
             let pointToUse = interaction.wantsRawInput ? rawPoint : processedPoint
             interaction.mouseDragged(to: pointToUse, context: context, controller: controller)
         }
-        
+
         host.performLayerUpdate()
     }
 
@@ -69,11 +69,20 @@ final class CanvasInputHandler {
 
         host.performLayerUpdate()
     }
-    
+
     // MARK: - Passthrough Events
-    
+
     func mouseMoved(_ event: NSEvent, in host: CanvasHostView) {
-        controller.mouseLocation = host.convert(event.locationInWindow, from: nil)
+        let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
+        let rawPoint = host.convert(event.locationInWindow, from: nil)
+        controller.mouseLocation = rawPoint
+        let processedPoint = process(point: rawPoint, context: context)
+
+        for interaction in controller.interactions {
+            let pointToUse = interaction.wantsRawInput ? rawPoint : processedPoint
+            interaction.mouseMoved(at: pointToUse, context: context, controller: controller)
+        }
+
         host.performLayerUpdate()
     }
 
@@ -81,17 +90,17 @@ final class CanvasInputHandler {
         controller.mouseLocation = nil
         controller.view?.performLayerUpdate()
     }
-    
+
     func keyDown(_ event: NSEvent, in host: CanvasHostView) -> Bool {
         let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
-        
+
         for interaction in controller.interactions {
             if interaction.keyDown(with: event, context: context, controller: controller) {
                 host.performLayerUpdate()
                 return true // Event was handled.
             }
         }
-        
+
         return false // Event was not handled.
     }
 }

@@ -94,8 +94,8 @@ final class CanvasEditorManager {
             for id in ids {
                 graph.removeNode(NodeID(id))
             }
-        case .selectionChanged:
-            break
+        case .selectionChanged(let selection):
+            graph.selection = Set(selection.map(NodeID.init))
         }
     }
 

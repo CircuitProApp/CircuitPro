@@ -24,6 +24,7 @@ struct LayoutCanvasView: View {
                 CrosshairsRenderLayer()
             ],
             interactions: [
+                HoverHighlightInteraction(),
                 KeyCommandInteraction(),
                 HandleInteraction(),
                 ToolInteraction(),

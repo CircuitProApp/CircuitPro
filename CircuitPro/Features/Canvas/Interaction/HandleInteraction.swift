@@ -5,6 +5,7 @@ final class HandleInteraction: CanvasInteraction {
     private enum State {
         case ready
         case dragging(node: BaseNode & HandleEditable, handleKind: CanvasHandle.Kind, oppositeHandleWorldPosition: CGPoint?)
+        case draggingGraph(id: NodeID, handleKind: CanvasHandle.Kind, oppositeHandleWorldPosition: CGPoint?)
     }
 
     private var state: State = .ready
@@ -14,7 +15,7 @@ final class HandleInteraction: CanvasInteraction {
         guard controller.selectedNodes.count == 1,
               let node = controller.selectedNodes.first,
               let editableNode = node as? BaseNode & HandleEditable else {
-            return false
+            return startGraphDrag(point: point, context: context)
         }
 
         for handle in editableNode.handles() {
@@ -36,18 +37,63 @@ final class HandleInteraction: CanvasInteraction {
         return false
     }
 
+    private func startGraphDrag(point: CGPoint, context: RenderContext) -> Bool {
+        guard let graph = context.graph else { return false }
+        guard graph.selection.count == 1, let id = graph.selection.first else { return false }
+        guard let primitive = graph.component(AnyCanvasPrimitive.self, for: id) else { return false }
+
+        for handle in primitive.handles() {
+            let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
+                .rotated(by: primitive.rotation)
+            let worldHandlePosition = handle.position.applying(transform)
+            let toleranceInWorld = (handleScreenSize / 2.0) / context.magnification
+
+            if point.distance(to: worldHandlePosition) <= toleranceInWorld {
+                var oppositeWorldPosition: CGPoint?
+                if let oppositeKind = handle.kind.opposite,
+                   let oppositeHandle = primitive.handles().first(where: { $0.kind == oppositeKind }) {
+                    oppositeWorldPosition = oppositeHandle.position.applying(transform)
+                }
+
+                self.state = .draggingGraph(
+                    id: id,
+                    handleKind: handle.kind,
+                    oppositeHandleWorldPosition: oppositeWorldPosition
+                )
+                return true
+            }
+        }
+
+        return false
+    }
+
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
-        guard case .dragging(let node, let handleKind, let oppositeWorldPosition) = state else { return }
+        switch state {
+        case .dragging(let node, let handleKind, let oppositeWorldPosition):
+            let worldToLocalTransform = node.worldTransform.inverted()
+            let dragLocalPoint = point.applying(worldToLocalTransform)
+            let oppositeLocalPoint = oppositeWorldPosition?.applying(worldToLocalTransform)
 
-        let worldToLocalTransform = node.worldTransform.inverted()
-        let dragLocalPoint = point.applying(worldToLocalTransform)
-        let oppositeLocalPoint = oppositeWorldPosition?.applying(worldToLocalTransform)
+            var editableNode = node
+            editableNode.updateHandle(handleKind, to: dragLocalPoint, opposite: oppositeLocalPoint)
 
-        var editableNode = node
-        editableNode.updateHandle(handleKind, to: dragLocalPoint, opposite: oppositeLocalPoint)
+            if let primitiveNode = editableNode as? PrimitiveNode, let graph = context.graph {
+                graph.setComponent(primitiveNode.primitive, for: NodeID(primitiveNode.id))
+            }
+        case .draggingGraph(let id, let handleKind, let oppositeWorldPosition):
+            guard let graph = context.graph,
+                  var primitive = graph.component(AnyCanvasPrimitive.self, for: id) else { return }
 
-        if let primitiveNode = editableNode as? PrimitiveNode, let graph = context.graph {
-            graph.setComponent(primitiveNode.primitive, for: NodeID(primitiveNode.id))
+            let worldToLocalTransform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
+                .rotated(by: primitive.rotation)
+                .inverted()
+            let dragLocalPoint = point.applying(worldToLocalTransform)
+            let oppositeLocalPoint = oppositeWorldPosition?.applying(worldToLocalTransform)
+
+            primitive.updateHandle(handleKind, to: dragLocalPoint, opposite: oppositeLocalPoint)
+            graph.setComponent(primitive, for: id)
+        case .ready:
+            break
         }
     }
 

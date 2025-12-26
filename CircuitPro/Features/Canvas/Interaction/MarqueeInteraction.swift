@@ -17,7 +17,7 @@ final class MarqueeInteraction: CanvasInteraction {
     }
 
     private var state: State = .ready
-    
+
     var wantsRawInput: Bool { true }
 
     // MODIFIED: Updated method signature to accept NSEvent.
@@ -29,10 +29,10 @@ final class MarqueeInteraction: CanvasInteraction {
         if context.sceneRoot.hitTest(point, tolerance: tolerance) == nil {
             // MODIFIED: Use the passed-in event instead of the global NSApp.currentEvent.
             let isAdditive = event.modifierFlags.contains(.shift)
-            
+
             // Store the selection state at the beginning of the drag.
             let initialSelection = controller.selectedNodes
-            
+
             self.state = .dragging(origin: point, isAdditive: isAdditive, initialSelection: initialSelection)
             return true
         }
@@ -44,24 +44,31 @@ final class MarqueeInteraction: CanvasInteraction {
         guard case .dragging(let origin, _, _) = state else { return }
 
         let marqueeRect = CGRect(origin: origin, size: .zero).union(CGRect(origin: point, size: .zero))
-        
+
         controller.updateEnvironment {
             $0.marqueeRect = marqueeRect
         }
 
-        // Get all nodes that intersect the marquee rectangle.
-        let intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
-        
+        let intersectingNodes: [BaseNode]
+        if let graph = context.graph {
+            let hitTester = GraphHitTester()
+            let hitIDs = Set(hitTester.hitTestAll(in: marqueeRect, context: context).map { $0.rawValue })
+            intersectingNodes = context.sceneRoot.children.filter { hitIDs.contains($0.id) }
+        } else {
+            // Get all nodes that intersect the marquee rectangle.
+            intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
+        }
+
         // --- Smart Highlighting Logic ---
         // This logic unifies the selection of a symbol and its text. If both are
         // under the marquee, we only highlight the symbol.
-        
+
         var finalHighlightableNodes = Set(intersectingNodes)
-        
+
         // Find all the text nodes and symbol nodes within the current marquee area.
         let textNodesInMarquee = finalHighlightableNodes.compactMap { $0 as? AnchoredTextNode }
         let symbolsInMarquee = finalHighlightableNodes.compactMap { $0 as? SymbolNode }
-        
+
         // If a text node's parent symbol is also in the marquee, remove the text node
         // from the highlight set to create a single, unified highlight on the symbol.
         for textNode in textNodesInMarquee {
@@ -69,7 +76,7 @@ final class MarqueeInteraction: CanvasInteraction {
                 finalHighlightableNodes.remove(textNode)
             }
         }
-        
+
         let highlightedIDs = Set(finalHighlightableNodes.map { $0.id })
         controller.setInteractionHighlight(nodeIDs: highlightedIDs)
     }
@@ -91,7 +98,7 @@ final class MarqueeInteraction: CanvasInteraction {
             // Default mode: The marquee selection replaces the old selection.
             controller.setSelection(to: highlightedNodes)
         }
-        
+
         // 3. Clean up state.
         self.state = .ready
         controller.updateEnvironment { $0.marqueeRect = nil }

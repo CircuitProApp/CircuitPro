@@ -13,18 +13,21 @@ import AppKit
 /// full canvas state via the controller and render context. The CanvasView will
 /// process an array of these interactions in order.
 protocol CanvasInteraction {
-    
+
     var wantsRawInput: Bool { get }
     /// Responds to a mouse down event.
     /// - Returns: `true` if the event was handled and should not be passed to other interactions, `false` otherwise.
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool
-    
+
     /// Responds to a mouse drag event.
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController)
-    
+
     /// Responds to a mouse up event.
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController)
-    
+
+    /// Responds to a mouse moved event.
+    func mouseMoved(at point: CGPoint, context: RenderContext, controller: CanvasController)
+
     func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool
 }
 
@@ -33,5 +36,6 @@ extension CanvasInteraction {
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool { return false }
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) { }
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) { }
+    func mouseMoved(at point: CGPoint, context: RenderContext, controller: CanvasController) { }
     func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool { return false }
 }
