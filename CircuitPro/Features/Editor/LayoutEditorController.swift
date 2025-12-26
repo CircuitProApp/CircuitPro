@@ -65,6 +65,17 @@ final class LayoutEditorController: EditorController {
             _ = projectManager.componentInstances
             // Also watch for changes from the sync manager for pending ECOs.
             _ = projectManager.syncManager.pendingChanges
+            // Track nested data that affects footprint text rendering.
+            for comp in projectManager.componentInstances {
+                _ = comp.propertyOverrides
+                _ = comp.propertyInstances
+                _ = comp.referenceDesignatorIndex
+                if let fp = comp.footprintInstance {
+                    _ = fp.textOverrides
+                    _ = fp.textInstances
+                    _ = fp.resolvedItems
+                }
+            }
         } onChange: {
             Task { @MainActor in
                 await self.rebuildNodes()

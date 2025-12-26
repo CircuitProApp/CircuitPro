@@ -308,14 +308,7 @@ extension CanvasEditorManager {
     func updateDynamicTextElements(componentData: (name: String, prefix: String, properties: [Property.Definition])) {
         for node in canvasNodes {
             guard let textNode = node as? TextNode else { continue }
-
-            // Re-resolve the placeholder string.
-            let newText = resolveText(for: textNode.resolvedText.content, componentData: componentData)
-
-            // Update the display map. The canvas view must observe this change.
-            if displayTextMap[textNode.id] != newText {
-                displayTextMap[textNode.id] = newText
-            }
+            refreshDisplayText(for: textNode, componentData: componentData)
         }
     }
 
@@ -364,7 +357,10 @@ extension CanvasEditorManager {
     }
 
     /// REWRITTEN: Creates a custom binding to an enum's associated value.
-    func bindingForDisplayOptions(with id: UUID) -> Binding<TextDisplayOptions>? {
+    func bindingForDisplayOptions(
+        with id: UUID,
+        componentData: (name: String, prefix: String, properties: [Property.Definition])
+    ) -> Binding<TextDisplayOptions>? {
         guard let index = elementIndexMap[id],
               let textNode = canvasNodes[index] as? TextNode,
               case .componentProperty(let definitionID, _) = textNode.resolvedText.content else {
@@ -383,6 +379,7 @@ extension CanvasEditorManager {
                 // Reconstruct the enum with the new options and assign it back to the model.
                 // This triggers the `didSet` in the TextNode, persisting the change.
                 textNode.resolvedText.content = .componentProperty(definitionID: definitionID, options: newOptions)
+                self.refreshDisplayText(for: textNode, componentData: componentData)
             }
         )
     }
@@ -401,6 +398,19 @@ extension CanvasEditorManager {
         let remainingNodes = canvasStore.nodes.filter { !idsToRemove.contains($0.id) }
         canvasStore.setNodes(remainingNodes)
         selectedElementIDs.subtract(idsToRemove)
+    }
+
+    private func refreshDisplayText(
+        for textNode: TextNode,
+        componentData: (name: String, prefix: String, properties: [Property.Definition])
+    ) {
+        let newText = resolveText(for: textNode.resolvedText.content, componentData: componentData)
+        if textNode.displayText != newText {
+            textNode.displayText = newText
+        }
+        if displayTextMap[textNode.id] != newText {
+            displayTextMap[textNode.id] = newText
+        }
     }
 }
 

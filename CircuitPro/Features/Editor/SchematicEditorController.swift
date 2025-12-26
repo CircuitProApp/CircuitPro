@@ -43,8 +43,15 @@ final class SchematicEditorController: EditorController {
 
             // NEW: observe nested symbol/footprint text collections (visibility, overrides, instances)
             for comp in projectManager.componentInstances {
+                _ = comp.propertyOverrides
+                _ = comp.propertyInstances
+                _ = comp.referenceDesignatorIndex
+                _ = comp.symbolInstance.textOverrides
+                _ = comp.symbolInstance.textInstances
                 _ = comp.symbolInstance.resolvedItems
                 if let fp = comp.footprintInstance {
+                    _ = fp.textOverrides
+                    _ = fp.textInstances
                     _ = fp.resolvedItems
                 }
             }

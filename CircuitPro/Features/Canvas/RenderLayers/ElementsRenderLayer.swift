@@ -131,7 +131,7 @@ final class ElementsRenderLayer: RenderLayer {
 
         for parent in parentNodes {
             // Ask the parent to generate a single, pre-stroked halo path for ALL of its selected children.
-            // Both SchematicGraphNode and TraceGraphNode override this method.
+            // TraceGraphNode overrides this method.
             if let unifiedHaloPath = parent.makeHaloPath(context: context) {
 
                 // The unified path is an outline that should be FILLED to create the halo effect.

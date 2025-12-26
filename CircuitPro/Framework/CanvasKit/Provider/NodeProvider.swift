@@ -13,11 +13,11 @@ import Foundation
 /// specific data structures. It acts as a "translator" or "factory" that takes a high-level
 /// data model (the `DataSource`) and produces a low-level, renderable node tree.
 protocol NodeProvider {
-    
+
     /// The source data type this provider works with (e.g., a `CircuitDesign` or a custom scene struct).
     /// It must be `Identifiable` so that SwiftUI can efficiently track changes to it.
     associatedtype DataSource: Identifiable
-    
+
 
 
     /// The primary build method. The canvas system will call this function to generate the complete
@@ -37,7 +37,7 @@ protocol NodeProvider {
 /// by the generic `CanvasKit` framework.
 struct BuildContext {
     let activeLayers: [CanvasLayer]
-    
-    // This is intentionally minimal. Application-specific context (like `WireGraph`)
+
+    // This is intentionally minimal. Application-specific context (like a wire engine)
     // should be held by the concrete `NodeProvider` implementation itself, not passed in here.
 }
