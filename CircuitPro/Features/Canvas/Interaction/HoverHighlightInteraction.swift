@@ -13,10 +13,22 @@ final class HoverHighlightInteraction: CanvasInteraction {
         }
 
         let tolerance = 5.0 / context.magnification
-        if let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) {
-            controller.setInteractionHighlight(nodeIDs: [hit.node.id])
+        if let hit = context.sceneRoot.hitTest(point, tolerance: tolerance),
+           let highlightNode = highlightNode(for: hit) {
+            controller.setInteractionHighlight(nodeIDs: [highlightNode.id])
         } else {
             controller.setInteractionHighlight(nodeIDs: [])
         }
+    }
+
+    private func highlightNode(for hit: CanvasHitTarget) -> BaseNode? {
+        var candidate: BaseNode? = hit.node
+        while let current = candidate {
+            if current.isSelectable {
+                return current
+            }
+            candidate = current.parent
+        }
+        return nil
     }
 }
