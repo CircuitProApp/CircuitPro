@@ -20,6 +20,8 @@ final class SchematicEditorController: EditorController {
     let wireEngine: WireEngine
     private var suppressGraphSelectionSync = false
     private var graphNodeProxyIDs: Set<NodeID> = []
+    private var isSyncingWiresFromModel = false
+    private var isApplyingWireChangesToModel = false
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
@@ -29,6 +31,11 @@ final class SchematicEditorController: EditorController {
             projectManager: projectManager,
             wireEngine: self.wireEngine
         )
+        self.wireEngine.onChange = { [weak self] in
+            Task { @MainActor in
+                self?.persistGraph()
+            }
+        }
         self.canvasStore.onNodesChanged = { [weak self] nodes in
             self?.syncGraphNodeProxies(from: nodes)
         }
@@ -41,6 +48,7 @@ final class SchematicEditorController: EditorController {
 
         startTrackingStructureChanges()
         startTrackingTextChanges()
+        startTrackingWireChanges()
 
         Task {
             await self.rebuildNodes()
@@ -51,7 +59,6 @@ final class SchematicEditorController: EditorController {
         withObservationTracking {
             _ = projectManager.selectedDesign
             _ = projectManager.componentInstances
-            _ = projectManager.selectedDesign.wires
         } onChange: {
             Task { @MainActor in
                 await self.rebuildNodes()
@@ -79,17 +86,29 @@ final class SchematicEditorController: EditorController {
         }
     }
 
+    private func startTrackingWireChanges() {
+        withObservationTracking {
+            _ = projectManager.selectedDesign.wires
+        } onChange: {
+            Task { @MainActor in
+                if self.isApplyingWireChangesToModel {
+                    self.isApplyingWireChangesToModel = false
+                    self.startTrackingWireChanges()
+                    return
+                }
+                self.syncWiresFromModel()
+                self.startTrackingWireChanges()
+            }
+        }
+    }
+
     private func rebuildNodes() async {
         let design = projectManager.selectedDesign
 
         // This is where the graph is automatically synced on every rebuild.
         let context = BuildContext(activeLayers: [])
         canvasStore.setNodes(await nodeProvider.buildNodes(from: design, context: context))
-        wireEngine.build(from: design.wires)
-        for inst in design.componentInstances {
-            guard let symbolDef = inst.definition?.symbol else { continue }
-            wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
-        }
+        syncWiresFromModel()
     }
 
     private func refreshSymbolTextNodes() {
@@ -184,9 +203,24 @@ final class SchematicEditorController: EditorController {
     }
 
     private func persistGraph() {
+        guard !isSyncingWiresFromModel else { return }
         let design = projectManager.selectedDesign
-        design.wires = wireEngine.toWires()
+        let newWires = wireEngine.toWires()
+        guard newWires != design.wires else { return }
+        isApplyingWireChangesToModel = true
+        design.wires = newWires
         document.scheduleAutosave()
+    }
+
+    private func syncWiresFromModel() {
+        isSyncingWiresFromModel = true
+        let design = projectManager.selectedDesign
+        wireEngine.build(from: design.wires)
+        for inst in design.componentInstances {
+            guard let symbolDef = inst.definition?.symbol else { continue }
+            wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
+        }
+        isSyncingWiresFromModel = false
     }
 
     // MARK: - Public Actions

@@ -216,6 +216,7 @@ final class WireEngine {
     var adjacency: [GraphVertex.ID: Set<GraphEdge.ID>] { engine.currentState.adjacency }
 
     private(set) var groupLabels: [UUID: String] = [:]
+    var onChange: (() -> Void)?
 
     // MARK: - Init
     init(graph: Graph) {
@@ -553,10 +554,12 @@ final class WireEngine {
                 if component.clusterID != clusterID {
                     component.clusterID = clusterID
                     graph.setComponent(component, for: nodeID)
-                }
             }
         }
+
+        onChange?()
     }
+}
 
     private func getOrCreateVertex(at point: CGPoint) -> GraphVertex.ID {
         var tx = GetOrCreateVertexTransaction(point: point)

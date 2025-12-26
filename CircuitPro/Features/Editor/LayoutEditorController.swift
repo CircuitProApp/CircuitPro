@@ -44,6 +44,11 @@ final class LayoutEditorController: EditorController {
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
         self.traceGraph = TraceGraph()
+        self.traceGraph.engine.onChange = { [weak self] _, _ in
+            Task { @MainActor in
+                self?.refreshTraceGraphNode()
+            }
+        }
         self.canvasStore.onNodesChanged = { [weak self] nodes in
             self?.syncGraphNodeProxies(from: nodes)
         }
@@ -146,6 +151,14 @@ final class LayoutEditorController: EditorController {
 
         // 4. Combine all nodes into the final scene graph.
         canvasStore.setNodes(footprintNodes + [traceGraphNode])
+    }
+
+    private func refreshTraceGraphNode() {
+        guard let traceGraphNode = canvasStore.nodes.first(where: { $0 is TraceGraphNode }) as? TraceGraphNode else {
+            return
+        }
+        traceGraphNode.syncChildNodesFromModel(canvasLayers: canvasLayers)
+        canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
     }
 
     private func refreshFootprintTextNodes() {
