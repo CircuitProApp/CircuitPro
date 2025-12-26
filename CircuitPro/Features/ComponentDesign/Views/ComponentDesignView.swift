@@ -24,7 +24,6 @@ struct ComponentDesignView: View {
     @State private var showWarning = false
     @State private var messages = [String]()
     @State private var didCreateComponent = false
-    @State private var showFeedbackSheet: Bool = false
     
     
     var body: some View {
@@ -56,31 +55,23 @@ struct ComponentDesignView: View {
                         } label: {
                             Text("Create Component")
                         }
-                        .buttonStyle(.plain)
-                        .directionalPadding(vertical: 5, horizontal: 7.5)
-                        .foregroundStyle(.white)
-                        .background(Color.blue)
-                        .clipShape(.rect(cornerRadius: 5))
+                        .modify { view in
+                            if #available(macOS 26.0, *) {
+                                view.buttonStyle(.glassProminent)
+                            } else {
+                                view
+                                    .buttonStyle(.plain)
+                                    .directionalPadding(vertical: 5, horizontal: 7.5)
+                                    .foregroundStyle(.white)
+                                    .background(Color.blue)
+                                    .clipShape(.rect(cornerRadius: 5))
+                            }
+                        }
                     }
                 }
                 .onChange(of: componentDesignManager.componentProperties) {
                     componentDesignManager.refreshValidation()
                 }
-            }
-        }
-        .sheet(isPresented: $showFeedbackSheet) {
-            FeedbackFormView(additionalContext: "Feedback sent from the Component Designer View, '\(componentDesignManager.currentStage.label)' stage.")
-                .frame(minWidth: 400, minHeight: 300)
-        }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showFeedbackSheet.toggle()
-                } label: {
-                    Image(systemName: CircuitProSymbols.Workspace.feedbackBubble)
-                        .imageScale(.large)
-                }
-                .help("Send Feedback")
             }
         }
         .onAppear {

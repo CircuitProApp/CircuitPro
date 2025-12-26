@@ -4,7 +4,7 @@ import SwiftUI
 struct CanvasToolbarView: View {
 
     // MARK: - Properties
-    
+
     let tools: [CanvasTool]
     @Binding var selectedTool: CanvasTool? // Use the base class and make it optional
 
@@ -13,7 +13,7 @@ struct CanvasToolbarView: View {
     let dividerAfter: ((CanvasTool) -> Bool)?
 
     // MARK: - Init
-    
+
     init(
         tools: [CanvasTool],
         selectedTool: Binding<CanvasTool?>, // The binding is now to an optional base class
@@ -36,9 +36,17 @@ struct CanvasToolbarView: View {
             }
             .scrollIndicators(.never)
         }
-        .background(.ultraThinMaterial)
-        .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3))
         .buttonStyle(.plain)
+        .modify { view in
+            if #available(macOS 26.0, *) {
+                view.glassEffect(in: .capsule)
+            } else {
+                view
+                    .background(.ultraThinMaterial)
+                    .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3))
+            }
+        }
+          
     }
 
     private var toolbarContent: some View {
