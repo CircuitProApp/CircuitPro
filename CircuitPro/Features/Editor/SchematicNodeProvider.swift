@@ -21,16 +21,16 @@ struct SchematicNodeProvider: NodeProvider {
     /// primarily the `generateString` utility which can resolve pending ECO values.
     private let projectManager: ProjectManager
 
-    /// The specific instance of the schematic graph that the generated nodes will be associated with.
-    private let schematicGraph: WireGraph
+    /// The schematic wire engine that the generated nodes can query.
+    private let wireEngine: WireEngine
 
     /// Initializes the provider with the dependencies it needs to build the scene graph.
     /// - Parameters:
     ///   - projectManager: The central project manager.
-    ///   - schematicGraph: The graph controller for the schematic editor.
-    init(projectManager: ProjectManager, schematicGraph: WireGraph) {
+    ///   - wireEngine: The wire engine for the schematic editor.
+    init(projectManager: ProjectManager, wireEngine: WireEngine) {
         self.projectManager = projectManager
-        self.schematicGraph = schematicGraph
+        self.wireEngine = wireEngine
     }
 
     // MARK: - NodeProvider Conformance
@@ -43,28 +43,14 @@ struct SchematicNodeProvider: NodeProvider {
     ///   - context: The generic build context from CanvasKit (not used by the schematic provider).
     /// - Returns: An array of `BaseNode`s representing the complete schematic scene.
     func buildNodes(from source: CircuitDesign, context: BuildContext) async -> [BaseNode] { // Marked as async
-        // Step 1: Ensure our internal graph is fully synchronized with the latest data from the design model.
-        // This must be done before creating any nodes that depend on the graph's state (like SymbolNode).
-        updateGraph(from: source)
-
-        // Step 2: Build the individual SymbolNodes from the component instances.
+        // Step 1: Build the individual SymbolNodes from the component instances.
         let symbolNodes = await generateSymbolNodes(from: source) // Await the async call
 
-        // Step 3: Return only symbol nodes. Wires are now rendered from the unified graph.
+        // Step 2: Return only symbol nodes. Wires are now rendered from the unified graph.
         return symbolNodes
     }
 
     // MARK: - Private Helper Methods
-
-    /// Updates the internal `schematicGraph` to match the state of the provided `CircuitDesign`.
-    /// This involves rebuilding wire connections and synchronizing all component pins.
-    private func updateGraph(from design: CircuitDesign) {
-        schematicGraph.build(from: design.wires)
-        for inst in design.componentInstances {
-            guard let symbolDef = inst.definition?.symbol else { continue }
-            schematicGraph.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
-        }
-    }
 
     /// Generates an array of `SymbolNode`s from the `ComponentInstance` data in the design.
     private func generateSymbolNodes(from design: CircuitDesign) async -> [SymbolNode] { // Marked as async
@@ -81,7 +67,7 @@ struct SchematicNodeProvider: NodeProvider {
                     let renderableTexts = await generateRenderableTexts(for: inst) // Await the async call
 
                     // Initialize the SymbolNode.
-                    return SymbolNode(id: inst.id, instance: inst.symbolInstance, renderableTexts: renderableTexts, graph: self.schematicGraph)
+                    return SymbolNode(id: inst.id, instance: inst.symbolInstance, renderableTexts: renderableTexts, wireEngine: self.wireEngine)
                 }
             }
             var symbolNodes: [SymbolNode] = []

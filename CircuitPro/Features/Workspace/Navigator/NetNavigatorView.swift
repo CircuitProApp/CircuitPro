@@ -3,19 +3,18 @@
 import SwiftUI
 
 struct NetNavigatorView: View {
-    
+
     @BindableEnvironment(\.projectManager)
     private var projectManager
-    
+
     var body: some View {
-        
-        // MODIFICATION: Access schematicGraph through the new controller.
-        let graph = projectManager.schematicController.schematicGraph
-        
+
+        let graph = projectManager.schematicController.wireEngine
+
         let sortedNets = graph.nets().sorted {
             $0.name.localizedStandardCompare($1.name) == .orderedAscending
         }
-        
+
         if sortedNets.isEmpty {
             VStack {
                 Text("No Nets")
@@ -33,18 +32,17 @@ struct NetNavigatorView: View {
             .scrollContentBackground(.hidden)
             .environment(\.defaultMinListRowHeight, 14)
             .onChange(of: projectManager.selectedNetIDs) { _, newSelection in
-                // MODIFICATION: Use the same `graph` variable for consistency.
                 let allEdgesOfSelectedNets = newSelection.flatMap { netID in
                     graph.component(for: netID).edges
                 }
-                
+
                 // Preserve any selected symbols (which are not edges).
                 let currentSymbolSelection = projectManager.selectedNodeIDs.filter {
                     graph.edges[$0] == nil
                 }
-                
-                // Set the main selection to be the selected symbols plus the edges from the selected nets.
-                projectManager.selectedNodeIDs = currentSymbolSelection.union(allEdgesOfSelectedNets)
+
+                projectManager.selectedNodeIDs = currentSymbolSelection
+                projectManager.schematicController.graph.selection = Set(allEdgesOfSelectedNets.map(NodeID.init))
             }
         }
     }

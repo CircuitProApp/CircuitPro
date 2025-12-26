@@ -15,18 +15,18 @@ final class SymbolNode: BaseNode {
     // MARK: - Properties
 
     var instance: SymbolInstance
-    
-    weak var graph: WireGraph?
+
+    weak var wireEngine: WireEngine?
 
     override var isSelectable: Bool { true }
-    
+
     // MARK: - Overridden Scene Graph Properties
 
     override var position: CGPoint {
         get { instance.position }
         set {
             instance.position = newValue
-          
+
         }
     }
 
@@ -34,27 +34,27 @@ final class SymbolNode: BaseNode {
         get { instance.rotation }
         set {
             instance.rotation = newValue
-            
+
         }
     }
 
     // MARK: - Initialization
 
-    init?(id: UUID, instance: SymbolInstance, renderableTexts: [RenderableText], graph: WireGraph? = nil) {
+    init?(id: UUID, instance: SymbolInstance, renderableTexts: [RenderableText], wireEngine: WireEngine? = nil) {
         guard let symbolDefinition = instance.definition else {
             print("Error: SymbolNode cannot be initialized without a hydrated SymbolInstance.definition.")
             return nil
         }
-        
+
         self.instance = instance
-        self.graph = graph
-        
+        self.wireEngine = wireEngine
+
         super.init(id: id)
 
         // Create child nodes from the symbol's definition and the renderable text data.
         let primitiveNodes = symbolDefinition.primitives.map { PrimitiveNode(primitive: $0) }
-        let pinNodes = symbolDefinition.pins.map { PinNode(pin: $0, graph: graph) }
-        
+        let pinNodes = symbolDefinition.pins.map { PinNode(pin: $0, wireEngine: wireEngine) }
+
         // Loop over the renderable texts to create fully hydrated `AnchoredTextNode`s.
         let textNodes: [AnchoredTextNode] = renderableTexts.map { renderable in
             AnchoredTextNode(
@@ -66,11 +66,11 @@ final class SymbolNode: BaseNode {
 
         // Assign all children at once.
         self.children = primitiveNodes + pinNodes + textNodes
-        
+
         // Configure parent-child relationships.
         for child in self.children {
             child.parent = self
-         
+
         }
     }
 
@@ -115,15 +115,14 @@ final class SymbolNode: BaseNode {
             if child is AnchoredTextNode {
                 continue
             }
-            
+
             guard child.isVisible else { continue }
             let childBox = child.interactionBounds
             let transformedChildBox = childBox.applying(child.localTransform)
             combinedBox = combinedBox.union(transformedChildBox)
         }
-        
+
         return combinedBox
     }
 
 }
-

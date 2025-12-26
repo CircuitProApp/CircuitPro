@@ -3,80 +3,80 @@ import Observation
 
 @Observable
 class PinNode: BaseNode {
-    
+
     // MARK: - Properties
-    
+
     var pin: Pin {
         didSet {
             invalidateContentBoundingBox()
 
         }
     }
-    
+
     // --- CHANGE: The graph reference is now optional. ---
-    weak var graph: WireGraph?
-    
+    weak var wireEngine: WireEngine?
+
     enum Part: Hashable {
         case endpoint
         case body
         case nameLabel
         case numberLabel
     }
-    
+
     override var isSelectable: Bool {
         return !(parent is SymbolNode)
     }
-    
+
     // MARK: - Overridden Scene Graph Properties
-    
+
     override var position: CGPoint {
         get { pin.position }
         set { pin.position = newValue }
     }
-    
+
     override var rotation: CGFloat {
         get { 0 }
         set { pin.rotation = newValue }
     }
-    
+
     // --- CHANGE: The initializer now accepts an optional graph. ---
-    init(pin: Pin, graph: WireGraph? = nil) {
+    init(pin: Pin, wireEngine: WireEngine? = nil) {
         self.pin = pin
-        self.graph = graph
+        self.wireEngine = wireEngine
         super.init(id: pin.id)
     }
-    
+
     // MARK: - Drawable Conformance
-    
+
     override func makeDrawingPrimitives() -> [DrawingPrimitive] {
         var primitives = pin.makeDrawingPrimitives()
-        
+
         // --- CHANGE: Safely unwrap the optional graph. ---
         // If there's no graph, or we can't find the corresponding vertex,
         // we simply don't draw a dot. No crash, no problem.
-        guard let graph = self.graph,
+        guard let wireEngine = self.wireEngine,
               let symbolNode = self.parent as? SymbolNode,
-              let vertexID = graph.findVertex(ownedBy: symbolNode.instance.id, pinID: self.pin.id)
+              let vertexID = wireEngine.findVertex(ownedBy: symbolNode.instance.id, pinID: self.pin.id)
         else {
             return primitives
         }
-        
-        let wireCount = graph.adjacency[vertexID]?.count ?? 0
-        
+
+        let wireCount = wireEngine.adjacency[vertexID]?.count ?? 0
+
         if wireCount > 1 {
             let dotPath = CGPath(ellipseIn: CGRect(x: -2, y: -2, width: 4, height: 4), transform: nil)
             let dotPrimitive = DrawingPrimitive.fill(path: dotPath, color: NSColor.controlAccentColor.cgColor)
             primitives.append(dotPrimitive)
         }
-        
+
         return primitives
     }
-    
+
     override func makeHaloPath() -> CGPath? {
         return pin.makeHaloPath()
     }
-    
-    
+
+
     // ... (hitTest method remains the same) ...
     override func hitTest(_ point: CGPoint, tolerance: CGFloat) -> CanvasHitTarget? {
           let inflatedTolerance = tolerance * 2.0

@@ -1,14 +1,14 @@
 import AppKit
 
 /// Handles dragging selected nodes on the canvas.
-/// This interaction can handle normal drags, wire drags via the `WireGraph`, and special
+/// This interaction can handle normal drags, wire drags via the `WireEngine`, and special
 /// anchor-repositioning drags for text nodes when the Control key is held.
 final class DragInteraction: CanvasInteraction {
 
     private struct DraggingState {
         let origin: CGPoint
         let originalNodePositions: [UUID: CGPoint]
-        let graph: WireGraph?
+        let graph: WireEngine?
         let isAnchorDrag: Bool
         let originalAnchorPositions: [UUID: CGPoint]
     }
@@ -47,12 +47,12 @@ final class DragInteraction: CanvasInteraction {
                 return true
             }
 
-            if let wireGraph = context.environment.wireGraph,
+            if let wireEngine = context.environment.wireEngine,
                let graphHit = GraphHitTester().hitTest(point: point, context: context),
                graph.selection.contains(graphHit),
                graph.component(WireEdgeComponent.self, for: graphHit) != nil {
-                if wireGraph.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
-                    self.state = DraggingState(origin: point, originalNodePositions: [:], graph: wireGraph, isAnchorDrag: false, originalAnchorPositions: [:])
+                if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
+                    self.state = DraggingState(origin: point, originalNodePositions: [:], graph: wireEngine, isAnchorDrag: false, originalAnchorPositions: [:])
                     self.didMove = false
                     return true
                 }
@@ -85,18 +85,18 @@ final class DragInteraction: CanvasInteraction {
         }
 
         // Prime pin vertices for selected symbols so beginDrag has something to move
-        if let wireGraph = context.environment.wireGraph {
+        if let wireEngine = context.environment.wireEngine {
             for node in controller.selectedNodes {
                 if let sym = node as? SymbolNode, let symbolDef = sym.instance.definition {
-                    wireGraph.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
+                    wireEngine.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
                 }
             }
 
             let nodeSelection = Set(controller.selectedNodes.map { $0.id })
             let graphSelection = Set(context.graph?.selection.map { $0.rawValue } ?? [])
             let selectedIDs = nodeSelection.union(graphSelection)
-            if wireGraph.beginDrag(selectedIDs: selectedIDs) {
-                self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: wireGraph, isAnchorDrag: isAnchorDrag, originalAnchorPositions: originalAnchorPositions)
+            if wireEngine.beginDrag(selectedIDs: selectedIDs) {
+                self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: wireEngine, isAnchorDrag: isAnchorDrag, originalAnchorPositions: originalAnchorPositions)
             } else {
                 self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: nil, isAnchorDrag: isAnchorDrag, originalAnchorPositions: originalAnchorPositions)
             }
@@ -157,11 +157,11 @@ final class DragInteraction: CanvasInteraction {
 
         if let graph = currentState.graph {
             graph.updateDrag(by: deltaPoint)
-        } else if let wireGraph = context.environment.wireGraph {
+        } else if let wireEngine = context.environment.wireEngine {
             // Fallback: graph drag not active, do live pin sync for moved symbols
             for node in controller.selectedNodes {
                 if let sym = node as? SymbolNode, let symbolDef = sym.instance.definition {
-                    wireGraph.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
+                    wireEngine.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
                 }
             }
         }

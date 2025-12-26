@@ -109,8 +109,8 @@ struct KeyCommandInteraction: CanvasInteraction {
                 graph.component(WireVertexComponent.self, for: id) != nil
             }
 
-            if hasWireSelection, let wireGraph = context.environment.wireGraph {
-                wireGraph.delete(items: selectedIDs)
+            if hasWireSelection, let wireEngine = context.environment.wireEngine {
+                wireEngine.delete(items: selectedIDs)
                 graph.selection = []
                 Task { @MainActor in
                     context.environment.canvasStore?.selection.subtract(selectedIDs)

@@ -44,7 +44,7 @@ final class WireTool: CanvasTool {
             }
 
             // Create the request node
-            let strategy: WireGraph.WireConnectionStrategy =
+            let strategy: WireEngine.WireConnectionStrategy =
                 (direction == .horizontal) ? .horizontalThenVertical : .verticalThenHorizontal
             let requestNode = WireRequestNode(from: startPoint, to: location, strategy: strategy)
 

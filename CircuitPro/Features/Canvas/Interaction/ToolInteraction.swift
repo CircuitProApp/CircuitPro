@@ -31,11 +31,11 @@ struct ToolInteraction: CanvasInteraction {
 
         if let request = newNode as? WireRequestNode {
             // Handle schematic wire requests (existing logic)
-            guard let wireGraph = context.environment.wireGraph else {
+            guard let wireEngine = context.environment.wireEngine else {
                 return true
             }
 
-            wireGraph.connect(from: request.from, to: request.to, preferring: request.strategy)
+            wireEngine.connect(from: request.from, to: request.to, preferring: request.strategy)
             return true
 
         } else if let request = newNode as? TraceRequestNode {
