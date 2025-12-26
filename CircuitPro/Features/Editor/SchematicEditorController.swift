@@ -111,7 +111,7 @@ final class SchematicEditorController: EditorController {
         syncWiresFromModel()
     }
 
-    private func refreshSymbolTextNodes() {
+    func refreshSymbolTextNodes() {
         let design = projectManager.selectedDesign
         var didChange = false
 

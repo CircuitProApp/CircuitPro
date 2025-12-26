@@ -151,6 +151,12 @@ final class ProjectManager {
     func updateText(for component: ComponentInstance, with editedText: CircuitText.Resolved) {
         component.apply(editedText)              // writes into SymbolInstance (overrides/instances)
         document.scheduleAutosave()
+        switch selectedEditor {
+        case .schematic:
+            schematicController.refreshSymbolTextNodes()
+        case .layout:
+            layoutController.refreshFootprintTextNodes()
+        }
     }
 
     // Toggle Name / RefDes / any non-property text
@@ -215,6 +221,12 @@ final class ProjectManager {
             component.footprintInstance?.add(newText)
         }
         document.scheduleAutosave()
+        switch selectedEditor {
+        case .schematic:
+            schematicController.refreshSymbolTextNodes()
+        case .layout:
+            layoutController.refreshFootprintTextNodes()
+        }
     }
 
     /// Remove a text item from the active container.

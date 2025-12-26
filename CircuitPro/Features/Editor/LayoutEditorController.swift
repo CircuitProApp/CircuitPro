@@ -172,7 +172,7 @@ final class LayoutEditorController: EditorController {
         syncTracesFromModel()
     }
 
-    private func refreshFootprintTextNodes() {
+    func refreshFootprintTextNodes() {
         let design = projectManager.selectedDesign
         var didChange = false
 
