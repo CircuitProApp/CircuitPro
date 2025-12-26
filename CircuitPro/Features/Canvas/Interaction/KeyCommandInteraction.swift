@@ -71,6 +71,9 @@ struct KeyCommandInteraction: CanvasInteraction {
         switch result {
         case .noResult:
             return false
+        case .command(let command):
+            command.execute(context: ToolInteractionContext(clickCount: 0, hitTarget: nil, renderContext: context), controller: controller)
+            return true
         case .newNode(let newNode):
             if let primitiveNode = newNode as? PrimitiveNode {
                 guard let graph = context.graph else {

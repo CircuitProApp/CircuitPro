@@ -28,6 +28,9 @@ struct ToolInteraction: CanvasInteraction {
             // If the tool handled the tap but didn't create a new node (e.g., the
             // first click of a line tool), we should still consume the mouse event.
             return true
+        case .command(let command):
+            command.execute(context: interactionContext, controller: controller)
+            return true
 
         case .newNode(let newNode):
             if let request = newNode as? WireRequestNode {

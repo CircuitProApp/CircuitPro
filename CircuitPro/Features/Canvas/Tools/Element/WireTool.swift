@@ -1,8 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// A stateful tool for drawing orthogonal wires. This tool is fully generic and
-/// emits its results as `WireRequestNode` instances via the CanvasToolResult.
+/// A stateful tool for drawing orthogonal wires.
 final class WireTool: CanvasTool {
 
     // MARK: - UI Representation
@@ -46,7 +45,8 @@ final class WireTool: CanvasTool {
             // Create the request node
             let strategy: WireEngine.WireConnectionStrategy =
                 (direction == .horizontal) ? .horizontalThenVertical : .verticalThenHorizontal
-            let requestNode = WireRequestNode(from: startPoint, to: location, strategy: strategy)
+            let fromPoint = startPoint
+            let toPoint = location
 
             // Finish only when hitting a pin or anything in the schematic graph subtree
             if shouldFinish(on: context.hitTarget, at: location, context: context.renderContext) {
@@ -58,7 +58,12 @@ final class WireTool: CanvasTool {
                 self.state = .drawing(startPoint: location, direction: newDirection)
             }
 
-            return .newNode(requestNode)
+            return .command(CanvasToolCommand { interactionContext, _ in
+                guard let wireEngine = interactionContext.renderContext.environment.wireEngine else {
+                    return
+                }
+                wireEngine.connect(from: fromPoint, to: toPoint, preferring: strategy)
+            })
         }
     }
 

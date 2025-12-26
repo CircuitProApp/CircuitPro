@@ -7,8 +7,9 @@
 
 import Foundation
 
-enum CanvasToolResult: Equatable {
+enum CanvasToolResult {
     case noResult
     case newNode(BaseNode)
     case newPrimitive(AnyCanvasPrimitive)
+    case command(CanvasToolCommand)
 }

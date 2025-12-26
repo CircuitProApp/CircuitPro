@@ -20,16 +20,16 @@ final class TraceTool: CanvasTool {
         case drawing(lastPoint: CGPoint)
     }
     private var state: State = .idle
-    
+
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         guard let activeLayerId = context.activeLayerId else {
             print("TraceTool Error: No active layer selected.")
             return .noResult
         }
-        
+
         // Use the editable property for the trace width.
         let traceWidth = self.currentTraceWidthInPoints
-        
+
         switch self.state {
         case .idle:
             self.state = .drawing(lastPoint: location)
@@ -43,28 +43,36 @@ final class TraceTool: CanvasTool {
 
             let pathPoints = calculateOptimalPath(from: lastPoint, to: location)
             // Pass the current, potentially user-modified, width to the request node.
-            let requestNode = TraceRequestNode(points: pathPoints, width: traceWidth, layerId: activeLayerId)
             let newLastPoint = pathPoints.last ?? location
             self.state = .drawing(lastPoint: newLastPoint)
-            
-            return .newNode(requestNode)
+
+            return .command(CanvasToolCommand { interactionContext, _ in
+                guard let traceEngine = interactionContext.renderContext.environment.traceEngine else {
+                    return
+                }
+                traceEngine.addTrace(
+                    path: pathPoints,
+                    width: traceWidth,
+                    layerId: activeLayerId
+                )
+            })
         }
     }
 
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard case .drawing(let lastPoint) = state else { return [] }
-        
+
         let color = context.layers.first(where: { $0.id == context.activeLayerId })?.color ?? NSColor.systemBlue.cgColor
-        
+
         let pathPoints = calculateOptimalPath(from: lastPoint, to: mouse)
-        
+
         let path = CGMutablePath()
         guard let firstPoint = pathPoints.first else { return [] }
         path.move(to: firstPoint)
         for i in 1..<pathPoints.count {
             path.addLine(to: pathPoints[i])
         }
-        
+
         // The preview should always reflect the current width setting.
         return [.stroke(
             path: path,
@@ -72,26 +80,26 @@ final class TraceTool: CanvasTool {
             lineWidth: self.currentTraceWidthInPoints
         )]
     }
-    
+
     private func calculateOptimalPath(from start: CGPoint, to end: CGPoint) -> [CGPoint] {
         let delta = CGPoint(x: end.x - start.x, y: end.y - start.y)
         let dx = abs(delta.x)
         let dy = abs(delta.y)
-        
+
         if dx < 1e-6 || dy < 1e-6 || abs(dx - dy) < 1e-6 {
             return [start, end]
         }
-        
+
         let diagonalLength = min(dx, dy)
         let corner = CGPoint(
             x: start.x + diagonalLength * delta.x.sign(),
             y: start.y + diagonalLength * delta.y.sign()
         )
-        
+
         if hypot(corner.x - end.x, corner.y - end.y) < 1e-6 {
             return [start, end]
         }
-        
+
         return [start, corner, end]
     }
 
