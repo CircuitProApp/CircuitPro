@@ -19,7 +19,6 @@ final class LayoutEditorController: EditorController {
 
     let graph = CanvasGraph()
     private var suppressGraphSelectionSync = false
-    private var suppressPrimitiveRemoval = false
     private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]
     private var activeDesignID: UUID?
     private var isSyncingTracesFromModel = false
@@ -255,18 +254,6 @@ final class LayoutEditorController: EditorController {
 
     private func handleStoreDelta(_ delta: CanvasStoreDelta) {
         switch delta {
-        case .reset(let nodes):
-            addGraphPrimitives(from: nodes)
-            removePrimitiveNodes(from: nodes)
-            syncPrimitiveCacheFromGraph()
-        case .nodesAdded(let nodes):
-            addGraphPrimitives(from: nodes)
-            removePrimitiveNodes(from: nodes)
-            syncPrimitiveCacheFromGraph()
-        case .nodesRemoved(let ids):
-            for id in ids {
-                graph.removeNode(NodeID(id))
-            }
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
             let graphSelection = Set(selection.compactMap { id -> NodeID? in
@@ -278,6 +265,8 @@ final class LayoutEditorController: EditorController {
                 graph.selection = graphSelection
                 suppressGraphSelectionSync = false
             }
+        default:
+            break
         }
     }
 
@@ -311,30 +300,6 @@ final class LayoutEditorController: EditorController {
         default:
             break
         }
-    }
-
-    private func syncPrimitiveCacheFromGraph() {
-        primitiveCache = Dictionary(
-            uniqueKeysWithValues: graph.components(AnyCanvasPrimitive.self).map { ($0.0, $0.1) }
-        )
-    }
-
-    private func addGraphPrimitives(from nodes: [BaseNode]) {
-        for node in nodes {
-            guard let primitiveNode = node as? PrimitiveNode else { continue }
-            let graphID = NodeID(primitiveNode.id)
-            graph.addNode(graphID)
-            graph.setComponent(primitiveNode.primitive, for: graphID)
-        }
-    }
-
-    private func removePrimitiveNodes(from nodes: [BaseNode]) {
-        guard !suppressPrimitiveRemoval else { return }
-        let primitiveIDs = Set(nodes.compactMap { ($0 as? PrimitiveNode)?.id })
-        guard !primitiveIDs.isEmpty else { return }
-        suppressPrimitiveRemoval = true
-        canvasStore.removeNodes(ids: primitiveIDs, emitDelta: false)
-        suppressPrimitiveRemoval = false
     }
 
     private func handleTraceEngineChange() {

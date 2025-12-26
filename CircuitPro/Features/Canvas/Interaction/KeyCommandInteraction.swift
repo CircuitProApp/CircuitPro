@@ -72,38 +72,37 @@ struct KeyCommandInteraction: CanvasInteraction {
         case .noResult:
             return false
         case .newNode(let newNode):
-            if let primitiveNode = newNode as? PrimitiveNode, let graph = context.graph {
+            if let primitiveNode = newNode as? PrimitiveNode {
+                guard let graph = context.graph else {
+                    assertionFailure("Primitive nodes must be routed through the graph.")
+                    return true
+                }
                 let nodeID = NodeID(primitiveNode.id)
                 if !graph.nodes.contains(nodeID) {
                     graph.addNode(nodeID)
                 }
                 graph.setComponent(primitiveNode.primitive, for: nodeID)
-            } else {
-                // Add the new node to the scene and notify the document of the change.
-                if let store = context.environment.canvasStore {
-                    Task { @MainActor in
-                        store.addNode(newNode)
-                    }
-                }
-                controller.sceneRoot.addChild(newNode)
+                return true
             }
+
+            // Add the new node to the scene and notify the document of the change.
+            if let store = context.environment.canvasStore {
+                Task { @MainActor in
+                    store.addNode(newNode)
+                }
+            }
+            controller.sceneRoot.addChild(newNode)
             return true
         case .newPrimitive(let primitive):
-            if let graph = context.graph {
-                let nodeID = NodeID(primitive.id)
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
-                }
-                graph.setComponent(primitive, for: nodeID)
-            } else {
-                let node = PrimitiveNode(primitive: primitive)
-                if let store = context.environment.canvasStore {
-                    Task { @MainActor in
-                        store.addNode(node)
-                    }
-                }
-                controller.sceneRoot.addChild(node)
+            guard let graph = context.graph else {
+                assertionFailure("Primitives require a graph-backed canvas.")
+                return true
             }
+            let nodeID = NodeID(primitive.id)
+            if !graph.nodes.contains(nodeID) {
+                graph.addNode(nodeID)
+            }
+            graph.setComponent(primitive, for: nodeID)
             return true
         }
     }

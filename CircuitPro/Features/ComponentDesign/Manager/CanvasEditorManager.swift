@@ -38,7 +38,6 @@ final class CanvasEditorManager {
     var selectedTool: CanvasTool = CursorTool()
     private var elementIndexMap: [UUID: Int] = [:]
     let graph = CanvasGraph()
-    private var suppressPrimitiveRemoval = false
     private var suppressGraphSelectionSync = false
     private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]
 
@@ -96,18 +95,6 @@ final class CanvasEditorManager {
 
     private func handleStoreDelta(_ delta: CanvasStoreDelta) {
         switch delta {
-        case .reset(let nodes):
-            syncGraph(from: nodes)
-            removePrimitiveNodes(from: nodes)
-            syncPrimitiveCacheFromGraph()
-        case .nodesAdded(let nodes):
-            addGraphPrimitives(from: nodes)
-            removePrimitiveNodes(from: nodes)
-            syncPrimitiveCacheFromGraph()
-        case .nodesRemoved(let ids):
-            for id in ids {
-                graph.removeNode(NodeID(id))
-            }
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
             let graphSelection = Set(selection.compactMap { id -> NodeID? in
@@ -117,6 +104,8 @@ final class CanvasEditorManager {
             if graph.selection != graphSelection {
                 graph.selection = graphSelection
             }
+        default:
+            break
         }
     }
 
@@ -151,35 +140,6 @@ final class CanvasEditorManager {
         default:
             break
         }
-    }
-
-    private func syncPrimitiveCacheFromGraph() {
-        primitiveCache = Dictionary(
-            uniqueKeysWithValues: graph.components(AnyCanvasPrimitive.self).map { ($0.0, $0.1) }
-        )
-    }
-
-    private func syncGraph(from nodes: [BaseNode]) {
-        graph.reset()
-        addGraphPrimitives(from: nodes)
-    }
-
-    private func addGraphPrimitives(from nodes: [BaseNode]) {
-        for node in nodes {
-            guard let primitiveNode = node as? PrimitiveNode else { continue }
-            let graphID = NodeID(primitiveNode.id)
-            graph.addNode(graphID)
-            graph.setComponent(primitiveNode.primitive, for: graphID)
-        }
-    }
-
-    private func removePrimitiveNodes(from nodes: [BaseNode]) {
-        guard !suppressPrimitiveRemoval else { return }
-        let primitiveIDs = Set(nodes.compactMap { ($0 as? PrimitiveNode)?.id })
-        guard !primitiveIDs.isEmpty else { return }
-        suppressPrimitiveRemoval = true
-        canvasStore.removeNodes(ids: primitiveIDs, emitDelta: false)
-        suppressPrimitiveRemoval = false
     }
 
     struct ElementItem: Identifiable {
@@ -268,6 +228,7 @@ final class CanvasEditorManager {
         displayTextMap = [:] // Reset the new map
         layers = []
         activeLayerId = nil
+        primitiveCache.removeAll()
         graph.reset()
     }
 }
