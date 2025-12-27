@@ -21,7 +21,13 @@ final class DragInteraction: CanvasInteraction {
         let wireEngine: WireEngine?
     }
 
+    private struct WireDraggingState {
+        let origin: CGPoint
+        let wireEngine: WireEngine
+    }
+
     private var graphState: GraphDraggingState?
+    private var wireState: WireDraggingState?
     private var didMove: Bool = false
     private let dragThreshold: CGFloat = 4.0
 
@@ -29,6 +35,7 @@ final class DragInteraction: CanvasInteraction {
 
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         self.graphState = nil
+        self.wireState = nil
         guard controller.selectedTool is CursorTool else { return false }
 
         if let graph = context.graph {
@@ -133,8 +140,10 @@ final class DragInteraction: CanvasInteraction {
             if let wireEngine = context.environment.wireEngine,
                let graphHit = GraphHitTester().hitTest(point: point, context: context, scope: .graphOnly),
                graph.selection.contains(graphHit),
-               graph.component(WireEdgeComponent.self, for: graphHit) != nil {
+               (graph.component(WireEdgeComponent.self, for: graphHit) != nil ||
+                graph.component(WireVertexComponent.self, for: graphHit) != nil) {
                 if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
+                    self.wireState = WireDraggingState(origin: point, wireEngine: wireEngine)
                     self.didMove = false
                     return true
                 }
@@ -232,12 +241,29 @@ final class DragInteraction: CanvasInteraction {
             return
         }
 
+        if let wireState = wireState {
+            let rawDelta = CGVector(dx: point.x - wireState.origin.x, dy: point.y - wireState.origin.y)
+            if !didMove {
+                if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }
+                didMove = true
+            }
+            let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
+            let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
+            wireState.wireEngine.updateDrag(by: deltaPoint)
+            return
+        }
     }
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         if let currentGraphState = graphState {
             currentGraphState.wireEngine?.endDrag()
             self.graphState = nil
+            didMove = false
+            return
+        }
+        if let wireState = wireState {
+            wireState.wireEngine.endDrag()
+            self.wireState = nil
             didMove = false
             return
         }
