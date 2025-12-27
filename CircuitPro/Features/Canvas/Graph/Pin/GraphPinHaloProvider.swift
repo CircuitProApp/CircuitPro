@@ -13,6 +13,9 @@ struct GraphPinHaloProvider: GraphHaloProvider {
 
         for (id, component) in graph.components(GraphPinComponent.self) {
             guard highlightedIDs.contains(id.rawValue) else { continue }
+            if let ownerID = component.ownerID, highlightedIDs.contains(ownerID) {
+                continue
+            }
             guard let haloPath = component.pin.makeHaloPath() else { continue }
 
             let haloPrimitive = DrawingPrimitive.stroke(

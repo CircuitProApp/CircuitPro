@@ -39,8 +39,12 @@ final class DragInteraction: CanvasInteraction {
         guard controller.selectedTool is CursorTool else { return false }
 
         let graph = context.graph
-        if let graphHit = GraphHitTester().hitTest(point: point, context: context),
-           graph.selection.contains(graphHit) {
+        if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
+            let resolvedHit = graph.selectionTarget(for: graphHit)
+            let isOwnedHit = resolvedHit != graphHit
+            if !graph.selection.contains(resolvedHit) {
+                return false
+            }
             let hitPrimitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) != nil
             let hitText = graph.component(GraphTextComponent.self, for: graphHit) != nil
             let hitPin = graph.component(GraphPinComponent.self, for: graphHit)
@@ -49,7 +53,7 @@ final class DragInteraction: CanvasInteraction {
             let hitFootprint = graph.component(GraphFootprintComponent.self, for: graphHit) != nil
             let hitSelectablePin = hitPin?.isSelectable ?? false
             let hitSelectablePad = hitPad?.isSelectable ?? false
-            if hitPrimitive || hitText || hitSelectablePin || hitSelectablePad || hitSymbol || hitFootprint {
+            if hitPrimitive || hitText || hitSelectablePin || hitSelectablePad || hitSymbol || hitFootprint || isOwnedHit {
                 let selectedIDs = graph.selection
                 var originalPrimitives: [NodeID: AnyCanvasPrimitive] = [:]
                 var originalTexts: [NodeID: GraphTextComponent] = [:]
@@ -138,14 +142,16 @@ final class DragInteraction: CanvasInteraction {
         }
 
         if let wireEngine = context.environment.wireEngine,
-           let graphHit = GraphHitTester().hitTest(point: point, context: context),
-           graph.selection.contains(graphHit),
-           (graph.component(WireEdgeComponent.self, for: graphHit) != nil ||
-            graph.component(WireVertexComponent.self, for: graphHit) != nil) {
-            if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
-                self.wireState = WireDraggingState(origin: point, wireEngine: wireEngine)
-                self.didMove = false
-                return true
+           let graphHit = GraphHitTester().hitTest(point: point, context: context) {
+            let resolvedHit = graph.selectionTarget(for: graphHit)
+            if graph.selection.contains(resolvedHit),
+               (graph.component(WireEdgeComponent.self, for: graphHit) != nil ||
+                graph.component(WireVertexComponent.self, for: graphHit) != nil) {
+                if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
+                    self.wireState = WireDraggingState(origin: point, wireEngine: wireEngine)
+                    self.didMove = false
+                    return true
+                }
             }
         }
         return false

@@ -12,7 +12,6 @@ struct GraphPinHitTestProvider: GraphHitTestProvider {
         var best: GraphHitCandidate?
 
         for (id, component) in graph.components(GraphPinComponent.self) {
-            if !component.isSelectable, context.selectedTool is CursorTool { continue }
             let localPoint = point.applying(component.worldTransform.inverted())
             if isHit(point: localPoint, pin: component.pin, tolerance: tolerance) {
                 let bounds = component.pin.makeHaloPath()?.boundingBoxOfPath ?? .zero
@@ -34,10 +33,7 @@ struct GraphPinHitTestProvider: GraphHitTestProvider {
 
     func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [NodeID] {
         var hits = Set<NodeID>()
-        let wantsSelectable = !(context.selectedTool is CursorTool)
-
         for (id, component) in graph.components(GraphPinComponent.self) {
-            if !component.isSelectable, !wantsSelectable { continue }
 
             let bounds = component.pin.makeHaloPath()?.boundingBoxOfPath ?? .zero
             if bounds.isNull { continue }

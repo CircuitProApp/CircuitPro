@@ -13,6 +13,9 @@ struct GraphTextHaloProvider: GraphHaloProvider {
 
         for (id, component) in graph.components(GraphTextComponent.self) {
             guard highlightedIDs.contains(id.rawValue) else { continue }
+            if highlightedIDs.contains(component.ownerID) {
+                continue
+            }
             guard component.isVisible else { continue }
             let worldPath = component.worldPath()
             guard !worldPath.isEmpty else { continue }

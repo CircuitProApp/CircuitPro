@@ -13,6 +13,9 @@ struct GraphPadHaloProvider: GraphHaloProvider {
 
         for (id, component) in graph.components(GraphPadComponent.self) {
             guard highlightedIDs.contains(id.rawValue) else { continue }
+            if let ownerID = component.ownerID, highlightedIDs.contains(ownerID) {
+                continue
+            }
 
             let haloWidth: CGFloat = 1.0
             let shapePath = component.pad.calculateShapePath()

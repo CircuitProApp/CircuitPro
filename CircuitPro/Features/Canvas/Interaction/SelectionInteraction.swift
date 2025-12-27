@@ -14,17 +14,18 @@ struct SelectionInteraction: CanvasInteraction {
 
         let graph = context.graph
         if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
+            let resolvedHit = graph.selectionTarget(for: graphHit)
             let currentSelectionIDs = graph.selection
             var newSelectionIDs = currentSelectionIDs
 
             if modifierFlags.contains(.shift) {
-                if newSelectionIDs.contains(graphHit) {
-                    newSelectionIDs.remove(graphHit)
+                if newSelectionIDs.contains(resolvedHit) {
+                    newSelectionIDs.remove(resolvedHit)
                 } else {
-                    newSelectionIDs.insert(graphHit)
+                    newSelectionIDs.insert(resolvedHit)
                 }
             } else {
-                newSelectionIDs = [graphHit]
+                newSelectionIDs = [resolvedHit]
             }
 
             if newSelectionIDs != currentSelectionIDs {

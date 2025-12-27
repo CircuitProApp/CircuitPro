@@ -12,7 +12,6 @@ struct GraphPadHitTestProvider: GraphHitTestProvider {
         var best: GraphHitCandidate?
 
         for (id, component) in graph.components(GraphPadComponent.self) {
-            if !component.isSelectable, context.selectedTool is CursorTool { continue }
             let localPoint = point.applying(component.worldTransform.inverted())
             let bodyPath = component.pad.calculateCompositePath()
             let hitArea = bodyPath.copy(
@@ -41,10 +40,7 @@ struct GraphPadHitTestProvider: GraphHitTestProvider {
 
     func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [NodeID] {
         var hits = Set<NodeID>()
-        let wantsSelectable = !(context.selectedTool is CursorTool)
-
         for (id, component) in graph.components(GraphPadComponent.self) {
-            if !component.isSelectable, !wantsSelectable { continue }
             let bodyPath = component.pad.calculateCompositePath()
             let bounds = bodyPath.boundingBoxOfPath
             if bounds.isNull { continue }

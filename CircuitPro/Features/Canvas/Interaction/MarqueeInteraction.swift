@@ -51,9 +51,11 @@ final class MarqueeInteraction: CanvasInteraction {
             $0.marqueeRect = marqueeRect
         }
 
+        let graph = context.graph
         let hitTester = GraphHitTester()
-        let graphHitIDs = Set(hitTester.hitTestAll(in: marqueeRect, context: context).map { $0.rawValue })
-        controller.setInteractionHighlight(nodeIDs: graphHitIDs)
+        let rawHits = hitTester.hitTestAll(in: marqueeRect, context: context)
+        let resolved = Set(rawHits.map { graph.selectionTarget(for: $0).rawValue })
+        controller.setInteractionHighlight(nodeIDs: resolved)
     }
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
