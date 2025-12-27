@@ -23,7 +23,7 @@ struct SymbolNodeAppearanceView: View {
 
     @Bindable var component: ComponentInstance
 
-    let symbolNode: SymbolNode
+    let symbol: GraphSymbolComponent
 
     var body: some View {
         VStack(spacing: 5) {
@@ -151,7 +151,7 @@ struct SymbolNodeAppearanceView: View {
     }
 
     private func makeDefaultTextInstance(for content: CircuitTextContent) -> CircuitText.Instance {
-        let bounds = symbolNode.interactionBounds
+        let bounds = symbol.localInteractionBounds() ?? .zero
         let position = defaultTextPosition(for: content, bounds: bounds)
 
         return CircuitText.Instance(

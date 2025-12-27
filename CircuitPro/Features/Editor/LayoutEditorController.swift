@@ -25,6 +25,7 @@ final class LayoutEditorController: EditorController {
     private var isApplyingTraceChangesToModel = false
     private var isSyncingTextFromModel = false
     private var isApplyingTextChangesToModel = false
+    private var isSyncingFootprintsFromModel = false
 
     // MARK: - Layout-Specific State
 
@@ -103,6 +104,7 @@ final class LayoutEditorController: EditorController {
             }
         } onChange: {
             Task { @MainActor in
+                self.refreshFootprintComponents()
                 self.refreshFootprintTextNodes()
                 self.refreshFootprintPadComponents()
                 self.startTrackingTextChanges()
@@ -156,21 +158,76 @@ final class LayoutEditorController: EditorController {
             return sideA.drawingOrder < sideB.drawingOrder
         }
 
-        // 2. Build the FootprintNodes for all placed components.
-        let footprintNodes: [FootprintNode] = design.componentInstances.compactMap { inst in
-            guard let footprintInst = inst.footprintInstance,
-                  case .placed = footprintInst.placement,
-                  footprintInst.definition != nil else {
-                return nil
-            }
-            return FootprintNode(id: inst.id, instance: footprintInst, canvasLayers: self.canvasLayers)
-        }
-
-        // 3. Combine all nodes into the final scene graph.
-        canvasStore.setNodes(footprintNodes)
+        canvasStore.setNodes([])
         syncTracesFromModel()
+        refreshFootprintComponents()
         refreshFootprintTextNodes()
         refreshFootprintPadComponents()
+    }
+
+    private func refreshFootprintComponents() {
+        let design = projectManager.selectedDesign
+        isSyncingFootprintsFromModel = true
+        var updatedIDs = Set<NodeID>()
+
+        for inst in design.componentInstances {
+            guard let footprintInst = inst.footprintInstance,
+                  case .placed = footprintInst.placement,
+                  let footprintDef = footprintInst.definition else {
+                continue
+            }
+
+            let nodeID = NodeID(inst.id)
+            let primitives = resolveFootprintPrimitives(for: footprintInst, definition: footprintDef)
+            let component = GraphFootprintComponent(
+                ownerID: inst.id,
+                position: footprintInst.position,
+                rotation: footprintInst.rotation,
+                primitives: primitives
+            )
+
+            if !graph.nodes.contains(nodeID) {
+                graph.addNode(nodeID)
+            }
+            graph.setComponent(component, for: nodeID)
+            updatedIDs.insert(nodeID)
+        }
+
+        let existingIDs = Set(graph.nodeIDs(with: GraphFootprintComponent.self))
+        for id in existingIDs.subtracting(updatedIDs) {
+            graph.removeComponent(GraphFootprintComponent.self, for: id)
+            if !graph.hasAnyComponent(for: id) {
+                graph.removeNode(id)
+            }
+        }
+
+        isSyncingFootprintsFromModel = false
+    }
+
+    private func resolveFootprintPrimitives(for instance: FootprintInstance, definition: FootprintDefinition) -> [AnyCanvasPrimitive] {
+        guard case .placed(let side) = instance.placement else {
+            return definition.primitives
+        }
+
+        return definition.primitives.map { primitive in
+            var copy = primitive
+            guard let genericLayerID = copy.layerId,
+                  let genericKind = LayerKind.allCases.first(where: { $0.stableId == genericLayerID }) else {
+                return copy
+            }
+
+            if let specificLayer = canvasLayers.first(where: { canvasLayer in
+                guard let layerType = canvasLayer.kind as? LayerType else { return false }
+                let kindMatches = layerType.kind == genericKind
+                let sideMatches = (side == .front && layerType.side == .front)
+                    || (side == .back && layerType.side == .back)
+                return kindMatches && sideMatches
+            }) {
+                copy.layerId = specificLayer.id
+            }
+
+            return copy
+        }
     }
 
     func refreshFootprintTextNodes() {
@@ -358,6 +415,10 @@ final class LayoutEditorController: EditorController {
                       let component = graph.component(GraphTextComponent.self, for: id),
                       !isSyncingTextFromModel {
                 applyGraphTextChange(component)
+            } else if componentKey == ObjectIdentifier(GraphFootprintComponent.self),
+                      let component = graph.component(GraphFootprintComponent.self, for: id),
+                      !isSyncingFootprintsFromModel {
+                applyGraphFootprintChange(component)
             }
         case .nodeRemoved(let id):
             primitiveCache.removeValue(forKey: id)
@@ -378,6 +439,53 @@ final class LayoutEditorController: EditorController {
         inst.apply(component.resolvedText, for: component.target)
         document.scheduleAutosave()
         isApplyingTextChangesToModel = false
+    }
+
+    private func applyGraphFootprintChange(_ component: GraphFootprintComponent) {
+        guard let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }),
+              let footprintInst = inst.footprintInstance else {
+            return
+        }
+        footprintInst.position = component.position
+        footprintInst.rotation = component.rotation
+        document.scheduleAutosave()
+    }
+
+    func footprintBinding(for id: UUID) -> Binding<GraphFootprintComponent>? {
+        let nodeID = NodeID(id)
+        guard graph.component(GraphFootprintComponent.self, for: nodeID) != nil else { return nil }
+        return Binding(
+            get: { self.graph.component(GraphFootprintComponent.self, for: nodeID)! },
+            set: { newValue in
+                if !self.graph.nodes.contains(nodeID) {
+                    self.graph.addNode(nodeID)
+                }
+                self.graph.setComponent(newValue, for: nodeID)
+            }
+        )
+    }
+
+    func textBinding(for id: UUID) -> Binding<GraphTextComponent>? {
+        let nodeID = NodeID(id)
+        guard graph.component(GraphTextComponent.self, for: nodeID) != nil else { return nil }
+        return Binding(
+            get: { self.graph.component(GraphTextComponent.self, for: nodeID)! },
+            set: { newValue in
+                self.setTextComponent(newValue, for: nodeID)
+            }
+        )
+    }
+
+    private func setTextComponent(_ component: GraphTextComponent, for id: NodeID) {
+        var updated = component
+        let ownerTransform = component.ownerTransform
+        updated.worldPosition = component.resolvedText.relativePosition.applying(ownerTransform)
+        updated.worldAnchorPosition = component.resolvedText.anchorPosition.applying(ownerTransform)
+        updated.worldRotation = component.ownerRotation + component.resolvedText.cardinalRotation.radians
+        if !graph.nodes.contains(id) {
+            graph.addNode(id)
+        }
+        graph.setComponent(updated, for: id)
     }
 
     private func handleTraceEngineChange() {

@@ -14,7 +14,6 @@ final class SchematicEditorController: EditorController {
 
     private let projectManager: ProjectManager
     private let document: CircuitProjectFileDocument
-    private let nodeProvider: SchematicNodeProvider
 
     let graph = CanvasGraph()
     let wireEngine: WireEngine
@@ -23,12 +22,12 @@ final class SchematicEditorController: EditorController {
     private var isApplyingWireChangesToModel = false
     private var isSyncingTextFromModel = false
     private var isApplyingTextChangesToModel = false
+    private var isSyncingSymbolsFromModel = false
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
         self.document = projectManager.document
         self.wireEngine = WireEngine(graph: graph)
-        self.nodeProvider = SchematicNodeProvider(wireEngine: self.wireEngine)
         self.wireEngine.onChange = { [weak self] in
             Task { @MainActor in
                 self?.persistGraph()
@@ -77,6 +76,7 @@ final class SchematicEditorController: EditorController {
             }
         } onChange: {
             Task { @MainActor in
+                self.refreshSymbolComponents()
                 self.refreshSymbolTextNodes()
                 self.refreshSymbolPinComponents()
                 self.startTrackingTextChanges()
@@ -103,12 +103,43 @@ final class SchematicEditorController: EditorController {
     private func rebuildNodes() async {
         let design = projectManager.selectedDesign
 
-        // This is where the graph is automatically synced on every rebuild.
-        let context = BuildContext(activeLayers: [])
-        canvasStore.setNodes(await nodeProvider.buildNodes(from: design, context: context))
+        canvasStore.setNodes([])
         syncWiresFromModel()
+        refreshSymbolComponents()
         refreshSymbolTextNodes()
         refreshSymbolPinComponents()
+    }
+
+    private func refreshSymbolComponents() {
+        let design = projectManager.selectedDesign
+        isSyncingSymbolsFromModel = true
+        var updatedIDs = Set<NodeID>()
+
+        for inst in design.componentInstances {
+            guard let symbolDef = inst.symbolInstance.definition else { continue }
+            let nodeID = NodeID(inst.id)
+            let component = GraphSymbolComponent(
+                ownerID: inst.id,
+                position: inst.symbolInstance.position,
+                rotation: inst.symbolInstance.rotation,
+                primitives: symbolDef.primitives
+            )
+            if !graph.nodes.contains(nodeID) {
+                graph.addNode(nodeID)
+            }
+            graph.setComponent(component, for: nodeID)
+            updatedIDs.insert(nodeID)
+        }
+
+        let existingIDs = Set(graph.nodeIDs(with: GraphSymbolComponent.self))
+        for id in existingIDs.subtracting(updatedIDs) {
+            graph.removeComponent(GraphSymbolComponent.self, for: id)
+            if !graph.hasAnyComponent(for: id) {
+                graph.removeNode(id)
+            }
+        }
+
+        isSyncingSymbolsFromModel = false
     }
 
     func refreshSymbolTextNodes() {
@@ -243,6 +274,10 @@ final class SchematicEditorController: EditorController {
                let component = graph.component(GraphTextComponent.self, for: id),
                !isSyncingTextFromModel {
                 applyGraphTextChange(component)
+            } else if componentKey == ObjectIdentifier(GraphSymbolComponent.self),
+                      let component = graph.component(GraphSymbolComponent.self, for: id),
+                      !isSyncingSymbolsFromModel {
+                applyGraphSymbolChange(component)
             }
         default:
             break
@@ -259,8 +294,52 @@ final class SchematicEditorController: EditorController {
         isApplyingTextChangesToModel = false
     }
 
+    private func applyGraphSymbolChange(_ component: GraphSymbolComponent) {
+        guard let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }) else { return }
+        inst.symbolInstance.position = component.position
+        inst.symbolInstance.rotation = component.rotation
+        document.scheduleAutosave()
+    }
+
     func findNode(with id: UUID) -> BaseNode? {
         return canvasStore.nodes.findNode(with: id)
+    }
+
+    func symbolBinding(for id: UUID) -> Binding<GraphSymbolComponent>? {
+        let nodeID = NodeID(id)
+        guard graph.component(GraphSymbolComponent.self, for: nodeID) != nil else { return nil }
+        return Binding(
+            get: { self.graph.component(GraphSymbolComponent.self, for: nodeID)! },
+            set: { newValue in
+                if !self.graph.nodes.contains(nodeID) {
+                    self.graph.addNode(nodeID)
+                }
+                self.graph.setComponent(newValue, for: nodeID)
+            }
+        )
+    }
+
+    func textBinding(for id: UUID) -> Binding<GraphTextComponent>? {
+        let nodeID = NodeID(id)
+        guard graph.component(GraphTextComponent.self, for: nodeID) != nil else { return nil }
+        return Binding(
+            get: { self.graph.component(GraphTextComponent.self, for: nodeID)! },
+            set: { newValue in
+                self.setTextComponent(newValue, for: nodeID)
+            }
+        )
+    }
+
+    private func setTextComponent(_ component: GraphTextComponent, for id: NodeID) {
+        var updated = component
+        let ownerTransform = component.ownerTransform
+        updated.worldPosition = component.resolvedText.relativePosition.applying(ownerTransform)
+        updated.worldAnchorPosition = component.resolvedText.anchorPosition.applying(ownerTransform)
+        updated.worldRotation = component.ownerRotation + component.resolvedText.cardinalRotation.radians
+        if !graph.nodes.contains(id) {
+            graph.addNode(id)
+        }
+        graph.setComponent(updated, for: id)
     }
 
     private func persistGraph() {

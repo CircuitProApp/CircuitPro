@@ -18,31 +18,31 @@ import SwiftData
 
 struct SymbolNodeAttributesView: View {
     @Environment(\.projectManager) private var projectManager
-    
+
     @Bindable var component: ComponentInstance
-    @Bindable var symbolNode: SymbolNode
-    
+    @Binding var symbol: GraphSymbolComponent
+
     @Query(sort: \FootprintDefinition.name) private var allFootprints: [FootprintDefinition]
-    
+
     @State private var selectedProperty: Property.Resolved.ID?
-    
+
     // MARK: - Computed Properties for Footprint Sections (Unchanged)
-    
+
     private var compatibleFootprints: [FootprintDefinition] {
         component.definition?.footprints.sorted(by: { $0.name < $1.name }) ?? []
     }
-    
+
     private var otherFootprints: [FootprintDefinition] {
         let compatibleUUIDs = Set(compatibleFootprints.map { $0.uuid })
         return allFootprints.filter { !compatibleUUIDs.contains($0.uuid) }
     }
-    
+
     /// The display name of the currently selected footprint.
     // --- MODIFIED: This now uses the resolver ---
     private var selectedFootprintName: String {
         return projectManager.syncManager.resolvedFootprintName(for: component) ?? "None"
     }
-    
+
     @State private var commitSessionID: UUID? // NEW
 
     private func withCommitSession(_ perform: (UUID) -> Void) {
@@ -125,7 +125,18 @@ struct SymbolNodeAttributesView: View {
             }
         )
     }
-    
+
+    private var positionBinding: Binding<CGPoint> {
+        Binding(
+            get: { symbol.position },
+            set: { newValue in
+                var updated = symbol
+                updated.position = newValue
+                symbol = updated
+            }
+        )
+    }
+
     // Body of the view (No changes needed here)
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -143,7 +154,7 @@ struct SymbolNodeAttributesView: View {
                     )
                 }
             }
-            
+
             Divider()
 
             InspectorSection("Footprint") {
@@ -181,18 +192,18 @@ struct SymbolNodeAttributesView: View {
                     .controlSize(.small)
                 }
             }
-            
+
             Divider()
-            
+
             InspectorSection("Transform") {
                 PointControlView(
                     title: "Position",
-                    point: $symbolNode.instance.position
+                    point: positionBinding
                 )
-                RotationControlView(object: $symbolNode.instance)
+                RotationControlView(object: $symbol)
             }
             Divider()
-            
+
             InspectorSection("Properties") {
                 VStack(spacing: 0) {
                     // This table is now bound to the resolved properties array

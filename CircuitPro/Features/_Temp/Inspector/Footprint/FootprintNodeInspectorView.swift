@@ -16,20 +16,20 @@
 import SwiftUI
 
 struct FootprintNodeInspectorView: View {
-    
+
     @Environment(\.projectManager)
     private var projectManager
-    
+
     /// The component instance that this footprint belongs to.
     /// This is used for displaying contextual information, like the RefDes.
     var component: ComponentInstance
-    
-    /// The actual scene node being inspected. Use @Bindable to allow direct editing of its properties.
-    @Bindable var footprintNode: FootprintNode
-    
+
+    /// The graph-backed footprint component being inspected.
+    @Binding var footprint: GraphFootprintComponent
+
     @State private var selectedTab: InspectorTab = .attributes
     private var availableTabs: [InspectorTab] = [.attributes]
-    
+
     @State private var commitSessionID: UUID? // NEW
 
     private func withCommitSession(_ perform: (UUID) -> Void) {
@@ -47,25 +47,25 @@ struct FootprintNodeInspectorView: View {
         }
         perform(id)
     }
-    
+
     /// A custom binding to safely get and set the board side from the `PlacementState` enum.
     private var placementSideBinding: Binding<BoardSide> {
         Binding(
             get: {
                 // If the footprint is placed, return its side.
                 // Otherwise, default to .front for the picker's initial state.
-                if case .placed(let side) = footprintNode.instance.placement {
+                if case .placed(let side) = component.footprintInstance?.placement {
                     return side
                 }
                 return .front
             },
             set: { newSide in
                 // When the picker's value changes, update the instance's placement.
-                footprintNode.instance.placement = .placed(side: newSide)
+                component.footprintInstance?.placement = .placed(side: newSide)
             }
         )
     }
-    
+
     private var refdesIndexBinding: Binding<Int> {
         Binding(
             get: { projectManager.syncManager.resolvedReferenceDesignator(for: component, onlyFrom: .layout) },
@@ -78,10 +78,21 @@ struct FootprintNodeInspectorView: View {
             }
         )
     }
-    
-    init(component: ComponentInstance, footprintNode: FootprintNode) {
+
+    private var positionBinding: Binding<CGPoint> {
+        Binding(
+            get: { footprint.position },
+            set: { newValue in
+                var updated = footprint
+                updated.position = newValue
+                footprint = updated
+            }
+        )
+    }
+
+    init(component: ComponentInstance, footprint: Binding<GraphFootprintComponent>) {
         self.component = component
-        self.footprintNode = footprintNode
+        self._footprint = footprint
     }
 
     var body: some View {
@@ -102,7 +113,7 @@ struct FootprintNodeInspectorView: View {
                             )
                         }
                     }
-                    
+
                     Divider()
 
                     InspectorSection("Placement") {
@@ -117,14 +128,14 @@ struct FootprintNodeInspectorView: View {
                     }
 
                     Divider()
-                    
+
                     // Manual implementation of the Transform section.
                     InspectorSection("Transform") {
                         PointControlView(
                             title: "Position",
-                            point: $footprintNode.instance.position
+                            point: positionBinding
                         )
-                        RotationControlView(object: $footprintNode.instance)
+                        RotationControlView(object: $footprint)
                     }
                 }
                 .padding(5)

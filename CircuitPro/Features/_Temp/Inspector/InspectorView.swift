@@ -13,41 +13,57 @@ struct InspectorView: View {
 
     @State private var selectedTab: InspectorTab = .attributes
 
-    /// A computed property that attempts to find the selected node from the currently active canvas.
-    private var singleSelectedNode: BaseNode? {
-        guard projectManager.selectedNodeIDs.count == 1,
-              let selectedID = projectManager.selectedNodeIDs.first else {
-            return nil
-        }
-        return projectManager.activeCanvasStore.nodes.findNode(with: selectedID)
+    private var singleSelectedID: UUID? {
+        guard projectManager.selectedNodeIDs.count == 1 else { return nil }
+        return projectManager.selectedNodeIDs.first
     }
 
-    /// A computed property that finds the ComponentInstance for a selected SymbolNode.
-    private var selectedComponentContext: (component: ComponentInstance, node: SymbolNode)? {
-        guard let symbolNode = singleSelectedNode as? SymbolNode else {
-            return nil
+    private var activeGraph: CanvasGraph? {
+        switch projectManager.selectedEditor {
+        case .schematic:
+            return projectManager.schematicController.graph
+        case .layout:
+            return projectManager.layoutController.graph
         }
-
-        if let componentInstance = projectManager.componentInstances.first(where: { $0.id == symbolNode.id }) {
-            return (componentInstance, symbolNode)
-        }
-
-        return nil
     }
 
-    /// A computed property that finds the ComponentInstance for a selected FootprintNode.
-    private var selectedFootprintContext: (component: ComponentInstance, node: FootprintNode)? {
-        // Ensure the selected node is a FootprintNode
-        guard let footprintNode = singleSelectedNode as? FootprintNode else {
-            return nil
-        }
+    private var selectedGraphID: NodeID? {
+        guard let selectedID = singleSelectedID,
+              let graph = activeGraph else { return nil }
+        let nodeID = NodeID(selectedID)
+        return graph.hasAnyComponent(for: nodeID) ? nodeID : nil
+    }
 
-        // The FootprintNode's ID is the same as the ComponentInstance's ID.
-        if let componentInstance = projectManager.componentInstances.first(where: { $0.id == footprintNode.id }) {
-            return (componentInstance, footprintNode)
-        }
+    /// A computed property that finds the ComponentInstance for a selected schematic symbol.
+    private var selectedSymbolContext: (component: ComponentInstance, symbol: Binding<GraphSymbolComponent>)? {
+        guard projectManager.selectedEditor == .schematic,
+              let nodeID = selectedGraphID,
+              let symbolBinding = projectManager.schematicController.symbolBinding(for: nodeID.rawValue),
+              let componentInstance = projectManager.componentInstances.first(where: { $0.id == nodeID.rawValue })
+        else { return nil }
 
-        return nil
+        return (componentInstance, symbolBinding)
+    }
+
+    /// A computed property that finds the ComponentInstance for a selected layout footprint.
+    private var selectedFootprintContext: (component: ComponentInstance, footprint: Binding<GraphFootprintComponent>)? {
+        guard projectManager.selectedEditor == .layout,
+              let nodeID = selectedGraphID,
+              let footprintBinding = projectManager.layoutController.footprintBinding(for: nodeID.rawValue),
+              let componentInstance = projectManager.componentInstances.first(where: { $0.id == nodeID.rawValue })
+        else { return nil }
+
+        return (componentInstance, footprintBinding)
+    }
+
+    private var selectedTextBinding: Binding<GraphTextComponent>? {
+        guard let nodeID = selectedGraphID else { return nil }
+        switch projectManager.selectedEditor {
+        case .schematic:
+            return projectManager.schematicController.textBinding(for: nodeID.rawValue)
+        case .layout:
+            return projectManager.layoutController.textBinding(for: nodeID.rawValue)
+        }
     }
 
     var body: some View {
@@ -66,16 +82,16 @@ struct InspectorView: View {
     /// The view content to display when the Schematic editor is active.
     @ViewBuilder
     private var schematicInspectorView: some View {
-        if let context = selectedComponentContext {
+        if let context = selectedSymbolContext {
             SymbolNodeInspectorHostView(
                 component: context.component,
-                symbolNode: context.node,
+                symbol: context.symbol,
                 selectedTab: $selectedTab
             )
             .id(context.component.id)
 
-        } else if let anchoredText = singleSelectedNode as? AnchoredTextNode {
-            AnchoredTextInspectorView(anchoredText: anchoredText)
+        } else if let textBinding = selectedTextBinding {
+            GraphTextInspectorView(text: textBinding)
 
         } else {
             selectionStatusView
@@ -88,7 +104,7 @@ struct InspectorView: View {
         if let context = selectedFootprintContext {
             FootprintNodeInspectorView(
                 component: context.component,
-                footprintNode: context.node
+                footprint: context.footprint
             )
             .id(context.component.id)
 
@@ -97,8 +113,8 @@ struct InspectorView: View {
             ScrollView {
                 PrimitivePropertiesView(primitive: binding)
             }
-        } else if let anchoredText = singleSelectedNode as? AnchoredTextNode {
-            AnchoredTextInspectorView(anchoredText: anchoredText)
+        } else if let textBinding = selectedTextBinding {
+            GraphTextInspectorView(text: textBinding)
 
         } else {
             selectionStatusView
