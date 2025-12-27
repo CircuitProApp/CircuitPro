@@ -39,6 +39,13 @@ struct SelectionInteraction: CanvasInteraction {
             } else if !modifierFlags.contains(.shift), !graph.selection.isEmpty {
                 graph.selection = []
             }
+
+            if context.environment.interactionMode == .graphOnly {
+                if !controller.selectedNodes.isEmpty {
+                    controller.setSelection(to: [])
+                }
+                return false
+            }
         }
 
         let currentSelection: [BaseNode] = controller.selectedNodes

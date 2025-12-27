@@ -7,11 +7,19 @@ final class HoverHighlightInteraction: CanvasInteraction {
     func mouseMoved(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard controller.selectedTool is CursorTool else { return }
 
-        if context.graph != nil {
+        if context.environment.interactionMode == .graphOnly {
             if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
                 controller.setInteractionHighlight(nodeIDs: [graphHit.rawValue])
-                return
+            } else {
+                controller.setInteractionHighlight(nodeIDs: [])
             }
+            return
+        }
+
+        if context.graph != nil,
+           let graphHit = GraphHitTester().hitTest(point: point, context: context) {
+            controller.setInteractionHighlight(nodeIDs: [graphHit.rawValue])
+            return
         }
 
         let tolerance = 5.0 / context.magnification

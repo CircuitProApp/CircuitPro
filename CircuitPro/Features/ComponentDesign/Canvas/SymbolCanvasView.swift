@@ -30,6 +30,7 @@ struct SymbolCanvasView: View {
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
                 graph: symbolEditor.graph,
                 environment: canvasManager.environment
+                    .withInteractionMode(.graphOnly)
                     .withGraphRenderProviders([
                         GraphTextRenderProvider(),
                         GraphPinRenderProvider()

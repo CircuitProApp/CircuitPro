@@ -29,7 +29,8 @@ final class MarqueeInteraction: CanvasInteraction {
         if context.graph != nil, GraphHitTester().hitTest(point: point, context: context) != nil {
             return false
         }
-        if context.sceneRoot.hitTest(point, tolerance: tolerance) != nil {
+        if context.environment.interactionMode != .graphOnly,
+           context.sceneRoot.hitTest(point, tolerance: tolerance) != nil {
             return false
         }
 
@@ -63,7 +64,11 @@ final class MarqueeInteraction: CanvasInteraction {
         if context.graph != nil {
             let hitTester = GraphHitTester()
             graphHitIDs = Set(hitTester.hitTestAll(in: marqueeRect, context: context).map { $0.rawValue })
-            intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
+            if context.environment.interactionMode == .graphOnly {
+                intersectingNodes = []
+            } else {
+                intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
+            }
         } else {
             graphHitIDs = []
             // Get all nodes that intersect the marquee rectangle.
@@ -98,6 +103,24 @@ final class MarqueeInteraction: CanvasInteraction {
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard case .dragging(_, let isAdditive, let initialSelection, let initialGraphSelection) = state else { return }
+
+        if context.environment.interactionMode == .graphOnly {
+            if let graph = context.graph {
+                let highlightedIDs = controller.interactionHighlightedNodeIDs
+                let graphHitIDs = highlightedIDs.filter { graph.hasAnyComponent(for: NodeID($0)) }
+                let finalGraphSelection = isAdditive
+                    ? initialGraphSelection.union(graphHitIDs.map(NodeID.init))
+                    : Set(graphHitIDs.map(NodeID.init))
+                if graph.selection != finalGraphSelection {
+                    graph.selection = finalGraphSelection
+                }
+            }
+            controller.setSelection(to: [])
+            self.state = .ready
+            controller.updateEnvironment { $0.marqueeRect = nil }
+            controller.setInteractionHighlight(nodeIDs: [])
+            return
+        }
 
         // 1. Get the nodes that were highlighted by the marquee drag.
         let highlightedNodes = controller.interactionHighlightedNodeIDs.compactMap { id in

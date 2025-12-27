@@ -45,6 +45,15 @@ private struct TraceEngineKey: CanvasEnvironmentKey {
     static let defaultValue: TraceEngine? = nil
 }
 
+enum CanvasInteractionMode {
+    case graphAndScene
+    case graphOnly
+}
+
+private struct InteractionModeKey: CanvasEnvironmentKey {
+    static let defaultValue = CanvasInteractionMode.graphAndScene
+}
+
 extension CanvasEnvironmentValues {
     var configuration: CanvasConfiguration {
         get { self[ConfigurationKey.self] }
@@ -66,6 +75,11 @@ extension CanvasEnvironmentValues {
         set { self[TraceEngineKey.self] = newValue }
     }
 
+    var interactionMode: CanvasInteractionMode {
+        get { self[InteractionModeKey.self] }
+        set { self[InteractionModeKey.self] = newValue }
+    }
+
     func withWireEngine(_ engine: WireEngine?) -> CanvasEnvironmentValues {
         var copy = self
         copy.wireEngine = engine
@@ -75,6 +89,12 @@ extension CanvasEnvironmentValues {
     func withTraceEngine(_ engine: TraceEngine?) -> CanvasEnvironmentValues {
         var copy = self
         copy.traceEngine = engine
+        return copy
+    }
+
+    func withInteractionMode(_ mode: CanvasInteractionMode) -> CanvasEnvironmentValues {
+        var copy = self
+        copy.interactionMode = mode
         return copy
     }
 }

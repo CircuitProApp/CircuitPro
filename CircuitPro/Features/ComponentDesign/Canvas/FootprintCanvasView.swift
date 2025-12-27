@@ -27,6 +27,7 @@ struct FootprintCanvasView: View {
                 layers: $footprintEditor.layers,
                 activeLayerId: $footprintEditor.activeLayerId,
                 environment: canvasManager.environment
+                    .withInteractionMode(.graphOnly)
                     .withGraphRenderProviders([
                         GraphTextRenderProvider(),
                         GraphPadRenderProvider()
