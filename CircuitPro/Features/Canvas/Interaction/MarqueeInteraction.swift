@@ -75,29 +75,8 @@ final class MarqueeInteraction: CanvasInteraction {
             intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
         }
 
-        // --- Smart Highlighting Logic ---
-        // This logic unifies the selection of a symbol and its text. If both are
-        // under the marquee, we only highlight the symbol.
-
-        var finalHighlightableNodes = Set(intersectingNodes)
-
-        // Find all the text nodes and symbol nodes within the current marquee area.
-        let textNodesInMarquee = finalHighlightableNodes.compactMap { $0 as? AnchoredTextNode }
-        let symbolsInMarquee = finalHighlightableNodes.compactMap { $0 as? SymbolNode }
-
-        var suppressedTextIDs = Set<UUID>()
-
-        // If a text node's parent symbol is also in the marquee, remove the text node
-        // from the highlight set to create a single, unified highlight on the symbol.
-        for textNode in textNodesInMarquee {
-            if let parentSymbol = textNode.parent as? SymbolNode, symbolsInMarquee.contains(parentSymbol) {
-                finalHighlightableNodes.remove(textNode)
-                suppressedTextIDs.insert(textNode.id)
-            }
-        }
-
-        var highlightedIDs = Set(finalHighlightableNodes.map { $0.id })
-        highlightedIDs.formUnion(graphHitIDs.subtracting(suppressedTextIDs))
+        var highlightedIDs = Set(intersectingNodes.map { $0.id })
+        highlightedIDs.formUnion(graphHitIDs)
         controller.setInteractionHighlight(nodeIDs: highlightedIDs)
     }
 

@@ -10,8 +10,8 @@ import SwiftUI
 /// A pure data model representing a schematic pin.
 ///
 /// This struct holds all the essential data for a pin but has no knowledge of how
-/// to draw itself or how to be hit-tested. It serves as the data source for a `PinNode`,
-/// which is the actual `CanvasElement` responsible for rendering and interaction.
+/// to draw itself or how to be hit-tested. It serves as the data source for graph
+/// components that provide rendering and interaction.
 struct Pin: Identifiable, Codable, Hashable, Transformable {
     var id: UUID = UUID()
     var name: String

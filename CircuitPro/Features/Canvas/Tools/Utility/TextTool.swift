@@ -7,22 +7,13 @@
 
 import SwiftUI
 
-/// A tool for creating `TextNode` instances on the canvas.
+/// A tool for creating graph-backed text elements on the canvas.
 class TextTool: CanvasTool {
 
     override var symbolName: String { CircuitProSymbols.Text.textBox }
     override var label: String {  "Text" }
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
-    //        let newTextModel = CircuitText.Resolved(
-    //            source: ,
-    //            content: ,
-    //            relativePosition: location,
-    //            anchorPosition: location
-    //        )
-    //
-    //        let newTextNode = TextNode(textModel: newTextModel)
-
         return .noResult
     }
 

@@ -9,8 +9,6 @@ final class DragInteraction: CanvasInteraction {
         let origin: CGPoint
         let originalNodePositions: [UUID: CGPoint]
         let graph: WireEngine?
-        let isAnchorDrag: Bool
-        let originalAnchorPositions: [UUID: CGPoint]
     }
 
     private struct GraphDraggingState {
@@ -146,7 +144,7 @@ final class DragInteraction: CanvasInteraction {
                graph.selection.contains(graphHit),
                graph.component(WireEdgeComponent.self, for: graphHit) != nil {
                 if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
-                    self.state = DraggingState(origin: point, originalNodePositions: [:], graph: wireEngine, isAnchorDrag: false, originalAnchorPositions: [:])
+                    self.state = DraggingState(origin: point, originalNodePositions: [:], graph: wireEngine)
                     self.didMove = false
                     return true
                 }
@@ -166,36 +164,24 @@ final class DragInteraction: CanvasInteraction {
             nodeToDrag = currentNode.parent
         }
         guard hitNodeIsSelected else { return false }
-        let isAnchorDrag = event.modifierFlags.contains(.control)
-        var originalAnchorPositions: [UUID: CGPoint] = [:]
         var originalPositions: [UUID: CGPoint] = [:]
         for node in controller.selectedNodes {
             if node is Transformable {
                 originalPositions[node.id] = node.position
             }
-            if isAnchorDrag, let textNode = node as? AnchoredTextNode {
-                originalAnchorPositions[node.id] = textNode.anchorPosition
-            }
         }
 
-        // Prime pin vertices for selected symbols so beginDrag has something to move
         if let wireEngine = context.environment.wireEngine {
-            for node in controller.selectedNodes {
-                if let sym = node as? SymbolNode, let symbolDef = sym.instance.definition {
-                    wireEngine.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
-                }
-            }
-
             let nodeSelection = Set(controller.selectedNodes.map { $0.id })
             let graphSelection = Set(context.graph?.selection.map { $0.rawValue } ?? [])
             let selectedIDs = nodeSelection.union(graphSelection)
             if wireEngine.beginDrag(selectedIDs: selectedIDs) {
-                self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: wireEngine, isAnchorDrag: isAnchorDrag, originalAnchorPositions: originalAnchorPositions)
+                self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: wireEngine)
             } else {
-                self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: nil, isAnchorDrag: isAnchorDrag, originalAnchorPositions: originalAnchorPositions)
+                self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: nil)
             }
         } else {
-            self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: nil, isAnchorDrag: isAnchorDrag, originalAnchorPositions: originalAnchorPositions)
+            self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: nil)
         }
 
         self.didMove = false
@@ -299,36 +285,17 @@ final class DragInteraction: CanvasInteraction {
         }
         let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
         let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
-        if currentState.isAnchorDrag {
-            for node in controller.selectedNodes {
-                guard let textNode = node as? AnchoredTextNode else { continue }
-                if let originalPosition = currentState.originalNodePositions[textNode.id] {
-                    textNode.position = originalPosition + deltaPoint
-                }
-                if let originalAnchorPos = currentState.originalAnchorPositions[textNode.id] {
-                    textNode.anchorPosition = originalAnchorPos + deltaPoint
-                }
-            }
-        } else {
-            for node in controller.selectedNodes {
-                if let originalPosition = currentState.originalNodePositions[node.id] {
-                    node.position = originalPosition + deltaPoint
-                    if let primitiveNode = node as? PrimitiveNode, let graph = context.graph {
-                        graph.setComponent(primitiveNode.primitive, for: NodeID(primitiveNode.id))
-                    }
+        for node in controller.selectedNodes {
+            if let originalPosition = currentState.originalNodePositions[node.id] {
+                node.position = originalPosition + deltaPoint
+                if let primitiveNode = node as? PrimitiveNode, let graph = context.graph {
+                    graph.setComponent(primitiveNode.primitive, for: NodeID(primitiveNode.id))
                 }
             }
         }
 
         if let graph = currentState.graph {
             graph.updateDrag(by: deltaPoint)
-        } else if let wireEngine = context.environment.wireEngine {
-            // Fallback: graph drag not active, do live pin sync for moved symbols
-            for node in controller.selectedNodes {
-                if let sym = node as? SymbolNode, let symbolDef = sym.instance.definition {
-                    wireEngine.syncPins(for: sym.instance, of: symbolDef, ownerID: sym.id)
-                }
-            }
         }
 
 
@@ -343,14 +310,6 @@ final class DragInteraction: CanvasInteraction {
         }
         if let graph = self.state?.graph {
             graph.endDrag()
-        }
-
-        if didMove {
-            for node in controller.selectedNodes {
-                if let textNode = node as? AnchoredTextNode {
-                    textNode.commitChanges()
-                }
-            }
         }
 
         self.state = nil

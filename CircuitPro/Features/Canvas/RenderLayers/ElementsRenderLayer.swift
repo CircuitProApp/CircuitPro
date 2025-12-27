@@ -153,7 +153,7 @@ final class ElementsRenderLayer: RenderLayer {
 
         // --- PHASE 2: Generate Individual Halos for All Other Nodes ---
         // This phase handles selected nodes that did NOT have a parent provide a unified halo.
-        // (e.g., a selected SymbolNode or FootprintNode)
+        // (e.g., a selected symbol or footprint component)
 
         for node in highlightedNodes {
             // If this node was handled by its parent in Phase 1, skip it.
