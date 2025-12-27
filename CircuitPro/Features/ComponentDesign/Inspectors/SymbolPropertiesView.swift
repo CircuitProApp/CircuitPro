@@ -24,9 +24,6 @@ struct SymbolPropertiesView: View {
                 } else if let selection = symbolEditor.singleSelectedPrimitive,
                           let binding = symbolEditor.primitiveBinding(for: selection.id.rawValue) {
                     PrimitivePropertiesView(primitive: binding)
-                } else if symbolEditor.singleSelectedNode != nil {
-                    Text("Properties for this element type are not yet implemented.")
-                        .padding()
                 } else {
                     Text(symbolEditor.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
                         .foregroundColor(.secondary)

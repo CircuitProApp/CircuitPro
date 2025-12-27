@@ -24,9 +24,6 @@ struct FootprintPropertiesView: View {
             } else if let selection = footprintEditor.singleSelectedPrimitive,
                       let binding = footprintEditor.primitiveBinding(for: selection.id.rawValue) {
                 PrimitivePropertiesView(primitive: binding)
-            } else if footprintEditor.singleSelectedNode != nil {
-                Text("Properties for this element type are not yet implemented.")
-                    .padding()
             }  else {
                 Text(footprintEditor.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
                     .foregroundColor(.secondary)

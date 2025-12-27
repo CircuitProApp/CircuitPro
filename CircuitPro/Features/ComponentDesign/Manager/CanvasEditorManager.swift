@@ -18,27 +18,12 @@ final class CanvasEditorManager {
     let textTarget: TextTarget
     let textOwnerID: UUID
 
-    var canvasNodes: [BaseNode] {
-        get { canvasStore.nodes }
-        set { canvasStore.setNodes(newValue) }
-    }
-
     var selectedElementIDs: Set<UUID> {
         get { canvasStore.selection }
         set { canvasStore.selection = newValue }
     }
 
-    var singleSelectedNode: BaseNode? {
-        guard selectedElementIDs.count == 1,
-              let id = selectedElementIDs.first,
-              let index = elementIndexMap[id] else {
-            return nil
-        }
-        return canvasNodes[index]
-    }
-
     var selectedTool: CanvasTool = CursorTool()
-    private var elementIndexMap: [UUID: Int] = [:]
     let graph = CanvasGraph()
     private var suppressGraphSelectionSync = false
     private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]
@@ -74,21 +59,12 @@ final class CanvasEditorManager {
         self.canvasStore = CanvasStore()
         self.textTarget = textTarget
         self.textOwnerID = UUID()
-        self.canvasStore.onNodesChanged = { [weak self] nodes in
-            self?.didUpdateNodes(nodes)
-        }
         self.canvasStore.onDelta = { [weak self] delta in
             self?.handleStoreDelta(delta)
         }
         self.graph.onDelta = { [weak self] delta in
             self?.handleGraphDelta(delta)
         }
-    }
-
-    private func didUpdateNodes(_ nodes: [BaseNode]) {
-        elementIndexMap = Dictionary(
-            uniqueKeysWithValues: nodes.enumerated().map { ($1.id, $0) }
-        )
     }
 
     private func handleStoreDelta(_ delta: CanvasStoreDelta) {
@@ -142,7 +118,6 @@ final class CanvasEditorManager {
 
     struct ElementItem: Identifiable {
         enum Kind {
-            case node(BaseNode)
             case primitive(NodeID, AnyCanvasPrimitive)
             case text(NodeID, GraphTextComponent)
             case pin(NodeID, GraphPinComponent)
@@ -153,7 +128,6 @@ final class CanvasEditorManager {
 
         var id: UUID {
             switch kind {
-            case .node(let node): return node.id
             case .primitive(let id, _): return id.rawValue
             case .text(let id, _): return id.rawValue
             case .pin(let id, _): return id.rawValue
@@ -163,8 +137,6 @@ final class CanvasEditorManager {
 
         var layerId: UUID? {
             switch kind {
-            case .node(let node):
-                return (node as? Layerable)?.layerId
             case .primitive(_, let primitive):
                 return primitive.layerId
             case .text(_, let text):
@@ -178,9 +150,6 @@ final class CanvasEditorManager {
     }
 
     var elementItems: [ElementItem] {
-        let nodeItems = canvasNodes
-            .filter { !($0 is PrimitiveNode) && !($0 is PinNode) && !($0 is PadNode) && !($0 is TextNode) }
-            .map { ElementItem(kind: .node($0)) }
         let primitiveItems = graph.components(AnyCanvasPrimitive.self).map { id, primitive in
             ElementItem(kind: .primitive(id, primitive))
         }
@@ -193,7 +162,7 @@ final class CanvasEditorManager {
         let padItems = graph.components(GraphPadComponent.self).map { id, pad in
             ElementItem(kind: .pad(id, pad))
         }
-        return nodeItems + primitiveItems + textItems + pinItems + padItems
+        return primitiveItems + textItems + pinItems + padItems
     }
 
     var singleSelectedPrimitive: (id: NodeID, primitive: AnyCanvasPrimitive)? {
@@ -313,7 +282,6 @@ final class CanvasEditorManager {
         canvasStore.setNodes([])
         canvasStore.selection = []
         selectedTool = CursorTool()
-        elementIndexMap = [:]
         layers = []
         activeLayerId = nil
         primitiveCache.removeAll()

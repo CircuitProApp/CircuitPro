@@ -38,11 +38,6 @@ struct CanvasElementRowView: View {
                 let displayName = componentProperties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
                 Label(displayName, systemImage: "tag.fill")
             }
-        case .node(let node):
-            switch node {
-            default:
-                Label("Unknown Element", systemImage: "questionmark.diamond")
-            }
         }
 
     }
