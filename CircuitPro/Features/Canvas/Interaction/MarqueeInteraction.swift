@@ -29,7 +29,7 @@ final class MarqueeInteraction: CanvasInteraction {
         if context.graph != nil, GraphHitTester().hitTest(point: point, context: context) != nil {
             return false
         }
-        if context.environment.interactionMode != .graphOnly,
+        if context.graph == nil,
            context.sceneRoot.hitTest(point, tolerance: tolerance) != nil {
             return false
         }
@@ -59,19 +59,14 @@ final class MarqueeInteraction: CanvasInteraction {
             $0.marqueeRect = marqueeRect
         }
 
-        let intersectingNodes: [BaseNode]
         let graphHitIDs: Set<UUID>
+        let intersectingNodes: [BaseNode]
         if context.graph != nil {
             let hitTester = GraphHitTester()
             graphHitIDs = Set(hitTester.hitTestAll(in: marqueeRect, context: context).map { $0.rawValue })
-            if context.environment.interactionMode == .graphOnly {
-                intersectingNodes = []
-            } else {
-                intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
-            }
+            intersectingNodes = []
         } else {
             graphHitIDs = []
-            // Get all nodes that intersect the marquee rectangle.
             intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
         }
 
@@ -83,16 +78,14 @@ final class MarqueeInteraction: CanvasInteraction {
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard case .dragging(_, let isAdditive, let initialSelection, let initialGraphSelection) = state else { return }
 
-        if context.environment.interactionMode == .graphOnly {
-            if let graph = context.graph {
-                let highlightedIDs = controller.interactionHighlightedNodeIDs
-                let graphHitIDs = highlightedIDs.filter { graph.hasAnyComponent(for: NodeID($0)) }
-                let finalGraphSelection = isAdditive
-                    ? initialGraphSelection.union(graphHitIDs.map(NodeID.init))
-                    : Set(graphHitIDs.map(NodeID.init))
-                if graph.selection != finalGraphSelection {
-                    graph.selection = finalGraphSelection
-                }
+        if let graph = context.graph {
+            let highlightedIDs = controller.interactionHighlightedNodeIDs
+            let graphHitIDs = highlightedIDs.filter { graph.hasAnyComponent(for: NodeID($0)) }
+            let finalGraphSelection = isAdditive
+                ? initialGraphSelection.union(graphHitIDs.map(NodeID.init))
+                : Set(graphHitIDs.map(NodeID.init))
+            if graph.selection != finalGraphSelection {
+                graph.selection = finalGraphSelection
             }
             controller.setSelection(to: [])
             self.state = .ready

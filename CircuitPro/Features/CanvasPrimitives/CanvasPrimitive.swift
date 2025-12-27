@@ -90,8 +90,8 @@ extension CanvasPrimitive {
         guard wasHit else { return nil }
 
         // Instead of constructing a graphics-specific CanvasHitTarget, we now return
-        // the primitive's own unique ID. This serves as the `partIdentifier` for the
-        // consuming PrimitiveNode, which will then build the final, generic hit target.
+        // the primitive's own unique ID. This serves as the `partIdentifier` for consumers
+        // that build the final, generic hit target.
         return self.id
     }
 

@@ -1,6 +1,6 @@
 import AppKit
 
-/// Handles node selection logic when the cursor is active.
+/// Handles graph selection logic when the cursor is active.
 struct SelectionInteraction: CanvasInteraction {
 
     var wantsRawInput: Bool { true }
@@ -30,22 +30,15 @@ struct SelectionInteraction: CanvasInteraction {
                 if newSelectionIDs != currentSelectionIDs {
                     graph.selection = newSelectionIDs
                 }
-
-                if !modifierFlags.contains(.shift), !controller.selectedNodes.isEmpty {
-                    controller.setSelection(to: [])
-                }
-
-                return false
             } else if !modifierFlags.contains(.shift), !graph.selection.isEmpty {
                 graph.selection = []
             }
 
-            if context.environment.interactionMode == .graphOnly {
-                if !controller.selectedNodes.isEmpty {
-                    controller.setSelection(to: [])
-                }
-                return false
+            if !controller.selectedNodes.isEmpty {
+                controller.setSelection(to: [])
             }
+
+            return false
         }
 
         let currentSelection: [BaseNode] = controller.selectedNodes

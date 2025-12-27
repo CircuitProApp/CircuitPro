@@ -25,13 +25,11 @@ final class ElementsRenderLayer: RenderLayer {
         if let defaultLayer = self.defaultLayer { allLayersToClear.append(defaultLayer) }
         allLayersToClear.forEach { $0.sublayers?.forEach { $0.removeFromSuperlayer() } }
 
-        // 3. Get all nodes in the scene.
-        let allNodes = context.sceneRoot.children.flatMap { flatten(node: $0) }
-
         // --- 4. GATHER ALL PRIMITIVES FIRST ---
 
-        var bodyPrimitivesByLayer = gatherBodyPrimitives(from: allNodes, in: context, skipPrimitiveNodes: context.graph != nil)
-        var haloPrimitivesByLayer = gatherHaloPrimitives(from: context, allNodes: allNodes)
+        var bodyPrimitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
+        var haloPrimitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
+
         if let graph = context.graph {
             let graphHalos = gatherGraphHaloPrimitives(from: graph, context: context)
             for (layerId, primitives) in graphHalos {
@@ -43,9 +41,7 @@ final class ElementsRenderLayer: RenderLayer {
                     haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
                 }
             }
-        }
 
-        if let graph = context.graph {
             let graphAdapter = GraphRenderAdapter()
             let graphPrimitivesByLayer = graphAdapter.primitivesByLayer(from: graph, context: context)
             for (layerId, primitives) in graphPrimitivesByLayer {
@@ -57,6 +53,11 @@ final class ElementsRenderLayer: RenderLayer {
                     bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
                 }
             }
+        } else {
+            // 3. Get all nodes in the scene.
+            let allNodes = context.sceneRoot.children.flatMap { flatten(node: $0) }
+            bodyPrimitivesByLayer = gatherBodyPrimitives(from: allNodes, in: context, skipPrimitiveNodes: false)
+            haloPrimitivesByLayer = gatherHaloPrimitives(from: context, allNodes: allNodes)
         }
 
         // --- 5. RENDER EVERYTHING ---

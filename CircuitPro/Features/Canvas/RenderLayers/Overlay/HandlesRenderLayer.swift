@@ -1,6 +1,6 @@
 import AppKit
 
-/// Renders the editing handles for a single selected `HandleEditable` node.
+/// Renders the editing handles for a single selected graph primitive.
 class HandlesRenderLayer: RenderLayer {
 
     private let shapeLayer = CAShapeLayer()
@@ -20,31 +20,8 @@ class HandlesRenderLayer: RenderLayer {
             render(handles: graphHandle.handles, transform: graphHandle.transform, context: context)
             return
         }
-
-        guard let node = findEditableNode(in: context) else {
-            // If no valid node is found, hide the layer and clear its path.
-            shapeLayer.isHidden = true
-            shapeLayer.path = nil
-            return
-        }
-
-        render(handles: node.editable.handles(), transform: node.node.worldTransform, context: context)
-    }
-
-    /// Finds a single selected node that conforms to `HandleEditable`.
-    private func findEditableNode(in context: RenderContext) -> (node: BaseNode, editable: HandleEditable)? {
-        guard context.highlightedNodeIDs.count == 1,
-              let nodeID = context.highlightedNodeIDs.first else {
-            return nil
-        }
-
-        guard let node = findNode(with: nodeID, in: context.sceneRoot),
-              let editableNode = node as? HandleEditable,
-              !editableNode.handles().isEmpty else {
-            return nil
-        }
-
-        return (node, editableNode)
+        shapeLayer.isHidden = true
+        shapeLayer.path = nil
     }
 
     private func findGraphEditable(in context: RenderContext) -> (handles: [CanvasHandle], transform: CGAffineTransform)? {
@@ -93,18 +70,5 @@ class HandlesRenderLayer: RenderLayer {
         // Update the layer's path and line width.
         shapeLayer.path = path
         shapeLayer.lineWidth = lineWidth
-    }
-
-    /// Recursively searches the scene graph for a node with a given ID.
-    private func findNode(with id: UUID, in root: BaseNode) -> BaseNode? {
-        if root.id == id { return root }
-
-        for child in root.children {
-            if let childNode = child as? BaseNode,
-               let found = findNode(with: id, in: childNode) {
-                return found
-            }
-        }
-        return nil
     }
 }

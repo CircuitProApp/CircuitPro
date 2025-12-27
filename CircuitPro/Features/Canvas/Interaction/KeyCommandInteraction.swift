@@ -10,8 +10,8 @@ import AppKit
 import Carbon.HIToolbox // For kVK constants
 
 /// An interaction that handles global keyboard commands like Escape, Return, Delete, and Rotate.
-/// It prioritizes sending commands to the active tool first, falling back to global actions
-/// (like deleting selected nodes) if the tool doesn't handle the command.
+/// It prioritizes sending commands to the active tool first, falling back to graph actions
+/// (like deleting selected elements) if the tool doesn't handle the command.
 struct KeyCommandInteraction: CanvasInteraction {
 
     func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool {
@@ -138,22 +138,7 @@ struct KeyCommandInteraction: CanvasInteraction {
             }
             return true
         }
-
-        guard !controller.selectedNodes.isEmpty else { return false }
-
-        // Remove the selected nodes from the scene graph.
-        let selectedIDs = Set(controller.selectedNodes.map { $0.id })
-        if let store = context.environment.canvasStore {
-            Task { @MainActor in
-                store.removeNodes(ids: selectedIDs)
-            }
-        }
-        controller.sceneRoot.children.removeAll { selectedIDs.contains($0.id) }
-
-        // Clear the selection.
-        controller.setSelection(to: [])
-
-        return true
+        return false
     }
 
     /// Handles the 'R' key for rotation.
@@ -174,18 +159,6 @@ struct KeyCommandInteraction: CanvasInteraction {
             }
             return true
         }
-
-        // Fallback: Rotate the selected nodes.
-        guard !controller.selectedNodes.isEmpty else { return false }
-
-        // WARNING: This assumes your concrete node classes that should be rotatable
-        // have a working 'set' implementation for their `rotation` property.
-        // The provided `BaseNode` has a no-op setter, so you must override it.
-        controller.selectedNodes.forEach { node in
-            // Example: Rotate by 90 degrees (π/2 radians).
-            node.rotation += .pi / 2
-        }
-
-        return true
+        return false
     }
 }

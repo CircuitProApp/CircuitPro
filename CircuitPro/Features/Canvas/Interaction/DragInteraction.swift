@@ -1,15 +1,9 @@
 import AppKit
 
-/// Handles dragging selected nodes on the canvas.
-/// This interaction can handle normal drags, wire drags via the `WireEngine`, and special
-/// anchor-repositioning drags for text nodes when the Control key is held.
+/// Handles dragging selected graph elements on the canvas.
+/// This interaction supports graph drags, wire drags via the `WireEngine`, and special
+/// anchor-repositioning drags for text elements when the Control key is held.
 final class DragInteraction: CanvasInteraction {
-
-    private struct DraggingState {
-        let origin: CGPoint
-        let originalNodePositions: [UUID: CGPoint]
-        let graph: WireEngine?
-    }
 
     private struct GraphDraggingState {
         let origin: CGPoint
@@ -27,7 +21,6 @@ final class DragInteraction: CanvasInteraction {
         let wireEngine: WireEngine?
     }
 
-    private var state: DraggingState?
     private var graphState: GraphDraggingState?
     private var didMove: Bool = false
     private let dragThreshold: CGFloat = 4.0
@@ -35,12 +28,10 @@ final class DragInteraction: CanvasInteraction {
     var wantsRawInput: Bool { true }
 
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
-        self.state = nil
         self.graphState = nil
         guard controller.selectedTool is CursorTool else { return false }
-        let tolerance = 5.0 / context.magnification
 
-        if controller.selectedNodes.isEmpty, let graph = context.graph {
+        if let graph = context.graph {
             if let graphHit = GraphHitTester().hitTest(point: point, context: context, scope: .graphOnly),
                graph.selection.contains(graphHit) {
                 let hitPrimitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) != nil
@@ -144,48 +135,13 @@ final class DragInteraction: CanvasInteraction {
                graph.selection.contains(graphHit),
                graph.component(WireEdgeComponent.self, for: graphHit) != nil {
                 if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
-                    self.state = DraggingState(origin: point, originalNodePositions: [:], graph: wireEngine)
                     self.didMove = false
                     return true
                 }
             }
             return false
         }
-
-        guard !controller.selectedNodes.isEmpty else { return false }
-        guard let hit = context.sceneRoot.hitTest(point, tolerance: tolerance) else { return false }
-        var nodeToDrag: BaseNode? = hit.node
-        var hitNodeIsSelected = false
-        while let currentNode = nodeToDrag {
-            if controller.selectedNodes.contains(where: { $0.id == currentNode.id }) {
-                hitNodeIsSelected = true
-                break
-            }
-            nodeToDrag = currentNode.parent
-        }
-        guard hitNodeIsSelected else { return false }
-        var originalPositions: [UUID: CGPoint] = [:]
-        for node in controller.selectedNodes {
-            if node is Transformable {
-                originalPositions[node.id] = node.position
-            }
-        }
-
-        if let wireEngine = context.environment.wireEngine {
-            let nodeSelection = Set(controller.selectedNodes.map { $0.id })
-            let graphSelection = Set(context.graph?.selection.map { $0.rawValue } ?? [])
-            let selectedIDs = nodeSelection.union(graphSelection)
-            if wireEngine.beginDrag(selectedIDs: selectedIDs) {
-                self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: wireEngine)
-            } else {
-                self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: nil)
-            }
-        } else {
-            self.state = DraggingState(origin: point, originalNodePositions: originalPositions, graph: nil)
-        }
-
-        self.didMove = false
-        return true
+        return false
     }
 
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
@@ -276,29 +232,6 @@ final class DragInteraction: CanvasInteraction {
             return
         }
 
-        guard let currentState = self.state else { return }
-
-        let rawDelta = CGVector(dx: point.x - currentState.origin.x, dy: point.y - currentState.origin.y)
-        if !didMove {
-            if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }
-            didMove = true
-        }
-        let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
-        let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
-        for node in controller.selectedNodes {
-            if let originalPosition = currentState.originalNodePositions[node.id] {
-                node.position = originalPosition + deltaPoint
-                if let primitiveNode = node as? PrimitiveNode, let graph = context.graph {
-                    graph.setComponent(primitiveNode.primitive, for: NodeID(primitiveNode.id))
-                }
-            }
-        }
-
-        if let graph = currentState.graph {
-            graph.updateDrag(by: deltaPoint)
-        }
-
-
     }
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
@@ -308,11 +241,6 @@ final class DragInteraction: CanvasInteraction {
             didMove = false
             return
         }
-        if let graph = self.state?.graph {
-            graph.endDrag()
-        }
-
-        self.state = nil
         self.didMove = false
     }
 }
