@@ -11,8 +11,6 @@ final class CanvasController {
 
     // MARK: - Core Data Model
 
-    /// The root of the internal scene graph. Its children are the nodes displayed on the canvas.
-    let sceneRoot: BaseNode = BaseNode()
     var interactionHighlightedNodeIDs: Set<UUID> = []
 
     // MARK: - View Reference
@@ -93,7 +91,6 @@ final class CanvasController {
         allHighlightedIDs.formUnion(graph?.selection.map { $0.rawValue } ?? [])
 
         return RenderContext(
-            sceneRoot: self.sceneRoot,
             magnification: self.magnification,
             mouseLocation: self.mouseLocation,
             selectedTool: self.selectedTool,

@@ -126,10 +126,6 @@ class GridRenderLayer: RenderLayer {
         CATransaction.commit()
     }
 
-    func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
-        return nil
-    }
-
     private func fadeFactor(magnification m: CGFloat) -> CGFloat {
         if m <= fadeOutEnd { return 0 }
         if m >= fadeOutStart { return 1 }

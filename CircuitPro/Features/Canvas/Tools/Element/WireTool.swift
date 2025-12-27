@@ -27,7 +27,7 @@ final class WireTool: CanvasTool {
         switch self.state {
         case .idle:
             let graphHit = GraphHitTester().hitTest(point: location, context: context.renderContext, scope: .graphOnly)
-            let initialDirection = determineInitialDirection(from: context.hitTarget, graphHit: graphHit, context: context.renderContext)
+            let initialDirection = determineInitialDirection(graphHit: graphHit, context: context.renderContext)
             self.state = .drawing(startPoint: location, direction: initialDirection)
             return .noResult
 
@@ -111,20 +111,7 @@ final class WireTool: CanvasTool {
     }
 
     // MARK: - Private Helpers
-    private func determineInitialDirection(from hitTarget: CanvasHitTarget?, graphHit: NodeID?, context: RenderContext) -> DrawingDirection {
-        guard let hitTarget = hitTarget else {
-            if let graphHit, let orientation = wireOrientation(for: graphHit, in: context) {
-                return orientation == .horizontal ? .vertical : .horizontal
-            }
-            return .horizontal
-        }
-
-        // Check if the partIdentifier contains a EdgeOrientation.
-        if let orientation = hitTarget.partIdentifier as? EdgeOrientation {
-            // We hit a wire! Start drawing perpendicular to it.
-            return orientation == .horizontal ? .vertical : .horizontal
-        }
-
+    private func determineInitialDirection(graphHit: NodeID?, context: RenderContext) -> DrawingDirection {
         if let graphHit, let orientation = wireOrientation(for: graphHit, in: context) {
             return orientation == .horizontal ? .vertical : .horizontal
         }

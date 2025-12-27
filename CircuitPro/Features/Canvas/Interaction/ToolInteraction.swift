@@ -14,7 +14,6 @@ struct ToolInteraction: CanvasInteraction {
         // MODIFIED: It's safer to get the click count from the passed-in event.
         let interactionContext = ToolInteractionContext(
             clickCount: event.clickCount,
-            hitTarget: nil,
             renderContext: context
         )
 

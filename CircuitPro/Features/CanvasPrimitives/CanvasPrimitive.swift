@@ -89,9 +89,9 @@ extension CanvasPrimitive {
         // If the geometry wasn't hit, we return nil as before.
         guard wasHit else { return nil }
 
-        // Instead of constructing a graphics-specific CanvasHitTarget, we now return
+        // Instead of constructing a framework-specific hit target, we return
         // the primitive's own unique ID. This serves as the `partIdentifier` for consumers
-        // that build the final, generic hit target.
+        // that build the final hit target.
         return self.id
     }
 

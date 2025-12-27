@@ -29,10 +29,6 @@ final class SheetRenderLayer: RenderLayer {
         CATransaction.commit()
     }
 
-    func hitTest(point: CGPoint, context: RenderContext) -> CanvasHitTarget? {
-        nil
-    }
-
     // MARK: - Building the layer tree
 
     private func createSheetLayers(context: RenderContext) -> [CALayer] {

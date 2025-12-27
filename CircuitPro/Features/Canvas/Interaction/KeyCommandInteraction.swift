@@ -71,7 +71,7 @@ struct KeyCommandInteraction: CanvasInteraction {
         case .noResult:
             return false
         case .command(let command):
-            command.execute(context: ToolInteractionContext(clickCount: 0, hitTarget: nil, renderContext: context), controller: controller)
+            command.execute(context: ToolInteractionContext(clickCount: 0, renderContext: context), controller: controller)
             return true
         case .newPrimitive(let primitive):
             guard let graph = context.graph else {

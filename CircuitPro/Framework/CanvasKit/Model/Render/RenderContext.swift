@@ -11,7 +11,6 @@ import AppKit
 /// This struct bundles all the information a layer might need to render itself.
 struct RenderContext {
     // MARK: - Core Framework Data
-    let sceneRoot: BaseNode
     let magnification: CGFloat
     let mouseLocation: CGPoint?
     let selectedTool: CanvasTool?
@@ -42,8 +41,7 @@ struct RenderContext {
         }
     }
 
-    init(sceneRoot: BaseNode, magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedNodeIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, graph: CanvasGraph?, environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
-        self.sceneRoot = sceneRoot
+    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedNodeIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, graph: CanvasGraph?, environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
         self.magnification = magnification
         self.mouseLocation = mouseLocation
         self.selectedTool = selectedTool

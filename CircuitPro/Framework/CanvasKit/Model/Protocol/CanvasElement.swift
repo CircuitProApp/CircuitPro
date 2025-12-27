@@ -12,7 +12,6 @@ import AppKit
 typealias CanvasElement =
     Transformable &
     Drawable &
-    Hittable &
     Bounded &
     Hashable &
     Identifiable
