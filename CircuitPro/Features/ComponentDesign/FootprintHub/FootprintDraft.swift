@@ -23,7 +23,7 @@ final class FootprintDraft: Identifiable, Hashable {
 
     init(name: String) {
         self.name = name
-        self.editor = CanvasEditorManager()
+        self.editor = CanvasEditorManager(textTarget: .footprint)
         self.editor.setupForFootprintEditing()
     }
 

@@ -10,7 +10,6 @@ import SwiftUI
 struct CanvasElementRowView: View {
     @Environment(ComponentDesignManager.self) private var componentDesignManager
     let element: CanvasEditorManager.ElementItem
-    let editor: CanvasEditorManager
 
     private var componentProperties: [Property.Definition] {
         componentDesignManager.componentProperties
@@ -27,23 +26,20 @@ struct CanvasElementRowView: View {
             Label("Pin \(pin.pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
         case .pad(_, let pad):
             Label("Pad \(pad.pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
+        case .text(_, let text):
+            switch text.resolvedText.content {
+            case .static:
+                Label("\"\(text.displayText)\"", systemImage: "text.bubble.fill")
+            case .componentName:
+                Label("Component Name", systemImage: "c.square.fill")
+            case .componentReferenceDesignator:
+                Label("Reference Designator", systemImage: "textformat.alt")
+            case .componentProperty(let definitionID, _):
+                let displayName = componentProperties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
+                Label(displayName, systemImage: "tag.fill")
+            }
         case .node(let node):
             switch node {
-            case let textNode as TextNode:
-                switch textNode.resolvedText.content {
-                case .static(let text):
-                    Label("\"\(text)\"", systemImage: "text.bubble.fill")
-
-                case .componentName:
-                    Label("Component Name", systemImage: "c.square.fill")
-
-                case .componentReferenceDesignator:
-                    Label("Reference Designator", systemImage: "textformat.alt")
-
-                case .componentProperty(let definitionID, _):
-                    let displayName = componentProperties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
-                    Label(displayName, systemImage: "tag.fill")
-                }
             default:
                 Label("Unknown Element", systemImage: "questionmark.diamond")
             }

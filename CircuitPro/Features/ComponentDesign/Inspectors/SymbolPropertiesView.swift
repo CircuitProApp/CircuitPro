@@ -18,12 +18,15 @@ struct SymbolPropertiesView: View {
                 if let selection = symbolEditor.singleSelectedPin,
                    let binding = symbolEditor.pinBinding(for: selection.id.rawValue) {
                     PinPropertiesView(pin: binding)
-                } else if let node = symbolEditor.singleSelectedNode,
-                          let textNode = node as? TextNode {
-                    TextPropertiesView(textNode: textNode)
+                } else if let selection = symbolEditor.singleSelectedText,
+                          let binding = symbolEditor.textBinding(for: selection.id.rawValue) {
+                    TextPropertiesView(textID: selection.id, text: binding)
                 } else if let selection = symbolEditor.singleSelectedPrimitive,
                           let binding = symbolEditor.primitiveBinding(for: selection.id.rawValue) {
                     PrimitivePropertiesView(primitive: binding)
+                } else if symbolEditor.singleSelectedNode != nil {
+                    Text("Properties for this element type are not yet implemented.")
+                        .padding()
                 } else {
                     Text(symbolEditor.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
                         .foregroundColor(.secondary)

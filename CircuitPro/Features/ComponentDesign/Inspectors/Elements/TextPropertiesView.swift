@@ -12,30 +12,37 @@ struct TextPropertiesView: View {
     @Environment(ComponentDesignManager.self)
     private var componentDesignManager
 
-    // NEW: The view now needs the editor to access the display text map.
     @Environment(CanvasEditorManager.self)
     private var editor
 
-    // The view correctly observes the TextNode as its primary source of truth.
-    @Bindable var textNode: TextNode
+    let textID: NodeID
+    @Binding var text: GraphTextComponent
 
     private var componentData: (name: String, prefix: String, properties: [Property.Definition]) {
         (componentDesignManager.componentName, componentDesignManager.referenceDesignatorPrefix, componentDesignManager.componentProperties)
     }
 
-    // MARK: - Custom Bindings (These are correct and unchanged)
+    // MARK: - Custom Bindings
 
     private var positionBinding: Binding<CGPoint> {
         Binding(
-            get: { textNode.resolvedText.relativePosition },
-            set: { textNode.resolvedText.relativePosition = $0 }
+            get: { text.resolvedText.relativePosition },
+            set: { newValue in
+                var updated = text
+                updated.resolvedText.relativePosition = newValue
+                text = updated
+            }
         )
     }
 
     private var anchorBinding: Binding<TextAnchor> {
         Binding(
-            get: { textNode.resolvedText.anchor },
-            set: { textNode.resolvedText.anchor = $0 }
+            get: { text.resolvedText.anchor },
+            set: { newValue in
+                var updated = text
+                updated.resolvedText.anchor = newValue
+                text = updated
+            }
         )
     }
 
@@ -67,7 +74,7 @@ struct TextPropertiesView: View {
     @ViewBuilder
     private var contentSection: some View {
         // Get the content enum directly from the node's data model.
-        let content = textNode.resolvedText.content
+        let content = text.resolvedText.content
 
         InspectorSection("Content") {
             // The description row remains, but uses the updated helper.
@@ -80,19 +87,16 @@ struct TextPropertiesView: View {
             // If the content is static, provide an editable text field.
             if case .static = content {
                 InspectorRow("Text") {
-                    // This binding now correctly reads from and writes to the editor's displayTextMap.
                     TextField("Static Text", text: Binding(
                         get: {
-                            // Read the current display text from the editor's map.
-                            editor.displayTextMap[textNode.id] ?? ""
+                            text.displayText
                         },
                         set: { newText in
-                            // On edit, update both the map and the node's display text for live refresh.
-                            editor.displayTextMap[textNode.id] = newText
-                            textNode.displayText = newText
-
-                            // To persist the change to the *model* for static text, we must update the enum.
-                            textNode.resolvedText.content = .static(text: newText)
+                            var updated = text
+                            updated.displayText = newText
+                            // Persist the change to the *model* for static text.
+                            updated.resolvedText.content = .static(text: newText)
+                            text = updated
                         }
                     )).inspectorField()
                 }
@@ -101,7 +105,7 @@ struct TextPropertiesView: View {
             // Check for component properties and bind to their display options.
             if case .componentProperty = content {
                 // Use the manager's helper to get a binding that handles the complex enum update.
-                if let optionsBinding = editor.bindingForDisplayOptions(with: textNode.id, componentData: componentData) {
+                if let optionsBinding = editor.bindingForDisplayOptions(with: textID.rawValue, componentData: componentData) {
 
                     Text("Display Options").font(.caption).foregroundColor(.secondary)
 

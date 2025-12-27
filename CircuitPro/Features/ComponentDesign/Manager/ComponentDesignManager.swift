@@ -13,23 +13,23 @@ import Observation
 final class ComponentDesignManager {
 
     // MARK: - Child Managers
-    let symbolEditor = CanvasEditorManager()
-    
+    let symbolEditor = CanvasEditorManager(textTarget: .symbol)
+
     // --- NEW ARCHITECTURE ---
-    
+
     /// Holds the work-in-progress drafts for each new footprint.
     /// Each draft is a self-contained object holding its name and its dedicated editor (UI state).
     var footprintDrafts: [FootprintDraft] = []
-    
+
     /// Holds footprints that will be linked from an existing library (pre-existing models).
     var assignedFootprints: [FootprintDefinition] = []
-    
+
     /// The ID of the currently selected footprint draft. This is the source of truth for navigation.
     /// If this is non-nil, the UI should show the canvas editor. If nil, it should show the Hub.
     var selectedFootprintID: UUID?
-    
+
     var currentStage: ComponentDesignStage = .details
-    
+
     /// A computed property to easily access the currently selected draft object and its associated editor.
     var selectedFootprintDraft: FootprintDraft? {
         guard let selectedFootprintID else { return nil }
@@ -55,7 +55,7 @@ final class ComponentDesignManager {
             didUpdateComponentData()
         }
     }
-    
+
     var componentProperties: [Property.Definition] {
         draftProperties.compactMap { draft in
             guard let key = draft.key else { return nil }
@@ -70,25 +70,25 @@ final class ComponentDesignManager {
 
     var availableTextSources: [(displayName: String, source: CircuitTextContent)] {
         var sources: [(String, CircuitTextContent)] = []
-        
+
         if !componentName.isEmpty {
             sources.append(("Name", .componentName))
         }
         if !referenceDesignatorPrefix.isEmpty {
             sources.append(("Reference", .componentReferenceDesignator))
         }
-        
+
         for propDef in componentProperties {
             sources.append((propDef.key.label, .componentProperty(definitionID: propDef.id, options: .default)))
         }
-        
+
         return sources
     }
 
     // MARK: - Validation State
     var validationSummary = ValidationSummary()
     var showFieldErrors = false
-    
+
     private var validator: ComponentValidator {
         ComponentValidator(manager: self)
     }
@@ -105,26 +105,26 @@ final class ComponentDesignManager {
     }
 
     // MARK: - Public Methods
-    
+
     /// Creates a new footprint draft, which encapsulates its own name and editor state.
     func addNewFootprint() {
         let newDraft = FootprintDraft(name: "Footprint \(footprintDrafts.count + 1)")
         footprintDrafts.append(newDraft)
         // We do NOT automatically select it. The user must click "Open" from the Hub.
     }
-    
+
     /// Resets the entire component design session to its initial state.
     func resetAll() {
         componentName = ""
         referenceDesignatorPrefix = ""
         selectedCategory = nil
         draftProperties = [DraftProperty(key: nil, value: .single(nil), unit: .init())]
-        
+
         symbolEditor.reset()
         footprintDrafts.removeAll()
         assignedFootprints.removeAll()
         selectedFootprintID = nil
-        
+
         validationSummary = ValidationSummary()
         showFieldErrors = false
     }

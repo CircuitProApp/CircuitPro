@@ -18,14 +18,15 @@ struct FootprintPropertiesView: View {
             if let selection = footprintEditor.singleSelectedPad,
                let binding = footprintEditor.padBinding(for: selection.id.rawValue) {
                 PadPropertiesView(pad: binding)
-            } else if let element = footprintEditor.singleSelectedNode,
-                      let textNode = element as? TextNode {
-                // TextPropertiesView will also use the manager from the environment
-                // to resolve bindings and other contextual data.
-                TextPropertiesView(textNode: textNode)
+            } else if let selection = footprintEditor.singleSelectedText,
+                      let binding = footprintEditor.textBinding(for: selection.id.rawValue) {
+                TextPropertiesView(textID: selection.id, text: binding)
             } else if let selection = footprintEditor.singleSelectedPrimitive,
                       let binding = footprintEditor.primitiveBinding(for: selection.id.rawValue) {
                 PrimitivePropertiesView(primitive: binding)
+            } else if footprintEditor.singleSelectedNode != nil {
+                Text("Properties for this element type are not yet implemented.")
+                    .padding()
             }  else {
                 Text(footprintEditor.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
                     .foregroundColor(.secondary)

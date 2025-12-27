@@ -195,26 +195,29 @@ struct ComponentDesignView: View {
     }
 
     private func createTextDefinitions(from editor: CanvasEditorManager, anchor: CGPoint) -> [CircuitText.Definition] {
-        let textNodes = editor.canvasNodes.compactMap { $0 as? TextNode }
+        let textItems = editor.graph.components(GraphTextComponent.self)
 
-        return textNodes.map { textNode in
-            let model = textNode.resolvedText
+        return textItems.map { _, component in
+            let model = component.resolvedText
             let centeredPosition = CGPoint(
                 x: model.relativePosition.x - anchor.x,
                 y: model.relativePosition.y - anchor.y
             )
+            let centeredAnchorPosition = CGPoint(
+                x: model.anchorPosition.x - anchor.x,
+                y: model.anchorPosition.y - anchor.y
+            )
 
             var finalContent = model.content
             if case .static = finalContent {
-                let userEnteredText = editor.displayTextMap[textNode.id] ?? ""
-                finalContent = .static(text: userEnteredText)
+                finalContent = .static(text: component.displayText)
             }
 
             return CircuitText.Definition(
                 id: model.id,
                 content: finalContent,
                 relativePosition: centeredPosition,
-                anchorPosition: centeredPosition,
+                anchorPosition: centeredAnchorPosition,
                 font: model.font,
                 color: model.color,
                 anchor: model.anchor,

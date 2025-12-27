@@ -35,7 +35,7 @@ struct SymbolElementListView: View {
             } else {
                 List(selection: $symbolEditor.selectedElementIDs) {
                     ForEach(symbolEditor.elementItems) { element in
-                        CanvasElementRowView(element: element, editor: symbolEditor)
+                        CanvasElementRowView(element: element)
                             .tag(element.id)
                     }
 

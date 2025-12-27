@@ -94,7 +94,7 @@ struct FootprintElementListView: View {
         DisclosureGroup(isExpanded: isExpandedBinding) {
             ForEach(children) { childItem in
                 if case .element(let element) = childItem.content {
-                    CanvasElementRowView(element: element, editor: editor)
+                    CanvasElementRowView(element: element)
                         .tag(childItem.id) // Tag elements for selection
                 }
             }
