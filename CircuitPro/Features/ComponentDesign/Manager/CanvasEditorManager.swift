@@ -87,14 +87,10 @@ final class CanvasEditorManager {
         switch delta {
         case .selectionChanged(let selection):
             let graphSelectionIDs = Set(selection.map { $0.rawValue })
-            let nonGraphSelection = canvasStore.selection.filter { id in
-                !graph.hasAnyComponent(for: NodeID(id))
-            }
-            let mergedSelection = Set(nonGraphSelection).union(graphSelectionIDs)
-            if canvasStore.selection != mergedSelection {
+            if canvasStore.selection != graphSelectionIDs {
                 suppressGraphSelectionSync = true
                 Task { @MainActor in
-                    self.canvasStore.selection = mergedSelection
+                    self.canvasStore.selection = graphSelectionIDs
                     self.suppressGraphSelectionSync = false
                 }
             }

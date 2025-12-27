@@ -29,10 +29,7 @@ struct ToolInteraction: CanvasInteraction {
             return true
 
         case .newPrimitive(let primitive):
-            guard let graph = context.graph else {
-                assertionFailure("Primitives require a graph-backed canvas.")
-                return true
-            }
+            let graph = context.graph
             let nodeID = NodeID(primitive.id)
             if !graph.nodes.contains(nodeID) {
                 graph.addNode(nodeID)

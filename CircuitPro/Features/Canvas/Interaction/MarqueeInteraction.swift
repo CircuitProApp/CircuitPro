@@ -23,7 +23,7 @@ final class MarqueeInteraction: CanvasInteraction {
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         guard controller.selectedTool is CursorTool else { return false }
 
-        guard let graph = context.graph else { return false }
+        let graph = context.graph
         if GraphHitTester().hitTest(point: point, context: context) != nil {
             return false
         }
@@ -59,19 +59,18 @@ final class MarqueeInteraction: CanvasInteraction {
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard case .dragging(_, let isAdditive, let initialGraphSelection) = state else { return }
 
-        if let graph = context.graph {
-            let highlightedIDs = controller.interactionHighlightedNodeIDs
-            let graphHitIDs = highlightedIDs.filter { graph.hasAnyComponent(for: NodeID($0)) }
-            let finalGraphSelection = isAdditive
-                ? initialGraphSelection.union(graphHitIDs.map(NodeID.init))
-                : Set(graphHitIDs.map(NodeID.init))
-            if graph.selection != finalGraphSelection {
-                graph.selection = finalGraphSelection
-            }
-            self.state = .ready
-            controller.updateEnvironment { $0.marqueeRect = nil }
-            controller.setInteractionHighlight(nodeIDs: [])
-            return
+        let graph = context.graph
+        let highlightedIDs = controller.interactionHighlightedNodeIDs
+        let graphHitIDs = highlightedIDs.filter { graph.hasAnyComponent(for: NodeID($0)) }
+        let finalGraphSelection = isAdditive
+            ? initialGraphSelection.union(graphHitIDs.map(NodeID.init))
+            : Set(graphHitIDs.map(NodeID.init))
+        if graph.selection != finalGraphSelection {
+            graph.selection = finalGraphSelection
         }
+        self.state = .ready
+        controller.updateEnvironment { $0.marqueeRect = nil }
+        controller.setInteractionHighlight(nodeIDs: [])
+        return
     }
 }

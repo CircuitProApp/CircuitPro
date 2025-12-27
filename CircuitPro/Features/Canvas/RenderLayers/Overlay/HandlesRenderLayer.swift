@@ -25,7 +25,7 @@ class HandlesRenderLayer: RenderLayer {
     }
 
     private func findGraphEditable(in context: RenderContext) -> (handles: [CanvasHandle], transform: CGAffineTransform)? {
-        guard let graph = context.graph else { return nil }
+        let graph = context.graph
         let selectionIDs = graph.selection
         guard selectionIDs.count == 1, let selectedID = selectionIDs.first else { return nil }
         guard let primitive = graph.component(AnyCanvasPrimitive.self, for: selectedID) else { return nil }

@@ -37,7 +37,7 @@ final class CanvasController {
     var environment: CanvasEnvironmentValues = .init()
     var layers: [CanvasLayer]?
     var activeLayerId: UUID?
-    var graph: CanvasGraph?
+    var graph: CanvasGraph = CanvasGraph()
 
     // MARK: - Pluggable Pipelines
 
@@ -74,7 +74,7 @@ final class CanvasController {
         environment: CanvasEnvironmentValues,
         layers: [CanvasLayer]?,
         activeLayerId: UUID?,
-        graph: CanvasGraph? = nil
+        graph: CanvasGraph
     ) {
         // --- Other State ---
         if self.selectedTool?.id != tool?.id { self.selectedTool = tool }
@@ -88,7 +88,7 @@ final class CanvasController {
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
     func currentContext(for hostViewBounds: CGRect, visibleRect: CGRect) -> RenderContext {
         var allHighlightedIDs = interactionHighlightedNodeIDs
-        allHighlightedIDs.formUnion(graph?.selection.map { $0.rawValue } ?? [])
+        allHighlightedIDs.formUnion(graph.selection.map { $0.rawValue })
 
         return RenderContext(
             magnification: self.magnification,

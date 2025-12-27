@@ -390,14 +390,10 @@ final class LayoutEditorController: EditorController {
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
             let graphSelectionIDs = Set(selection.map { $0.rawValue })
-            let nonGraphSelection = canvasStore.selection.filter { id in
-                !graph.hasAnyComponent(for: NodeID(id))
-            }
-            let mergedSelection = Set(nonGraphSelection).union(graphSelectionIDs)
-            if canvasStore.selection != mergedSelection {
+            if canvasStore.selection != graphSelectionIDs {
                 suppressGraphSelectionSync = true
                 Task { @MainActor in
-                    self.canvasStore.selection = mergedSelection
+                    self.canvasStore.selection = graphSelectionIDs
                     self.suppressGraphSelectionSync = false
                 }
             }

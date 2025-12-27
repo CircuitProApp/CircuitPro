@@ -5,20 +5,13 @@
 //  Created by Codex on 9/20/25.
 //
 
-import Foundation
+import CoreGraphics
 
 struct GraphHitTester {
-    enum Scope {
-        case all
-        case graphOnly
-    }
-
-    func hitTest(point: CGPoint, context: RenderContext, scope: Scope = .all) -> NodeID? {
-        guard let graph = context.graph else { return nil }
+    func hitTest(point: CGPoint, context: RenderContext) -> NodeID? {
+        let graph = context.graph
         let tolerance = 5.0 / context.magnification
         var best: GraphHitCandidate?
-
-        _ = scope
 
         for (id, primitive) in graph.components(AnyCanvasPrimitive.self) {
             let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
@@ -38,12 +31,9 @@ struct GraphHitTester {
         return best?.id
     }
 
-    func hitTestAll(in rect: CGRect, context: RenderContext, scope: Scope = .all) -> [NodeID] {
-        guard let graph = context.graph else { return [] }
-
+    func hitTestAll(in rect: CGRect, context: RenderContext) -> [NodeID] {
+        let graph = context.graph
         var hits = Set<NodeID>()
-
-        _ = scope
 
         for (id, primitive) in graph.components(AnyCanvasPrimitive.self) {
             let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)

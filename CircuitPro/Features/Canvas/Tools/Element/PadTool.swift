@@ -42,10 +42,7 @@ final class PadTool: CanvasTool {
         )
 
         return .command(CanvasToolCommand { interactionContext, _ in
-            guard let graph = interactionContext.renderContext.graph else {
-                assertionFailure("PadTool requires a graph-backed canvas.")
-                return
-            }
+            let graph = interactionContext.renderContext.graph
             let component = GraphPadComponent(
                 pad: pad,
                 ownerID: nil,
@@ -107,11 +104,7 @@ final class PadTool: CanvasTool {
     }
 
     private func nextPadNumber(in context: RenderContext) -> Int {
-        guard let graph = context.graph else {
-            assertionFailure("PadTool requires a graph-backed canvas.")
-            return 1
-        }
-
+        let graph = context.graph
         let numbers = graph.components(GraphPadComponent.self).map { $0.1.pad.number }
         return numbers.max().map { $0 + 1 } ?? 1
     }

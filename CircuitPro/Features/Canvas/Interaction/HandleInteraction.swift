@@ -15,7 +15,7 @@ final class HandleInteraction: CanvasInteraction {
     }
 
     private func startGraphDrag(point: CGPoint, context: RenderContext) -> Bool {
-        guard let graph = context.graph else { return false }
+        let graph = context.graph
         guard graph.selection.count == 1, let id = graph.selection.first else { return false }
         guard let primitive = graph.component(AnyCanvasPrimitive.self, for: id) else { return false }
 
@@ -47,8 +47,8 @@ final class HandleInteraction: CanvasInteraction {
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
         switch state {
         case .draggingGraph(let id, let handleKind, let oppositeWorldPosition):
-            guard let graph = context.graph,
-                  var primitive = graph.component(AnyCanvasPrimitive.self, for: id) else { return }
+            let graph = context.graph
+            guard var primitive = graph.component(AnyCanvasPrimitive.self, for: id) else { return }
 
             let worldToLocalTransform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
                 .rotated(by: primitive.rotation)

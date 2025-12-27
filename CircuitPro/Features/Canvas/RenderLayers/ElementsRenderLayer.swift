@@ -30,28 +30,27 @@ final class ElementsRenderLayer: RenderLayer {
         var bodyPrimitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
         var haloPrimitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
-        if let graph = context.graph {
-            let graphHalos = gatherGraphHaloPrimitives(from: graph, context: context)
-            for (layerId, primitives) in graphHalos {
+        let graph = context.graph
+        let graphHalos = gatherGraphHaloPrimitives(from: graph, context: context)
+        for (layerId, primitives) in graphHalos {
+            haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
+        }
+        for provider in context.environment.graphHaloProviders {
+            let provided = provider.haloPrimitives(from: graph, context: context, highlightedIDs: context.highlightedNodeIDs)
+            for (layerId, primitives) in provided {
                 haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
             }
-            for provider in context.environment.graphHaloProviders {
-                let provided = provider.haloPrimitives(from: graph, context: context, highlightedIDs: context.highlightedNodeIDs)
-                for (layerId, primitives) in provided {
-                    haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
-                }
-            }
+        }
 
-            let graphAdapter = GraphRenderAdapter()
-            let graphPrimitivesByLayer = graphAdapter.primitivesByLayer(from: graph, context: context)
-            for (layerId, primitives) in graphPrimitivesByLayer {
+        let graphAdapter = GraphRenderAdapter()
+        let graphPrimitivesByLayer = graphAdapter.primitivesByLayer(from: graph, context: context)
+        for (layerId, primitives) in graphPrimitivesByLayer {
+            bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
+        }
+        for provider in context.environment.graphRenderProviders {
+            let provided = provider.primitivesByLayer(from: graph, context: context)
+            for (layerId, primitives) in provided {
                 bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
-            }
-            for provider in context.environment.graphRenderProviders {
-                let provided = provider.primitivesByLayer(from: graph, context: context)
-                for (layerId, primitives) in provided {
-                    bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
-                }
             }
         }
 

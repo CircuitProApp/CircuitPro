@@ -18,10 +18,7 @@ final class PinTool: CanvasTool {
         let number = nextPinNumber(in: context.renderContext)
         let pin = Pin(name: "", number: number, position: location, cardinalRotation: rotation, type: .unknown, lengthType: .regular)
         return .command(CanvasToolCommand { interactionContext, _ in
-            guard let graph = interactionContext.renderContext.graph else {
-                assertionFailure("PinTool requires a graph-backed canvas.")
-                return
-            }
+            let graph = interactionContext.renderContext.graph
             let component = GraphPinComponent(
                 pin: pin,
                 ownerID: nil,
@@ -60,11 +57,7 @@ final class PinTool: CanvasTool {
     }
 
     private func nextPinNumber(in context: RenderContext) -> Int {
-        guard let graph = context.graph else {
-            assertionFailure("PinTool requires a graph-backed canvas.")
-            return 1
-        }
-
+        let graph = context.graph
         let numbers = graph.components(GraphPinComponent.self).map { $0.1.pin.number }
         return numbers.max().map { $0 + 1 } ?? 1
     }

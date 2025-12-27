@@ -38,123 +38,122 @@ final class DragInteraction: CanvasInteraction {
         self.wireState = nil
         guard controller.selectedTool is CursorTool else { return false }
 
-        if let graph = context.graph {
-            if let graphHit = GraphHitTester().hitTest(point: point, context: context, scope: .graphOnly),
-               graph.selection.contains(graphHit) {
-                let hitPrimitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) != nil
-                let hitText = graph.component(GraphTextComponent.self, for: graphHit) != nil
-                let hitPin = graph.component(GraphPinComponent.self, for: graphHit)
-                let hitPad = graph.component(GraphPadComponent.self, for: graphHit)
-                let hitSymbol = graph.component(GraphSymbolComponent.self, for: graphHit) != nil
-                let hitFootprint = graph.component(GraphFootprintComponent.self, for: graphHit) != nil
-                let hitSelectablePin = hitPin?.isSelectable ?? false
-                let hitSelectablePad = hitPad?.isSelectable ?? false
-                if hitPrimitive || hitText || hitSelectablePin || hitSelectablePad || hitSymbol || hitFootprint {
-                    let selectedIDs = graph.selection
-                    var originalPrimitives: [NodeID: AnyCanvasPrimitive] = [:]
-                    var originalTexts: [NodeID: GraphTextComponent] = [:]
-                    var originalPins: [NodeID: GraphPinComponent] = [:]
-                    var originalPads: [NodeID: GraphPadComponent] = [:]
-                    var originalSymbols: [NodeID: GraphSymbolComponent] = [:]
-                    var originalFootprints: [NodeID: GraphFootprintComponent] = [:]
-                    var ownerIDs = Set<UUID>()
-                    for id in selectedIDs {
-                        if let original = graph.component(AnyCanvasPrimitive.self, for: id) {
-                            originalPrimitives[id] = original
-                        }
-                        if let original = graph.component(GraphTextComponent.self, for: id) {
-                            originalTexts[id] = original
-                        }
-                        if let original = graph.component(GraphPinComponent.self, for: id), original.isSelectable {
-                            originalPins[id] = original
-                        }
-                        if let original = graph.component(GraphPadComponent.self, for: id), original.isSelectable {
-                            originalPads[id] = original
-                        }
-                        if let original = graph.component(GraphSymbolComponent.self, for: id) {
-                            originalSymbols[id] = original
-                            ownerIDs.insert(original.ownerID)
-                        }
-                        if let original = graph.component(GraphFootprintComponent.self, for: id) {
-                            originalFootprints[id] = original
-                            ownerIDs.insert(original.ownerID)
-                        }
+        let graph = context.graph
+        if let graphHit = GraphHitTester().hitTest(point: point, context: context),
+           graph.selection.contains(graphHit) {
+            let hitPrimitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) != nil
+            let hitText = graph.component(GraphTextComponent.self, for: graphHit) != nil
+            let hitPin = graph.component(GraphPinComponent.self, for: graphHit)
+            let hitPad = graph.component(GraphPadComponent.self, for: graphHit)
+            let hitSymbol = graph.component(GraphSymbolComponent.self, for: graphHit) != nil
+            let hitFootprint = graph.component(GraphFootprintComponent.self, for: graphHit) != nil
+            let hitSelectablePin = hitPin?.isSelectable ?? false
+            let hitSelectablePad = hitPad?.isSelectable ?? false
+            if hitPrimitive || hitText || hitSelectablePin || hitSelectablePad || hitSymbol || hitFootprint {
+                let selectedIDs = graph.selection
+                var originalPrimitives: [NodeID: AnyCanvasPrimitive] = [:]
+                var originalTexts: [NodeID: GraphTextComponent] = [:]
+                var originalPins: [NodeID: GraphPinComponent] = [:]
+                var originalPads: [NodeID: GraphPadComponent] = [:]
+                var originalSymbols: [NodeID: GraphSymbolComponent] = [:]
+                var originalFootprints: [NodeID: GraphFootprintComponent] = [:]
+                var ownerIDs = Set<UUID>()
+                for id in selectedIDs {
+                    if let original = graph.component(AnyCanvasPrimitive.self, for: id) {
+                        originalPrimitives[id] = original
                     }
-
-                    let ownedTextIDs = Set(graph.components(GraphTextComponent.self).compactMap { id, component in
-                        ownerIDs.contains(component.ownerID) ? id : nil
-                    })
-                    let ownedPinIDs = Set<NodeID>(graph.components(GraphPinComponent.self).compactMap { id, component in
-                        guard let ownerID = component.ownerID else { return nil }
-                        return ownerIDs.contains(ownerID) ? id : nil
-                    })
-                    let ownedPadIDs = Set<NodeID>(graph.components(GraphPadComponent.self).compactMap { id, component in
-                        guard let ownerID = component.ownerID else { return nil }
-                        return ownerIDs.contains(ownerID) ? id : nil
-                    })
-
-                    for id in ownedTextIDs {
-                        if originalTexts[id] == nil, let original = graph.component(GraphTextComponent.self, for: id) {
-                            originalTexts[id] = original
-                        }
+                    if let original = graph.component(GraphTextComponent.self, for: id) {
+                        originalTexts[id] = original
                     }
-                    for id in ownedPinIDs {
-                        if originalPins[id] == nil, let original = graph.component(GraphPinComponent.self, for: id) {
-                            originalPins[id] = original
-                        }
+                    if let original = graph.component(GraphPinComponent.self, for: id), original.isSelectable {
+                        originalPins[id] = original
                     }
-                    for id in ownedPadIDs {
-                        if originalPads[id] == nil, let original = graph.component(GraphPadComponent.self, for: id) {
-                            originalPads[id] = original
-                        }
+                    if let original = graph.component(GraphPadComponent.self, for: id), original.isSelectable {
+                        originalPads[id] = original
                     }
-
-                    var activeWireEngine: WireEngine?
-                    if let wireEngine = context.environment.wireEngine, !ownerIDs.isEmpty {
-                        let selectedRawIDs = Set(selectedIDs.map { $0.rawValue })
-                        if wireEngine.beginDrag(selectedIDs: selectedRawIDs) {
-                            activeWireEngine = wireEngine
-                        }
+                    if let original = graph.component(GraphSymbolComponent.self, for: id) {
+                        originalSymbols[id] = original
+                        ownerIDs.insert(original.ownerID)
                     }
-                    let isAnchorDrag = event.modifierFlags.contains(.control)
-                    self.graphState = GraphDraggingState(
-                        origin: point,
-                        originalPrimitives: originalPrimitives,
-                        originalTexts: originalTexts,
-                        ownedTextIDs: ownedTextIDs,
-                        originalPins: originalPins,
-                        ownedPinIDs: ownedPinIDs,
-                        originalPads: originalPads,
-                        ownedPadIDs: ownedPadIDs,
-                        originalSymbols: originalSymbols,
-                        originalFootprints: originalFootprints,
-                        ownerIDs: ownerIDs,
-                        isAnchorDrag: isAnchorDrag,
-                        wireEngine: activeWireEngine
-                    )
-                    self.didMove = false
-                    return true
+                    if let original = graph.component(GraphFootprintComponent.self, for: id) {
+                        originalFootprints[id] = original
+                        ownerIDs.insert(original.ownerID)
+                    }
                 }
-            }
 
-            if let wireEngine = context.environment.wireEngine,
-               let graphHit = GraphHitTester().hitTest(point: point, context: context, scope: .graphOnly),
-               graph.selection.contains(graphHit),
-               (graph.component(WireEdgeComponent.self, for: graphHit) != nil ||
-                graph.component(WireVertexComponent.self, for: graphHit) != nil) {
-                if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
-                    self.wireState = WireDraggingState(origin: point, wireEngine: wireEngine)
-                    self.didMove = false
-                    return true
+                let ownedTextIDs = Set(graph.components(GraphTextComponent.self).compactMap { id, component in
+                    ownerIDs.contains(component.ownerID) ? id : nil
+                })
+                let ownedPinIDs = Set<NodeID>(graph.components(GraphPinComponent.self).compactMap { id, component in
+                    guard let ownerID = component.ownerID else { return nil }
+                    return ownerIDs.contains(ownerID) ? id : nil
+                })
+                let ownedPadIDs = Set<NodeID>(graph.components(GraphPadComponent.self).compactMap { id, component in
+                    guard let ownerID = component.ownerID else { return nil }
+                    return ownerIDs.contains(ownerID) ? id : nil
+                })
+
+                for id in ownedTextIDs {
+                    if originalTexts[id] == nil, let original = graph.component(GraphTextComponent.self, for: id) {
+                        originalTexts[id] = original
+                    }
                 }
+                for id in ownedPinIDs {
+                    if originalPins[id] == nil, let original = graph.component(GraphPinComponent.self, for: id) {
+                        originalPins[id] = original
+                    }
+                }
+                for id in ownedPadIDs {
+                    if originalPads[id] == nil, let original = graph.component(GraphPadComponent.self, for: id) {
+                        originalPads[id] = original
+                    }
+                }
+
+                var activeWireEngine: WireEngine?
+                if let wireEngine = context.environment.wireEngine, !ownerIDs.isEmpty {
+                    let selectedRawIDs = Set(selectedIDs.map { $0.rawValue })
+                    if wireEngine.beginDrag(selectedIDs: selectedRawIDs) {
+                        activeWireEngine = wireEngine
+                    }
+                }
+                let isAnchorDrag = event.modifierFlags.contains(.control)
+                self.graphState = GraphDraggingState(
+                    origin: point,
+                    originalPrimitives: originalPrimitives,
+                    originalTexts: originalTexts,
+                    ownedTextIDs: ownedTextIDs,
+                    originalPins: originalPins,
+                    ownedPinIDs: ownedPinIDs,
+                    originalPads: originalPads,
+                    ownedPadIDs: ownedPadIDs,
+                    originalSymbols: originalSymbols,
+                    originalFootprints: originalFootprints,
+                    ownerIDs: ownerIDs,
+                    isAnchorDrag: isAnchorDrag,
+                    wireEngine: activeWireEngine
+                )
+                self.didMove = false
+                return true
             }
-            return false
+        }
+
+        if let wireEngine = context.environment.wireEngine,
+           let graphHit = GraphHitTester().hitTest(point: point, context: context),
+           graph.selection.contains(graphHit),
+           (graph.component(WireEdgeComponent.self, for: graphHit) != nil ||
+            graph.component(WireVertexComponent.self, for: graphHit) != nil) {
+            if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
+                self.wireState = WireDraggingState(origin: point, wireEngine: wireEngine)
+                self.didMove = false
+                return true
+            }
         }
         return false
     }
 
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
-        if let currentGraphState = graphState, let graph = context.graph {
+        if let currentGraphState = graphState {
+            let graph = context.graph
             let rawDelta = CGVector(dx: point.x - currentGraphState.origin.x, dy: point.y - currentGraphState.origin.y)
             if !didMove {
                 if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }

@@ -74,10 +74,7 @@ struct KeyCommandInteraction: CanvasInteraction {
             command.execute(context: ToolInteractionContext(clickCount: 0, renderContext: context), controller: controller)
             return true
         case .newPrimitive(let primitive):
-            guard let graph = context.graph else {
-                assertionFailure("Primitives require a graph-backed canvas.")
-                return true
-            }
+            let graph = context.graph
             let nodeID = NodeID(primitive.id)
             if !graph.nodes.contains(nodeID) {
                 graph.addNode(nodeID)
@@ -99,46 +96,45 @@ struct KeyCommandInteraction: CanvasInteraction {
         }
 
         // If no tool handled it, perform the standard "delete selection" action.
-        if let graph = context.graph, !graph.selection.isEmpty {
-            let selectedIDs = Set(graph.selection.map { $0.rawValue })
-            let hasWireSelection = graph.selection.contains { id in
-                graph.component(WireEdgeComponent.self, for: id) != nil ||
-                graph.component(WireVertexComponent.self, for: id) != nil
-            }
+        let graph = context.graph
+        guard !graph.selection.isEmpty else { return false }
+        let selectedIDs = Set(graph.selection.map { $0.rawValue })
+        let hasWireSelection = graph.selection.contains { id in
+            graph.component(WireEdgeComponent.self, for: id) != nil ||
+            graph.component(WireVertexComponent.self, for: id) != nil
+        }
 
-            if hasWireSelection, let wireEngine = context.environment.wireEngine {
-                wireEngine.delete(items: selectedIDs)
-                graph.selection = []
-                Task { @MainActor in
-                    context.environment.canvasStore?.selection.subtract(selectedIDs)
-                }
-                return true
-            }
-
-            let hasTraceSelection = graph.selection.contains { id in
-                graph.component(TraceEdgeComponent.self, for: id) != nil ||
-                graph.component(TraceVertexComponent.self, for: id) != nil
-            }
-
-            if hasTraceSelection, let traceEngine = context.environment.traceEngine {
-                traceEngine.delete(items: selectedIDs)
-                graph.selection = []
-                Task { @MainActor in
-                    context.environment.canvasStore?.selection.subtract(selectedIDs)
-                }
-                return true
-            }
-
-            for id in graph.selection {
-                graph.removeNode(id)
-            }
+        if hasWireSelection, let wireEngine = context.environment.wireEngine {
+            wireEngine.delete(items: selectedIDs)
             graph.selection = []
             Task { @MainActor in
                 context.environment.canvasStore?.selection.subtract(selectedIDs)
             }
             return true
         }
-        return false
+
+        let hasTraceSelection = graph.selection.contains { id in
+            graph.component(TraceEdgeComponent.self, for: id) != nil ||
+            graph.component(TraceVertexComponent.self, for: id) != nil
+        }
+
+        if hasTraceSelection, let traceEngine = context.environment.traceEngine {
+            traceEngine.delete(items: selectedIDs)
+            graph.selection = []
+            Task { @MainActor in
+                context.environment.canvasStore?.selection.subtract(selectedIDs)
+            }
+            return true
+        }
+
+        for id in graph.selection {
+            graph.removeNode(id)
+        }
+        graph.selection = []
+        Task { @MainActor in
+            context.environment.canvasStore?.selection.subtract(selectedIDs)
+        }
+        return true
     }
 
     /// Handles the 'R' key for rotation.
@@ -151,14 +147,13 @@ struct KeyCommandInteraction: CanvasInteraction {
             return true
         }
 
-        if let graph = context.graph, !graph.selection.isEmpty {
-            for id in graph.selection {
-                guard var primitive = graph.component(AnyCanvasPrimitive.self, for: id) else { continue }
-                primitive.rotation += .pi / 2
-                graph.setComponent(primitive, for: id)
-            }
-            return true
+        let graph = context.graph
+        guard !graph.selection.isEmpty else { return false }
+        for id in graph.selection {
+            guard var primitive = graph.component(AnyCanvasPrimitive.self, for: id) else { continue }
+            primitive.rotation += .pi / 2
+            graph.setComponent(primitive, for: id)
         }
-        return false
+        return true
     }
 }
