@@ -13,7 +13,6 @@ final class CanvasController {
 
     /// The root of the internal scene graph. Its children are the nodes displayed on the canvas.
     let sceneRoot: BaseNode = BaseNode()
-    var selectedNodes: [BaseNode] = []
     var interactionHighlightedNodeIDs: Set<UUID> = []
 
     // MARK: - View Reference
@@ -51,7 +50,6 @@ final class CanvasController {
 
     // MARK: - Callbacks to Owner
 
-    var onSelectionChanged: ((Set<UUID>) -> Void)?
     var onCanvasChange: ((CanvasChangeContext) -> Void)?
     var onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
 
@@ -73,8 +71,6 @@ final class CanvasController {
 
     /// The primary entry point for SwiftUI to push state updates *into* the controller.
     func sync(
-        nodes: [BaseNode],
-        selection: Set<UUID>,
         tool: CanvasTool?,
         magnification: CGFloat,
         environment: CanvasEnvironmentValues,
@@ -82,34 +78,6 @@ final class CanvasController {
         activeLayerId: UUID?,
         graph: CanvasGraph? = nil
     ) {
-        // --- Smart Node Syncing Logic ---
-        // This diffing approach is the perfect balance of performance and simplicity.
-        // It avoids destroying/recreating existing nodes if they haven't changed,
-        // but doesn't require a complex `update(from:)` method on the nodes themselves.
-        let newNodesByID = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
-        let oldNodeIDs = Set(sceneRoot.children.map { $0.id })
-        let newNodeIDs = Set(newNodesByID.keys)
-
-        // 1. Remove nodes that are no longer in the new set.
-        if oldNodeIDs != newNodeIDs {
-            let nodesToRemove = oldNodeIDs.subtracting(newNodeIDs)
-            sceneRoot.children.removeAll { nodesToRemove.contains($0.id) }
-        }
-
-        // 2. Add new nodes that weren't there before and re-order all children.
-        //    By re-assigning the whole array, we ensure the render order is correct.
-        sceneRoot.children = nodes.map { newNode in
-            // Re-parent the node to our sceneRoot.
-            newNode.parent = sceneRoot
-            return newNode
-        }
-
-        // --- Selection Syncing ---
-        let currentSelectedIDs = Set(self.selectedNodes.map { $0.id })
-        if currentSelectedIDs != selection {
-            self.selectedNodes = selection.compactMap { id in findNode(with: id, in: sceneRoot) }
-        }
-
         // --- Other State ---
         if self.selectedTool?.id != tool?.id { self.selectedTool = tool }
         self.magnification = magnification
@@ -121,11 +89,8 @@ final class CanvasController {
 
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
     func currentContext(for hostViewBounds: CGRect, visibleRect: CGRect) -> RenderContext {
-        let selectedIDs = Set(self.selectedNodes.map { $0.id })
-        var allHighlightedIDs = selectedIDs.union(interactionHighlightedNodeIDs)
-        if let graph = graph {
-            allHighlightedIDs.formUnion(graph.selection.map { $0.rawValue })
-        }
+        var allHighlightedIDs = interactionHighlightedNodeIDs
+        allHighlightedIDs.formUnion(graph?.selection.map { $0.rawValue } ?? [])
 
         return RenderContext(
             sceneRoot: self.sceneRoot,
@@ -157,13 +122,6 @@ final class CanvasController {
 
     // MARK: - Interaction API
 
-    func setSelection(to nodes: [BaseNode]) {
-        self.selectedNodes = nodes
-        let nodeIDs = Set(nodes.map { $0.id })
-        let graphIDs = Set(graph?.selection.map { $0.rawValue } ?? [])
-        self.onSelectionChanged?(nodeIDs.union(graphIDs))
-    }
-
     func setInteractionHighlight(nodeIDs: Set<UUID>) {
         guard self.interactionHighlightedNodeIDs != nodeIDs else { return }
         self.interactionHighlightedNodeIDs = nodeIDs
@@ -173,17 +131,5 @@ final class CanvasController {
     func updateEnvironment(_ block: (inout CanvasEnvironmentValues) -> Void) {
         block(&environment)
         view?.performLayerUpdate() // Redraw for transient state like Marquee.
-    }
-
-    /// Recursively finds a node in the scene graph.
-    func findNode(with id: UUID, in root: BaseNode) -> BaseNode? {
-        if root.id == id { return root }
-        for child in root.children {
-            if let childNode = child as? BaseNode,
-               let found = findNode(with: id, in: childNode) {
-                return found
-            }
-        }
-        return nil
     }
 }

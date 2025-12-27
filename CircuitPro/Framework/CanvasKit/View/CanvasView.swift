@@ -61,33 +61,20 @@ struct CanvasView: NSViewRepresentable {
         let canvasController: CanvasController
 
         private var viewportBinding: Binding<CanvasViewport>
-        private let store: CanvasStore
 
         private var magnificationObservation: NSKeyValueObservation?
         private var boundsChangeObserver: Any?
 
         init(
             viewport: Binding<CanvasViewport>,
-            store: CanvasStore,
             renderLayers: [any RenderLayer],
             interactions: [any CanvasInteraction],
             inputProcessors: [any InputProcessor],
             snapProvider: any SnapProvider
         ) {
             self.viewportBinding = viewport
-            self.store = store
             self.canvasController = CanvasController(renderLayers: renderLayers, interactions: interactions, inputProcessors: inputProcessors, snapProvider: snapProvider)
             super.init()
-            setupControllerCallbacks()
-        }
-
-        private func setupControllerCallbacks() {
-            canvasController.onSelectionChanged = { [weak self] newSelectionIDs in
-                guard let self else { return }
-                Task { @MainActor in
-                    self.store.selection = newSelectionIDs
-                }
-            }
         }
 
         func observeScrollView(_ scrollView: NSScrollView) {
@@ -129,7 +116,6 @@ struct CanvasView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator {
         let coordinator = Coordinator(
             viewport: $viewport,
-            store: store,
             renderLayers: self.renderLayers,
             interactions: self.interactions,
             inputProcessors: self.inputProcessors,
@@ -164,10 +150,9 @@ struct CanvasView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
         controller.onCanvasChange = self.onCanvasChange
+        _ = store.revision
 
         controller.sync(
-            nodes: self.store.nodes,
-            selection: self.store.selection,
             tool: self.tool,
             magnification: self.viewport.magnification,
             environment: self.environment,

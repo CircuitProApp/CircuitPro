@@ -103,14 +103,17 @@ final class CanvasEditorManager {
                let primitive = graph.component(AnyCanvasPrimitive.self, for: id) {
                 primitiveCache[id] = primitive
             }
+            canvasStore.invalidate()
         case .nodeRemoved(let id):
             primitiveCache.removeValue(forKey: id)
+            canvasStore.invalidate()
         case .nodeAdded:
-            break
+            canvasStore.invalidate()
         case .componentRemoved(let id, let componentKey):
             if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self) {
                 primitiveCache.removeValue(forKey: id)
             }
+            canvasStore.invalidate()
         default:
             break
         }
@@ -279,8 +282,8 @@ final class CanvasEditorManager {
     )
 
     func reset() {
-        canvasStore.setNodes([])
         canvasStore.selection = []
+        canvasStore.invalidate()
         selectedTool = CursorTool()
         layers = []
         activeLayerId = nil

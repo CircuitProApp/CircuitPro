@@ -12,34 +12,17 @@ import Observation
 @MainActor
 @Observable
 final class CanvasStore {
-    var nodes: [BaseNode] = []
     var selection: Set<UUID> = [] {
         didSet {
+            guard selection != oldValue else { return }
             onDelta?(.selectionChanged(selection))
+            invalidate()
         }
     }
-    var onNodesChanged: (([BaseNode]) -> Void)?
+    var revision: Int = 0
     var onDelta: ((CanvasStoreDelta) -> Void)?
 
-    func setNodes(_ nodes: [BaseNode], emitDelta: Bool = true) {
-        self.nodes = nodes
-        onNodesChanged?(nodes)
-        if emitDelta {
-            onDelta?(.reset(nodes: nodes))
-        }
-    }
-
-    func addNode(_ node: BaseNode) {
-        nodes.append(node)
-        onNodesChanged?(nodes)
-        onDelta?(.nodesAdded([node]))
-    }
-
-    func removeNodes(ids: Set<UUID>, emitDelta: Bool = true) {
-        nodes.removeAll { ids.contains($0.id) }
-        onNodesChanged?(nodes)
-        if emitDelta {
-            onDelta?(.nodesRemoved(ids: ids))
-        }
+    func invalidate() {
+        revision &+= 1
     }
 }

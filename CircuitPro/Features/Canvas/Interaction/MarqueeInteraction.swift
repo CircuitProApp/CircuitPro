@@ -12,8 +12,7 @@ final class MarqueeInteraction: CanvasInteraction {
         /// - Parameters:
         ///   - origin: The starting point of the drag in canvas coordinates.
         ///   - isAdditive: Whether the user is holding Shift to add to the selection.
-        ///   - initialSelection: The set of nodes that were selected when the drag began.
-        case dragging(origin: CGPoint, isAdditive: Bool, initialSelection: [BaseNode], initialGraphSelection: Set<NodeID>)
+        case dragging(origin: CGPoint, isAdditive: Bool, initialGraphSelection: Set<NodeID>)
     }
 
     private var state: State = .ready
@@ -24,13 +23,8 @@ final class MarqueeInteraction: CanvasInteraction {
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         guard controller.selectedTool is CursorTool else { return false }
 
-        let tolerance = 5.0 / context.magnification
-        // This interaction starts only if the click was on an empty area.
-        if context.graph != nil, GraphHitTester().hitTest(point: point, context: context) != nil {
-            return false
-        }
-        if context.graph == nil,
-           context.sceneRoot.hitTest(point, tolerance: tolerance) != nil {
+        guard let graph = context.graph else { return false }
+        if GraphHitTester().hitTest(point: point, context: context) != nil {
             return false
         }
 
@@ -38,20 +32,18 @@ final class MarqueeInteraction: CanvasInteraction {
         let isAdditive = event.modifierFlags.contains(.shift)
 
         // Store the selection state at the beginning of the drag.
-        let initialSelection = controller.selectedNodes
-        let initialGraphSelection = context.graph?.selection ?? []
+        let initialGraphSelection = graph.selection
 
         self.state = .dragging(
             origin: point,
             isAdditive: isAdditive,
-            initialSelection: initialSelection,
             initialGraphSelection: initialGraphSelection
         )
         return true
     }
 
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
-        guard case .dragging(let origin, _, _, _) = state else { return }
+        guard case .dragging(let origin, _, _) = state else { return }
 
         let marqueeRect = CGRect(origin: origin, size: .zero).union(CGRect(origin: point, size: .zero))
 
@@ -59,24 +51,13 @@ final class MarqueeInteraction: CanvasInteraction {
             $0.marqueeRect = marqueeRect
         }
 
-        let graphHitIDs: Set<UUID>
-        let intersectingNodes: [BaseNode]
-        if context.graph != nil {
-            let hitTester = GraphHitTester()
-            graphHitIDs = Set(hitTester.hitTestAll(in: marqueeRect, context: context).map { $0.rawValue })
-            intersectingNodes = []
-        } else {
-            graphHitIDs = []
-            intersectingNodes = context.sceneRoot.nodes(intersecting: marqueeRect)
-        }
-
-        var highlightedIDs = Set(intersectingNodes.map { $0.id })
-        highlightedIDs.formUnion(graphHitIDs)
-        controller.setInteractionHighlight(nodeIDs: highlightedIDs)
+        let hitTester = GraphHitTester()
+        let graphHitIDs = Set(hitTester.hitTestAll(in: marqueeRect, context: context).map { $0.rawValue })
+        controller.setInteractionHighlight(nodeIDs: graphHitIDs)
     }
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
-        guard case .dragging(_, let isAdditive, let initialSelection, let initialGraphSelection) = state else { return }
+        guard case .dragging(_, let isAdditive, let initialGraphSelection) = state else { return }
 
         if let graph = context.graph {
             let highlightedIDs = controller.interactionHighlightedNodeIDs
@@ -87,42 +68,10 @@ final class MarqueeInteraction: CanvasInteraction {
             if graph.selection != finalGraphSelection {
                 graph.selection = finalGraphSelection
             }
-            controller.setSelection(to: [])
             self.state = .ready
             controller.updateEnvironment { $0.marqueeRect = nil }
             controller.setInteractionHighlight(nodeIDs: [])
             return
         }
-
-        // 1. Get the nodes that were highlighted by the marquee drag.
-        let highlightedNodes = controller.interactionHighlightedNodeIDs.compactMap { id in
-            controller.findNode(with: id, in: context.sceneRoot)
-        }
-
-        // 2. Calculate the final selection.
-        if let graph = context.graph {
-            let highlightedIDs = controller.interactionHighlightedNodeIDs
-            let graphHitIDs = highlightedIDs.filter { graph.hasAnyComponent(for: NodeID($0)) }
-            let finalGraphSelection = isAdditive
-                ? initialGraphSelection.union(graphHitIDs.map(NodeID.init))
-                : Set(graphHitIDs.map(NodeID.init))
-            if graph.selection != finalGraphSelection {
-                graph.selection = finalGraphSelection
-            }
-        }
-
-        if isAdditive {
-            // Additive mode: Union of the initial selection and the marquee selection.
-            let finalSelection = Set(initialSelection).union(Set(highlightedNodes))
-            controller.setSelection(to: Array(finalSelection))
-        } else {
-            // Default mode: The marquee selection replaces the old selection.
-            controller.setSelection(to: highlightedNodes)
-        }
-
-        // 3. Clean up state.
-        self.state = .ready
-        controller.updateEnvironment { $0.marqueeRect = nil }
-        controller.setInteractionHighlight(nodeIDs: [])
     }
 }

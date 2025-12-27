@@ -11,13 +11,10 @@ struct ToolInteraction: CanvasInteraction {
             return false
         }
 
-        let tolerance = 5.0 / context.magnification
-        let hitTarget = context.sceneRoot.hitTest(point, tolerance: tolerance)
-
         // MODIFIED: It's safer to get the click count from the passed-in event.
         let interactionContext = ToolInteractionContext(
             clickCount: event.clickCount,
-            hitTarget: hitTarget,
+            hitTarget: nil,
             renderContext: context
         )
 

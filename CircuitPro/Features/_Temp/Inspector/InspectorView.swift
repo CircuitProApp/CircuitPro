@@ -133,17 +133,3 @@ struct InspectorView: View {
         .frame(maxWidth: .infinity)
     }
 }
-
-extension Array where Element == BaseNode {
-    func findNode(with id: UUID) -> BaseNode? {
-        for node in self {
-            if node.id == id {
-                return node
-            }
-            if let foundInChildren = node.children.findNode(with: id) {
-                return foundInChildren
-            }
-        }
-        return nil
-    }
-}

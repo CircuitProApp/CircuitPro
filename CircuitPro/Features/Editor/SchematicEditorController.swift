@@ -8,8 +8,6 @@ final class SchematicEditorController: EditorController {
 
     let canvasStore = CanvasStore()
 
-    var nodes: [BaseNode] { canvasStore.nodes }
-
     var selectedTool: CanvasTool = CursorTool()
 
     private let projectManager: ProjectManager
@@ -103,11 +101,12 @@ final class SchematicEditorController: EditorController {
     private func rebuildNodes() async {
         let design = projectManager.selectedDesign
 
-        canvasStore.setNodes([])
+        canvasStore.selection = []
         syncWiresFromModel()
         refreshSymbolComponents()
         refreshSymbolTextNodes()
         refreshSymbolPinComponents()
+        canvasStore.invalidate()
     }
 
     private func refreshSymbolComponents() {
@@ -193,7 +192,7 @@ final class SchematicEditorController: EditorController {
         }
 
         isSyncingTextFromModel = false
-        canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
+        canvasStore.invalidate()
     }
 
     private func refreshSymbolPinComponents() {
@@ -279,6 +278,13 @@ final class SchematicEditorController: EditorController {
                       !isSyncingSymbolsFromModel {
                 applyGraphSymbolChange(component)
             }
+            canvasStore.invalidate()
+        case .nodeRemoved:
+            canvasStore.invalidate()
+        case .nodeAdded:
+            canvasStore.invalidate()
+        case .componentRemoved:
+            canvasStore.invalidate()
         default:
             break
         }
@@ -299,10 +305,6 @@ final class SchematicEditorController: EditorController {
         inst.symbolInstance.position = component.position
         inst.symbolInstance.rotation = component.rotation
         document.scheduleAutosave()
-    }
-
-    func findNode(with id: UUID) -> BaseNode? {
-        return canvasStore.nodes.findNode(with: id)
     }
 
     func symbolBinding(for id: UUID) -> Binding<GraphSymbolComponent>? {

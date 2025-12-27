@@ -12,10 +12,8 @@ final class LayoutEditorController: EditorController {
 
     // MARK: - EditorController Conformance
 
-    /// The final, renderable scene graph for the layout canvas.
+    /// The canvas store for view invalidation and selection.
     let canvasStore = CanvasStore()
-
-    var nodes: [BaseNode] { canvasStore.nodes }
 
     let graph = CanvasGraph()
     private var suppressGraphSelectionSync = false
@@ -158,11 +156,12 @@ final class LayoutEditorController: EditorController {
             return sideA.drawingOrder < sideB.drawingOrder
         }
 
-        canvasStore.setNodes([])
+        canvasStore.selection = []
         syncTracesFromModel()
         refreshFootprintComponents()
         refreshFootprintTextNodes()
         refreshFootprintPadComponents()
+        canvasStore.invalidate()
     }
 
     private func refreshFootprintComponents() {
@@ -286,7 +285,7 @@ final class LayoutEditorController: EditorController {
         }
 
         isSyncingTextFromModel = false
-        canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
+        canvasStore.invalidate()
     }
 
     private func refreshFootprintPadComponents() {
@@ -330,11 +329,6 @@ final class LayoutEditorController: EditorController {
                 graph.removeNode(id)
             }
         }
-    }
-
-    /// Finds a node (and its children) recursively by its ID.
-    func findNode(with id: UUID) -> BaseNode? {
-        return canvasStore.nodes.findNode(with: id)
     }
 
     // MARK: - Private Helpers
@@ -420,12 +414,17 @@ final class LayoutEditorController: EditorController {
                       !isSyncingFootprintsFromModel {
                 applyGraphFootprintChange(component)
             }
+            canvasStore.invalidate()
         case .nodeRemoved(let id):
             primitiveCache.removeValue(forKey: id)
+            canvasStore.invalidate()
+        case .nodeAdded:
+            canvasStore.invalidate()
         case .componentRemoved(let id, let componentKey):
             if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self) {
                 primitiveCache.removeValue(forKey: id)
             }
+            canvasStore.invalidate()
         default:
             break
         }
@@ -490,7 +489,7 @@ final class LayoutEditorController: EditorController {
 
     private func handleTraceEngineChange() {
         persistTraces()
-        canvasStore.setNodes(canvasStore.nodes, emitDelta: false)
+        canvasStore.invalidate()
     }
 
     private func persistTraces() {
