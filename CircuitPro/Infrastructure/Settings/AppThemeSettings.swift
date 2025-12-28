@@ -88,7 +88,8 @@ struct CanvasStyle: Codable, Identifiable, Equatable {
         gridHex = try container.decode(String.self, forKey: .gridHex)
         textHex = try container.decode(String.self, forKey: .textHex)
         markerHex = try container.decode(String.self, forKey: .markerHex)
-        crosshairHex = try container.decodeIfPresent(String.self, forKey: .crosshairHex) ?? "#3B82F6"
+        crosshairHex =
+            try container.decodeIfPresent(String.self, forKey: .crosshairHex) ?? "#3B82F6"
         isBuiltin = try container.decode(Bool.self, forKey: .isBuiltin)
     }
 }
@@ -101,7 +102,7 @@ enum CanvasStyleStore {
         [
             CanvasStyle(
                 id: UUID(uuidString: "E862CE61-9C5F-4E4D-9A38-3B7B19E0AF6E")!,
-                name: "Light",
+                name: "Pristine",
                 backgroundHex: "#FFFFFF",
                 gridHex: "#8E8E93",
                 textHex: "#1C1C1E",
@@ -114,9 +115,9 @@ enum CanvasStyleStore {
                 name: "Sandstone",
                 backgroundHex: "#F4EFE6",
                 gridHex: "#C4B8A3",
-                textHex: "#3E3428",
+                textHex: "#5D1010",
                 markerHex: "#7F6A55",
-                crosshairHex: "#A6723A",
+                crosshairHex: "#A64B44",
                 isBuiltin: true
             ),
             CanvasStyle(
@@ -131,14 +132,14 @@ enum CanvasStyleStore {
             ),
             CanvasStyle(
                 id: UUID(uuidString: "1E8B1F14-0C74-4C98-8E0E-4C6A2F1E2B64")!,
-                name: "Dark",
+                name: "Pro",
                 backgroundHex: "#1C1C1E",
                 gridHex: "#636366",
                 textHex: "#F2F2F7",
                 markerHex: "#AEAEB2",
                 crosshairHex: "#60A5FA",
                 isBuiltin: true
-            )
+            ),
         ]
     }
 
@@ -148,17 +149,19 @@ enum CanvasStyleStore {
     }
 
     static var defaultSelectedLightID: String {
-        defaultStyles.first(where: { $0.name == "Light" })?.id.uuidString ?? defaultStyles.first?.id.uuidString ?? ""
+        defaultStyles.first(where: { $0.name == "Pristine" })?.id.uuidString ?? defaultStyles.first?
+            .id.uuidString ?? ""
     }
 
     static var defaultSelectedDarkID: String {
-        defaultStyles.first(where: { $0.name == "Dark" })?.id.uuidString ?? defaultStyles.first?.id.uuidString ?? ""
+        defaultStyles.first(where: { $0.name == "Pro" })?.id.uuidString ?? defaultStyles.first?.id
+            .uuidString ?? ""
     }
 
     static func loadStyles(from dataString: String) -> [CanvasStyle] {
         guard let data = dataString.data(using: .utf8),
-              let styles = try? decoder.decode([CanvasStyle].self, from: data),
-              !styles.isEmpty
+            let styles = try? decoder.decode([CanvasStyle].self, from: data),
+            !styles.isEmpty
         else { return defaultStyles }
         return styles
     }
@@ -202,8 +205,8 @@ extension Color {
     }
 }
 
-private extension NSColor {
-    convenience init?(hex: String) {
+extension NSColor {
+    fileprivate convenience init?(hex: String) {
         guard let rgba = RGBAColor(hex: hex) else { return nil }
         self.init(
             red: rgba.red,
@@ -213,7 +216,7 @@ private extension NSColor {
         )
     }
 
-    func toHexRGBA() -> String {
+    fileprivate func toHexRGBA() -> String {
         let color = usingColorSpace(.sRGB) ?? self
         var red: CGFloat = 0
         var green: CGFloat = 0
@@ -242,10 +245,10 @@ private struct RGBAColor {
             blue = CGFloat(value & 0x0000FF) / 255.0
             alpha = 1.0
         } else {
-            red = CGFloat((value & 0xFF000000) >> 24) / 255.0
-            green = CGFloat((value & 0x00FF0000) >> 16) / 255.0
-            blue = CGFloat((value & 0x0000FF00) >> 8) / 255.0
-            alpha = CGFloat(value & 0x000000FF) / 255.0
+            red = CGFloat((value & 0xFF00_0000) >> 24) / 255.0
+            green = CGFloat((value & 0x00FF_0000) >> 16) / 255.0
+            blue = CGFloat((value & 0x0000_FF00) >> 8) / 255.0
+            alpha = CGFloat(value & 0x0000_00FF) / 255.0
         }
     }
 
