@@ -22,9 +22,22 @@ struct GraphTextHaloProvider: GraphHaloProvider {
             let worldPath = component.worldPath()
             guard !worldPath.isEmpty else { continue }
 
-            let textColor = context.environment.canvasTheme.textColor
+            let theme = context.environment.canvasTheme
+            let textColor = theme.textColor
+            let crosshairColor = theme.crosshairColor
+
+            let nsTextColor = NSColor(cgColor: textColor) ?? .labelColor
+            var saturation: CGFloat = 0
+            var isChromatic = false
+            if let sRGBColor = nsTextColor.usingColorSpace(.sRGB) {
+                sRGBColor.getHue(nil, saturation: &saturation, brightness: nil, alpha: nil)
+                isChromatic = saturation > 0.1
+            }
+
+            let baseColor = isChromatic ? textColor : crosshairColor
             let haloColor =
-                NSColor(cgColor: textColor)?.withAlphaComponent(0.4).cgColor ?? textColor
+                NSColor(cgColor: baseColor)?.withAlphaComponent(0.4).cgColor ?? baseColor
+
             let haloPrimitive = DrawingPrimitive.stroke(
                 path: worldPath,
                 color: haloColor,
