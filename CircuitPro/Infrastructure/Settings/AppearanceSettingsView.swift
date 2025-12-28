@@ -79,7 +79,7 @@ struct AppearanceSettingsView: View {
 
                     }
                     .scrollIndicators(.hidden)
-                    .contentMargins(.horizontal, 5.0, for: .scrollContent)
+                    .contentMargins(.horizontal, 10.0, for: .scrollContent)
                     .scrollClipDisabled()
 
                 }
