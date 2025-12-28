@@ -13,7 +13,7 @@ class CrosshairsRenderLayer: RenderLayer {
 
     func update(using context: RenderContext) {
         let config = context.environment.configuration
-        
+
         // Use the new `processedMouseLocation` property from the context.
         // It will be nil if the raw location is nil, so this guard is sufficient.
         guard config.crosshairsStyle != .hidden, let point = context.processedMouseLocation else {
@@ -21,10 +21,11 @@ class CrosshairsRenderLayer: RenderLayer {
             shapeLayer.path = nil
             return
         }
-        
+
         // The manual snap service logic is now completely gone.
 
         shapeLayer.isHidden = false
+        shapeLayer.strokeColor = context.environment.canvasTheme.crosshairColor
 
         let path = CGMutablePath()
         let bounds = context.hostViewBounds

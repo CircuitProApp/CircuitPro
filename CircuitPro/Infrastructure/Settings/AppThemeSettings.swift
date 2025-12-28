@@ -46,7 +46,51 @@ struct CanvasStyle: Codable, Identifiable, Equatable {
     var gridHex: String
     var textHex: String
     var markerHex: String
+    var crosshairHex: String
     var isBuiltin: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case backgroundHex
+        case gridHex
+        case textHex
+        case markerHex
+        case crosshairHex
+        case isBuiltin
+    }
+
+    init(
+        id: UUID,
+        name: String,
+        backgroundHex: String,
+        gridHex: String,
+        textHex: String,
+        markerHex: String,
+        crosshairHex: String,
+        isBuiltin: Bool
+    ) {
+        self.id = id
+        self.name = name
+        self.backgroundHex = backgroundHex
+        self.gridHex = gridHex
+        self.textHex = textHex
+        self.markerHex = markerHex
+        self.crosshairHex = crosshairHex
+        self.isBuiltin = isBuiltin
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        backgroundHex = try container.decode(String.self, forKey: .backgroundHex)
+        gridHex = try container.decode(String.self, forKey: .gridHex)
+        textHex = try container.decode(String.self, forKey: .textHex)
+        markerHex = try container.decode(String.self, forKey: .markerHex)
+        crosshairHex = try container.decodeIfPresent(String.self, forKey: .crosshairHex) ?? "#3B82F6"
+        isBuiltin = try container.decode(Bool.self, forKey: .isBuiltin)
+    }
 }
 
 enum CanvasStyleStore {
@@ -62,6 +106,7 @@ enum CanvasStyleStore {
                 gridHex: "#8E8E93",
                 textHex: "#1C1C1E",
                 markerHex: "#2C2C2E",
+                crosshairHex: "#3B82F6",
                 isBuiltin: true
             ),
             CanvasStyle(
@@ -71,6 +116,7 @@ enum CanvasStyleStore {
                 gridHex: "#C4B8A3",
                 textHex: "#3E3428",
                 markerHex: "#7F6A55",
+                crosshairHex: "#A6723A",
                 isBuiltin: true
             ),
             CanvasStyle(
@@ -80,6 +126,7 @@ enum CanvasStyleStore {
                 gridHex: "#3E5C76",
                 textHex: "#E0E1DD",
                 markerHex: "#98C1D9",
+                crosshairHex: "#E0E1DD",
                 isBuiltin: true
             ),
             CanvasStyle(
@@ -89,6 +136,7 @@ enum CanvasStyleStore {
                 gridHex: "#636366",
                 textHex: "#F2F2F7",
                 markerHex: "#AEAEB2",
+                crosshairHex: "#60A5FA",
                 isBuiltin: true
             )
         ]
@@ -134,7 +182,8 @@ struct CanvasThemeSettings {
             backgroundColor: NSColor(hex: style.backgroundHex)?.cgColor ?? NSColor.white.cgColor,
             gridPrimaryColor: NSColor(hex: style.gridHex)?.cgColor ?? NSColor.gray.cgColor,
             textColor: NSColor(hex: style.textHex)?.cgColor ?? NSColor.labelColor.cgColor,
-            sheetMarkerColor: NSColor(hex: style.markerHex)?.cgColor ?? NSColor.gray.cgColor
+            sheetMarkerColor: NSColor(hex: style.markerHex)?.cgColor ?? NSColor.gray.cgColor,
+            crosshairColor: NSColor(hex: style.crosshairHex)?.cgColor ?? NSColor.systemBlue.cgColor
         )
     }
 }

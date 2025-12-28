@@ -7,6 +7,7 @@
 
 
 import CoreGraphics
+import AppKit
 
 struct CanvasConfiguration {
     var grid = CanvasGrid()
@@ -25,12 +26,14 @@ struct CanvasTheme {
     var gridPrimaryColor: CGColor
     var textColor: CGColor
     var sheetMarkerColor: CGColor
+    var crosshairColor: CGColor
 
     static let `default` = CanvasTheme(
         backgroundColor: CGColor(gray: 1, alpha: 1),
         gridPrimaryColor: CGColor(gray: 0.5, alpha: 1),
         textColor: CGColor(gray: 0.1, alpha: 1),
-        sheetMarkerColor: CGColor(gray: 0.2, alpha: 1)
+        sheetMarkerColor: CGColor(gray: 0.2, alpha: 1),
+        crosshairColor: NSColor.systemBlue.cgColor
     )
 }
 
