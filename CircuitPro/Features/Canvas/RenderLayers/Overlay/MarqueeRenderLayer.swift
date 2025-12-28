@@ -6,16 +6,14 @@ import AppKit
 /// rectangle. The `MarqueeInteraction` is responsible for updating this rectangle
 /// during a drag.
 class MarqueeRenderLayer: RenderLayer {
-    
+
     private let shapeLayer = CAShapeLayer()
 
     func install(on hostLayer: CALayer) {
         // Configure the visual appearance of the marquee rectangle.
-        shapeLayer.fillColor = NSColor.systemBlue.withAlphaComponent(0.1).cgColor
-        shapeLayer.strokeColor = NSColor.systemBlue.cgColor
         shapeLayer.lineCap = .butt
         shapeLayer.lineJoin = .miter
-        
+
         hostLayer.addSublayer(shapeLayer)
     }
 
@@ -24,6 +22,10 @@ class MarqueeRenderLayer: RenderLayer {
         // the marqueeRect from the `CanvasManager` into it.
         if let rect = context.environment.marqueeRect {
             shapeLayer.isHidden = false
+
+            let crosshairColor = context.environment.canvasTheme.crosshairColor
+            shapeLayer.strokeColor = crosshairColor
+            shapeLayer.fillColor = NSColor(cgColor: crosshairColor)?.withAlphaComponent(0.1).cgColor
 
             // Adjust line width and dash pattern for the current canvas magnification.
             let scale = 1.0 / max(context.magnification, .ulpOfOne)

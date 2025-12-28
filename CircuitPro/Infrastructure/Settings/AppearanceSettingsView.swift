@@ -126,7 +126,7 @@ struct AppearanceSettingsView: View {
                 )
 
                 CanvasColorPickerView(
-                    title: "Crosshairs",
+                    title: "Crosshair & Marquee",
                     hex: hexBinding(for: \.crosshairHex),
                     showReset: isFieldModified(.crosshair),
                     onReset: { resetSelectedField(.crosshair) }

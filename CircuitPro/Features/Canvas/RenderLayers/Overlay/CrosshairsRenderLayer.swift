@@ -6,7 +6,6 @@ class CrosshairsRenderLayer: RenderLayer {
 
     func install(on hostLayer: CALayer) {
         shapeLayer.fillColor = nil
-        shapeLayer.strokeColor = NSColor.systemBlue.cgColor
         shapeLayer.lineCap = .round
         hostLayer.addSublayer(shapeLayer)
     }
