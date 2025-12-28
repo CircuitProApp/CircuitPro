@@ -20,6 +20,8 @@ struct CanvasColorPickerView: View {
             if showReset {
                 Button(action: onReset) {
                     Image(systemName: "arrow.clockwise")
+                        .foregroundStyle(.secondary)
+                        .fontWeight(.semibold)
                 }
                 .buttonStyle(.plain)
             }
