@@ -79,7 +79,8 @@ struct AppearanceSettingsView: View {
 
                     }
                     .scrollIndicators(.hidden)
-                    .contentMargins(.vertical, 10.0, for: .scrollContent)
+                    .contentMargins(.vertical, 5.0, for: .scrollContent)
+                    .defaultScrollAnchor(.trailing)
 
                 }
 
