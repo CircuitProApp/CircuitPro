@@ -15,6 +15,9 @@ struct ComponentDesignView: View {
 
     @UserContext private var userContext
 
+    @AppStorage(AppThemeKeys.canvasBackground) private var canvasBackground = AppThemeDefaults.canvasBackground
+    @AppStorage(AppThemeKeys.gridDots) private var gridDots = AppThemeDefaults.gridDots
+
     @State private var componentDesignManager = ComponentDesignManager()
 
     @State private var symbolCanvasManager = CanvasManager()
@@ -77,7 +80,10 @@ struct ComponentDesignView: View {
         .onAppear {
             symbolCanvasManager.viewport.size = PaperSize.component.canvasSize()
             footprintCanvasManager.viewport.size = PaperSize.component.canvasSize()
+            applyCanvasTheme()
         }
+        .onChange(of: canvasBackground) { applyCanvasTheme() }
+        .onChange(of: gridDots) { applyCanvasTheme() }
         .alert("Error", isPresented: $showError, actions: {
             Button("OK", role: .cancel) { }
         }, message: {
@@ -226,6 +232,12 @@ struct ComponentDesignView: View {
                 isVisible: model.isVisible
             )
         }
+    }
+
+    private func applyCanvasTheme() {
+        let theme = CanvasThemeSettings.makeTheme(backgroundHex: canvasBackground, gridDotsHex: gridDots)
+        symbolCanvasManager.applyTheme(theme)
+        footprintCanvasManager.applyTheme(theme)
     }
 
     private func resetForNewComponent() {

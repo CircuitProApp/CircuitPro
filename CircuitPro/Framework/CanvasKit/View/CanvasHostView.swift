@@ -21,17 +21,17 @@ final class CanvasHostView: NSView {
         self.dragDropHandler = CanvasDragDropHandler(controller: controller)
 
         super.init(frame: .zero)
-        
+
         self.wantsLayer = true
         self.layer?.backgroundColor = NSColor.white.cgColor
-        
+
         self.registerForDraggedTypes(registeredDraggedTypes)
 
         for renderLayer in controller.renderLayers {
             renderLayer.install(on: self.layer!)
         }
     }
-    
+
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     // MARK: - Core Rendering Logic
@@ -39,13 +39,14 @@ final class CanvasHostView: NSView {
     override var wantsUpdateLayer: Bool {
         return true
     }
-    
+
     override func updateLayer() {
         performLayerUpdate()
     }
-    
+
     func performLayerUpdate() {
         let context = controller.currentContext(for: self.bounds, visibleRect: self.visibleRect)
+        self.layer?.backgroundColor = context.environment.canvasTheme.backgroundColor
 
         // Create the change context and fire the callback.
         // This is the ideal central point for this event.
@@ -65,7 +66,7 @@ final class CanvasHostView: NSView {
 
         CATransaction.commit()
     }
-    
+
     // MARK: - Input & Tracking Area
 
     override func viewDidMoveToWindow() {
@@ -73,7 +74,7 @@ final class CanvasHostView: NSView {
         window?.makeFirstResponder(self)
         updateTrackingAreas()
     }
-    
+
     override var acceptsFirstResponder: Bool { true }
 
     override func updateTrackingAreas() {
@@ -82,49 +83,49 @@ final class CanvasHostView: NSView {
         let options: NSTrackingArea.Options = [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect]
         addTrackingArea(NSTrackingArea(rect: bounds, options: options, owner: self, userInfo: nil))
     }
-    
+
     // MARK: - Event Forwarding (Mouse)
 
     override func mouseMoved(with event: NSEvent) { inputHandler.mouseMoved(event, in: self) }
     override func mouseExited(with event: NSEvent) { inputHandler.mouseExited() }
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
-        
+
         inputHandler.mouseDown(event, in: self)
     }
     override func mouseDragged(with event: NSEvent) { inputHandler.mouseDragged(event, in: self) }
     override func mouseUp(with event: NSEvent) { inputHandler.mouseUp(event, in: self) }
-    
+
     override func keyDown(with event: NSEvent) {
         let wasHandledByInteraction = inputHandler.keyDown(event, in: self)
-        
+
         if !wasHandledByInteraction {
             super.keyDown(with: event)
         }
     }
-    
+
     // MARK: - Event Forwarding (Drag and Drop)
-    
+
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         return dragDropHandler.draggingEntered(sender, in: self)
     }
-    
+
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
         return dragDropHandler.draggingUpdated(sender, in: self)
     }
-    
+
     override func draggingExited(_ sender: NSDraggingInfo?) {
         dragDropHandler.draggingExited(sender, in: self)
     }
-    
+
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        
+
         let wasHandled = dragDropHandler.performDragOperation(sender, in: self)
 
         if wasHandled {
             window?.makeFirstResponder(self)
         }
-        
+
         return wasHandled
     }
 }

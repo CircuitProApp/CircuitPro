@@ -10,12 +10,12 @@ import WelcomeWindow
 import SwiftDataPacks
 
 struct WelcomeWindowScene: Scene {
-    
+
     @Environment(\.openWindow)
     private var openWindow
-    
+
     var packManager: SwiftDataPackManager
-    
+
     var body: some Scene {
         WelcomeWindow(
             actions: { dismiss in

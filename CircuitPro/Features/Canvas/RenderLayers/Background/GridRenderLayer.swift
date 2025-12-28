@@ -58,8 +58,9 @@ class GridRenderLayer: RenderLayer {
         // Apply fade via fillColor alpha.
         let majorAlpha = clamp01(majorBaseAlpha * f)
         let minorAlpha = clamp01(minorBaseAlpha * f)
-        majorGridLayer.fillColor = NSColor.gray.withAlphaComponent(majorAlpha).cgColor
-        minorGridLayer.fillColor = NSColor.gray.withAlphaComponent(minorAlpha).cgColor
+        let baseColor = context.environment.canvasTheme.gridDotColor
+        majorGridLayer.fillColor = applyAlpha(majorAlpha, to: baseColor)
+        minorGridLayer.fillColor = applyAlpha(minorAlpha, to: baseColor)
 
         // Build geometry only when visible.
         let unitSpacing = context.environment.configuration.grid.spacing.canvasPoints
@@ -135,6 +136,11 @@ class GridRenderLayer: RenderLayer {
     }
 
     private func clamp01(_ v: CGFloat) -> CGFloat { max(0, min(1, v)) }
+
+    private func applyAlpha(_ alpha: CGFloat, to color: CGColor) -> CGColor {
+        let base = NSColor(cgColor: color) ?? NSColor.gray
+        return base.withAlphaComponent(clamp01(base.alphaComponent * alpha)).cgColor
+    }
 
     private func previousMultiple(of step: CGFloat, beforeOrEqualTo value: CGFloat, offset: CGFloat) -> CGFloat {
         guard step > 0 else { return value }

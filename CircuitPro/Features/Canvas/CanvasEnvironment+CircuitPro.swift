@@ -12,15 +12,22 @@ struct CanvasConfiguration {
     var grid = CanvasGrid()
     var snapping = Snapping()
     var crosshairsStyle = CrosshairsStyle.centeredCross
-    // Future settings go here, e.g.:
-    // var theme = Theme()
-    // var guides = Guides()
 }
 
 struct CanvasGrid {
     var spacing: GridSpacing = .mm1
     var majorLineInterval: Int = 10
     var isVisible: Bool = true
+}
+
+struct CanvasTheme {
+    var backgroundColor: CGColor
+    var gridDotColor: CGColor
+
+    static let `default` = CanvasTheme(
+        backgroundColor: CGColor(gray: 1, alpha: 1),
+        gridDotColor: CGColor(gray: 0.5, alpha: 1)
+    )
 }
 
 struct Snapping {
@@ -31,6 +38,10 @@ struct Snapping {
 
 private struct ConfigurationKey: CanvasEnvironmentKey {
     static let defaultValue = CanvasConfiguration()
+}
+
+private struct CanvasThemeKey: CanvasEnvironmentKey {
+    static let defaultValue = CanvasTheme.default
 }
 
 private struct MarqueeRectKey: CanvasEnvironmentKey {
@@ -58,6 +69,11 @@ extension CanvasEnvironmentValues {
     var configuration: CanvasConfiguration {
         get { self[ConfigurationKey.self] }
         set { self[ConfigurationKey.self] = newValue }
+    }
+
+    var canvasTheme: CanvasTheme {
+        get { self[CanvasThemeKey.self] }
+        set { self[CanvasThemeKey.self] = newValue }
     }
 
     var marqueeRect: CGRect? {

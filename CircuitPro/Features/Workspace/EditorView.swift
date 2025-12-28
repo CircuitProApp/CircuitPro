@@ -13,6 +13,9 @@ struct EditorView: View {
     @Environment(\.projectManager)
     private var projectManager
 
+    @AppStorage(AppThemeKeys.canvasBackground) private var canvasBackground = AppThemeDefaults.canvasBackground
+    @AppStorage(AppThemeKeys.gridDots) private var gridDots = AppThemeDefaults.gridDots
+
     @State private var showUtilityArea: Bool = true
 
     @State private var schematicCanvasManager = CanvasManager()
@@ -50,5 +53,14 @@ struct EditorView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(selectedCanvasManager)
+        .onAppear { applyCanvasTheme() }
+        .onChange(of: canvasBackground) { applyCanvasTheme() }
+        .onChange(of: gridDots) { applyCanvasTheme() }
+    }
+
+    private func applyCanvasTheme() {
+        let theme = CanvasThemeSettings.makeTheme(backgroundHex: canvasBackground, gridDotsHex: gridDots)
+        schematicCanvasManager.applyTheme(theme)
+        layoutCanvasManager.applyTheme(theme)
     }
 }
