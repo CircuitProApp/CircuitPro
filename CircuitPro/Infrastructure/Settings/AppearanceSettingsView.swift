@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct AppearanceSettingsView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage(AppThemeKeys.appearance) private var appearance = AppAppearance.system.rawValue
     @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore
         .defaultStylesData
@@ -31,7 +32,7 @@ struct AppearanceSettingsView: View {
     }
 
     private var selectedIndex: Int {
-        let currentID = editStyleID ?? selectedLightStyleID
+        let currentID = editStyleID ?? activeSelectionID()
         return styles.firstIndex(where: { $0.id.uuidString == currentID }) ?? 0
     }
 
@@ -153,6 +154,14 @@ struct AppearanceSettingsView: View {
             }
             if !loaded.contains(where: { $0.id.uuidString == selectedDarkStyleID }) {
                 selectedDarkStyleID = loaded[0].id.uuidString
+            }
+        }
+        .onAppear {
+            let appAppearance = AppAppearance(rawValue: appearance) ?? .system
+            switch appAppearance {
+            case .light: assignMode = .light
+            case .dark: assignMode = .dark
+            case .system: assignMode = (colorScheme == .dark) ? .dark : .light
             }
         }
     }
