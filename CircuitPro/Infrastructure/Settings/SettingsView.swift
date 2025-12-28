@@ -19,7 +19,15 @@ struct SettingsView: View {
         NavigationSplitView {
             List(selection: $selection) {
                 NavigationLink(value: SettingsRoute.appearance) {
-                    Label("Appearance", systemImage: "paintbrush")
+                    Label {
+                        Text("Appearance")
+                    } icon: {
+                        
+                        Image(systemName: "paintbrush")
+                            .padding(5)
+                            .background(.black.gradient)
+                            .clipShape(.rect(cornerRadius: 5))
+                    }
                 }
                 NavigationLink(value: SettingsRoute.test) {
                     Label("Test", systemImage: "gearshape")

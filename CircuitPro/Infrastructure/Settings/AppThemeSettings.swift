@@ -35,7 +35,8 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 enum AppThemeKeys {
     static let appearance = "app.appearance"
     static let canvasStyleList = "canvas.style.list"
-    static let canvasStyleSelected = "canvas.style.selected"
+    static let canvasStyleSelectedLight = "canvas.style.selected.light"
+    static let canvasStyleSelectedDark = "canvas.style.selected.dark"
 }
 
 struct CanvasStyle: Codable, Identifiable, Equatable {
@@ -98,8 +99,12 @@ enum CanvasStyleStore {
         return String(decoding: data, as: UTF8.self)
     }
 
-    static var defaultSelectedID: String {
-        defaultStyles.first?.id.uuidString ?? ""
+    static var defaultSelectedLightID: String {
+        defaultStyles.first(where: { $0.name == "Light" })?.id.uuidString ?? defaultStyles.first?.id.uuidString ?? ""
+    }
+
+    static var defaultSelectedDarkID: String {
+        defaultStyles.first(where: { $0.name == "Dark" })?.id.uuidString ?? defaultStyles.first?.id.uuidString ?? ""
     }
 
     static func loadStyles(from dataString: String) -> [CanvasStyle] {

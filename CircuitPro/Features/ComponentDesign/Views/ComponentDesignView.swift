@@ -13,10 +13,15 @@ struct ComponentDesignView: View {
     @Environment(\.dismissWindow)
     private var dismissWindow
 
+    @Environment(\.colorScheme)
+    private var colorScheme
+
     @UserContext private var userContext
 
+    @AppStorage(AppThemeKeys.appearance) private var appearance = AppAppearance.system.rawValue
     @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore.defaultStylesData
-    @AppStorage(AppThemeKeys.canvasStyleSelected) private var selectedStyleID = CanvasStyleStore.defaultSelectedID
+    @AppStorage(AppThemeKeys.canvasStyleSelectedLight) private var selectedLightStyleID = CanvasStyleStore.defaultSelectedLightID
+    @AppStorage(AppThemeKeys.canvasStyleSelectedDark) private var selectedDarkStyleID = CanvasStyleStore.defaultSelectedDarkID
 
     @State private var componentDesignManager = ComponentDesignManager()
 
@@ -82,8 +87,10 @@ struct ComponentDesignView: View {
             footprintCanvasManager.viewport.size = PaperSize.component.canvasSize()
             applyCanvasTheme()
         }
+        .onChange(of: appearance) { applyCanvasTheme() }
         .onChange(of: stylesData) { applyCanvasTheme() }
-        .onChange(of: selectedStyleID) { applyCanvasTheme() }
+        .onChange(of: selectedLightStyleID) { applyCanvasTheme() }
+        .onChange(of: selectedDarkStyleID) { applyCanvasTheme() }
         .alert("Error", isPresented: $showError, actions: {
             Button("OK", role: .cancel) { }
         }, message: {
@@ -236,7 +243,16 @@ struct ComponentDesignView: View {
 
     private func applyCanvasTheme() {
         let styles = CanvasStyleStore.loadStyles(from: stylesData)
-        let style = CanvasStyleStore.selectedStyle(from: styles, selectedID: selectedStyleID)
+        let appAppearance = AppAppearance(rawValue: appearance) ?? .system
+        let effectiveScheme: ColorScheme = {
+            switch appAppearance {
+            case .system: return colorScheme
+            case .light: return .light
+            case .dark: return .dark
+            }
+        }()
+        let selectedID = effectiveScheme == .dark ? selectedDarkStyleID : selectedLightStyleID
+        let style = CanvasStyleStore.selectedStyle(from: styles, selectedID: selectedID)
         let theme = CanvasThemeSettings.makeTheme(from: style)
         symbolCanvasManager.applyTheme(theme)
         footprintCanvasManager.applyTheme(theme)
