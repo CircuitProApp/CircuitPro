@@ -9,9 +9,12 @@ import SwiftUI
 
 struct AppearanceSettingsView: View {
     @AppStorage(AppThemeKeys.appearance) private var appearance = AppAppearance.system.rawValue
-    @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore.defaultStylesData
-    @AppStorage(AppThemeKeys.canvasStyleSelectedLight) private var selectedLightStyleID = CanvasStyleStore.defaultSelectedLightID
-    @AppStorage(AppThemeKeys.canvasStyleSelectedDark) private var selectedDarkStyleID = CanvasStyleStore.defaultSelectedDarkID
+    @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore
+        .defaultStylesData
+    @AppStorage(AppThemeKeys.canvasStyleSelectedLight) private var selectedLightStyleID =
+        CanvasStyleStore.defaultSelectedLightID
+    @AppStorage(AppThemeKeys.canvasStyleSelectedDark) private var selectedDarkStyleID =
+        CanvasStyleStore.defaultSelectedDarkID
     @State private var editStyleID: String?
     @State private var assignMode: AssignMode = .light
 
@@ -58,156 +61,75 @@ struct AppearanceSettingsView: View {
                     .labelsHidden()
 
                     Spacer()
-
-                    HStack(spacing: 12) {
-                        ForEach(styles) { style in
-                            CanvasStyleSwatch(
-                                style: style,
-                                isSelected: style.id.uuidString == activeSelectionID(),
-                                isLightAssigned: style.id.uuidString == selectedLightStyleID,
-                                isDarkAssigned: style.id.uuidString == selectedDarkStyleID
-                            )
-                            .onTapGesture {
-                                applySelection(styleID: style.id.uuidString)
+                    ScrollView(.horizontal) {
+                        HStack(alignment: .top, spacing: 12) {
+                            ForEach(styles) { style in
+                                CanvasStyleSwatch(
+                                    style: style,
+                                    isSelected: style.id.uuidString == activeSelectionID(),
+                                    isLightAssigned: style.id.uuidString == selectedLightStyleID,
+                                    isDarkAssigned: style.id.uuidString == selectedDarkStyleID
+                                )
+                                .onTapGesture {
+                                    applySelection(styleID: style.id.uuidString)
+                                }
                             }
+                            CanvasAddSwatch(action: duplicateSelectedStyle)
                         }
-                        CanvasAddSwatch()
-                            .onTapGesture {
-                                duplicateSelectedStyle()
-                            }
+
                     }
+                    .scrollIndicators(.hidden)
+                    .contentMargins(.vertical, 10.0, for: .scrollContent)
+
                 }
 
-                TextField("Name", text: Binding(
-                    get: { selectedStyle.name },
-                    set: { newValue in
-                        updateSelectedStyle { style in
-                            style.name = newValue
+                TextField(
+                    "Name",
+                    text: Binding(
+                        get: { selectedStyle.name },
+                        set: { newValue in
+                            updateSelectedStyle { style in
+                                style.name = newValue
+                            }
                         }
-                    }
-                ))
+                    )
+                )
                 .disabled(selectedStyle.isBuiltin)
 
-                HStack(spacing: 8) {
-                    Text("Background")
-                    if selectedStyle.isBuiltin && isFieldModified(.background) {
-                        Button {
-                            resetSelectedField(.background)
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Spacer()
-                    ColorPicker(
-                        "",
-                        selection: Binding(
-                            get: { Color(hex: selectedStyle.backgroundHex) },
-                            set: { newValue in
-                                updateSelectedStyle { style in
-                                    style.backgroundHex = newValue.toHexRGBA()
-                                }
-                            }
-                        )
-                    )
-                    .labelsHidden()
-                }
-                HStack(spacing: 8) {
-                    Text("Grid Marks")
-                    if selectedStyle.isBuiltin && isFieldModified(.grid) {
-                        Button {
-                            resetSelectedField(.grid)
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Spacer()
-                    ColorPicker(
-                        "",
-                        selection: Binding(
-                            get: { Color(hex: selectedStyle.gridHex) },
-                            set: { newValue in
-                                updateSelectedStyle { style in
-                                    style.gridHex = newValue.toHexRGBA()
-                                }
-                            }
-                        )
-                    )
-                    .labelsHidden()
-                }
-                HStack(spacing: 8) {
-                    Text("Text")
-                    if selectedStyle.isBuiltin && isFieldModified(.text) {
-                        Button {
-                            resetSelectedField(.text)
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Spacer()
-                    ColorPicker(
-                        "",
-                        selection: Binding(
-                            get: { Color(hex: selectedStyle.textHex) },
-                            set: { newValue in
-                                updateSelectedStyle { style in
-                                    style.textHex = newValue.toHexRGBA()
-                                }
-                            }
-                        )
-                    )
-                    .labelsHidden()
-                }
-                HStack(spacing: 8) {
-                    Text("Markers")
-                    if selectedStyle.isBuiltin && isFieldModified(.marker) {
-                        Button {
-                            resetSelectedField(.marker)
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Spacer()
-                    ColorPicker(
-                        "",
-                        selection: Binding(
-                            get: { Color(hex: selectedStyle.markerHex) },
-                            set: { newValue in
-                                updateSelectedStyle { style in
-                                    style.markerHex = newValue.toHexRGBA()
-                                }
-                            }
-                        )
-                    )
-                    .labelsHidden()
-                }
-                HStack(spacing: 8) {
-                    Text("Crosshairs")
-                    if selectedStyle.isBuiltin && isFieldModified(.crosshair) {
-                        Button {
-                            resetSelectedField(.crosshair)
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Spacer()
-                    ColorPicker(
-                        "",
-                        selection: Binding(
-                            get: { Color(hex: selectedStyle.crosshairHex) },
-                            set: { newValue in
-                                updateSelectedStyle { style in
-                                    style.crosshairHex = newValue.toHexRGBA()
-                                }
-                            }
-                        )
-                    )
-                    .labelsHidden()
-                }
+                CanvasColorPickerView(
+                    title: "Background",
+                    hex: hexBinding(for: \.backgroundHex),
+                    showReset: isFieldModified(.background),
+                    onReset: { resetSelectedField(.background) }
+                )
+
+                CanvasColorPickerView(
+                    title: "Grid Marks",
+                    hex: hexBinding(for: \.gridHex),
+                    showReset: isFieldModified(.grid),
+                    onReset: { resetSelectedField(.grid) }
+                )
+
+                CanvasColorPickerView(
+                    title: "Text",
+                    hex: hexBinding(for: \.textHex),
+                    showReset: isFieldModified(.text),
+                    onReset: { resetSelectedField(.text) }
+                )
+
+                CanvasColorPickerView(
+                    title: "Markers",
+                    hex: hexBinding(for: \.markerHex),
+                    showReset: isFieldModified(.marker),
+                    onReset: { resetSelectedField(.marker) }
+                )
+
+                CanvasColorPickerView(
+                    title: "Crosshairs",
+                    hex: hexBinding(for: \.crosshairHex),
+                    showReset: isFieldModified(.crosshair),
+                    onReset: { resetSelectedField(.crosshair) }
+                )
 
                 HStack {
                     Spacer()
@@ -239,6 +161,17 @@ struct AppearanceSettingsView: View {
         guard updatedStyles.indices.contains(selectedIndex) else { return }
         update(&updatedStyles[selectedIndex])
         stylesData = CanvasStyleStore.encodeStyles(updatedStyles)
+    }
+
+    private func hexBinding(for keyPath: WritableKeyPath<CanvasStyle, String>) -> Binding<String> {
+        Binding(
+            get: { selectedStyle[keyPath: keyPath] },
+            set: { newValue in
+                updateSelectedStyle { style in
+                    style[keyPath: keyPath] = newValue
+                }
+            }
+        )
     }
 
     private func duplicateSelectedStyle() {
@@ -274,18 +207,23 @@ struct AppearanceSettingsView: View {
         if !updatedStyles.contains(where: { $0.id.uuidString == selectedDarkStyleID }) {
             selectedDarkStyleID = updatedStyles[0].id.uuidString
         }
-        if editStyleID == nil || !updatedStyles.contains(where: { $0.id.uuidString == editStyleID }) {
+        if editStyleID == nil || !updatedStyles.contains(where: { $0.id.uuidString == editStyleID })
+        {
             editStyleID = selectedLightStyleID
         }
     }
 
     private var canResetSelectedStyle: Bool {
-        guard selectedStyle.isBuiltin, let defaults = defaultStyle(for: selectedStyle.id) else { return false }
+        guard selectedStyle.isBuiltin, let defaults = defaultStyle(for: selectedStyle.id) else {
+            return false
+        }
         return selectedStyle != defaults
     }
 
     private func resetSelectedStyle() {
-        guard selectedStyle.isBuiltin, let defaults = defaultStyle(for: selectedStyle.id) else { return }
+        guard selectedStyle.isBuiltin, let defaults = defaultStyle(for: selectedStyle.id) else {
+            return
+        }
         updateSelectedStyle { style in
             style.name = defaults.name
             style.backgroundHex = defaults.backgroundHex
@@ -309,7 +247,9 @@ struct AppearanceSettingsView: View {
     }
 
     private func isFieldModified(_ field: StyleField) -> Bool {
-        guard selectedStyle.isBuiltin, let defaults = defaultStyle(for: selectedStyle.id) else { return false }
+        guard selectedStyle.isBuiltin, let defaults = defaultStyle(for: selectedStyle.id) else {
+            return false
+        }
         switch field {
         case .background: return selectedStyle.backgroundHex != defaults.backgroundHex
         case .grid: return selectedStyle.gridHex != defaults.gridHex
@@ -320,7 +260,9 @@ struct AppearanceSettingsView: View {
     }
 
     private func resetSelectedField(_ field: StyleField) {
-        guard selectedStyle.isBuiltin, let defaults = defaultStyle(for: selectedStyle.id) else { return }
+        guard selectedStyle.isBuiltin, let defaults = defaultStyle(for: selectedStyle.id) else {
+            return
+        }
         updateSelectedStyle { style in
             switch field {
             case .background:
@@ -429,15 +371,24 @@ private struct CanvasStyleSwatch: View {
 }
 
 private struct CanvasAddSwatch: View {
+    var action: () -> Void
     var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.secondary, lineWidth: 1)
-            Image(systemName: "plus")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        Button {
+            action()
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(.secondary)
+
+                Image(systemName: "plus")
+                    .imageScale(.large)
+                    .fontWeight(.bold)
+                    .blendMode(.destinationOut)
+            }
+            .compositingGroup()
+            .frame(width: 28, height: 28)
         }
-        .frame(width: 28, height: 28)
+        .buttonStyle(.plain)
         .contentShape(Circle())
     }
 }
