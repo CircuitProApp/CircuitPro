@@ -114,8 +114,8 @@ enum CanvasStyleStore {
                 id: UUID(uuidString: "5F46B6E8-6DFE-4F91-9BA4-75A2C4005D12")!,
                 name: "Sandstone",
                 backgroundHex: "#F4EFE6",
-                gridHex: "#C4B8A3",
-                textHex: "#5D1010",
+                gridHex: "#A49173",
+                textHex: "#2D4C3E",
                 markerHex: "#7F6A55",
                 crosshairHex: "#A64B44",
                 isBuiltin: true
