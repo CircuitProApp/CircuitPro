@@ -46,16 +46,18 @@ final class SheetRenderLayer: RenderLayer {
         )
 
         let backgroundColor = context.environment.canvasTheme.backgroundColor
-        generated.append(contentsOf: createBackgroundLayers(metrics: metrics, backgroundColor: backgroundColor))
-        let markerColor = NSColor(cgColor: context.environment.canvasTheme.sheetMarkerColor) ?? .black
-        let textColor = NSColor(cgColor: context.environment.canvasTheme.textColor) ?? .labelColor
-        generated.append(contentsOf: BorderDrawer().makeLayers(metrics: metrics, lineColor: markerColor.cgColor))
+        generated.append(
+            contentsOf: createBackgroundLayers(metrics: metrics, backgroundColor: backgroundColor))
+        let markerColor =
+            NSColor(cgColor: context.environment.canvasTheme.sheetMarkerColor) ?? .black
+        generated.append(
+            contentsOf: BorderDrawer().makeLayers(metrics: metrics, lineColor: markerColor.cgColor))
 
         if !bakedCellValues.isEmpty {
             let drawer = TitleBlockDrawer(
                 cellValues: bakedCellValues,
                 lineColor: markerColor,
-                textColor: textColor,
+                textColor: markerColor,
                 cellPad: cellPad,
                 cellHeight: cellHeight,
                 safeFont: safeFont
@@ -67,7 +69,7 @@ final class SheetRenderLayer: RenderLayer {
             let drawer = RulerDrawer(
                 position: position,
                 lineColor: markerColor,
-                textColor: textColor,
+                textColor: markerColor,
                 safeFont: safeFont,
                 showLabels: true
             )
@@ -77,7 +79,9 @@ final class SheetRenderLayer: RenderLayer {
         return generated
     }
 
-    private func createBackgroundLayers(metrics: DrawingMetrics, backgroundColor: CGColor) -> [CALayer] {
+    private func createBackgroundLayers(metrics: DrawingMetrics, backgroundColor: CGColor)
+        -> [CALayer]
+    {
         let rulerBGPath = CGMutablePath()
         rulerBGPath.addRect(metrics.outerBounds)
         rulerBGPath.addRect(metrics.innerBounds)
