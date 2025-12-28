@@ -264,6 +264,8 @@ final class WireEngine {
             return
         }
 
+        lastPosition.removeAll()
+
         var newVertices: [GraphVertex.ID: GraphVertex] = [:]
         var newEdges: [GraphEdge.ID: GraphEdge] = [:]
         var newAdjacency: [GraphVertex.ID: Set<GraphEdge.ID>] = [:]
@@ -309,7 +311,8 @@ final class WireEngine {
 
         ownership = newOwnership
         let newState = GraphState(vertices: newVertices, edges: newEdges, adjacency: newAdjacency)
-        engine.replaceState(newState)
+        var tx = LoadStateTransaction(newState: newState, epicenter: Set(newVertices.keys))
+        _ = engine.execute(transaction: &tx)
         restoreSelection(previousSelection)
     }
 
@@ -321,7 +324,8 @@ final class WireEngine {
         for vID in s.vertices.keys where !processed.contains(vID) {
             let (compV, compE) = net(startingFrom: vID, in: s)
             processed.formUnion(compV)
-            guard !compE.isEmpty, let groupID = s.vertices[vID]?.clusterID else { continue }
+            guard !compE.isEmpty else { continue }
+            let groupID = s.vertices[vID]?.clusterID ?? vID
 
             let segments: [WireSegment] = compE.compactMap { eid in
                 guard let e = s.edges[eid],
@@ -462,6 +466,93 @@ final class WireEngine {
         }
     }
 
+    /// Ensures any edge directly connected to a pin stays orthogonal by inserting a jog when needed.
+    /// This guards against diagonal pin edges after model sync.
+    func repairPinConnections() {
+        let tol = geometry.epsilon
+        var state = engine.currentState
+        var changed = false
+        var changedIDs = Set<UUID>()
+
+        let edges = Array(state.edges.values)
+
+        func preferredCorner(pinID: UUID, pinPos: CGPoint, otherID: UUID, otherPos: CGPoint) -> CGPoint {
+            var horiz = 0
+            var vert = 0
+            for eid in state.adjacency[otherID] ?? [] {
+                guard let e = state.edges[eid] else { continue }
+                let neighborID = (e.start == otherID) ? e.end : e.start
+                if neighborID == pinID { continue }
+                guard let neighbor = state.vertices[neighborID] else { continue }
+                if abs(neighbor.point.x - otherPos.x) <= tol { vert += 1 }
+                if abs(neighbor.point.y - otherPos.y) <= tol { horiz += 1 }
+            }
+
+            if vert > horiz {
+                return CGPoint(x: otherPos.x, y: pinPos.y)
+            }
+            // Default to preserving the other vertex's horizontal run.
+            return CGPoint(x: pinPos.x, y: otherPos.y)
+        }
+
+        for edge in edges {
+            guard let start = state.vertices[edge.start],
+                  let end = state.vertices[edge.end] else { continue }
+
+            let startOwn = ownership[edge.start] ?? .free
+            let endOwn = ownership[edge.end] ?? .free
+
+            let pinID: UUID
+            let otherID: UUID
+            let pinPos: CGPoint
+            let otherPos: CGPoint
+
+            if case .pin = startOwn {
+                pinID = edge.start
+                otherID = edge.end
+                pinPos = start.point
+                otherPos = end.point
+            } else if case .pin = endOwn {
+                pinID = edge.end
+                otherID = edge.start
+                pinPos = end.point
+                otherPos = start.point
+            } else {
+                continue
+            }
+
+            if abs(pinPos.x - otherPos.x) <= tol || abs(pinPos.y - otherPos.y) <= tol {
+                continue
+            }
+
+            let corner = preferredCorner(pinID: pinID, pinPos: pinPos, otherID: otherID, otherPos: otherPos)
+            let cornerID: UUID
+            if let existing = state.findVertex(at: corner, tol: tol),
+               let existingCluster = state.vertices[existing.id]?.clusterID,
+               let targetCluster = state.vertices[pinID]?.clusterID,
+               existingCluster == targetCluster {
+                cornerID = existing.id
+            } else {
+                let clusterID = state.vertices[pinID]?.clusterID ?? state.vertices[otherID]?.clusterID
+                let newVertex = state.addVertex(at: corner, clusterID: clusterID)
+                cornerID = newVertex.id
+                ownership[cornerID] = .free
+                lastPosition[cornerID] = corner
+            }
+
+            state.removeEdge(edge.id)
+            _ = state.addEdge(from: pinID, to: cornerID)
+            _ = state.addEdge(from: cornerID, to: otherID)
+            changed = true
+            changedIDs.formUnion([pinID, cornerID, otherID])
+        }
+
+        if changed {
+            var tx = LoadStateTransaction(newState: state, epicenter: changedIDs)
+            _ = engine.execute(transaction: &tx)
+        }
+    }
+
     // MARK: - Private Helpers
 
     private func attachmentPoint(for v: GraphVertex) -> AttachmentPoint? {
@@ -554,12 +645,12 @@ final class WireEngine {
                 if component.clusterID != clusterID {
                     component.clusterID = clusterID
                     graph.setComponent(component, for: nodeID)
+                }
             }
         }
 
         onChange?()
     }
-}
 
     private func getOrCreateVertex(at point: CGPoint) -> GraphVertex.ID {
         var tx = GetOrCreateVertexTransaction(point: point)

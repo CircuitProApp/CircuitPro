@@ -27,8 +27,12 @@ final class SchematicEditorController: EditorController {
         self.document = projectManager.document
         self.wireEngine = WireEngine(graph: graph)
         self.wireEngine.onChange = { [weak self] in
-            Task { @MainActor in
+            if Thread.isMainThread {
                 self?.persistGraph()
+            } else {
+                Task { @MainActor in
+                    self?.persistGraph()
+                }
             }
         }
         self.canvasStore.onDelta = { [weak self] delta in
@@ -355,9 +359,11 @@ final class SchematicEditorController: EditorController {
         let design = projectManager.selectedDesign
         wireEngine.build(from: design.wires)
         for inst in design.componentInstances {
-            guard let symbolDef = inst.definition?.symbol else { continue }
+            let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
+            guard let symbolDef else { continue }
             wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
         }
+        wireEngine.repairPinConnections()
         isSyncingWiresFromModel = false
     }
 

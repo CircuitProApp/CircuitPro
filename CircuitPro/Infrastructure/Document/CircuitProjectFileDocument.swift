@@ -19,19 +19,31 @@ final class CircuitProjectFileDocument: ReferenceFileDocument {
     let syncManager = SyncManager()
 
     private var autosaveWorkItem: DispatchWorkItem?
+    private var autosavePending = false
     var autosaveDelay: TimeInterval = 2 // tune as needed
 
     func scheduleAutosave() {
-        autosaveWorkItem?.cancel()
+        if autosaveWorkItem != nil {
+            autosavePending = true
+            return
+        }
 
         let work = DispatchWorkItem { [weak self] in
-            guard let self, let url = self.fileURL else { return }
+            guard let self else { return }
+            self.autosaveWorkItem = nil
+
+            guard let url = self.fileURL else { return }
             do {
                 try self.write(to: url)
                 print("AUTOSAVE")
             } catch {
                 // Non-blocking error handling; consider a banner/toast instead of an alert.
                 NSLog("Autosave failed: \(error.localizedDescription)")
+            }
+
+            if self.autosavePending {
+                self.autosavePending = false
+                self.scheduleAutosave()
             }
         }
 
