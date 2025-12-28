@@ -63,7 +63,9 @@ struct AppearanceSettingsView: View {
                         ForEach(styles) { style in
                             CanvasStyleSwatch(
                                 style: style,
-                                isSelected: style.id.uuidString == activeSelectionID()
+                                isSelected: style.id.uuidString == activeSelectionID(),
+                                isLightAssigned: style.id.uuidString == selectedLightStyleID,
+                                isDarkAssigned: style.id.uuidString == selectedDarkStyleID
                             )
                             .onTapGesture {
                                 applySelection(styleID: style.id.uuidString)
@@ -128,6 +130,7 @@ struct AppearanceSettingsView: View {
                 )
 
                 HStack {
+                    Spacer()
                     Button("New Style") { duplicateSelectedStyle() }
                     Button("Delete Style") { deleteSelectedStyle() }
                         .disabled(selectedStyle.isBuiltin || styles.count <= 1)
@@ -214,6 +217,8 @@ struct AppearanceSettingsView: View {
 private struct CanvasStyleSwatch: View {
     let style: CanvasStyle
     let isSelected: Bool
+    let isLightAssigned: Bool
+    let isDarkAssigned: Bool
     @State private var isHovered = false
 
     var body: some View {
@@ -235,19 +240,47 @@ private struct CanvasStyleSwatch: View {
                     .stroke(isSelected ? ring : Color.clear, lineWidth: 3)
                     .padding(-4)
             }
-            .frame(width: 32, height: 32)
+            .frame(width: 28, height: 28)
             .contentShape(Circle())
             .onHover { hovering in
                 isHovered = hovering
             }
 
-            Text(style.name)
+            ZStack {
+                if showsLabel && isLightAssigned && isDarkAssigned {
+                    HStack(spacing: 4) {
+                        Text(style.name)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        Image(systemName: "sun.max.fill")
+                        Image(systemName: "moon.fill")
+                    }
+                    .font(.caption2)
+                    .imageScale(.small)
+                    .foregroundStyle(.secondary)
+                } else {
+                    Text(style.name)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .opacity(showsLabel ? 1 : 0)
+                }
+
+                HStack(spacing: 4) {
+                    if isLightAssigned {
+                        Image(systemName: "sun.max.fill")
+                    }
+                    if isDarkAssigned {
+                        Image(systemName: "moon.fill")
+                    }
+                }
                 .font(.caption2)
+                .imageScale(.small)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .frame(width: 56)
-                .opacity(showsLabel ? 1 : 0)
+                .opacity(showsLabel || (!isLightAssigned && !isDarkAssigned) ? 0 : 1)
+            }
+            .frame(width: 56)
         }
     }
 }

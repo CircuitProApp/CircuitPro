@@ -22,9 +22,9 @@ struct SettingsView: View {
                     Label {
                         Text("Appearance")
                     } icon: {
-                        
-                        Image(systemName: "paintbrush")
-                            .padding(5)
+
+                        Image(systemName: "circle")
+                            .padding(3)
                             .background(.black.gradient)
                             .clipShape(.rect(cornerRadius: 5))
                     }
