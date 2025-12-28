@@ -7,9 +7,26 @@
 
 import SwiftUI
 
-private enum SettingsRoute: Hashable {
+private enum SettingsRoute: String, Hashable, CaseIterable {
     case appearance
-    case test
+
+    var label: String {
+        switch self {
+        case .appearance: return "Appearance"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .appearance: return "paintbrush"
+        }
+    }
+
+    var iconColor: Color {
+        switch self {
+        case .appearance: return .blue
+        }
+    }
 }
 
 struct SettingsView: View {
@@ -18,19 +35,11 @@ struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                NavigationLink(value: SettingsRoute.appearance) {
-                    Label {
-                        Text("Appearance")
-                    } icon: {
-
-                        Image(systemName: "circle")
-                            .padding(3)
-                            .background(.black.gradient)
-                            .clipShape(.rect(cornerRadius: 5))
+                ForEach(SettingsRoute.allCases, id: \.self) { route in
+                    NavigationLink(value: route) {
+                        SettingsLabel(
+                            title: route.label, icon: route.iconName, color: route.iconColor)
                     }
-                }
-                NavigationLink(value: SettingsRoute.test) {
-                    Label("Test", systemImage: "gearshape")
                 }
             }
             .listStyle(.sidebar)
@@ -41,8 +50,6 @@ struct SettingsView: View {
                         switch route {
                         case .appearance:
                             AppearanceSettingsView()
-                        case .test:
-                            TestSettingsView()
                         }
                     }
             }
@@ -51,17 +58,22 @@ struct SettingsView: View {
     }
 }
 
-private struct TestSettingsView: View {
+private struct SettingsLabel: View {
+    let title: String
+    let icon: String
+    let color: Color
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Test Settings")
-                .font(.title2)
-                .fontWeight(.semibold)
-            Text("This is a placeholder screen for the settings navigation.")
-                .foregroundStyle(.secondary)
-            Spacer()
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundStyle(.white)
+                .padding(4)
+                .frame(width: 22, height: 22)
+                .background(color.gradient)
+                .clipShape(.rect(cornerRadius: 5))
         }
-        .padding(24)
-        .navigationTitle("Test")
     }
 }
