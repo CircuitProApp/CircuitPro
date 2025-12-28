@@ -5,8 +5,8 @@
 //  Created by Giorgi Tchelidze on 7/29/25.
 //
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct EditorView: View {
 
@@ -17,15 +17,17 @@ struct EditorView: View {
     private var colorScheme
 
     @AppStorage(AppThemeKeys.appearance) private var appearance = AppAppearance.system.rawValue
-    @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore.defaultStylesData
-    @AppStorage(AppThemeKeys.canvasStyleSelectedLight) private var selectedLightStyleID = CanvasStyleStore.defaultSelectedLightID
-    @AppStorage(AppThemeKeys.canvasStyleSelectedDark) private var selectedDarkStyleID = CanvasStyleStore.defaultSelectedDarkID
+    @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore
+        .defaultStylesData
+    @AppStorage(AppThemeKeys.canvasStyleSelectedLight) private var selectedLightStyleID =
+        CanvasStyleStore.defaultSelectedLightID
+    @AppStorage(AppThemeKeys.canvasStyleSelectedDark) private var selectedDarkStyleID =
+        CanvasStyleStore.defaultSelectedDarkID
 
     @State private var showUtilityArea: Bool = true
 
     @State private var schematicCanvasManager = CanvasManager()
     @State private var layoutCanvasManager = CanvasManager()
-
 
     var selectedEditor: EditorType {
         projectManager.selectedEditor
@@ -51,7 +53,9 @@ struct EditorView: View {
                 }
 
             } handle: {
-                CanvasStatusBarView(isCollapsed: $showUtilityArea, configuration: selectedEditor == .schematic ? .fixedGrid : .default)
+                CanvasStatusBarView(
+                    isCollapsed: $showUtilityArea,
+                    configuration: selectedEditor == .schematic ? .fixedGrid : .default)
             } secondary: {
                 UtilityAreaView()
             }
@@ -63,6 +67,7 @@ struct EditorView: View {
         .onChange(of: stylesData) { applyCanvasTheme() }
         .onChange(of: selectedLightStyleID) { applyCanvasTheme() }
         .onChange(of: selectedDarkStyleID) { applyCanvasTheme() }
+        .onChange(of: colorScheme) { applyCanvasTheme() }
     }
 
     private func applyCanvasTheme() {

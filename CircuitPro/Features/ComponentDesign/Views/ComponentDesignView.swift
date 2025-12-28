@@ -5,8 +5,8 @@
 //  Created by Giorgi Tchelidze on 18.06.25.
 //
 
-import SwiftUI
 import SwiftDataPacks
+import SwiftUI
 
 struct ComponentDesignView: View {
 
@@ -19,9 +19,12 @@ struct ComponentDesignView: View {
     @UserContext private var userContext
 
     @AppStorage(AppThemeKeys.appearance) private var appearance = AppAppearance.system.rawValue
-    @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore.defaultStylesData
-    @AppStorage(AppThemeKeys.canvasStyleSelectedLight) private var selectedLightStyleID = CanvasStyleStore.defaultSelectedLightID
-    @AppStorage(AppThemeKeys.canvasStyleSelectedDark) private var selectedDarkStyleID = CanvasStyleStore.defaultSelectedDarkID
+    @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore
+        .defaultStylesData
+    @AppStorage(AppThemeKeys.canvasStyleSelectedLight) private var selectedLightStyleID =
+        CanvasStyleStore.defaultSelectedLightID
+    @AppStorage(AppThemeKeys.canvasStyleSelectedDark) private var selectedDarkStyleID =
+        CanvasStyleStore.defaultSelectedDarkID
 
     @State private var componentDesignManager = ComponentDesignManager()
 
@@ -32,7 +35,6 @@ struct ComponentDesignView: View {
     @State private var showWarning = false
     @State private var messages = [String]()
     @State private var didCreateComponent = false
-
 
     var body: some View {
         Group {
@@ -51,7 +53,9 @@ struct ComponentDesignView: View {
                 NavigationSplitView {
                     ComponentDesignNavigator()
                 } content: {
-                    ComponentDesignContent(symbolCanvasManager: symbolCanvasManager, footprintCanvasManager: footprintCanvasManager)
+                    ComponentDesignContent(
+                        symbolCanvasManager: symbolCanvasManager,
+                        footprintCanvasManager: footprintCanvasManager)
                 } detail: {
                     ComponentDesignInspector()
                 }
@@ -91,16 +95,24 @@ struct ComponentDesignView: View {
         .onChange(of: stylesData) { applyCanvasTheme() }
         .onChange(of: selectedLightStyleID) { applyCanvasTheme() }
         .onChange(of: selectedDarkStyleID) { applyCanvasTheme() }
-        .alert("Error", isPresented: $showError, actions: {
-            Button("OK", role: .cancel) { }
-        }, message: {
-            Text(messages.joined(separator: "\n"))
-        })
-        .alert("Warning", isPresented: $showWarning, actions: {
-            Button("Cancel", role: .cancel) { }
-        }, message: {
-            Text(messages.joined(separator: "\n"))
-        })
+        .onChange(of: colorScheme) { applyCanvasTheme() }
+        .alert(
+            "Error", isPresented: $showError,
+            actions: {
+                Button("OK", role: .cancel) {}
+            },
+            message: {
+                Text(messages.joined(separator: "\n"))
+            }
+        )
+        .alert(
+            "Warning", isPresented: $showWarning,
+            actions: {
+                Button("Cancel", role: .cancel) {}
+            },
+            message: {
+                Text(messages.joined(separator: "\n"))
+            })
     }
 
     private func createComponent() {
@@ -141,7 +153,9 @@ struct ComponentDesignView: View {
         let symbolEditor = componentDesignManager.symbolEditor
         // NOTE: Using footprintCanvasManager.viewport.size since it's the same size.
         // Could also create a shared constant for this.
-        let anchor = CGPoint(x: footprintCanvasManager.viewport.size.width / 2, y: footprintCanvasManager.viewport.size.height / 2)
+        let anchor = CGPoint(
+            x: footprintCanvasManager.viewport.size.width / 2,
+            y: footprintCanvasManager.viewport.size.height / 2)
 
         let symbolTextDefinitions = createTextDefinitions(from: symbolEditor, anchor: anchor)
         let symbolPrimitives = createPrimitives(from: symbolEditor, anchor: anchor)
@@ -198,7 +212,9 @@ struct ComponentDesignView: View {
         didCreateComponent = true
     }
 
-    private func createPrimitives(from editor: CanvasEditorManager, anchor: CGPoint) -> [AnyCanvasPrimitive] {
+    private func createPrimitives(from editor: CanvasEditorManager, anchor: CGPoint)
+        -> [AnyCanvasPrimitive]
+    {
         let rawPrimitives: [AnyCanvasPrimitive] = editor.primitives
         return rawPrimitives.map { prim -> AnyCanvasPrimitive in
             var copy = prim
@@ -207,7 +223,9 @@ struct ComponentDesignView: View {
         }
     }
 
-    private func createTextDefinitions(from editor: CanvasEditorManager, anchor: CGPoint) -> [CircuitText.Definition] {
+    private func createTextDefinitions(from editor: CanvasEditorManager, anchor: CGPoint)
+        -> [CircuitText.Definition]
+    {
         let textItems = editor.graph.components(GraphTextComponent.self)
 
         return textItems.map { _, component in
