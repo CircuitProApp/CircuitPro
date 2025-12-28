@@ -52,7 +52,7 @@ struct AppearanceSettingsView: View {
             }
 
             Section("Canvas") {
-                HStack(spacing: 12) {
+                VStack(spacing: 12) {
                     Picker("", selection: $assignMode) {
                         ForEach(AssignMode.allCases) { mode in
                             Text(mode.label).tag(mode)
@@ -60,10 +60,9 @@ struct AppearanceSettingsView: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
-
-                    Spacer()
                     ScrollView(.horizontal) {
                         HStack(alignment: .top, spacing: 12) {
+                            CanvasAddSwatch(action: duplicateSelectedStyle)
                             ForEach(styles) { style in
                                 CanvasStyleSwatch(
                                     style: style,
@@ -75,13 +74,13 @@ struct AppearanceSettingsView: View {
                                     applySelection(styleID: style.id.uuidString)
                                 }
                             }
-                            CanvasAddSwatch(action: duplicateSelectedStyle)
+
                         }
 
                     }
                     .scrollIndicators(.hidden)
-                    .contentMargins(.vertical, 5.0, for: .scrollContent)
-                    .defaultScrollAnchor(.trailing)
+                    .contentMargins(.horizontal, 5.0, for: .scrollContent)
+                    .scrollClipDisabled()
 
                 }
 
