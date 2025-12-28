@@ -15,8 +15,8 @@ struct ComponentDesignView: View {
 
     @UserContext private var userContext
 
-    @AppStorage(AppThemeKeys.canvasBackground) private var canvasBackground = AppThemeDefaults.canvasBackground
-    @AppStorage(AppThemeKeys.gridDots) private var gridDots = AppThemeDefaults.gridDots
+    @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore.defaultStylesData
+    @AppStorage(AppThemeKeys.canvasStyleSelected) private var selectedStyleID = CanvasStyleStore.defaultSelectedID
 
     @State private var componentDesignManager = ComponentDesignManager()
 
@@ -82,8 +82,8 @@ struct ComponentDesignView: View {
             footprintCanvasManager.viewport.size = PaperSize.component.canvasSize()
             applyCanvasTheme()
         }
-        .onChange(of: canvasBackground) { applyCanvasTheme() }
-        .onChange(of: gridDots) { applyCanvasTheme() }
+        .onChange(of: stylesData) { applyCanvasTheme() }
+        .onChange(of: selectedStyleID) { applyCanvasTheme() }
         .alert("Error", isPresented: $showError, actions: {
             Button("OK", role: .cancel) { }
         }, message: {
@@ -235,7 +235,9 @@ struct ComponentDesignView: View {
     }
 
     private func applyCanvasTheme() {
-        let theme = CanvasThemeSettings.makeTheme(backgroundHex: canvasBackground, gridDotsHex: gridDots)
+        let styles = CanvasStyleStore.loadStyles(from: stylesData)
+        let style = CanvasStyleStore.selectedStyle(from: styles, selectedID: selectedStyleID)
+        let theme = CanvasThemeSettings.makeTheme(from: style)
         symbolCanvasManager.applyTheme(theme)
         footprintCanvasManager.applyTheme(theme)
     }

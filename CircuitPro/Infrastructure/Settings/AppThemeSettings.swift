@@ -34,20 +34,102 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 
 enum AppThemeKeys {
     static let appearance = "app.appearance"
-    static let canvasBackground = "canvas.backgroundColor"
-    static let gridDots = "canvas.gridDotColor"
+    static let canvasStyleList = "canvas.style.list"
+    static let canvasStyleSelected = "canvas.style.selected"
 }
 
-enum AppThemeDefaults {
-    static let canvasBackground = "#FFFFFF"
-    static let gridDots = "#8E8E93"
+struct CanvasStyle: Codable, Identifiable, Equatable {
+    var id: UUID
+    var name: String
+    var backgroundHex: String
+    var gridHex: String
+    var textHex: String
+    var markerHex: String
+    var isBuiltin: Bool
+}
+
+enum CanvasStyleStore {
+    private static let encoder = JSONEncoder()
+    private static let decoder = JSONDecoder()
+
+    static var defaultStyles: [CanvasStyle] {
+        [
+            CanvasStyle(
+                id: UUID(uuidString: "E862CE61-9C5F-4E4D-9A38-3B7B19E0AF6E")!,
+                name: "Light",
+                backgroundHex: "#FFFFFF",
+                gridHex: "#8E8E93",
+                textHex: "#1C1C1E",
+                markerHex: "#2C2C2E",
+                isBuiltin: true
+            ),
+            CanvasStyle(
+                id: UUID(uuidString: "5F46B6E8-6DFE-4F91-9BA4-75A2C4005D12")!,
+                name: "Sandstone",
+                backgroundHex: "#F4EFE6",
+                gridHex: "#C4B8A3",
+                textHex: "#3E3428",
+                markerHex: "#7F6A55",
+                isBuiltin: true
+            ),
+            CanvasStyle(
+                id: UUID(uuidString: "A6F0B663-4B4F-4A7D-9F4F-3312B3C8B983")!,
+                name: "Blueprint",
+                backgroundHex: "#0D1B2A",
+                gridHex: "#3E5C76",
+                textHex: "#E0E1DD",
+                markerHex: "#98C1D9",
+                isBuiltin: true
+            ),
+            CanvasStyle(
+                id: UUID(uuidString: "1E8B1F14-0C74-4C98-8E0E-4C6A2F1E2B64")!,
+                name: "Dark",
+                backgroundHex: "#1C1C1E",
+                gridHex: "#636366",
+                textHex: "#F2F2F7",
+                markerHex: "#AEAEB2",
+                isBuiltin: true
+            )
+        ]
+    }
+
+    static var defaultStylesData: String {
+        guard let data = try? encoder.encode(defaultStyles) else { return "[]" }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    static var defaultSelectedID: String {
+        defaultStyles.first?.id.uuidString ?? ""
+    }
+
+    static func loadStyles(from dataString: String) -> [CanvasStyle] {
+        guard let data = dataString.data(using: .utf8),
+              let styles = try? decoder.decode([CanvasStyle].self, from: data),
+              !styles.isEmpty
+        else { return defaultStyles }
+        return styles
+    }
+
+    static func encodeStyles(_ styles: [CanvasStyle]) -> String {
+        guard let data = try? encoder.encode(styles) else { return defaultStylesData }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    static func selectedStyle(from styles: [CanvasStyle], selectedID: String) -> CanvasStyle {
+        if let style = styles.first(where: { $0.id.uuidString == selectedID }) {
+            return style
+        }
+        return styles.first ?? defaultStyles[0]
+    }
 }
 
 struct CanvasThemeSettings {
-    static func makeTheme(backgroundHex: String, gridDotsHex: String) -> CanvasTheme {
+    static func makeTheme(from style: CanvasStyle) -> CanvasTheme {
         CanvasTheme(
-            backgroundColor: NSColor(hex: backgroundHex)?.cgColor ?? NSColor.white.cgColor,
-            gridDotColor: NSColor(hex: gridDotsHex)?.cgColor ?? NSColor.gray.cgColor
+            backgroundColor: NSColor(hex: style.backgroundHex)?.cgColor ?? NSColor.white.cgColor,
+            gridPrimaryColor: NSColor(hex: style.gridHex)?.cgColor ?? NSColor.gray.cgColor,
+            textColor: NSColor(hex: style.textHex)?.cgColor ?? NSColor.labelColor.cgColor,
+            sheetMarkerColor: NSColor(hex: style.markerHex)?.cgColor ?? NSColor.gray.cgColor
         )
     }
 }

@@ -5,7 +5,6 @@ final class SheetRenderLayer: RenderLayer {
     private let rootLayer = CALayer()
 
     // Renderer constants.
-    private let graphicColor: NSColor = .black
     private let inset: CGFloat = 20
     private let cellHeight: CGFloat = 25
     private let cellPad: CGFloat = 10
@@ -46,13 +45,17 @@ final class SheetRenderLayer: RenderLayer {
             cellValues: bakedCellValues
         )
 
-        generated.append(contentsOf: createBackgroundLayers(metrics: metrics))
-        generated.append(contentsOf: BorderDrawer().makeLayers(metrics: metrics, color: graphicColor.cgColor))
+        let backgroundColor = context.environment.canvasTheme.backgroundColor
+        generated.append(contentsOf: createBackgroundLayers(metrics: metrics, backgroundColor: backgroundColor))
+        let markerColor = NSColor(cgColor: context.environment.canvasTheme.sheetMarkerColor) ?? .black
+        let textColor = NSColor(cgColor: context.environment.canvasTheme.textColor) ?? .labelColor
+        generated.append(contentsOf: BorderDrawer().makeLayers(metrics: metrics, lineColor: markerColor.cgColor))
 
         if !bakedCellValues.isEmpty {
             let drawer = TitleBlockDrawer(
                 cellValues: bakedCellValues,
-                graphicColor: graphicColor,
+                lineColor: markerColor,
+                textColor: textColor,
                 cellPad: cellPad,
                 cellHeight: cellHeight,
                 safeFont: safeFont
@@ -63,7 +66,8 @@ final class SheetRenderLayer: RenderLayer {
         for position in [RulerDrawer.Position.top, .bottom, .left, .right] {
             let drawer = RulerDrawer(
                 position: position,
-                graphicColor: graphicColor,
+                lineColor: markerColor,
+                textColor: textColor,
                 safeFont: safeFont,
                 showLabels: true
             )
@@ -73,7 +77,7 @@ final class SheetRenderLayer: RenderLayer {
         return generated
     }
 
-    private func createBackgroundLayers(metrics: DrawingMetrics) -> [CALayer] {
+    private func createBackgroundLayers(metrics: DrawingMetrics, backgroundColor: CGColor) -> [CALayer] {
         let rulerBGPath = CGMutablePath()
         rulerBGPath.addRect(metrics.outerBounds)
         rulerBGPath.addRect(metrics.innerBounds)
@@ -81,14 +85,14 @@ final class SheetRenderLayer: RenderLayer {
         let rulerBGLayer = CAShapeLayer()
         rulerBGLayer.path = rulerBGPath
         rulerBGLayer.fillRule = .evenOdd
-        rulerBGLayer.fillColor = NSColor.white.cgColor
+        rulerBGLayer.fillColor = backgroundColor
 
         var layers: [CALayer] = [rulerBGLayer]
 
         if metrics.titleBlockFrame.height > 0 {
             let titleBGLayer = CAShapeLayer()
             titleBGLayer.path = CGPath(rect: metrics.titleBlockFrame, transform: nil)
-            titleBGLayer.fillColor = NSColor.white.cgColor
+            titleBGLayer.fillColor = backgroundColor
             layers.append(titleBGLayer)
         }
 

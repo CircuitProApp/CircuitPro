@@ -16,9 +16,10 @@ struct GraphTextRenderProvider: GraphRenderProvider {
             let worldPath = component.worldPath()
             guard !worldPath.isEmpty else { continue }
 
+            let themedTextColor = context.environment.canvasTheme.textColor
             let textPrimitive = DrawingPrimitive.fill(
                 path: worldPath,
-                color: component.color
+                color: themedTextColor
             )
             primitivesByLayer[component.layerId, default: []].append(textPrimitive)
 

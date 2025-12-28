@@ -58,7 +58,7 @@ class GridRenderLayer: RenderLayer {
         // Apply fade via fillColor alpha.
         let majorAlpha = clamp01(majorBaseAlpha * f)
         let minorAlpha = clamp01(minorBaseAlpha * f)
-        let baseColor = context.environment.canvasTheme.gridDotColor
+        let baseColor = context.environment.canvasTheme.gridPrimaryColor
         majorGridLayer.fillColor = applyAlpha(majorAlpha, to: baseColor)
         minorGridLayer.fillColor = applyAlpha(minorAlpha, to: baseColor)
 
