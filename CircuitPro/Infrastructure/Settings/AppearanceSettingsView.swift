@@ -138,8 +138,12 @@ struct AppearanceSettingsView: View {
                         Button("Reset to Default") { resetSelectedStyle() }
                             .disabled(!canResetSelectedStyle)
                     } else {
-                        Button("Delete Style") { deleteSelectedStyle() }
-                            .disabled(styles.count <= 1)
+                        Button(role: .destructive) {
+                            deleteSelectedStyle()
+                        } label: {
+                            Text("Delete Style")
+                        }
+                        .disabled(styles.count <= 1)
                     }
                 }
             }
