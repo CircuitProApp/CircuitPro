@@ -16,30 +16,33 @@ final class SchematicEditorController: EditorController {
     let graph = CanvasGraph()
     let wireEngine: WireEngine
     private var suppressGraphSelectionSync = false
-    private var isSyncingWiresFromModel = false
-    private var isApplyingWireChangesToModel = false
     private var isSyncingTextFromModel = false
     private var isApplyingTextChangesToModel = false
     private var isSyncingSymbolsFromModel = false
 
-    // Snapshot tracking to detect actual changes
-    private var lastComponentInstanceIDs: Set<UUID> = []
-    private var lastWireCount: Int = -1
-    private var lastDesignID: UUID?
+    // Track if initial load has happened
+    private var hasPerformedInitialLoad = false
+    private var isPerformingInitialLoad = false
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
         self.document = projectManager.document
         self.wireEngine = WireEngine(graph: graph)
+
+        // When wires change in the engine, persist to document
         self.wireEngine.onChange = { [weak self] in
+            guard let self = self else { return }
+            // Don't persist during initial load
+            guard !self.isPerformingInitialLoad else { return }
             if Thread.isMainThread {
-                self?.persistGraph()
+                self.persistWiresToDocument()
             } else {
                 Task { @MainActor in
-                    self?.persistGraph()
+                    self.persistWiresToDocument()
                 }
             }
         }
+
         self.canvasStore.onDelta = { [weak self] delta in
             self?.handleStoreDelta(delta)
         }
@@ -49,10 +52,9 @@ final class SchematicEditorController: EditorController {
 
         startTrackingStructureChanges()
         startTrackingTextChanges()
-        startTrackingWireChanges()
 
         Task {
-            await self.rebuildNodes()
+            await self.initialLoad()
         }
     }
 
@@ -62,8 +64,7 @@ final class SchematicEditorController: EditorController {
             _ = projectManager.componentInstances
         } onChange: {
             Task { @MainActor in
-                print("🔴 Structure tracking onChange fired")
-                await self.rebuildNodes()
+                await self.refreshSymbols()
                 self.startTrackingStructureChanges()
             }
         }
@@ -92,54 +93,55 @@ final class SchematicEditorController: EditorController {
         }
     }
 
-    private func startTrackingWireChanges() {
-        withObservationTracking {
-            _ = projectManager.selectedDesign.wires
-        } onChange: {
-            Task { @MainActor in
-                print("🔴 Wire tracking onChange fired")
-                if self.isApplyingWireChangesToModel {
-                    self.isApplyingWireChangesToModel = false
-                    self.startTrackingWireChanges()
-                    return
-                }
-                self.syncWiresFromModel()
-                self.startTrackingWireChanges()
-            }
-        }
-    }
+    // MARK: - Initial Load (once at startup)
 
-    private func rebuildNodes() async {
-        print("🔴 rebuildNodes() called")
+    private func initialLoad() async {
+        guard !hasPerformedInitialLoad else { return }
+        hasPerformedInitialLoad = true
+        isPerformingInitialLoad = true
+
         let design = projectManager.selectedDesign
 
-        // Check if anything actually changed
-        let currentInstanceIDs = Set(design.componentInstances.map { $0.id })
-        let currentDesignID = design.id
+        // Load wires from model into engine (one time)
+        wireEngine.build(from: design.wires)
 
-        let designChanged = lastDesignID != currentDesignID
-        let instancesChanged = lastComponentInstanceIDs != currentInstanceIDs
-
-        print(
-            "   📊 designChanged: \(designChanged) (last: \(lastDesignID?.uuidString.prefix(8) ?? "nil") vs current: \(currentDesignID.uuidString.prefix(8)))"
-        )
-        print(
-            "   📊 instancesChanged: \(instancesChanged) (last count: \(lastComponentInstanceIDs.count) vs current: \(currentInstanceIDs.count))"
-        )
-
-        guard designChanged || instancesChanged else {
-            print("⏭️ Skipping rebuildNodes - no actual changes")
-            return
+        // Sync pin positions
+        for inst in design.componentInstances {
+            let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
+            guard let symbolDef else { continue }
+            wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
         }
+        wireEngine.repairPinConnections()
 
-        lastDesignID = currentDesignID
-        lastComponentInstanceIDs = currentInstanceIDs
+        isPerformingInitialLoad = false
 
-        canvasStore.selection = []
-        syncWiresFromModel()
+        // Load symbol components
         refreshSymbolComponents()
         refreshSymbolTextNodes()
         refreshSymbolPinComponents()
+        canvasStore.invalidate()
+    }
+
+    // MARK: - Symbol Refresh (when structure changes)
+
+    private func refreshSymbols() async {
+        refreshSymbolComponents()
+        refreshSymbolTextNodes()
+        refreshSymbolPinComponents()
+
+        // Also sync pins when symbols change (component added/moved)
+        // Use the loading flag to prevent persistence during sync
+        let wasLoading = isPerformingInitialLoad
+        isPerformingInitialLoad = true
+
+        let design = projectManager.selectedDesign
+        for inst in design.componentInstances {
+            let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
+            guard let symbolDef else { continue }
+            wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
+        }
+
+        isPerformingInitialLoad = wasLoading
         canvasStore.invalidate()
     }
 
@@ -388,41 +390,41 @@ final class SchematicEditorController: EditorController {
         graph.setComponent(updated, for: id)
     }
 
-    private func persistGraph() {
-        guard !isSyncingWiresFromModel else { return }
+    // MARK: - Persistence
+
+    /// Called by WireEngine.onChange - saves wires to document model
+    private func persistWiresToDocument() {
         let design = projectManager.selectedDesign
         let newWires = wireEngine.toWires()
-        guard newWires != design.wires else { return }
-        isApplyingWireChangesToModel = true
-        design.wires = newWires
-        document.scheduleAutosave()
-    }
+        print("🔵 persistWiresToDocument: \(newWires.count) wires (was \(design.wires.count))")
 
-    private func syncWiresFromModel() {
-        print("🔴 syncWiresFromModel() called")
-        let design = projectManager.selectedDesign
+        // Compare wires by content, not identity
+        let oldSegmentCount = design.wires.flatMap { $0.segments }.count
+        let newSegmentCount = newWires.flatMap { $0.segments }.count
+        print("   📊 Old segments: \(oldSegmentCount), New segments: \(newSegmentCount)")
 
-        // Check if wire count actually changed to avoid unnecessary rebuilds
-        let currentWireCount = design.wires.count
-        if lastWireCount == currentWireCount && lastWireCount >= 0 {
-            // Wire count same - do a deeper check
-            let currentWires = wireEngine.toWires()
-            if currentWires == design.wires {
-                print("⏭️ Skipping syncWiresFromModel - wires unchanged")
-                return
+        guard newWires != design.wires else {
+            print("   ⏭️ Same wires, skipping")
+            return
+        }
+
+        // Log what's different
+        for (i, newWire) in newWires.enumerated() {
+            if i < design.wires.count {
+                let oldWire = design.wires[i]
+                if newWire.segments.count != oldWire.segments.count {
+                    print(
+                        "   ⚠️ Wire \(i): segment count changed \(oldWire.segments.count) → \(newWire.segments.count)"
+                    )
+                }
+            } else {
+                print("   ⚠️ Wire \(i): NEW wire added")
             }
         }
-        lastWireCount = currentWireCount
 
-        isSyncingWiresFromModel = true
-        wireEngine.build(from: design.wires)
-        for inst in design.componentInstances {
-            let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
-            guard let symbolDef else { continue }
-            wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
-        }
-        wireEngine.repairPinConnections()
-        isSyncingWiresFromModel = false
+        print("   ✅ Saving wires")
+        design.wires = newWires
+        document.scheduleAutosave()
     }
 
     // MARK: - Public Actions
