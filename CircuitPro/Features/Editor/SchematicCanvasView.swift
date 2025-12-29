@@ -5,8 +5,8 @@
 //  Created by Giorgi Tchelidze on 7/29/25.
 //
 
-import SwiftUI
 import SwiftDataPacks
+import SwiftUI
 
 struct SchematicCanvasView: View {
 
@@ -19,27 +19,26 @@ struct SchematicCanvasView: View {
         CanvasView(
             viewport: $canvasManager.viewport,
             store: projectManager.schematicController.canvasStore,
-            tool: $projectManager.schematicController.selectedTool.unwrapping(withDefault: CursorTool()),
+            tool: $projectManager.schematicController.selectedTool.unwrapping(
+                withDefault: CursorTool()),
             graph: projectManager.schematicController.graph,
             environment: canvasManager.environment
                 .withWireEngine(projectManager.schematicController.wireEngine)
+                .withRenderables(projectManager.componentInstances)
                 .withGraphRenderProviders([
                     GraphWireRenderAdapter(),
-                    GraphSymbolRenderProvider(),
-                    GraphTextRenderProvider(),
-                    GraphPinRenderProvider()
+                    CanvasRenderableProvider(),  // New: uses protocol
+                    GraphTextRenderProvider(),  // Keep: for text nodes
+                    GraphPinRenderProvider(),  // Keep: for pin junction dots
                 ])
                 .withGraphHaloProviders([
                     WireGraphHaloProvider(),
-                    GraphSymbolHaloProvider(),
-                    GraphTextHaloProvider(),
-                    GraphPinHaloProvider()
+                    CanvasRenderableHaloProvider(),  // New: uses protocol
                 ])
                 .withGraphHitTestProviders([
                     WireGraphHitTestProvider(),
-                    GraphSymbolHitTestProvider(),
-                    GraphTextHitTestProvider(),
-                    GraphPinHitTestProvider()
+                    CanvasRenderableHitTestProvider(),  // New: uses protocol
+                    GraphTextHitTestProvider(),  // Keep: for text selection
                 ]),
             renderLayers: [
                 GridRenderLayer(),
@@ -47,7 +46,7 @@ struct SchematicCanvasView: View {
                 ElementsRenderLayer(),
                 PreviewRenderLayer(),
                 MarqueeRenderLayer(),
-                CrosshairsRenderLayer()
+                CrosshairsRenderLayer(),
             ],
             interactions: [
                 HoverHighlightInteraction(),
@@ -55,9 +54,9 @@ struct SchematicCanvasView: View {
                 ToolInteraction(),
                 SelectionInteraction(),
                 DragInteraction(),
-                MarqueeInteraction()
+                MarqueeInteraction(),
             ],
-            inputProcessors: [ GridSnapProcessor() ],
+            inputProcessors: [GridSnapProcessor()],
             snapProvider: CircuitProSnapProvider(),
             registeredDraggedTypes: [.transferableComponent],
             onPasteboardDropped: handleComponentDrop
@@ -66,8 +65,10 @@ struct SchematicCanvasView: View {
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
         .overlay(alignment: .leading) {
-            SchematicToolbarView(selectedSchematicTool: $projectManager.schematicController.selectedTool)
-                .padding(16)
+            SchematicToolbarView(
+                selectedSchematicTool: $projectManager.schematicController.selectedTool
+            )
+            .padding(16)
         }
     }
 
@@ -75,7 +76,8 @@ struct SchematicCanvasView: View {
     /// The view's only job is to decode the data and delegate the action.
     private func handleComponentDrop(pasteboard: NSPasteboard, location: CGPoint) -> Bool {
         guard let data = pasteboard.data(forType: .transferableComponent),
-              let transferable = try? JSONDecoder().decode(TransferableComponent.self, from: data) else {
+            let transferable = try? JSONDecoder().decode(TransferableComponent.self, from: data)
+        else {
             return false
         }
 

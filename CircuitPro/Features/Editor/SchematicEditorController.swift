@@ -85,9 +85,10 @@ final class SchematicEditorController: EditorController {
             }
         } onChange: {
             Task { @MainActor in
-                self.refreshSymbolComponents()
+                self.refreshSymbolComponents()  // Needed for selection/drag
                 self.refreshSymbolTextNodes()
                 self.refreshSymbolPinComponents()
+                self.canvasStore.invalidate()
                 self.startTrackingTextChanges()
             }
         }
@@ -115,7 +116,7 @@ final class SchematicEditorController: EditorController {
 
         isPerformingInitialLoad = false
 
-        // Load symbol components
+        // Load graph components (needed for selection, not rendering)
         refreshSymbolComponents()
         refreshSymbolTextNodes()
         refreshSymbolPinComponents()
@@ -125,6 +126,7 @@ final class SchematicEditorController: EditorController {
     // MARK: - Symbol Refresh (when structure changes)
 
     private func refreshSymbols() async {
+        // Update graph components for selection/drag (rendering uses CanvasRenderable)
         refreshSymbolComponents()
         refreshSymbolTextNodes()
         refreshSymbolPinComponents()
@@ -144,6 +146,8 @@ final class SchematicEditorController: EditorController {
         isPerformingInitialLoad = wasLoading
         canvasStore.invalidate()
     }
+
+    // MARK: - Graph Component Refresh (for selection/drag, not rendering)
 
     private func refreshSymbolComponents() {
         let design = projectManager.selectedDesign

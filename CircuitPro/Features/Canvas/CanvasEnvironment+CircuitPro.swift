@@ -5,9 +5,8 @@
 //  Created by Giorgi Tchelidze on 8/5/25.
 //
 
-
-import CoreGraphics
 import AppKit
+import CoreGraphics
 
 struct CanvasConfiguration {
     var grid = CanvasGrid()
@@ -63,6 +62,10 @@ private struct TraceEngineKey: CanvasEnvironmentKey {
     static let defaultValue: TraceEngine? = nil
 }
 
+private struct RenderablesKey: CanvasEnvironmentKey {
+    static let defaultValue: [any CanvasRenderable] = []
+}
+
 enum CanvasInteractionMode {
     case graphAndScene
     case graphOnly
@@ -98,6 +101,11 @@ extension CanvasEnvironmentValues {
         set { self[TraceEngineKey.self] = newValue }
     }
 
+    var renderables: [any CanvasRenderable] {
+        get { self[RenderablesKey.self] }
+        set { self[RenderablesKey.self] = newValue }
+    }
+
     var interactionMode: CanvasInteractionMode {
         get { self[InteractionModeKey.self] }
         set { self[InteractionModeKey.self] = newValue }
@@ -118,6 +126,12 @@ extension CanvasEnvironmentValues {
     func withInteractionMode(_ mode: CanvasInteractionMode) -> CanvasEnvironmentValues {
         var copy = self
         copy.interactionMode = mode
+        return copy
+    }
+
+    func withRenderables(_ items: [any CanvasRenderable]) -> CanvasEnvironmentValues {
+        var copy = self
+        copy.renderables = items
         return copy
     }
 }
