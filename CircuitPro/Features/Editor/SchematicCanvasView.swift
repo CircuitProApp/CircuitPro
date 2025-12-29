@@ -23,7 +23,7 @@ struct SchematicCanvasView: View {
                 withDefault: CursorTool()),
             graph: projectManager.schematicController.graph,
             environment: canvasManager.environment
-                .withWireEngine(projectManager.schematicController.wireEngine)
+                .withConnectionEngine(projectManager.schematicController.wireEngine)
                 .withRenderables(projectManager.componentInstances)
                 .withGraphRenderProviders([
                     GraphWireRenderAdapter(),
@@ -53,7 +53,8 @@ struct SchematicCanvasView: View {
                 KeyCommandInteraction(),
                 ToolInteraction(),
                 SelectionInteraction(),
-                DragInteraction(),
+                CanvasDraggableInteraction(),  // Uses protocol
+                DragInteraction(),  // Fallback (for wires, text, etc.)
                 MarqueeInteraction(),
             ],
             inputProcessors: [GridSnapProcessor()],

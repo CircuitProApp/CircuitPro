@@ -5,16 +5,16 @@
 //  Created by Giorgi Tchelidze on 8/9/25.
 //
 
-
 import AppKit
-import Carbon.HIToolbox // For kVK constants
+import Carbon.HIToolbox  // For kVK constants
 
 /// An interaction that handles global keyboard commands like Escape, Return, Delete, and Rotate.
 /// It prioritizes sending commands to the active tool first, falling back to graph actions
 /// (like deleting selected elements) if the tool doesn't handle the command.
 struct KeyCommandInteraction: CanvasInteraction {
 
-    func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool {
+    func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool
+    {
         // Use key codes for non-character keys like Escape, Return, and Delete.
         switch Int(event.keyCode) {
 
@@ -56,7 +56,7 @@ struct KeyCommandInteraction: CanvasInteraction {
             // Setting the tool to nil will cause the view to fall back to the default tool.
             controller.selectedTool = nil
         }
-        return true // We consumed the Escape key event.
+        return true  // We consumed the Escape key event.
     }
 
     /// Handles the Return/Enter key.
@@ -71,7 +71,9 @@ struct KeyCommandInteraction: CanvasInteraction {
         case .noResult:
             return false
         case .command(let command):
-            command.execute(context: ToolInteractionContext(clickCount: 0, renderContext: context), controller: controller)
+            command.execute(
+                context: ToolInteractionContext(clickCount: 0, renderContext: context),
+                controller: controller)
             return true
         case .newPrimitive(let primitive):
             let graph = context.graph
@@ -92,7 +94,7 @@ struct KeyCommandInteraction: CanvasInteraction {
         if let tool = controller.selectedTool, !(tool is CursorTool) {
             // Allow the tool to perform a "backspace" action.
             tool.handleBackspace()
-            return true // Assume the tool handled it.
+            return true  // Assume the tool handled it.
         }
 
         // If no tool handled it, perform the standard "delete selection" action.
@@ -100,11 +102,11 @@ struct KeyCommandInteraction: CanvasInteraction {
         guard !graph.selection.isEmpty else { return false }
         let selectedIDs = Set(graph.selection.map { $0.rawValue })
         let hasWireSelection = graph.selection.contains { id in
-            graph.component(WireEdgeComponent.self, for: id) != nil ||
-            graph.component(WireVertexComponent.self, for: id) != nil
+            graph.component(WireEdgeComponent.self, for: id) != nil
+                || graph.component(WireVertexComponent.self, for: id) != nil
         }
 
-        if hasWireSelection, let wireEngine = context.environment.wireEngine {
+        if hasWireSelection, let wireEngine = context.environment.connectionEngine as? WireEngine {
             wireEngine.delete(items: selectedIDs)
             graph.selection = []
             Task { @MainActor in
@@ -114,8 +116,8 @@ struct KeyCommandInteraction: CanvasInteraction {
         }
 
         let hasTraceSelection = graph.selection.contains { id in
-            graph.component(TraceEdgeComponent.self, for: id) != nil ||
-            graph.component(TraceVertexComponent.self, for: id) != nil
+            graph.component(TraceEdgeComponent.self, for: id) != nil
+                || graph.component(TraceVertexComponent.self, for: id) != nil
         }
 
         if hasTraceSelection, let traceEngine = context.environment.traceEngine {
@@ -150,7 +152,9 @@ struct KeyCommandInteraction: CanvasInteraction {
         let graph = context.graph
         guard !graph.selection.isEmpty else { return false }
         for id in graph.selection {
-            guard var primitive = graph.component(AnyCanvasPrimitive.self, for: id) else { continue }
+            guard var primitive = graph.component(AnyCanvasPrimitive.self, for: id) else {
+                continue
+            }
             primitive.rotation += .pi / 2
             graph.setComponent(primitive, for: id)
         }

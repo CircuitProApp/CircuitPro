@@ -7,9 +7,24 @@
 
 import AppKit
 
-// MARK: - CanvasRenderable Conformance
+// MARK: - CanvasDraggable Conformance (extends CanvasRenderable)
 
-extension ComponentInstance: CanvasRenderable {
+extension ComponentInstance: CanvasDraggable {
+
+    var worldPosition: CGPoint {
+        symbolInstance.position
+    }
+
+    var worldRotation: CGFloat {
+        symbolInstance.rotation
+    }
+
+    func move(by delta: CGPoint) {
+        symbolInstance.position = CGPoint(
+            x: symbolInstance.position.x + delta.x,
+            y: symbolInstance.position.y + delta.y
+        )
+    }
 
     var renderBounds: CGRect {
         guard let symbolDef = symbolInstance.definition else { return .null }

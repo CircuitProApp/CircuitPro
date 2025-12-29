@@ -27,10 +27,12 @@ private final class DragHandler {
     // Accumulated during update()
     private var newVertices: Set<UUID> = []
 
-    init(state: GraphState,
-         geometry: GeometryPolicy,
-         lookup: @escaping (UUID) -> VertexOwnership?,
-         assign: @escaping (UUID, VertexOwnership) -> Void) {
+    init(
+        state: GraphState,
+        geometry: GeometryPolicy,
+        lookup: @escaping (UUID) -> VertexOwnership?,
+        assign: @escaping (UUID, VertexOwnership) -> Void
+    ) {
         self.workingState = state
         self.geometry = geometry
         self.lookup = lookup
@@ -50,7 +52,8 @@ private final class DragHandler {
         selectedEdges = s.edges.values.filter { selectedIDs.contains($0.id) }
         selectedEdgeIDs = Set(selectedEdges.map { $0.id })
 
-        let movableEdgeVertexIDs = selectedEdges
+        let movableEdgeVertexIDs =
+            selectedEdges
             .flatMap { [$0.start, $0.end] }
             .filter { vid in
                 if case .pin = lookup(vid) { return false }
@@ -74,16 +77,19 @@ private final class DragHandler {
                 let otherEndID = (e.start == vertexID) ? e.end : e.start
                 if verticesToMove.contains(otherEndID) { return false }
                 guard let orig = originalVertexPositions[vertexID],
-                      let otherOrig = originalVertexPositions[otherEndID] else { return false }
+                    let otherOrig = originalVertexPositions[otherEndID]
+                else { return false }
                 let wasHorizontal = abs(orig.y - otherOrig.y) < tol
-                return (wasHorizontal && abs(delta.y) > tol) || (!wasHorizontal && abs(delta.x) > tol)
+                return (wasHorizontal && abs(delta.y) > tol)
+                    || (!wasHorizontal && abs(delta.x) > tol)
             }
 
             if isOffAxis {
                 let pinOwnership = lookup(vertexID) ?? .free
                 let pinPoint = s.vertices[vertexID]?.point ?? .zero
                 assign(vertexID, .detachedPin)
-                let newStatic = s.addVertex(at: pinPoint, clusterID: s.vertices[vertexID]?.clusterID)
+                let newStatic = s.addVertex(
+                    at: pinPoint, clusterID: s.vertices[vertexID]?.clusterID)
                 newVertices.insert(newStatic.id)
                 assign(newStatic.id, pinOwnership)
                 _ = s.addEdge(from: vertexID, to: newStatic.id)
@@ -99,19 +105,28 @@ private final class DragHandler {
 
         for vertexID in verticesToMove where lookup(vertexID) == .detachedPin {
             guard
-                let staticPinNeighbor = findNeighbor(of: vertexID, in: s, where: { nID, _ in
-                    if case .pin = self.lookup(nID) { return newPositions[nID] == nil } else { return false }
-                }),
-                let movingNeighbor = findNeighbor(of: vertexID, in: s, where: { nID, e in
-                    return newPositions[nID] != nil && self.selectedEdgeIDs.contains(e.id)
-                }),
+                let staticPinNeighbor = findNeighbor(
+                    of: vertexID, in: s,
+                    where: { nID, _ in
+                        if case .pin = self.lookup(nID) {
+                            return newPositions[nID] == nil
+                        } else {
+                            return false
+                        }
+                    }),
+                let movingNeighbor = findNeighbor(
+                    of: vertexID, in: s,
+                    where: { nID, e in
+                        return newPositions[nID] != nil && self.selectedEdgeIDs.contains(e.id)
+                    }),
                 let origV = originalVertexPositions[vertexID],
                 let origM = originalVertexPositions[movingNeighbor.id],
                 let newM = newPositions[movingNeighbor.id]
             else { continue }
 
             let wasHorizontal = abs(origV.y - origM.y) < tol
-            newPositions[vertexID] = wasHorizontal
+            newPositions[vertexID] =
+                wasHorizontal
                 ? CGPoint(x: staticPinNeighbor.point.x, y: newM.y)
                 : CGPoint(x: newM.x, y: staticPinNeighbor.point.y)
         }
@@ -121,9 +136,11 @@ private final class DragHandler {
         var head = 0
 
         while head < queue.count {
-            let junctionID = queue[head]; head += 1
+            let junctionID = queue[head]
+            head += 1
             guard let junctionNewPos = newPositions[junctionID],
-                  let junctionOrigPos = originalVertexPositions[junctionID] else { continue }
+                let junctionOrigPos = originalVertexPositions[junctionID]
+            else { continue }
 
             for edgeID in s.adjacency[junctionID] ?? [] {
                 guard let e = s.edges[edgeID] else { continue }
@@ -135,15 +152,18 @@ private final class DragHandler {
                 let wasHorizontal = abs(anchorOrigPos.y - junctionOrigPos.y) < tol
 
                 if case .pin(let owner, let pin) = lookup(anchorID) {
-                    let isOffAxisPull = (wasHorizontal && abs(junctionNewPos.y - anchorOrigPos.y) > tol)
+                    let isOffAxisPull =
+                        (wasHorizontal && abs(junctionNewPos.y - anchorOrigPos.y) > tol)
                         || (!wasHorizontal && abs(junctionNewPos.x - anchorOrigPos.x) > tol)
                     if isOffAxisPull {
-                        updatedAnchorPos = wasHorizontal
+                        updatedAnchorPos =
+                            wasHorizontal
                             ? CGPoint(x: anchorOrigPos.x, y: junctionNewPos.y)
                             : CGPoint(x: junctionNewPos.x, y: anchorOrigPos.y)
 
                         assign(anchorID, .detachedPin)
-                        let newStaticPin = s.addVertex(at: anchorOrigPos, clusterID: s.vertices[anchorID]?.clusterID)
+                        let newStaticPin = s.addVertex(
+                            at: anchorOrigPos, clusterID: s.vertices[anchorID]?.clusterID)
                         newVertices.insert(newStaticPin.id)
                         assign(newStaticPin.id, .pin(ownerID: owner, pinID: pin))
                         _ = s.addEdge(from: anchorID, to: newStaticPin.id)
@@ -151,8 +171,11 @@ private final class DragHandler {
                         continue
                     }
                 } else {
-                    if wasHorizontal { updatedAnchorPos.y = junctionNewPos.y }
-                    else { updatedAnchorPos.x = junctionNewPos.x }
+                    if wasHorizontal {
+                        updatedAnchorPos.y = junctionNewPos.y
+                    } else {
+                        updatedAnchorPos.x = junctionNewPos.x
+                    }
                 }
 
                 if newPositions[anchorID] != updatedAnchorPos {
@@ -186,9 +209,11 @@ private final class DragHandler {
         return (workingState, epicenter)
     }
 
-    private func findNeighbor(of vertexID: UUID,
-                              in state: GraphState,
-                              where predicate: (UUID, GraphEdge) -> Bool) -> GraphVertex? {
+    private func findNeighbor(
+        of vertexID: UUID,
+        in state: GraphState,
+        where predicate: (UUID, GraphEdge) -> Bool
+    ) -> GraphVertex? {
         guard let edgeIDs = state.adjacency[vertexID] else { return nil }
         for eid in edgeIDs {
             guard let e = state.edges[eid] else { continue }
@@ -199,7 +224,7 @@ private final class DragHandler {
     }
 }
 
-final class WireEngine {
+final class WireEngine: ConnectionEngine {
     // MARK: - Engine and State
     let graph: CanvasGraph
     let engine: GraphEngine
@@ -329,10 +354,11 @@ final class WireEngine {
 
             let segments: [WireSegment] = compE.compactMap { eid in
                 guard let e = s.edges[eid],
-                      let a = s.vertices[e.start],
-                      let b = s.vertices[e.end],
-                      let ap = attachmentPoint(for: a),
-                      let bp = attachmentPoint(for: b) else { return nil }
+                    let a = s.vertices[e.start],
+                    let b = s.vertices[e.end],
+                    let ap = attachmentPoint(for: a),
+                    let bp = attachmentPoint(for: b)
+                else { return nil }
                 return WireSegment(start: ap, end: bp)
             }
             if !segments.isEmpty {
@@ -359,12 +385,13 @@ final class WireEngine {
             guard !compE.isEmpty, let groupID = s.vertices[vID]?.clusterID else { continue }
 
             let netName = groupLabels[groupID] ?? "Net \(groupID.uuidString.prefix(8))"
-            nets.append(Net(
-                id: groupID,
-                name: netName,
-                vertexCount: compV.count,
-                edgeCount: compE.count
-            ))
+            nets.append(
+                Net(
+                    id: groupID,
+                    name: netName,
+                    vertexCount: compV.count,
+                    edgeCount: compE.count
+                ))
         }
         return nets
     }
@@ -378,9 +405,11 @@ final class WireEngine {
 
     // MARK: - Public API (transactions-first)
 
-    func connect(from startPoint: CGPoint,
-                 to endPoint: CGPoint,
-                 preferring strategy: WireConnectionStrategy = .horizontalThenVertical) {
+    func connect(
+        from startPoint: CGPoint,
+        to endPoint: CGPoint,
+        preferring strategy: WireConnectionStrategy = .horizontalThenVertical
+    ) {
         var txA = GetOrCreateVertexTransaction(point: startPoint)
         _ = engine.execute(transaction: &txA)
         guard let aID = txA.createdID else { return }
@@ -389,14 +418,17 @@ final class WireEngine {
         _ = engine.execute(transaction: &txB)
         guard let bID = txB.createdID else { return }
 
-        let s: ConnectVerticesTransaction.Strategy = (strategy == .horizontalThenVertical) ? .hThenV : .vThenH
+        let s: ConnectVerticesTransaction.Strategy =
+            (strategy == .horizontalThenVertical) ? .hThenV : .vThenH
         var tx = ConnectVerticesTransaction(startID: aID, endID: bID, strategy: s)
         _ = engine.execute(transaction: &tx)
     }
 
-    func connect(from startID: UUID,
-                 to endID: UUID,
-                 preferring strategy: WireConnectionStrategy = .horizontalThenVertical) {
+    func connect(
+        from startID: UUID,
+        to endID: UUID,
+        preferring strategy: WireConnectionStrategy = .horizontalThenVertical
+    ) {
         let s: ConnectVerticesTransaction.Strategy =
             (strategy == .horizontalThenVertical) ? .hThenV : .vThenH
         var tx = ConnectVerticesTransaction(startID: startID, endID: endID, strategy: s)
@@ -451,10 +483,14 @@ final class WireEngine {
         return nil
     }
 
-    func syncPins(for symbolInstance: SymbolInstance, of symbolDefinition: SymbolDefinition, ownerID: UUID) {
+    func syncPins(
+        for symbolInstance: SymbolInstance, of symbolDefinition: SymbolDefinition, ownerID: UUID
+    ) {
         for pinDef in symbolDefinition.pins {
-            let rotated = pinDef.position.applying(CGAffineTransform(rotationAngle: symbolInstance.rotation))
-            let absPos = CGPoint(x: symbolInstance.position.x + rotated.x, y: symbolInstance.position.y + rotated.y)
+            let rotated = pinDef.position.applying(
+                CGAffineTransform(rotationAngle: symbolInstance.rotation))
+            let absPos = CGPoint(
+                x: symbolInstance.position.x + rotated.x, y: symbolInstance.position.y + rotated.y)
 
             if let existingID = findVertex(ownedBy: ownerID, pinID: pinDef.id) {
                 var tx = MoveVertexTransaction(id: existingID, newPoint: absPos)
@@ -476,7 +512,9 @@ final class WireEngine {
 
         let edges = Array(state.edges.values)
 
-        func preferredCorner(pinID: UUID, pinPos: CGPoint, otherID: UUID, otherPos: CGPoint) -> CGPoint {
+        func preferredCorner(pinID: UUID, pinPos: CGPoint, otherID: UUID, otherPos: CGPoint)
+            -> CGPoint
+        {
             var horiz = 0
             var vert = 0
             for eid in state.adjacency[otherID] ?? [] {
@@ -497,7 +535,8 @@ final class WireEngine {
 
         for edge in edges {
             guard let start = state.vertices[edge.start],
-                  let end = state.vertices[edge.end] else { continue }
+                let end = state.vertices[edge.end]
+            else { continue }
 
             let startOwn = ownership[edge.start] ?? .free
             let endOwn = ownership[edge.end] ?? .free
@@ -525,15 +564,18 @@ final class WireEngine {
                 continue
             }
 
-            let corner = preferredCorner(pinID: pinID, pinPos: pinPos, otherID: otherID, otherPos: otherPos)
+            let corner = preferredCorner(
+                pinID: pinID, pinPos: pinPos, otherID: otherID, otherPos: otherPos)
             let cornerID: UUID
             if let existing = state.findVertex(at: corner, tol: tol),
-               let existingCluster = state.vertices[existing.id]?.clusterID,
-               let targetCluster = state.vertices[pinID]?.clusterID,
-               existingCluster == targetCluster {
+                let existingCluster = state.vertices[existing.id]?.clusterID,
+                let targetCluster = state.vertices[pinID]?.clusterID,
+                existingCluster == targetCluster
+            {
                 cornerID = existing.id
             } else {
-                let clusterID = state.vertices[pinID]?.clusterID ?? state.vertices[otherID]?.clusterID
+                let clusterID =
+                    state.vertices[pinID]?.clusterID ?? state.vertices[otherID]?.clusterID
                 let newVertex = state.addVertex(at: corner, clusterID: clusterID)
                 cornerID = newVertex.id
                 ownership[cornerID] = .free
@@ -568,9 +610,10 @@ final class WireEngine {
         for vid in delta.deletedVertices {
             if let own = ownership[vid], let oldPos = lastPosition[vid] {
                 if case .pin = own,
-                   let survivor = final.vertices.values.first(where: { p in
-                       abs(p.point.x - oldPos.x) < tol && abs(p.point.y - oldPos.y) < tol
-                   }) {
+                    let survivor = final.vertices.values.first(where: { p in
+                        abs(p.point.x - oldPos.x) < tol && abs(p.point.y - oldPos.y) < tol
+                    })
+                {
                     setOwnership(own, for: survivor.id)
                 }
                 ownership.removeValue(forKey: vid)
@@ -618,7 +661,8 @@ final class WireEngine {
             let nodeID = NodeID(id)
             graph.addNode(nodeID)
             let clusterID = final.vertices[e.start]?.clusterID ?? final.vertices[e.end]?.clusterID
-            let component = WireEdgeComponent(start: NodeID(e.start), end: NodeID(e.end), clusterID: clusterID)
+            let component = WireEdgeComponent(
+                start: NodeID(e.start), end: NodeID(e.end), clusterID: clusterID)
             graph.setComponent(component, for: nodeID)
         }
 
@@ -640,8 +684,11 @@ final class WireEngine {
             }
             for (edgeID, edge) in final.edges {
                 let nodeID = NodeID(edgeID)
-                guard var component = graph.component(WireEdgeComponent.self, for: nodeID) else { continue }
-                let clusterID = final.vertices[edge.start]?.clusterID ?? final.vertices[edge.end]?.clusterID
+                guard var component = graph.component(WireEdgeComponent.self, for: nodeID) else {
+                    continue
+                }
+                let clusterID =
+                    final.vertices[edge.start]?.clusterID ?? final.vertices[edge.end]?.clusterID
                 if component.clusterID != clusterID {
                     component.clusterID = clusterID
                     graph.setComponent(component, for: nodeID)
@@ -660,7 +707,9 @@ final class WireEngine {
     }
 
     @discardableResult
-    private func getOrCreatePinVertex(at point: CGPoint, ownerID: UUID, pinID: UUID) -> GraphVertex.ID {
+    private func getOrCreatePinVertex(at point: CGPoint, ownerID: UUID, pinID: UUID)
+        -> GraphVertex.ID
+    {
         let vid = getOrCreateVertex(at: point)
         setOwnership(.pin(ownerID: ownerID, pinID: pinID), for: vid)
         return vid
@@ -674,7 +723,9 @@ final class WireEngine {
         }
     }
 
-    private func net(startingFrom start: UUID, in state: GraphState) -> (vertices: Set<UUID>, edges: Set<UUID>) {
+    private func net(startingFrom start: UUID, in state: GraphState) -> (
+        vertices: Set<UUID>, edges: Set<UUID>
+    ) {
         guard state.vertices[start] != nil else { return ([], []) }
         var vset: Set<UUID> = [start]
         var eset: Set<UUID> = []

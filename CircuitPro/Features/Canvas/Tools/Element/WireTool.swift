@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 /// A stateful tool for drawing orthogonal wires.
 final class WireTool: CanvasTool {
@@ -23,11 +23,14 @@ final class WireTool: CanvasTool {
     private var state: State = .idle
 
     // MARK: - Primary Actions
-    override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
+    override func handleTap(at location: CGPoint, context: ToolInteractionContext)
+        -> CanvasToolResult
+    {
         switch self.state {
         case .idle:
             let graphHit = GraphHitTester().hitTest(point: location, context: context.renderContext)
-            let initialDirection = determineInitialDirection(graphHit: graphHit, context: context.renderContext)
+            let initialDirection = determineInitialDirection(
+                graphHit: graphHit, context: context.renderContext)
             self.state = .drawing(startPoint: location, direction: initialDirection)
             return .noResult
 
@@ -58,12 +61,16 @@ final class WireTool: CanvasTool {
                 self.state = .drawing(startPoint: location, direction: newDirection)
             }
 
-            return .command(CanvasToolCommand { interactionContext, _ in
-                guard let wireEngine = interactionContext.renderContext.environment.wireEngine else {
-                    return
-                }
-                wireEngine.connect(from: fromPoint, to: toPoint, preferring: strategy)
-            })
+            return .command(
+                CanvasToolCommand { interactionContext, _ in
+                    guard
+                        let wireEngine = interactionContext.renderContext.environment
+                            .connectionEngine as? WireEngine
+                    else {
+                        return
+                    }
+                    wireEngine.connect(from: fromPoint, to: toPoint, preferring: strategy)
+                })
         }
     }
 
@@ -71,7 +78,9 @@ final class WireTool: CanvasTool {
         guard case .drawing(let startPoint, let direction) = state else { return [] }
 
         // Calculate the corner point for the two-segment orthogonal line.
-        let corner = (direction == .horizontal) ? CGPoint(x: mouse.x, y: startPoint.y) : CGPoint(x: startPoint.x, y: mouse.y)
+        let corner =
+            (direction == .horizontal)
+            ? CGPoint(x: mouse.x, y: startPoint.y) : CGPoint(x: startPoint.x, y: mouse.y)
 
         // Create the path for the preview.
         let path = CGMutablePath()
@@ -80,12 +89,14 @@ final class WireTool: CanvasTool {
         path.addLine(to: mouse)
 
         // Return a single stroke primitive with the specified styling.
-        return [.stroke(
-            path: path,
-            color: NSColor.systemBlue.cgColor,
-            lineWidth: 1.0, // Default line width
-            lineDash: [4, 4]
-        )]
+        return [
+            .stroke(
+                path: path,
+                color: NSColor.systemBlue.cgColor,
+                lineWidth: 1.0,  // Default line width
+                lineDash: [4, 4]
+            )
+        ]
     }
 
     private func shouldFinish(at location: CGPoint, context: RenderContext) -> Bool {
@@ -111,7 +122,9 @@ final class WireTool: CanvasTool {
     }
 
     // MARK: - Private Helpers
-    private func determineInitialDirection(graphHit: NodeID?, context: RenderContext) -> DrawingDirection {
+    private func determineInitialDirection(graphHit: NodeID?, context: RenderContext)
+        -> DrawingDirection
+    {
         if let graphHit, let orientation = wireOrientation(for: graphHit, in: context) {
             return orientation == .horizontal ? .vertical : .horizontal
         }
@@ -122,8 +135,9 @@ final class WireTool: CanvasTool {
     private func wireOrientation(for id: NodeID, in context: RenderContext) -> EdgeOrientation? {
         let graph = context.graph
         guard let edge = graph.component(WireEdgeComponent.self, for: id),
-              let start = graph.component(WireVertexComponent.self, for: edge.start),
-              let end = graph.component(WireVertexComponent.self, for: edge.end) else {
+            let start = graph.component(WireVertexComponent.self, for: edge.start),
+            let end = graph.component(WireVertexComponent.self, for: edge.end)
+        else {
             return nil
         }
         let dx = abs(start.point.x - end.point.x)

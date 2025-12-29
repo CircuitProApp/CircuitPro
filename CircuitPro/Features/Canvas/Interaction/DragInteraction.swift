@@ -33,7 +33,9 @@ final class DragInteraction: CanvasInteraction {
 
     var wantsRawInput: Bool { true }
 
-    func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
+    func mouseDown(
+        with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController
+    ) -> Bool {
         self.graphState = nil
         self.wireState = nil
         guard controller.selectedTool is CursorTool else { return false }
@@ -53,7 +55,9 @@ final class DragInteraction: CanvasInteraction {
             let hitFootprint = graph.component(GraphFootprintComponent.self, for: graphHit) != nil
             let hitSelectablePin = hitPin?.isSelectable ?? false
             let hitSelectablePad = hitPad?.isSelectable ?? false
-            if hitPrimitive || hitText || hitSelectablePin || hitSelectablePad || hitSymbol || hitFootprint || isOwnedHit {
+            if hitPrimitive || hitText || hitSelectablePin || hitSelectablePad || hitSymbol
+                || hitFootprint || isOwnedHit
+            {
                 let selectedIDs = graph.selection
                 var originalPrimitives: [NodeID: AnyCanvasPrimitive] = [:]
                 var originalTexts: [NodeID: GraphTextComponent] = [:]
@@ -69,10 +73,14 @@ final class DragInteraction: CanvasInteraction {
                     if let original = graph.component(GraphTextComponent.self, for: id) {
                         originalTexts[id] = original
                     }
-                    if let original = graph.component(GraphPinComponent.self, for: id), original.isSelectable {
+                    if let original = graph.component(GraphPinComponent.self, for: id),
+                        original.isSelectable
+                    {
                         originalPins[id] = original
                     }
-                    if let original = graph.component(GraphPadComponent.self, for: id), original.isSelectable {
+                    if let original = graph.component(GraphPadComponent.self, for: id),
+                        original.isSelectable
+                    {
                         originalPads[id] = original
                     }
                     if let original = graph.component(GraphSymbolComponent.self, for: id) {
@@ -85,36 +93,47 @@ final class DragInteraction: CanvasInteraction {
                     }
                 }
 
-                let ownedTextIDs = Set(graph.components(GraphTextComponent.self).compactMap { id, component in
-                    ownerIDs.contains(component.ownerID) ? id : nil
-                })
-                let ownedPinIDs = Set<NodeID>(graph.components(GraphPinComponent.self).compactMap { id, component in
-                    guard let ownerID = component.ownerID else { return nil }
-                    return ownerIDs.contains(ownerID) ? id : nil
-                })
-                let ownedPadIDs = Set<NodeID>(graph.components(GraphPadComponent.self).compactMap { id, component in
-                    guard let ownerID = component.ownerID else { return nil }
-                    return ownerIDs.contains(ownerID) ? id : nil
-                })
+                let ownedTextIDs = Set(
+                    graph.components(GraphTextComponent.self).compactMap { id, component in
+                        ownerIDs.contains(component.ownerID) ? id : nil
+                    })
+                let ownedPinIDs = Set<NodeID>(
+                    graph.components(GraphPinComponent.self).compactMap { id, component in
+                        guard let ownerID = component.ownerID else { return nil }
+                        return ownerIDs.contains(ownerID) ? id : nil
+                    })
+                let ownedPadIDs = Set<NodeID>(
+                    graph.components(GraphPadComponent.self).compactMap { id, component in
+                        guard let ownerID = component.ownerID else { return nil }
+                        return ownerIDs.contains(ownerID) ? id : nil
+                    })
 
                 for id in ownedTextIDs {
-                    if originalTexts[id] == nil, let original = graph.component(GraphTextComponent.self, for: id) {
+                    if originalTexts[id] == nil,
+                        let original = graph.component(GraphTextComponent.self, for: id)
+                    {
                         originalTexts[id] = original
                     }
                 }
                 for id in ownedPinIDs {
-                    if originalPins[id] == nil, let original = graph.component(GraphPinComponent.self, for: id) {
+                    if originalPins[id] == nil,
+                        let original = graph.component(GraphPinComponent.self, for: id)
+                    {
                         originalPins[id] = original
                     }
                 }
                 for id in ownedPadIDs {
-                    if originalPads[id] == nil, let original = graph.component(GraphPadComponent.self, for: id) {
+                    if originalPads[id] == nil,
+                        let original = graph.component(GraphPadComponent.self, for: id)
+                    {
                         originalPads[id] = original
                     }
                 }
 
                 var activeWireEngine: WireEngine?
-                if let wireEngine = context.environment.wireEngine, !ownerIDs.isEmpty {
+                if let wireEngine = context.environment.connectionEngine as? WireEngine,
+                    !ownerIDs.isEmpty
+                {
                     let selectedRawIDs = Set(selectedIDs.map { $0.rawValue })
                     if wireEngine.beginDrag(selectedIDs: selectedRawIDs) {
                         activeWireEngine = wireEngine
@@ -141,12 +160,14 @@ final class DragInteraction: CanvasInteraction {
             }
         }
 
-        if let wireEngine = context.environment.wireEngine,
-           let graphHit = GraphHitTester().hitTest(point: point, context: context) {
+        if let wireEngine = context.environment.connectionEngine as? WireEngine,
+            let graphHit = GraphHitTester().hitTest(point: point, context: context)
+        {
             let resolvedHit = graph.selectionTarget(for: graphHit)
             if graph.selection.contains(resolvedHit),
-               (graph.component(WireEdgeComponent.self, for: graphHit) != nil ||
-                graph.component(WireVertexComponent.self, for: graphHit) != nil) {
+                graph.component(WireEdgeComponent.self, for: graphHit) != nil
+                    || graph.component(WireVertexComponent.self, for: graphHit) != nil
+            {
                 if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
                     self.wireState = WireDraggingState(origin: point, wireEngine: wireEngine)
                     self.didMove = false
@@ -160,9 +181,12 @@ final class DragInteraction: CanvasInteraction {
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
         if let currentGraphState = graphState {
             let graph = context.graph
-            let rawDelta = CGVector(dx: point.x - currentGraphState.origin.x, dy: point.y - currentGraphState.origin.y)
+            let rawDelta = CGVector(
+                dx: point.x - currentGraphState.origin.x, dy: point.y - currentGraphState.origin.y)
             if !didMove {
-                if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }
+                if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification {
+                    return
+                }
                 didMove = true
             }
             let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
@@ -187,15 +211,21 @@ final class DragInteraction: CanvasInteraction {
             }
             for (id, original) in currentGraphState.originalTexts {
                 if currentGraphState.ownedTextIDs.contains(id),
-                   let ownerState = ownerStates[original.ownerID] {
+                    let ownerState = ownerStates[original.ownerID]
+                {
                     var updated = original
                     updated.ownerPosition = ownerState.position
                     updated.ownerRotation = ownerState.rotation
-                    let ownerTransform = CGAffineTransform(translationX: ownerState.position.x, y: ownerState.position.y)
-                        .rotated(by: ownerState.rotation)
-                    updated.worldPosition = updated.resolvedText.relativePosition.applying(ownerTransform)
-                    updated.worldAnchorPosition = updated.resolvedText.anchorPosition.applying(ownerTransform)
-                    updated.worldRotation = ownerState.rotation + updated.resolvedText.cardinalRotation.radians
+                    let ownerTransform = CGAffineTransform(
+                        translationX: ownerState.position.x, y: ownerState.position.y
+                    )
+                    .rotated(by: ownerState.rotation)
+                    updated.worldPosition = updated.resolvedText.relativePosition.applying(
+                        ownerTransform)
+                    updated.worldAnchorPosition = updated.resolvedText.anchorPosition.applying(
+                        ownerTransform)
+                    updated.worldRotation =
+                        ownerState.rotation + updated.resolvedText.cardinalRotation.radians
                     graph.setComponent(updated, for: id)
                     continue
                 }
@@ -206,14 +236,16 @@ final class DragInteraction: CanvasInteraction {
                 updated.resolvedText.relativePosition = updated.worldPosition.applying(inverseOwner)
                 if currentGraphState.isAnchorDrag {
                     updated.worldAnchorPosition = original.worldAnchorPosition + deltaPoint
-                    updated.resolvedText.anchorPosition = updated.worldAnchorPosition.applying(inverseOwner)
+                    updated.resolvedText.anchorPosition = updated.worldAnchorPosition.applying(
+                        inverseOwner)
                 }
                 graph.setComponent(updated, for: id)
             }
             for (id, original) in currentGraphState.originalPins {
                 if currentGraphState.ownedPinIDs.contains(id),
-                   let ownerID = original.ownerID,
-                   let ownerState = ownerStates[ownerID] {
+                    let ownerID = original.ownerID,
+                    let ownerState = ownerStates[ownerID]
+                {
                     var updated = original
                     updated.ownerPosition = ownerState.position
                     updated.ownerRotation = ownerState.rotation
@@ -222,14 +254,16 @@ final class DragInteraction: CanvasInteraction {
                     var updated = original
                     let worldPosition = original.pin.position.applying(original.ownerTransform)
                     let newWorldPosition = worldPosition + deltaPoint
-                    updated.pin.position = newWorldPosition.applying(original.ownerTransform.inverted())
+                    updated.pin.position = newWorldPosition.applying(
+                        original.ownerTransform.inverted())
                     graph.setComponent(updated, for: id)
                 }
             }
             for (id, original) in currentGraphState.originalPads {
                 if currentGraphState.ownedPadIDs.contains(id),
-                   let ownerID = original.ownerID,
-                   let ownerState = ownerStates[ownerID] {
+                    let ownerID = original.ownerID,
+                    let ownerState = ownerStates[ownerID]
+                {
                     var updated = original
                     updated.ownerPosition = ownerState.position
                     updated.ownerRotation = ownerState.rotation
@@ -238,7 +272,8 @@ final class DragInteraction: CanvasInteraction {
                     var updated = original
                     let worldPosition = original.pad.position.applying(original.ownerTransform)
                     let newWorldPosition = worldPosition + deltaPoint
-                    updated.pad.position = newWorldPosition.applying(original.ownerTransform.inverted())
+                    updated.pad.position = newWorldPosition.applying(
+                        original.ownerTransform.inverted())
                     graph.setComponent(updated, for: id)
                 }
             }
@@ -247,9 +282,12 @@ final class DragInteraction: CanvasInteraction {
         }
 
         if let wireState = wireState {
-            let rawDelta = CGVector(dx: point.x - wireState.origin.x, dy: point.y - wireState.origin.y)
+            let rawDelta = CGVector(
+                dx: point.x - wireState.origin.x, dy: point.y - wireState.origin.y)
             if !didMove {
-                if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }
+                if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification {
+                    return
+                }
                 didMove = true
             }
             let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)

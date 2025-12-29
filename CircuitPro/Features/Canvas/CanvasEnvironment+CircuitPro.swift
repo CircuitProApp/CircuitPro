@@ -54,8 +54,8 @@ private struct MarqueeRectKey: CanvasEnvironmentKey {
     static let defaultValue: CGRect? = nil
 }
 
-private struct WireEngineKey: CanvasEnvironmentKey {
-    static let defaultValue: WireEngine? = nil
+private struct ConnectionEngineKey: CanvasEnvironmentKey {
+    static let defaultValue: (any ConnectionEngine)? = nil
 }
 
 private struct TraceEngineKey: CanvasEnvironmentKey {
@@ -91,9 +91,9 @@ extension CanvasEnvironmentValues {
         set { self[MarqueeRectKey.self] = newValue }
     }
 
-    var wireEngine: WireEngine? {
-        get { self[WireEngineKey.self] }
-        set { self[WireEngineKey.self] = newValue }
+    var connectionEngine: (any ConnectionEngine)? {
+        get { self[ConnectionEngineKey.self] }
+        set { self[ConnectionEngineKey.self] = newValue }
     }
 
     var traceEngine: TraceEngine? {
@@ -111,9 +111,9 @@ extension CanvasEnvironmentValues {
         set { self[InteractionModeKey.self] = newValue }
     }
 
-    func withWireEngine(_ engine: WireEngine?) -> CanvasEnvironmentValues {
+    func withConnectionEngine(_ engine: (any ConnectionEngine)?) -> CanvasEnvironmentValues {
         var copy = self
-        copy.wireEngine = engine
+        copy.connectionEngine = engine
         return copy
     }
 
