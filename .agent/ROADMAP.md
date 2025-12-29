@@ -2,62 +2,77 @@
 
 ## Current Status
 - CoreConnection module created ✓
-- Dead code cleanup started ✓
+- Dead code cleanup done ✓
+- Unified DragInteraction created ✓
 
 ---
 
-## Phase 1: CanvasRenderable Migration (IN PROGRESS)
+## Target Architecture
 
-### Architecture Understanding
+### Layer 1: CanvasKit (Framework — Domain-Agnostic)
+```
+CanvasKit/
+├── CoreConnection/           # Connection management
+│   ├── ConnectionEngine      # Protocol for connection systems
+│   └── ConnectionPoint       # Protocol for anchor points
+├── Model/Protocol/           # Canvas element protocols
+│   ├── CanvasRenderable      # Draw + bounds + hit test
+│   └── CanvasDraggable       # Move + position
+├── Interaction/              # Unified interaction handling
+│   └── DragInteraction       # ONE drag handler
+└── ...
+```
 
-**Dual System:**
-- `CanvasRenderable` → composite read-only rendering (symbols + pins + text as one unit)
-- `GraphComponent` → editable individual elements (text editing, pin editing, dragging)
-
-### Items (CanvasRenderable + CanvasDraggable)
-- [x] `ComponentInstance` — symbols with pins and text
-
-### Connections (managed by ConnectionEngine)
-- [x] Wire edges/vertices (via `WireEngine`) — already handled
-- [x] Trace edges/vertices (via `TraceEngine`) — already handled
-
-### Cleanup
-- [x] Remove `GraphSymbolRenderProvider` — DELETED (superseded by CanvasRenderableProvider)
-- [x] Remove `GraphSymbolHaloProvider` — DELETED (superseded by CanvasRenderableHaloProvider)
-- [x] Remove `GraphSymbolHitTestProvider` — DELETED (superseded by CanvasRenderableHitTestProvider)
-
-### Kept (Still Needed)
-- [x] `GraphSymbolComponent` — data model for dragging/editing symbols ✓
-- [x] `GraphTextComponent` + providers — for text selection/editing system ✓
-- [x] `GraphPinComponent` + providers — for junction dots + symbol editor ✓
+### Layer 2: CircuitPro (App Implementation)
+```
+Features/Canvas/
+├── ComponentInstance+CanvasRenderable   # Symbols conform to protocols
+├── WireEngine                           # Conforms to ConnectionEngine
+└── Graph/                               # Internal state for connections
+```
 
 ---
 
-## Phase 2: CoreConnection Integration
+## Phase 1: CanvasRenderable Migration ✓
 
-### ConnectionPoint conformance
+- [x] `ComponentInstance` conforms to `CanvasRenderable` + `CanvasDraggable`
+- [x] Removed legacy symbol render/halo/hit-test providers
+- [x] Fixed double-rendering bug (pins/text)
+- [x] Junction dots moved to wire rendering
+
+---
+
+## Phase 2: Unified Drag Interaction ✓
+
+- [x] Merged `CanvasDraggableInteraction` into `DragInteraction`
+- [x] Priority order: Items → Connections → Text
+- [x] Deleted `CanvasDraggableInteraction.swift`
+
+---
+
+## Phase 3: Graph Component Cleanup (IN PROGRESS)
+
+### For Schematic Editor:
+- [ ] Remove `GraphSymbolComponent` sync (symbols use protocol now)
+- [ ] Keep `GraphTextComponent` for text editing (Ctrl+drag anchor)
+- [x] Keep wire/trace components (internal to ConnectionEngine)
+
+### For Component Editors:
+- [ ] Migrate `SymbolCanvasView` to use `CanvasRenderable` for primitives
+- [ ] Migrate `FootprintCanvasView` to use `CanvasRenderable`
+
+---
+
+## Phase 4: CoreConnection Integration
+
 - [ ] Make `PinDefinition` conform to `ConnectionPoint`
-- [ ] Make pad connection points conform to `ConnectionPoint`
-
-### ConnectionEngine enhancements
 - [ ] Have `TraceEngine` conform to `ConnectionEngine`
-- [ ] Add connection rule abstraction (if needed)
+- [ ] Unify wire/trace handling under `ConnectionEngine` protocol
 
 ---
 
-## Phase 3: CanvasView Simplification
+## Phase 5: Final Cleanup
 
-- [ ] Simplify `CanvasView` API to work directly with `CanvasRenderable` items
-- [ ] Reduce `CanvasEnvironment` dependencies
-- [ ] Clean up refresh/observation patterns
-
----
-
-## Future Considerations
-
-### Unify Drag Systems
-Currently two drag systems exist:
-- `CanvasDraggableInteraction` — for CanvasRenderable items (new)
-- `DragInteraction` — for GraphComponent items (legacy)
-
-Could potentially unify these, but `DragInteraction` handles text/wire dragging with graph sync.
+- [ ] Remove unused graph components and providers
+- [ ] Simplify `CanvasView` API
+- [ ] Document the architecture for future development

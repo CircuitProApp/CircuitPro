@@ -1,315 +1,276 @@
 import AppKit
 
-/// Handles dragging selected graph elements on the canvas.
-/// This interaction supports graph drags, wire drags via the `WireEngine`, and special
-/// anchor-repositioning drags for text elements when the Control key is held.
+/// Unified drag interaction for all canvas elements.
+///
+/// Priority order:
+/// 1. CanvasDraggable items (symbols, footprints via protocol)
+/// 2. Connection elements (wires, traces via ConnectionEngine)
+/// 3. Special items (standalone text with anchor drag support)
 final class DragInteraction: CanvasInteraction {
 
-    private struct GraphDraggingState {
+    // MARK: - State Types
+
+    /// State for dragging CanvasDraggable items (protocol-based)
+    private struct ItemDragState {
         let origin: CGPoint
-        let originalPrimitives: [NodeID: AnyCanvasPrimitive]
+        let items: [(item: any CanvasDraggable, originalPosition: CGPoint)]
+        let connectionEngine: (any ConnectionEngine)?
+    }
+
+    /// State for dragging connection elements only (wires/traces)
+    private struct ConnectionDragState {
+        let origin: CGPoint
+        let connectionEngine: any ConnectionEngine
+    }
+
+    /// State for dragging text elements (with anchor support)
+    private struct TextDragState {
+        let origin: CGPoint
         let originalTexts: [NodeID: GraphTextComponent]
-        let ownedTextIDs: Set<NodeID>
-        let originalPins: [NodeID: GraphPinComponent]
-        let ownedPinIDs: Set<NodeID>
-        let originalPads: [NodeID: GraphPadComponent]
-        let ownedPadIDs: Set<NodeID>
-        let originalSymbols: [NodeID: GraphSymbolComponent]
-        let originalFootprints: [NodeID: GraphFootprintComponent]
-        let ownerIDs: Set<UUID>
         let isAnchorDrag: Bool
-        let wireEngine: WireEngine?
     }
 
-    private struct WireDraggingState {
-        let origin: CGPoint
-        let wireEngine: WireEngine
-    }
+    // MARK: - Properties
 
-    private var graphState: GraphDraggingState?
-    private var wireState: WireDraggingState?
+    private var itemState: ItemDragState?
+    private var connectionState: ConnectionDragState?
+    private var textState: TextDragState?
     private var didMove: Bool = false
     private let dragThreshold: CGFloat = 4.0
 
     var wantsRawInput: Bool { true }
 
+    // MARK: - Mouse Down
+
     func mouseDown(
         with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController
     ) -> Bool {
-        self.graphState = nil
-        self.wireState = nil
+        resetState()
         guard controller.selectedTool is CursorTool else { return false }
 
-        let graph = context.graph
-        if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
-            let resolvedHit = graph.selectionTarget(for: graphHit)
-            let isOwnedHit = resolvedHit != graphHit
-            if !graph.selection.contains(resolvedHit) {
-                return false
-            }
-            let hitPrimitive = graph.component(AnyCanvasPrimitive.self, for: graphHit) != nil
-            let hitText = graph.component(GraphTextComponent.self, for: graphHit) != nil
-            let hitPin = graph.component(GraphPinComponent.self, for: graphHit)
-            let hitPad = graph.component(GraphPadComponent.self, for: graphHit)
-            let hitSymbol = graph.component(GraphSymbolComponent.self, for: graphHit) != nil
-            let hitFootprint = graph.component(GraphFootprintComponent.self, for: graphHit) != nil
-            let hitSelectablePin = hitPin?.isSelectable ?? false
-            let hitSelectablePad = hitPad?.isSelectable ?? false
-            if hitPrimitive || hitText || hitSelectablePin || hitSelectablePad || hitSymbol
-                || hitFootprint || isOwnedHit
-            {
-                let selectedIDs = graph.selection
-                var originalPrimitives: [NodeID: AnyCanvasPrimitive] = [:]
-                var originalTexts: [NodeID: GraphTextComponent] = [:]
-                var originalPins: [NodeID: GraphPinComponent] = [:]
-                var originalPads: [NodeID: GraphPadComponent] = [:]
-                var originalSymbols: [NodeID: GraphSymbolComponent] = [:]
-                var originalFootprints: [NodeID: GraphFootprintComponent] = [:]
-                var ownerIDs = Set<UUID>()
-                for id in selectedIDs {
-                    if let original = graph.component(AnyCanvasPrimitive.self, for: id) {
-                        originalPrimitives[id] = original
-                    }
-                    if let original = graph.component(GraphTextComponent.self, for: id) {
-                        originalTexts[id] = original
-                    }
-                    if let original = graph.component(GraphPinComponent.self, for: id),
-                        original.isSelectable
-                    {
-                        originalPins[id] = original
-                    }
-                    if let original = graph.component(GraphPadComponent.self, for: id),
-                        original.isSelectable
-                    {
-                        originalPads[id] = original
-                    }
-                    if let original = graph.component(GraphSymbolComponent.self, for: id) {
-                        originalSymbols[id] = original
-                        ownerIDs.insert(original.ownerID)
-                    }
-                    if let original = graph.component(GraphFootprintComponent.self, for: id) {
-                        originalFootprints[id] = original
-                        ownerIDs.insert(original.ownerID)
-                    }
-                }
-
-                let ownedTextIDs = Set(
-                    graph.components(GraphTextComponent.self).compactMap { id, component in
-                        ownerIDs.contains(component.ownerID) ? id : nil
-                    })
-                let ownedPinIDs = Set<NodeID>(
-                    graph.components(GraphPinComponent.self).compactMap { id, component in
-                        guard let ownerID = component.ownerID else { return nil }
-                        return ownerIDs.contains(ownerID) ? id : nil
-                    })
-                let ownedPadIDs = Set<NodeID>(
-                    graph.components(GraphPadComponent.self).compactMap { id, component in
-                        guard let ownerID = component.ownerID else { return nil }
-                        return ownerIDs.contains(ownerID) ? id : nil
-                    })
-
-                for id in ownedTextIDs {
-                    if originalTexts[id] == nil,
-                        let original = graph.component(GraphTextComponent.self, for: id)
-                    {
-                        originalTexts[id] = original
-                    }
-                }
-                for id in ownedPinIDs {
-                    if originalPins[id] == nil,
-                        let original = graph.component(GraphPinComponent.self, for: id)
-                    {
-                        originalPins[id] = original
-                    }
-                }
-                for id in ownedPadIDs {
-                    if originalPads[id] == nil,
-                        let original = graph.component(GraphPadComponent.self, for: id)
-                    {
-                        originalPads[id] = original
-                    }
-                }
-
-                var activeWireEngine: WireEngine?
-                if let wireEngine = context.environment.connectionEngine as? WireEngine,
-                    !ownerIDs.isEmpty
-                {
-                    let selectedRawIDs = Set(selectedIDs.map { $0.rawValue })
-                    if wireEngine.beginDrag(selectedIDs: selectedRawIDs) {
-                        activeWireEngine = wireEngine
-                    }
-                }
-                let isAnchorDrag = event.modifierFlags.contains(.control)
-                self.graphState = GraphDraggingState(
-                    origin: point,
-                    originalPrimitives: originalPrimitives,
-                    originalTexts: originalTexts,
-                    ownedTextIDs: ownedTextIDs,
-                    originalPins: originalPins,
-                    ownedPinIDs: ownedPinIDs,
-                    originalPads: originalPads,
-                    ownedPadIDs: ownedPadIDs,
-                    originalSymbols: originalSymbols,
-                    originalFootprints: originalFootprints,
-                    ownerIDs: ownerIDs,
-                    isAnchorDrag: isAnchorDrag,
-                    wireEngine: activeWireEngine
-                )
-                self.didMove = false
-                return true
-            }
+        // Try each drag type in priority order
+        if tryStartItemDrag(at: point, context: context) {
+            return true
         }
 
-        if let wireEngine = context.environment.connectionEngine as? WireEngine,
-            let graphHit = GraphHitTester().hitTest(point: point, context: context)
-        {
-            let resolvedHit = graph.selectionTarget(for: graphHit)
-            if graph.selection.contains(resolvedHit),
-                graph.component(WireEdgeComponent.self, for: graphHit) != nil
-                    || graph.component(WireVertexComponent.self, for: graphHit) != nil
-            {
-                if wireEngine.beginDrag(selectedIDs: Set(graph.selection.map { $0.rawValue })) {
-                    self.wireState = WireDraggingState(origin: point, wireEngine: wireEngine)
-                    self.didMove = false
-                    return true
-                }
-            }
+        if tryStartConnectionDrag(at: point, context: context) {
+            return true
         }
+
+        if tryStartTextDrag(at: point, event: event, context: context) {
+            return true
+        }
+
         return false
     }
 
-    func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
-        if let currentGraphState = graphState {
-            let graph = context.graph
-            let rawDelta = CGVector(
-                dx: point.x - currentGraphState.origin.x, dy: point.y - currentGraphState.origin.y)
-            if !didMove {
-                if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification {
-                    return
-                }
-                didMove = true
-            }
-            let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
-            let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
-            var ownerStates: [UUID: (position: CGPoint, rotation: CGFloat)] = [:]
-            for (id, original) in currentGraphState.originalSymbols {
-                var updated = original
-                updated.position = original.position + deltaPoint
-                graph.setComponent(updated, for: id)
-                ownerStates[original.ownerID] = (updated.position, updated.rotation)
-            }
-            for (id, original) in currentGraphState.originalFootprints {
-                var updated = original
-                updated.position = original.position + deltaPoint
-                graph.setComponent(updated, for: id)
-                ownerStates[original.ownerID] = (updated.position, updated.rotation)
-            }
-            for (id, original) in currentGraphState.originalPrimitives {
-                var updated = original
-                updated.position = original.position + deltaPoint
-                graph.setComponent(updated, for: id)
-            }
-            for (id, original) in currentGraphState.originalTexts {
-                if currentGraphState.ownedTextIDs.contains(id),
-                    let ownerState = ownerStates[original.ownerID]
-                {
-                    var updated = original
-                    updated.ownerPosition = ownerState.position
-                    updated.ownerRotation = ownerState.rotation
-                    let ownerTransform = CGAffineTransform(
-                        translationX: ownerState.position.x, y: ownerState.position.y
-                    )
-                    .rotated(by: ownerState.rotation)
-                    updated.worldPosition = updated.resolvedText.relativePosition.applying(
-                        ownerTransform)
-                    updated.worldAnchorPosition = updated.resolvedText.anchorPosition.applying(
-                        ownerTransform)
-                    updated.worldRotation =
-                        ownerState.rotation + updated.resolvedText.cardinalRotation.radians
-                    graph.setComponent(updated, for: id)
-                    continue
-                }
+    // MARK: - Mouse Dragged
 
-                var updated = original
-                updated.worldPosition = original.worldPosition + deltaPoint
-                let inverseOwner = original.ownerTransform.inverted()
-                updated.resolvedText.relativePosition = updated.worldPosition.applying(inverseOwner)
-                if currentGraphState.isAnchorDrag {
-                    updated.worldAnchorPosition = original.worldAnchorPosition + deltaPoint
-                    updated.resolvedText.anchorPosition = updated.worldAnchorPosition.applying(
-                        inverseOwner)
-                }
-                graph.setComponent(updated, for: id)
-            }
-            for (id, original) in currentGraphState.originalPins {
-                if currentGraphState.ownedPinIDs.contains(id),
-                    let ownerID = original.ownerID,
-                    let ownerState = ownerStates[ownerID]
-                {
-                    var updated = original
-                    updated.ownerPosition = ownerState.position
-                    updated.ownerRotation = ownerState.rotation
-                    graph.setComponent(updated, for: id)
-                } else {
-                    var updated = original
-                    let worldPosition = original.pin.position.applying(original.ownerTransform)
-                    let newWorldPosition = worldPosition + deltaPoint
-                    updated.pin.position = newWorldPosition.applying(
-                        original.ownerTransform.inverted())
-                    graph.setComponent(updated, for: id)
-                }
-            }
-            for (id, original) in currentGraphState.originalPads {
-                if currentGraphState.ownedPadIDs.contains(id),
-                    let ownerID = original.ownerID,
-                    let ownerState = ownerStates[ownerID]
-                {
-                    var updated = original
-                    updated.ownerPosition = ownerState.position
-                    updated.ownerRotation = ownerState.rotation
-                    graph.setComponent(updated, for: id)
-                } else {
-                    var updated = original
-                    let worldPosition = original.pad.position.applying(original.ownerTransform)
-                    let newWorldPosition = worldPosition + deltaPoint
-                    updated.pad.position = newWorldPosition.applying(
-                        original.ownerTransform.inverted())
-                    graph.setComponent(updated, for: id)
-                }
-            }
-            currentGraphState.wireEngine?.updateDrag(by: deltaPoint)
+    func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
+        if let state = itemState {
+            handleItemDrag(to: point, state: state, context: context)
             return
         }
 
-        if let wireState = wireState {
-            let rawDelta = CGVector(
-                dx: point.x - wireState.origin.x, dy: point.y - wireState.origin.y)
-            if !didMove {
-                if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification {
-                    return
-                }
-                didMove = true
-            }
-            let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
-            let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
-            wireState.wireEngine.updateDrag(by: deltaPoint)
+        if let state = connectionState {
+            handleConnectionDrag(to: point, state: state, context: context)
+            return
+        }
+
+        if let state = textState {
+            handleTextDrag(to: point, state: state, context: context)
             return
         }
     }
 
+    // MARK: - Mouse Up
+
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
-        if let currentGraphState = graphState {
-            currentGraphState.wireEngine?.endDrag()
-            self.graphState = nil
-            didMove = false
-            return
+        itemState?.connectionEngine?.endDrag()
+        connectionState?.connectionEngine.endDrag()
+        resetState()
+    }
+
+    // MARK: - Private: Reset
+
+    private func resetState() {
+        itemState = nil
+        connectionState = nil
+        textState = nil
+        didMove = false
+    }
+
+    // MARK: - Private: Item Drag (CanvasDraggable Protocol)
+
+    private func tryStartItemDrag(at point: CGPoint, context: RenderContext) -> Bool {
+        let selection = context.graph.selection
+        guard !selection.isEmpty else { return false }
+
+        let selectedIDs = Set(selection.map { $0.rawValue })
+        let draggables = context.environment.renderables.compactMap { $0 as? (any CanvasDraggable) }
+        let selectedDraggables = draggables.filter { selectedIDs.contains($0.id) }
+
+        guard !selectedDraggables.isEmpty else { return false }
+
+        // Check if we hit one of the selected items
+        var hitSelected = false
+        for item in selectedDraggables {
+            if item.hitTest(point: point, tolerance: 5.0) {
+                hitSelected = true
+                break
+            }
         }
-        if let wireState = wireState {
-            wireState.wireEngine.endDrag()
-            self.wireState = nil
-            didMove = false
-            return
+        guard hitSelected else { return false }
+
+        // Start connection engine drag if applicable
+        var activeConnectionEngine: (any ConnectionEngine)?
+        if let connectionEngine = context.environment.connectionEngine {
+            if connectionEngine.beginDrag(selectedIDs: selectedIDs) {
+                activeConnectionEngine = connectionEngine
+            }
         }
-        self.didMove = false
+
+        let items = selectedDraggables.map { ($0, $0.worldPosition) }
+        self.itemState = ItemDragState(
+            origin: point,
+            items: items,
+            connectionEngine: activeConnectionEngine
+        )
+        return true
+    }
+
+    private func handleItemDrag(to point: CGPoint, state: ItemDragState, context: RenderContext) {
+        let rawDelta = CGVector(dx: point.x - state.origin.x, dy: point.y - state.origin.y)
+        if !didMove {
+            if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }
+            didMove = true
+        }
+
+        let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
+        let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
+
+        // Move each item from its original position
+        for (item, originalPosition) in state.items {
+            let newPosition = CGPoint(
+                x: originalPosition.x + deltaPoint.x,
+                y: originalPosition.y + deltaPoint.y
+            )
+            let delta = CGPoint(
+                x: newPosition.x - item.worldPosition.x,
+                y: newPosition.y - item.worldPosition.y
+            )
+            item.move(by: delta)
+        }
+
+        // Update connection engine
+        state.connectionEngine?.updateDrag(by: deltaPoint)
+    }
+
+    // MARK: - Private: Connection Drag (Wires/Traces Only)
+
+    private func tryStartConnectionDrag(at point: CGPoint, context: RenderContext) -> Bool {
+        guard let connectionEngine = context.environment.connectionEngine else { return false }
+
+        let graph = context.graph
+        guard let graphHit = GraphHitTester().hitTest(point: point, context: context) else {
+            return false
+        }
+
+        let resolvedHit = graph.selectionTarget(for: graphHit)
+        guard graph.selection.contains(resolvedHit) else { return false }
+
+        // Check if hit is a wire/trace element
+        let isWire =
+            graph.component(WireEdgeComponent.self, for: graphHit) != nil
+            || graph.component(WireVertexComponent.self, for: graphHit) != nil
+        let isTrace =
+            graph.component(TraceEdgeComponent.self, for: graphHit) != nil
+            || graph.component(TraceVertexComponent.self, for: graphHit) != nil
+
+        guard isWire || isTrace else { return false }
+
+        let selectedIDs = Set(graph.selection.map { $0.rawValue })
+        guard connectionEngine.beginDrag(selectedIDs: selectedIDs) else { return false }
+
+        self.connectionState = ConnectionDragState(
+            origin: point, connectionEngine: connectionEngine)
+        return true
+    }
+
+    private func handleConnectionDrag(
+        to point: CGPoint, state: ConnectionDragState, context: RenderContext
+    ) {
+        let rawDelta = CGVector(dx: point.x - state.origin.x, dy: point.y - state.origin.y)
+        if !didMove {
+            if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }
+            didMove = true
+        }
+
+        let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
+        let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
+        state.connectionEngine.updateDrag(by: deltaPoint)
+    }
+
+    // MARK: - Private: Text Drag (Standalone Text with Anchor Support)
+
+    private func tryStartTextDrag(
+        at point: CGPoint, event: NSEvent, context: RenderContext
+    ) -> Bool {
+        let graph = context.graph
+        guard let graphHit = GraphHitTester().hitTest(point: point, context: context) else {
+            return false
+        }
+
+        guard graph.component(GraphTextComponent.self, for: graphHit) != nil else {
+            return false
+        }
+
+        let resolvedHit = graph.selectionTarget(for: graphHit)
+        guard graph.selection.contains(resolvedHit) else { return false }
+
+        // Collect selected text components
+        var originalTexts: [NodeID: GraphTextComponent] = [:]
+        for id in graph.selection {
+            if let text = graph.component(GraphTextComponent.self, for: id) {
+                originalTexts[id] = text
+            }
+        }
+
+        guard !originalTexts.isEmpty else { return false }
+
+        let isAnchorDrag = event.modifierFlags.contains(.control)
+        self.textState = TextDragState(
+            origin: point,
+            originalTexts: originalTexts,
+            isAnchorDrag: isAnchorDrag
+        )
+        return true
+    }
+
+    private func handleTextDrag(to point: CGPoint, state: TextDragState, context: RenderContext) {
+        let rawDelta = CGVector(dx: point.x - state.origin.x, dy: point.y - state.origin.y)
+        if !didMove {
+            if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }
+            didMove = true
+        }
+
+        let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
+        let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
+        let graph = context.graph
+
+        for (id, original) in state.originalTexts {
+            var updated = original
+            updated.worldPosition = original.worldPosition + deltaPoint
+            let inverseOwner = original.ownerTransform.inverted()
+            updated.resolvedText.relativePosition = updated.worldPosition.applying(inverseOwner)
+
+            if state.isAnchorDrag {
+                updated.worldAnchorPosition = original.worldAnchorPosition + deltaPoint
+                updated.resolvedText.anchorPosition = updated.worldAnchorPosition.applying(
+                    inverseOwner)
+            }
+
+            graph.setComponent(updated, for: id)
+        }
     }
 }

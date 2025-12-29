@@ -51,8 +51,7 @@ struct SchematicCanvasView: View {
                 KeyCommandInteraction(),
                 ToolInteraction(),
                 SelectionInteraction(),
-                CanvasDraggableInteraction(),  // Uses protocol
-                DragInteraction(),  // Fallback (for wires, text, etc.)
+                DragInteraction(),
                 MarqueeInteraction(),
             ],
             inputProcessors: [GridSnapProcessor()],

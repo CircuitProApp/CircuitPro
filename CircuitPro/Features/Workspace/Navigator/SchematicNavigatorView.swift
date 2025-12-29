@@ -54,8 +54,6 @@ struct SchematicNavigatorView: View {
             .frame(height: 28)
             .font(.callout)
 
-            Divider().foregroundStyle(.quinary)
-
             switch selectedTab {
             case .symbols:
                 SymbolNavigatorView()
