@@ -27,9 +27,7 @@ struct SchematicCanvasView: View {
                 .withRenderables(projectManager.componentInstances)
                 .withGraphRenderProviders([
                     GraphWireRenderAdapter(),
-                    CanvasRenderableProvider(),  // New: uses protocol
-                    GraphTextRenderProvider(),  // Keep: for text nodes
-                    GraphPinRenderProvider(),  // Keep: for pin junction dots
+                    CanvasRenderableProvider(),
                 ])
                 .withGraphHaloProviders([
                     WireGraphHaloProvider(),

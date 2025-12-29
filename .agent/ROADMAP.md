@@ -1,31 +1,35 @@
 # CanvasKit Architecture Roadmap
 
 ## Current Status
-CoreConnection module created ✓
+- CoreConnection module created ✓
+- Dead code cleanup started ✓
 
 ---
 
 ## Phase 1: CanvasRenderable Migration (IN PROGRESS)
 
-Make all canvas elements conform to `CanvasRenderable` protocol, replacing the legacy `GraphComponent` + Provider pattern.
+### Architecture Understanding
+
+**Dual System:**
+- `CanvasRenderable` → composite read-only rendering (symbols + pins + text as one unit)
+- `GraphComponent` → editable individual elements (text editing, pin editing, dragging)
 
 ### Items (CanvasRenderable + CanvasDraggable)
 - [x] `ComponentInstance` — symbols with pins and text
-- [ ] Standalone text elements
-- [ ] Graphics primitives (rectangles, lines, etc.)
-- [ ] Footprints (PCB layout)
-- [ ] Pads (PCB layout)
 
 ### Connections (managed by ConnectionEngine)
-- [ ] Wire edges/vertices (via `WireEngine`)
-- [ ] Trace edges/vertices (via `TraceEngine`)
+- [x] Wire edges/vertices (via `WireEngine`) — already handled
+- [x] Trace edges/vertices (via `TraceEngine`) — already handled
 
 ### Cleanup
-- [ ] Remove legacy `GraphSymbolRenderProvider`, `GraphSymbolHaloProvider`, `GraphSymbolHitTestProvider`
-- [ ] Remove legacy `GraphPinRenderProvider`, `GraphPinHaloProvider`, `GraphPinHitTestProvider`
-- [ ] Remove legacy `GraphTextRenderProvider`, `GraphTextHaloProvider`, `GraphTextHitTestProvider`
-- [ ] Remove legacy `GraphFootprintRenderProvider`, `GraphFootprintHaloProvider`, `GraphFootprintHitTestProvider`
-- [ ] Remove legacy `GraphPadRenderProvider`, `GraphPadHaloProvider`, `GraphPadHitTestProvider`
+- [x] Remove `GraphSymbolRenderProvider` — DELETED (superseded by CanvasRenderableProvider)
+- [x] Remove `GraphSymbolHaloProvider` — DELETED (superseded by CanvasRenderableHaloProvider)
+- [x] Remove `GraphSymbolHitTestProvider` — DELETED (superseded by CanvasRenderableHitTestProvider)
+
+### Kept (Still Needed)
+- [x] `GraphSymbolComponent` — data model for dragging/editing symbols ✓
+- [x] `GraphTextComponent` + providers — for text selection/editing system ✓
+- [x] `GraphPinComponent` + providers — for junction dots + symbol editor ✓
 
 ---
 
@@ -46,3 +50,14 @@ Make all canvas elements conform to `CanvasRenderable` protocol, replacing the l
 - [ ] Simplify `CanvasView` API to work directly with `CanvasRenderable` items
 - [ ] Reduce `CanvasEnvironment` dependencies
 - [ ] Clean up refresh/observation patterns
+
+---
+
+## Future Considerations
+
+### Unify Drag Systems
+Currently two drag systems exist:
+- `CanvasDraggableInteraction` — for CanvasRenderable items (new)
+- `DragInteraction` — for GraphComponent items (legacy)
+
+Could potentially unify these, but `DragInteraction` handles text/wire dragging with graph sync.
