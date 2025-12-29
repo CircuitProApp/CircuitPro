@@ -396,33 +396,7 @@ final class SchematicEditorController: EditorController {
     private func persistWiresToDocument() {
         let design = projectManager.selectedDesign
         let newWires = wireEngine.toWires()
-        print("🔵 persistWiresToDocument: \(newWires.count) wires (was \(design.wires.count))")
-
-        // Compare wires by content, not identity
-        let oldSegmentCount = design.wires.flatMap { $0.segments }.count
-        let newSegmentCount = newWires.flatMap { $0.segments }.count
-        print("   📊 Old segments: \(oldSegmentCount), New segments: \(newSegmentCount)")
-
-        guard newWires != design.wires else {
-            print("   ⏭️ Same wires, skipping")
-            return
-        }
-
-        // Log what's different
-        for (i, newWire) in newWires.enumerated() {
-            if i < design.wires.count {
-                let oldWire = design.wires[i]
-                if newWire.segments.count != oldWire.segments.count {
-                    print(
-                        "   ⚠️ Wire \(i): segment count changed \(oldWire.segments.count) → \(newWire.segments.count)"
-                    )
-                }
-            } else {
-                print("   ⚠️ Wire \(i): NEW wire added")
-            }
-        }
-
-        print("   ✅ Saving wires")
+        guard newWires != design.wires else { return }
         design.wires = newWires
         document.scheduleAutosave()
     }
