@@ -5,8 +5,8 @@
 //  Created by Giorgi Tchelidze on 4/01/25.
 //
 
-import SwiftUI
 import SwiftDataPacks
+import SwiftUI
 
 @main
 struct CircuitProApp: App {
@@ -14,15 +14,14 @@ struct CircuitProApp: App {
     @State private var packManager: SwiftDataPackManager
     @AppStorage(AppThemeKeys.appearance) private var appearance = AppAppearance.system.rawValue
 
-     init() {
-         let manager = try! SwiftDataPackManager(for: [
-             ComponentDefinition.self,
-             SymbolDefinition.self,
-             FootprintDefinition.self
-         ])
-         _packManager = State(initialValue: manager)
-     }
-
+    init() {
+        let manager = try! SwiftDataPackManager(for: [
+            ComponentDefinition.self,
+            SymbolDefinition.self,
+            FootprintDefinition.self,
+        ])
+        _packManager = State(initialValue: manager)
+    }
 
     var body: some Scene {
         let preferredScheme = AppAppearance(rawValue: appearance)?.preferredColorScheme
@@ -34,9 +33,8 @@ struct CircuitProApp: App {
 
         WindowGroup(for: DocumentID.self) { $docID in
             if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {
-                WorkspaceView()
+                ProjectManagerContainer(document: doc, documentID: id)
                     .packContainer(packManager)
-                    .environment(\.projectManager, ProjectManager(document: doc))
                     .focusedSceneValue(\.activeDocumentID, id)
                     .onReceive(doc.objectWillChange) { _ in
                         doc.scheduleAutosave()

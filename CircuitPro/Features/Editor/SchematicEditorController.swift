@@ -1,6 +1,6 @@
-import SwiftUI
 import Observation
-import SwiftDataPacks // Add this import
+import SwiftDataPacks  // Add this import
+import SwiftUI
 
 @MainActor
 @Observable
@@ -21,6 +21,11 @@ final class SchematicEditorController: EditorController {
     private var isSyncingTextFromModel = false
     private var isApplyingTextChangesToModel = false
     private var isSyncingSymbolsFromModel = false
+
+    // Snapshot tracking to detect actual changes
+    private var lastComponentInstanceIDs: Set<UUID> = []
+    private var lastWireCount: Int = -1
+    private var lastDesignID: UUID?
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
@@ -57,6 +62,7 @@ final class SchematicEditorController: EditorController {
             _ = projectManager.componentInstances
         } onChange: {
             Task { @MainActor in
+                print("🔴 Structure tracking onChange fired")
                 await self.rebuildNodes()
                 self.startTrackingStructureChanges()
             }
@@ -91,6 +97,7 @@ final class SchematicEditorController: EditorController {
             _ = projectManager.selectedDesign.wires
         } onChange: {
             Task { @MainActor in
+                print("🔴 Wire tracking onChange fired")
                 if self.isApplyingWireChangesToModel {
                     self.isApplyingWireChangesToModel = false
                     self.startTrackingWireChanges()
@@ -103,7 +110,30 @@ final class SchematicEditorController: EditorController {
     }
 
     private func rebuildNodes() async {
+        print("🔴 rebuildNodes() called")
         let design = projectManager.selectedDesign
+
+        // Check if anything actually changed
+        let currentInstanceIDs = Set(design.componentInstances.map { $0.id })
+        let currentDesignID = design.id
+
+        let designChanged = lastDesignID != currentDesignID
+        let instancesChanged = lastComponentInstanceIDs != currentInstanceIDs
+
+        print(
+            "   📊 designChanged: \(designChanged) (last: \(lastDesignID?.uuidString.prefix(8) ?? "nil") vs current: \(currentDesignID.uuidString.prefix(8)))"
+        )
+        print(
+            "   📊 instancesChanged: \(instancesChanged) (last count: \(lastComponentInstanceIDs.count) vs current: \(currentInstanceIDs.count))"
+        )
+
+        guard designChanged || instancesChanged else {
+            print("⏭️ Skipping rebuildNodes - no actual changes")
+            return
+        }
+
+        lastDesignID = currentDesignID
+        lastComponentInstanceIDs = currentInstanceIDs
 
         canvasStore.selection = []
         syncWiresFromModel()
@@ -153,12 +183,16 @@ final class SchematicEditorController: EditorController {
         for inst in design.componentInstances {
             let ownerPosition = inst.symbolInstance.position
             let ownerRotation = inst.symbolInstance.rotation
-            let ownerTransform = CGAffineTransform(translationX: ownerPosition.x, y: ownerPosition.y)
-                .rotated(by: ownerRotation)
+            let ownerTransform = CGAffineTransform(
+                translationX: ownerPosition.x, y: ownerPosition.y
+            )
+            .rotated(by: ownerRotation)
 
             for resolvedModel in inst.symbolInstance.resolvedItems {
-                let displayString = projectManager.generateString(for: resolvedModel, component: inst)
-                let textID = GraphTextID.makeID(for: resolvedModel.source, ownerID: inst.id, fallback: resolvedModel.id)
+                let displayString = projectManager.generateString(
+                    for: resolvedModel, component: inst)
+                let textID = GraphTextID.makeID(
+                    for: resolvedModel.source, ownerID: inst.id, fallback: resolvedModel.id)
                 let nodeID = NodeID(textID)
 
                 let worldPosition = resolvedModel.relativePosition.applying(ownerTransform)
@@ -242,10 +276,11 @@ final class SchematicEditorController: EditorController {
         switch delta {
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
-            let graphSelection = Set(selection.compactMap { id -> NodeID? in
-                let nodeID = NodeID(id)
-                return graph.hasAnyComponent(for: nodeID) ? nodeID : nil
-            })
+            let graphSelection = Set(
+                selection.compactMap { id -> NodeID? in
+                    let nodeID = NodeID(id)
+                    return graph.hasAnyComponent(for: nodeID) ? nodeID : nil
+                })
             if graph.selection != graphSelection {
                 suppressGraphSelectionSync = true
                 graph.selection = graphSelection
@@ -270,12 +305,14 @@ final class SchematicEditorController: EditorController {
             }
         case .componentSet(let id, let componentKey):
             if componentKey == ObjectIdentifier(GraphTextComponent.self),
-               let component = graph.component(GraphTextComponent.self, for: id),
-               !isSyncingTextFromModel {
+                let component = graph.component(GraphTextComponent.self, for: id),
+                !isSyncingTextFromModel
+            {
                 applyGraphTextChange(component)
             } else if componentKey == ObjectIdentifier(GraphSymbolComponent.self),
-                      let component = graph.component(GraphSymbolComponent.self, for: id),
-                      !isSyncingSymbolsFromModel {
+                let component = graph.component(GraphSymbolComponent.self, for: id),
+                !isSyncingSymbolsFromModel
+            {
                 applyGraphSymbolChange(component)
             }
             canvasStore.invalidate()
@@ -292,7 +329,10 @@ final class SchematicEditorController: EditorController {
 
     private func applyGraphTextChange(_ component: GraphTextComponent) {
         guard !isApplyingTextChangesToModel else { return }
-        guard let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }) else { return }
+        guard
+            let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }
+            )
+        else { return }
 
         isApplyingTextChangesToModel = true
         inst.apply(component.resolvedText, for: component.target)
@@ -301,7 +341,10 @@ final class SchematicEditorController: EditorController {
     }
 
     private func applyGraphSymbolChange(_ component: GraphSymbolComponent) {
-        guard let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }) else { return }
+        guard
+            let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }
+            )
+        else { return }
         inst.symbolInstance.position = component.position
         inst.symbolInstance.rotation = component.rotation
         document.scheduleAutosave()
@@ -337,7 +380,8 @@ final class SchematicEditorController: EditorController {
         let ownerTransform = component.ownerTransform
         updated.worldPosition = component.resolvedText.relativePosition.applying(ownerTransform)
         updated.worldAnchorPosition = component.resolvedText.anchorPosition.applying(ownerTransform)
-        updated.worldRotation = component.ownerRotation + component.resolvedText.cardinalRotation.radians
+        updated.worldRotation =
+            component.ownerRotation + component.resolvedText.cardinalRotation.radians
         if !graph.nodes.contains(id) {
             graph.addNode(id)
         }
@@ -355,8 +399,22 @@ final class SchematicEditorController: EditorController {
     }
 
     private func syncWiresFromModel() {
-        isSyncingWiresFromModel = true
+        print("🔴 syncWiresFromModel() called")
         let design = projectManager.selectedDesign
+
+        // Check if wire count actually changed to avoid unnecessary rebuilds
+        let currentWireCount = design.wires.count
+        if lastWireCount == currentWireCount && lastWireCount >= 0 {
+            // Wire count same - do a deeper check
+            let currentWires = wireEngine.toWires()
+            if currentWires == design.wires {
+                print("⏭️ Skipping syncWiresFromModel - wires unchanged")
+                return
+            }
+        }
+        lastWireCount = currentWireCount
+
+        isSyncingWiresFromModel = true
         wireEngine.build(from: design.wires)
         for inst in design.componentInstances {
             let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
@@ -376,14 +434,16 @@ final class SchematicEditorController: EditorController {
         at location: CGPoint,
         packManager: SwiftDataPackManager
     ) -> Bool {
-        var fetchDescriptor = FetchDescriptor<ComponentDefinition>(predicate: #Predicate { $0.uuid == transferable.componentUUID })
+        var fetchDescriptor = FetchDescriptor<ComponentDefinition>(
+            predicate: #Predicate { $0.uuid == transferable.componentUUID })
         fetchDescriptor.relationshipKeyPathsForPrefetching = [\.symbol]
         let fullLibraryContext = ModelContext(packManager.mainContainer)
 
         guard let componentDefinition = (try? fullLibraryContext.fetch(fetchDescriptor))?.first,
-                let symbolDefinition = componentDefinition.symbol else {
-              return false
-          }
+            let symbolDefinition = componentDefinition.symbol
+        else {
+            return false
+        }
 
         // 1. THE FIX for SymbolInstance
         // We now correctly pass the `definitionUUID` from the symbol's definition.

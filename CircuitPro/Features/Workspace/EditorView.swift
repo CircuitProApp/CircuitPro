@@ -48,8 +48,10 @@ struct EditorView: View {
                 switch selectedEditor {
                 case .schematic:
                     SchematicCanvasView(canvasManager: selectedCanvasManager)
+                        .id("schematic-canvas")
                 case .layout:
                     LayoutCanvasView(canvasManager: selectedCanvasManager)
+                        .id("layout-canvas")
                 }
 
             } handle: {
