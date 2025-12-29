@@ -46,6 +46,16 @@ enum CanvasStyleStore {
                 crosshairHex: "#60A5FA",
                 isBuiltin: true
             ),
+            CanvasStyle(
+                id: UUID(uuidString: "33A7C5F4-8149-4158-971E-031234567890")!,
+                name: "Chalkboard",
+                backgroundHex: "#1B3022",
+                gridHex: "#2D4B39",
+                textHex: "#FCFAED",
+                markerHex: "#D2B48C",
+                crosshairHex: "#FFFFFF",
+                isBuiltin: true
+            ),
         ]
     }
 
@@ -66,9 +76,17 @@ enum CanvasStyleStore {
 
     static func loadStyles(from dataString: String) -> [CanvasStyle] {
         guard let data = dataString.data(using: .utf8),
-            let styles = try? decoder.decode([CanvasStyle].self, from: data),
+            var styles = try? decoder.decode([CanvasStyle].self, from: data),
             !styles.isEmpty
         else { return defaultStyles }
+
+        // Ensure all built-in default styles are present
+        for defaultStyle in defaultStyles {
+            if !styles.contains(where: { $0.id == defaultStyle.id }) {
+                styles.append(defaultStyle)
+            }
+        }
+
         return styles
     }
 
