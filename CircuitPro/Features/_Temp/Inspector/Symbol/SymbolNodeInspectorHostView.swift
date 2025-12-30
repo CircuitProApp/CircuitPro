@@ -5,13 +5,12 @@
 //  Created by Giorgi Tchelidze on 8/25/25.
 //
 
-import SwiftUI
 import SwiftDataPacks
+import SwiftUI
 
 struct SymbolNodeInspectorHostView: View {
 
     var component: ComponentInstance
-    @Binding var symbol: GraphSymbolComponent
 
     @Binding var selectedTab: InspectorTab
 
@@ -22,10 +21,10 @@ struct SymbolNodeInspectorHostView: View {
             ScrollView {
                 switch selectedTab {
                 case .attributes:
-                    SymbolNodeAttributesView(component: component, symbol: $symbol)
+                    SymbolNodeAttributesView(component: component)
                         .padding(5)
                 case .appearance:
-                    SymbolNodeAppearanceView(component: component, symbol: symbol)
+                    SymbolNodeAppearanceView(component: component)
                         .padding(5)
                 }
             }

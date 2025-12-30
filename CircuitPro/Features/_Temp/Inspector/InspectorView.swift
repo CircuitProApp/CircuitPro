@@ -29,28 +29,34 @@ struct InspectorView: View {
 
     private var selectedGraphID: NodeID? {
         guard let selectedID = singleSelectedID,
-              let graph = activeGraph else { return nil }
+            let graph = activeGraph
+        else { return nil }
         let nodeID = NodeID(selectedID)
         return graph.hasAnyComponent(for: nodeID) ? nodeID : nil
     }
 
     /// A computed property that finds the ComponentInstance for a selected schematic symbol.
-    private var selectedSymbolContext: (component: ComponentInstance, symbol: Binding<GraphSymbolComponent>)? {
+    private var selectedSymbolComponent: ComponentInstance? {
         guard projectManager.selectedEditor == .schematic,
-              let nodeID = selectedGraphID,
-              let symbolBinding = projectManager.schematicController.symbolBinding(for: nodeID.rawValue),
-              let componentInstance = projectManager.componentInstances.first(where: { $0.id == nodeID.rawValue })
+            let selectedID = singleSelectedID,
+            let componentInstance = projectManager.componentInstances.first(where: {
+                $0.id == selectedID
+            })
         else { return nil }
-
-        return (componentInstance, symbolBinding)
+        return componentInstance
     }
 
     /// A computed property that finds the ComponentInstance for a selected layout footprint.
-    private var selectedFootprintContext: (component: ComponentInstance, footprint: Binding<GraphFootprintComponent>)? {
+    private var selectedFootprintContext:
+        (component: ComponentInstance, footprint: Binding<GraphFootprintComponent>)?
+    {
         guard projectManager.selectedEditor == .layout,
-              let nodeID = selectedGraphID,
-              let footprintBinding = projectManager.layoutController.footprintBinding(for: nodeID.rawValue),
-              let componentInstance = projectManager.componentInstances.first(where: { $0.id == nodeID.rawValue })
+            let nodeID = selectedGraphID,
+            let footprintBinding = projectManager.layoutController.footprintBinding(
+                for: nodeID.rawValue),
+            let componentInstance = projectManager.componentInstances.first(where: {
+                $0.id == nodeID.rawValue
+            })
         else { return nil }
 
         return (componentInstance, footprintBinding)
@@ -82,13 +88,12 @@ struct InspectorView: View {
     /// The view content to display when the Schematic editor is active.
     @ViewBuilder
     private var schematicInspectorView: some View {
-        if let context = selectedSymbolContext {
+        if let component = selectedSymbolComponent {
             SymbolNodeInspectorHostView(
-                component: context.component,
-                symbol: context.symbol,
+                component: component,
                 selectedTab: $selectedTab
             )
-            .id(context.component.id)
+            .id(component.id)
 
         } else if let textBinding = selectedTextBinding {
             GraphTextInspectorView(text: textBinding)
@@ -109,7 +114,9 @@ struct InspectorView: View {
             .id(context.component.id)
 
         } else if let selection = projectManager.layoutController.singleSelectedPrimitive,
-                  let binding = projectManager.layoutController.primitiveBinding(for: selection.id.rawValue) {
+            let binding = projectManager.layoutController.primitiveBinding(
+                for: selection.id.rawValue)
+        {
             ScrollView {
                 PrimitivePropertiesView(primitive: binding)
             }
@@ -126,8 +133,10 @@ struct InspectorView: View {
     private var selectionStatusView: some View {
         VStack {
             Spacer()
-            Text(projectManager.selectedNodeIDs.isEmpty ? "No Selection" : "Multiple Items Selected")
-                .foregroundColor(.secondary)
+            Text(
+                projectManager.selectedNodeIDs.isEmpty ? "No Selection" : "Multiple Items Selected"
+            )
+            .foregroundColor(.secondary)
             Spacer()
         }
         .frame(maxWidth: .infinity)

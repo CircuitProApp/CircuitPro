@@ -18,7 +18,6 @@ final class SchematicEditorController: EditorController {
     private var suppressGraphSelectionSync = false
     private var isSyncingTextFromModel = false
     private var isApplyingTextChangesToModel = false
-    private var isSyncingSymbolsFromModel = false
 
     // Track if initial load has happened
     private var hasPerformedInitialLoad = false
@@ -85,7 +84,6 @@ final class SchematicEditorController: EditorController {
             }
         } onChange: {
             Task { @MainActor in
-                self.refreshSymbolComponents()  // Needed for selection/drag
                 self.refreshSymbolTextNodes()
                 self.refreshSymbolPinComponents()
                 self.canvasStore.invalidate()
@@ -116,8 +114,7 @@ final class SchematicEditorController: EditorController {
 
         isPerformingInitialLoad = false
 
-        // Load graph components (needed for selection, not rendering)
-        refreshSymbolComponents()
+        // Load graph components for text and pins (needed for selection/editing)
         refreshSymbolTextNodes()
         refreshSymbolPinComponents()
         canvasStore.invalidate()
@@ -126,13 +123,11 @@ final class SchematicEditorController: EditorController {
     // MARK: - Symbol Refresh (when structure changes)
 
     private func refreshSymbols() async {
-        // Update graph components for selection/drag (rendering uses CanvasRenderable)
-        refreshSymbolComponents()
+        // Update graph components for text and pins
         refreshSymbolTextNodes()
         refreshSymbolPinComponents()
 
-        // Also sync pins when symbols change (component added/moved)
-        // Use the loading flag to prevent persistence during sync
+        // Sync pins when symbols change (component added/moved)
         let wasLoading = isPerformingInitialLoad
         isPerformingInitialLoad = true
 
@@ -147,39 +142,7 @@ final class SchematicEditorController: EditorController {
         canvasStore.invalidate()
     }
 
-    // MARK: - Graph Component Refresh (for selection/drag, not rendering)
-
-    private func refreshSymbolComponents() {
-        let design = projectManager.selectedDesign
-        isSyncingSymbolsFromModel = true
-        var updatedIDs = Set<NodeID>()
-
-        for inst in design.componentInstances {
-            guard let symbolDef = inst.symbolInstance.definition else { continue }
-            let nodeID = NodeID(inst.id)
-            let component = GraphSymbolComponent(
-                ownerID: inst.id,
-                position: inst.symbolInstance.position,
-                rotation: inst.symbolInstance.rotation,
-                primitives: symbolDef.primitives
-            )
-            if !graph.nodes.contains(nodeID) {
-                graph.addNode(nodeID)
-            }
-            graph.setComponent(component, for: nodeID)
-            updatedIDs.insert(nodeID)
-        }
-
-        let existingIDs = Set(graph.nodeIDs(with: GraphSymbolComponent.self))
-        for id in existingIDs.subtracting(updatedIDs) {
-            graph.removeComponent(GraphSymbolComponent.self, for: id)
-            if !graph.hasAnyComponent(for: id) {
-                graph.removeNode(id)
-            }
-        }
-
-        isSyncingSymbolsFromModel = false
-    }
+    // MARK: - Graph Component Refresh (for text and pin selection/editing)
 
     func refreshSymbolTextNodes() {
         let design = projectManager.selectedDesign
@@ -315,11 +278,6 @@ final class SchematicEditorController: EditorController {
                 !isSyncingTextFromModel
             {
                 applyGraphTextChange(component)
-            } else if componentKey == ObjectIdentifier(GraphSymbolComponent.self),
-                let component = graph.component(GraphSymbolComponent.self, for: id),
-                !isSyncingSymbolsFromModel
-            {
-                applyGraphSymbolChange(component)
             }
             canvasStore.invalidate()
         case .nodeRemoved:
@@ -344,30 +302,6 @@ final class SchematicEditorController: EditorController {
         inst.apply(component.resolvedText, for: component.target)
         document.scheduleAutosave()
         isApplyingTextChangesToModel = false
-    }
-
-    private func applyGraphSymbolChange(_ component: GraphSymbolComponent) {
-        guard
-            let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }
-            )
-        else { return }
-        inst.symbolInstance.position = component.position
-        inst.symbolInstance.rotation = component.rotation
-        document.scheduleAutosave()
-    }
-
-    func symbolBinding(for id: UUID) -> Binding<GraphSymbolComponent>? {
-        let nodeID = NodeID(id)
-        guard graph.component(GraphSymbolComponent.self, for: nodeID) != nil else { return nil }
-        return Binding(
-            get: { self.graph.component(GraphSymbolComponent.self, for: nodeID)! },
-            set: { newValue in
-                if !self.graph.nodes.contains(nodeID) {
-                    self.graph.addNode(nodeID)
-                }
-                self.graph.setComponent(newValue, for: nodeID)
-            }
-        )
     }
 
     func textBinding(for id: UUID) -> Binding<GraphTextComponent>? {

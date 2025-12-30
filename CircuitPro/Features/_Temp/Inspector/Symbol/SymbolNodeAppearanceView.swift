@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 9/19/25.
 //
 
-
 //
 //  SymbolNodeAppearanceView.swift
 //  CircuitPro
@@ -13,9 +12,9 @@
 //  Created by Giorgi Tchelidze on 8/25/25.
 //
 
-import SwiftUI
-import SwiftDataPacks
 import AppKit
+import SwiftDataPacks
+import SwiftUI
 
 struct SymbolNodeAppearanceView: View {
     @Environment(\.projectManager) private var projectManager
@@ -23,22 +22,22 @@ struct SymbolNodeAppearanceView: View {
 
     @Bindable var component: ComponentInstance
 
-    let symbol: GraphSymbolComponent
-
     var body: some View {
         VStack(spacing: 5) {
             InspectorSection("Text Visibility") {
                 PlainList {
                     // This logic remains valid as it passes the correct content type.
                     textVisibilityListRow(label: "Name", content: .componentName)
-                    textVisibilityListRow(label: "Reference", content: .componentReferenceDesignator)
+                    textVisibilityListRow(
+                        label: "Reference", content: .componentReferenceDesignator)
 
                     if !component.displayedProperties.isEmpty { Divider() }
 
                     ForEach(component.displayedProperties) { property in
                         // Create a temporary content enum to use for searching.
                         // The actual options will be read from the resolved model.
-                        let content: CircuitTextContent = .componentProperty(definitionID: property.id, options: .default)
+                        let content: CircuitTextContent = .componentProperty(
+                            definitionID: property.id, options: .default)
                         let isVisible = isDynamicTextVisible(content)
 
                         VStack(alignment: .leading, spacing: 6) {
@@ -85,10 +84,13 @@ struct SymbolNodeAppearanceView: View {
     @ViewBuilder
     private func displayOptionsRow(for content: CircuitTextContent) -> some View {
         // 1. Find the text by its content type.
-        if let resolvedText = component.symbolInstance.resolvedItems.first(where: { $0.content.isSameType(as: content) }) {
+        if let resolvedText = component.symbolInstance.resolvedItems.first(where: {
+            $0.content.isSameType(as: content)
+        }) {
 
             // 2. Safely extract the definition ID and current options from the enum.
-            if case .componentProperty(let definitionID, let currentOptions) = resolvedText.content {
+            if case .componentProperty(let definitionID, let currentOptions) = resolvedText.content
+            {
 
                 // 3. Create a single, robust binding for the whole TextDisplayOptions struct.
                 let optionsBinding = Binding<TextDisplayOptions>(
@@ -99,7 +101,8 @@ struct SymbolNodeAppearanceView: View {
                     set: { newOptions in
                         // Reconstruct the enum with the new options and assign it back to the model.
                         var editedText = resolvedText
-                        editedText.content = .componentProperty(definitionID: definitionID, options: newOptions)
+                        editedText.content = .componentProperty(
+                            definitionID: definitionID, options: newOptions)
                         // Have the manager apply the change.
                         projectManager.updateText(for: component, with: editedText)
                     }
@@ -128,9 +131,12 @@ struct SymbolNodeAppearanceView: View {
     private func toggleVisibility(for content: CircuitTextContent) {
         // This logic correctly delegates to the ProjectManager, which was previously updated.
         if case .componentProperty(let definitionID, _) = content,
-           let property = component.displayedProperties.first(where: { $0.id == definitionID }) {
+            let property = component.displayedProperties.first(where: { $0.id == definitionID })
+        {
             projectManager.togglePropertyVisibility(for: component, property: property)
-        } else if component.symbolInstance.resolvedItems.first(where: { $0.content.isSameType(as: content) }) != nil {
+        } else if component.symbolInstance.resolvedItems.first(where: {
+            $0.content.isSameType(as: content)
+        }) != nil {
             projectManager.toggleDynamicTextVisibility(for: component, content: content)
         } else {
             let instance = makeDefaultTextInstance(for: content)
@@ -151,7 +157,7 @@ struct SymbolNodeAppearanceView: View {
     }
 
     private func makeDefaultTextInstance(for content: CircuitTextContent) -> CircuitText.Instance {
-        let bounds = symbol.localInteractionBounds() ?? .zero
+        let bounds = computeSymbolBounds()
         let position = defaultTextPosition(for: content, bounds: bounds)
 
         return CircuitText.Instance(
@@ -179,5 +185,22 @@ struct SymbolNodeAppearanceView: View {
         default:
             return CGPoint(x: bounds.midX, y: bounds.midY)
         }
+    }
+
+    private func computeSymbolBounds() -> CGRect {
+        guard let primitives = component.symbolInstance.definition?.primitives else {
+            return .zero
+        }
+        var combined = CGRect.null
+        for primitive in primitives {
+            var box = primitive.boundingBox
+            let primTransform = CGAffineTransform(
+                translationX: primitive.position.x, y: primitive.position.y
+            )
+            .rotated(by: primitive.rotation)
+            box = box.applying(primTransform)
+            combined = combined.union(box)
+        }
+        return combined.isNull ? .zero : combined
     }
 }

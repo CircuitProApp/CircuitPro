@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 9/19/25.
 //
 
-
 //
 //  SymbolNodeAttributesView.swift
 //  CircuitPro
@@ -13,14 +12,13 @@
 //  Created by Giorgi Tchelidze on 8/25/25.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct SymbolNodeAttributesView: View {
     @Environment(\.projectManager) private var projectManager
 
     @Bindable var component: ComponentInstance
-    @Binding var symbol: GraphSymbolComponent
 
     @Query(sort: \FootprintDefinition.name) private var allFootprints: [FootprintDefinition]
 
@@ -43,7 +41,7 @@ struct SymbolNodeAttributesView: View {
         return projectManager.syncManager.resolvedFootprintName(for: component) ?? "None"
     }
 
-    @State private var commitSessionID: UUID? // NEW
+    @State private var commitSessionID: UUID?  // NEW
 
     private func withCommitSession(_ perform: (UUID) -> Void) {
         let id: UUID
@@ -68,10 +66,12 @@ struct SymbolNodeAttributesView: View {
         Binding(
             get: { projectManager.syncManager.resolvedReferenceDesignator(for: self.component) },
             set: { newIndex in
-                let current = projectManager.syncManager.resolvedReferenceDesignator(for: self.component)
+                let current = projectManager.syncManager.resolvedReferenceDesignator(
+                    for: self.component)
                 guard newIndex != current else { return }
                 withCommitSession { session in
-                    projectManager.updateReferenceDesignator(for: self.component, newIndex: newIndex, sessionID: session)
+                    projectManager.updateReferenceDesignator(
+                        for: self.component, newIndex: newIndex, sessionID: session)
                 }
             }
         )
@@ -86,9 +86,11 @@ struct SymbolNodeAttributesView: View {
                 guard newUUID != current else { return }
                 withCommitSession { session in
                     if let id = newUUID, let fp = allFootprints.first(where: { $0.uuid == id }) {
-                        projectManager.assignFootprint(to: component, footprint: fp, sessionID: session)
+                        projectManager.assignFootprint(
+                            to: component, footprint: fp, sessionID: session)
                     } else {
-                        projectManager.assignFootprint(to: component, footprint: nil, sessionID: session)
+                        projectManager.assignFootprint(
+                            to: component, footprint: nil, sessionID: session)
                     }
                 }
             }
@@ -100,14 +102,18 @@ struct SymbolNodeAttributesView: View {
         Binding(
             get: {
                 component.displayedProperties.compactMap { original in
-                    projectManager.syncManager.resolvedProperty(for: component, propertyID: original.id)
+                    projectManager.syncManager.resolvedProperty(
+                        for: component, propertyID: original.id)
                 }
             },
             set: { newArray in
                 // Build resolved-current map once
                 let currentByID: [UUID: Property.Resolved] = Dictionary(
                     uniqueKeysWithValues: component.displayedProperties.compactMap { original in
-                        guard let resolved = projectManager.syncManager.resolvedProperty(for: component, propertyID: original.id) else { return nil }
+                        guard
+                            let resolved = projectManager.syncManager.resolvedProperty(
+                                for: component, propertyID: original.id)
+                        else { return nil }
                         return (original.id, resolved)
                     }
                 )
@@ -117,22 +123,32 @@ struct SymbolNodeAttributesView: View {
                         guard let cur = currentByID[newProp.id] else { continue }
                         if newProp.value != cur.value || newProp.unit != cur.unit {
                             didChange = true
-                            projectManager.updateProperty(for: component, with: newProp, sessionID: session)
+                            projectManager.updateProperty(
+                                for: component, with: newProp, sessionID: session)
                         }
                     }
                 }
-                _ = didChange // keep for breakpoints if you like
+                _ = didChange  // keep for breakpoints if you like
             }
         )
     }
 
     private var positionBinding: Binding<CGPoint> {
         Binding(
-            get: { symbol.position },
+            get: { component.symbolInstance.position },
             set: { newValue in
-                var updated = symbol
-                updated.position = newValue
-                symbol = updated
+                component.symbolInstance.position = newValue
+                projectManager.document.scheduleAutosave()
+            }
+        )
+    }
+
+    private var rotationBinding: Binding<CardinalRotation> {
+        Binding(
+            get: { component.symbolInstance.cardinalRotation },
+            set: { newValue in
+                component.symbolInstance.cardinalRotation = newValue
+                projectManager.document.scheduleAutosave()
             }
         )
     }
@@ -148,7 +164,7 @@ struct SymbolNodeAttributesView: View {
                 InspectorRow("Refdes", style: .leading) {
                     InspectorNumericField(
                         label: component.definition?.referenceDesignatorPrefix,
-                        value: refdesIndexBinding, // This now gets the resolved value
+                        value: refdesIndexBinding,  // This now gets the resolved value
                         placeholder: "?",
                         labelStyle: .prominent
                     )
@@ -186,7 +202,7 @@ struct SymbolNodeAttributesView: View {
                             }
                         }
                     } label: {
-                        Text(selectedFootprintName) // This now gets the resolved name
+                        Text(selectedFootprintName)  // This now gets the resolved name
                     }
                     .menuStyle(.automatic)
                     .controlSize(.small)
@@ -200,7 +216,16 @@ struct SymbolNodeAttributesView: View {
                     title: "Position",
                     point: positionBinding
                 )
-                RotationControlView(object: $symbol)
+                //                InspectorRow("Rotation") {
+                //                    Picker(selection: rotationBinding, label: EmptyView()) {
+                //                        ForEach(CardinalRotation.allCases, id: \.self) { rotation in
+                //                            Text(rotation.label)
+                //                        }
+                //                    }
+                //                    .labelsHidden()
+                //                    .pickerStyle(.segmented)
+                //                    .controlSize(.small)
+                //                }
             }
             Divider()
 
@@ -209,8 +234,11 @@ struct SymbolNodeAttributesView: View {
                     // This table is now bound to the resolved properties array
                     Table(propertiesBinding, selection: $selectedProperty) {
                         TableColumn("Key") { $property in Text(property.key.label) }
-                        TableColumn("Value") { $property in InspectorValueColumn(property: $property) }
-                        TableColumn("Unit") { $property in InspectorUnitColumn(property: $property) }
+                        TableColumn("Value") { $property in
+                            InspectorValueColumn(property: $property)
+                        }
+                        TableColumn("Unit") { $property in InspectorUnitColumn(property: $property)
+                        }
                     }
                     .font(.caption)
                     .tableStyle(.bordered)
