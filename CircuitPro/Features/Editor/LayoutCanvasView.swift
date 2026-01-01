@@ -44,7 +44,7 @@ struct LayoutCanvasView: View {
             ],
             interactions: [
                 HoverHighlightInteraction(),
-                KeyCommandInteraction(),
+                KeyCommandInteraction(traceEngine: layoutController.traceEngine),
                 HandleInteraction(),
                 ToolInteraction(),
                 SelectionInteraction(),
@@ -60,7 +60,10 @@ struct LayoutCanvasView: View {
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
         .overlay(alignment: .leading) {
-            LayoutToolbarView(selectedSchematicTool: selectedTool)
+            LayoutToolbarView(
+                selectedSchematicTool: selectedTool,
+                traceEngine: layoutController.traceEngine
+            )
                 .padding(16)
         }
     }

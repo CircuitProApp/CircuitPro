@@ -23,7 +23,7 @@ struct GraphPadHitTestProvider: GraphHitTestProvider {
             if hitArea.contains(localPoint) {
                 let bounds = bodyPath.boundingBoxOfPath
                 let area = bounds.width * bounds.height
-                let candidate = GraphHitCandidate(id: id, priority: 2, area: area)
+                let candidate = GraphHitCandidate(id: .node(id), priority: 2, area: area)
                 if let current = best {
                     if candidate.priority > current.priority ||
                         (candidate.priority == current.priority && candidate.area < current.area) {
@@ -38,8 +38,8 @@ struct GraphPadHitTestProvider: GraphHitTestProvider {
         return best
     }
 
-    func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [NodeID] {
-        var hits = Set<NodeID>()
+    func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [GraphElementID] {
+        var hits = Set<GraphElementID>()
         for (id, component) in graph.components(GraphPadComponent.self) {
             let bodyPath = component.pad.calculateCompositePath()
             let bounds = bodyPath.boundingBoxOfPath
@@ -48,7 +48,7 @@ struct GraphPadHitTestProvider: GraphHitTestProvider {
             var transform = component.worldTransform
             let worldBounds = bounds.applying(transform)
             if rect.intersects(worldBounds) {
-                hits.insert(id)
+                hits.insert(.node(id))
             }
         }
 

@@ -9,9 +9,9 @@ final class HoverHighlightInteraction: CanvasInteraction {
         let graph = context.graph
         if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
             let resolved = graph.selectionTarget(for: graphHit)
-            controller.setInteractionHighlight(nodeIDs: [resolved.rawValue])
+            controller.setInteractionHighlight(elementIDs: [resolved])
         } else {
-            controller.setInteractionHighlight(nodeIDs: [])
+            controller.setInteractionHighlight(elementIDs: [])
         }
     }
 }

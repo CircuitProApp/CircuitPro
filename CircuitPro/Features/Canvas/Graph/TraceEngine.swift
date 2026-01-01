@@ -109,7 +109,7 @@ final class TraceEngine: TraceMetadataStore {
 
     private func syncGraphComponents(delta: GraphDelta, final: GraphState) {
         for id in delta.deletedEdges {
-            graph.removeNode(NodeID(id))
+            graph.removeEdge(EdgeID(id))
         }
         for id in delta.deletedVertices {
             graph.removeNode(NodeID(id))
@@ -124,16 +124,22 @@ final class TraceEngine: TraceMetadataStore {
 
         for id in delta.createdEdges {
             guard let e = final.edges[id] else { continue }
-            let nodeID = NodeID(id)
-            graph.addNode(nodeID)
+            let edgeID = EdgeID(id)
+            graph.addEdge(edgeID)
             let metadata = edgeMetadata[id]
+            guard let start = final.vertices[e.start],
+                let end = final.vertices[e.end]
+            else { continue }
             let component = TraceEdgeComponent(
+                id: id,
                 start: NodeID(e.start),
                 end: NodeID(e.end),
+                startPoint: start.point,
+                endPoint: end.point,
                 width: metadata?.width ?? 1.0,
                 layerId: metadata?.layerId
             )
-            graph.setComponent(component, for: nodeID)
+            graph.setComponent(component, for: edgeID)
         }
 
         for (id, (_, to)) in delta.movedVertices {
@@ -146,27 +152,35 @@ final class TraceEngine: TraceMetadataStore {
 
         // Ensure edge components track metadata changes (splits/merges).
         for (edgeID, edge) in final.edges {
-            let nodeID = NodeID(edgeID)
             let metadata = edgeMetadata[edgeID]
+            guard let start = final.vertices[edge.start],
+                let end = final.vertices[edge.end]
+            else { continue }
             let desired = TraceEdgeComponent(
+                id: edgeID,
                 start: NodeID(edge.start),
                 end: NodeID(edge.end),
+                startPoint: start.point,
+                endPoint: end.point,
                 width: metadata?.width ?? 1.0,
                 layerId: metadata?.layerId
             )
 
-            if let existing = graph.component(TraceEdgeComponent.self, for: nodeID) {
+            let graphEdgeID = EdgeID(edgeID)
+            if let existing = graph.component(TraceEdgeComponent.self, for: graphEdgeID) {
                 if existing.start != desired.start ||
                     existing.end != desired.end ||
+                    existing.startPoint != desired.startPoint ||
+                    existing.endPoint != desired.endPoint ||
                     existing.width != desired.width ||
                     existing.layerId != desired.layerId {
-                    graph.setComponent(desired, for: nodeID)
+                    graph.setComponent(desired, for: graphEdgeID)
                 }
             } else {
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
+                if !graph.edges.contains(graphEdgeID) {
+                    graph.addEdge(graphEdgeID)
                 }
-                graph.setComponent(desired, for: nodeID)
+                graph.setComponent(desired, for: graphEdgeID)
             }
         }
     }

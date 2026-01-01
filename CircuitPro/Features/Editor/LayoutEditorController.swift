@@ -384,9 +384,9 @@ final class LayoutEditorController: EditorController {
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
             let graphSelection = Set(
-                selection.compactMap { id -> NodeID? in
+                selection.compactMap { id -> GraphElementID? in
                     let nodeID = NodeID(id)
-                    return graph.hasAnyComponent(for: nodeID) ? nodeID : nil
+                    return graph.hasAnyComponent(for: nodeID) ? .node(nodeID) : nil
                 })
             if graph.selection != graphSelection {
                 suppressGraphSelectionSync = true
@@ -402,7 +402,7 @@ final class LayoutEditorController: EditorController {
         switch delta {
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
-            let graphSelectionIDs = Set(selection.map { $0.rawValue })
+            let graphSelectionIDs = Set(selection.compactMap { $0.nodeID?.rawValue })
             if canvasStore.selection != graphSelectionIDs {
                 suppressGraphSelectionSync = true
                 Task { @MainActor in
@@ -410,7 +410,7 @@ final class LayoutEditorController: EditorController {
                     self.suppressGraphSelectionSync = false
                 }
             }
-        case .componentSet(let id, let componentKey):
+        case .nodeComponentSet(let id, let componentKey):
             if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self),
                 let primitive = graph.component(AnyCanvasPrimitive.self, for: id)
             {
@@ -430,12 +430,16 @@ final class LayoutEditorController: EditorController {
         case .nodeRemoved(let id):
             primitiveCache.removeValue(forKey: id)
             canvasStore.invalidate()
-        case .nodeAdded:
-            canvasStore.invalidate()
-        case .componentRemoved(let id, let componentKey):
+        case .nodeComponentRemoved(let id, let componentKey):
             if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self) {
                 primitiveCache.removeValue(forKey: id)
             }
+            canvasStore.invalidate()
+        case .edgeAdded,
+            .edgeRemoved,
+            .nodeAdded,
+            .edgeComponentSet,
+            .edgeComponentRemoved:
             canvasStore.invalidate()
         default:
             break

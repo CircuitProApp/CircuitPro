@@ -8,12 +8,12 @@
 import AppKit
 
 struct GraphPadHaloProvider: GraphHaloProvider {
-    func haloPrimitives(from graph: CanvasGraph, context: RenderContext, highlightedIDs: Set<UUID>) -> [UUID?: [DrawingPrimitive]] {
+    func haloPrimitives(from graph: CanvasGraph, context: RenderContext, highlightedIDs: Set<GraphElementID>) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
         for (id, component) in graph.components(GraphPadComponent.self) {
-            guard highlightedIDs.contains(id.rawValue) else { continue }
-            if let ownerID = component.ownerID, highlightedIDs.contains(ownerID) {
+            guard highlightedIDs.contains(.node(id)) else { continue }
+            if let ownerID = component.ownerID, highlightedIDs.contains(.node(NodeID(ownerID))) {
                 continue
             }
 

@@ -27,8 +27,10 @@ class HandlesRenderLayer: RenderLayer {
     private func findGraphEditable(in context: RenderContext) -> (handles: [CanvasHandle], transform: CGAffineTransform)? {
         let graph = context.graph
         let selectionIDs = graph.selection
-        guard selectionIDs.count == 1, let selectedID = selectionIDs.first else { return nil }
-        guard let primitive = graph.component(AnyCanvasPrimitive.self, for: selectedID) else { return nil }
+        guard selectionIDs.count == 1, let selectedElement = selectionIDs.first else { return nil }
+        guard case .node(let selectedID) = selectedElement,
+            let primitive = graph.component(AnyCanvasPrimitive.self, for: selectedID)
+        else { return nil }
 
         let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
             .rotated(by: primitive.rotation)

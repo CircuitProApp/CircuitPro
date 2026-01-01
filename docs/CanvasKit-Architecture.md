@@ -11,6 +11,11 @@
 - **Canvas graph**: `CanvasGraph` holds only canvas items that are interactive/selectable.
 - **Environment**: theme, grid, overlays only (no scene objects).
 
+## Graph Elements & Selection
+- `CanvasGraph` stores **nodes** (`NodeID`) and **edges** (`EdgeID`) separately.
+- `GraphElementID` unifies selection across nodes and edges.
+- Wires/traces live as edge components and participate in the same render/hit/halo path.
+
 ## Capability Protocols (Canvas Items)
 - `LayeredDrawable` — draw primitives grouped by layer with a render context.
 - `Bounded` — world-space bounds for culling and hit testing.

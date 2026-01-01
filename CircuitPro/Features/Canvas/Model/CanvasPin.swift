@@ -72,26 +72,7 @@ final class CanvasPin: GraphComponent, LayeredDrawable, Bounded, HitTestable, Ha
         var transform = worldTransform
         let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
 
-        var result: [UUID?: [DrawingPrimitive]] = [layerId: worldPrimitives]
-
-        // Add junction dot if needed
-        if let wireEngine = context.environment.connectionEngine as? WireEngine,
-            let ownerID = self.ownerID,
-            let vertexID = wireEngine.findVertex(ownedBy: ownerID, pinID: pin.id)
-        {
-
-            let wireCount = wireEngine.adjacency[vertexID]?.count ?? 0
-            if wireCount > 1 {
-                let dotPath = CGPath(
-                    ellipseIn: CGRect(x: -2, y: -2, width: 4, height: 4), transform: nil)
-                let dotPrimitive = DrawingPrimitive.fill(
-                    path: dotPath, color: NSColor.controlAccentColor.cgColor)
-                var dotTransform = transform
-                result[layerId, default: []].append(dotPrimitive.applying(transform: &dotTransform))
-            }
-        }
-
-        return result
+        return [layerId: worldPrimitives]
     }
 
     func haloPath() -> CGPath? {

@@ -638,61 +638,58 @@ final class WireEngine: ConnectionEngine {
 
     private func syncGraphComponents(delta: GraphDelta, final: GraphState) {
         for id in delta.deletedEdges {
-            graph.removeNode(NodeID(id))
+            graph.removeEdge(EdgeID(id))
         }
         for id in delta.deletedVertices {
             graph.removeNode(NodeID(id))
         }
 
-        for id in delta.createdVertices {
-            guard let v = final.vertices[id] else { continue }
+        let degrees = final.adjacency.mapValues { $0.count }
+
+        for (id, vertex) in final.vertices {
             let nodeID = NodeID(id)
-            graph.addNode(nodeID)
+            if !graph.nodes.contains(nodeID) {
+                graph.addNode(nodeID)
+            }
             let component = WireVertexComponent(
-                point: v.point,
-                clusterID: v.clusterID,
-                ownership: ownership[id] ?? .free
+                id: id,
+                point: vertex.point,
+                clusterID: vertex.clusterID,
+                ownership: ownership[id] ?? .free,
+                degree: degrees[id] ?? 0
             )
-            graph.setComponent(component, for: nodeID)
-        }
-
-        for id in delta.createdEdges {
-            guard let e = final.edges[id] else { continue }
-            let nodeID = NodeID(id)
-            graph.addNode(nodeID)
-            let clusterID = final.vertices[e.start]?.clusterID ?? final.vertices[e.end]?.clusterID
-            let component = WireEdgeComponent(
-                start: NodeID(e.start), end: NodeID(e.end), clusterID: clusterID)
-            graph.setComponent(component, for: nodeID)
-        }
-
-        for (id, (_, to)) in delta.movedVertices {
-            let nodeID = NodeID(id)
-            if var component = graph.component(WireVertexComponent.self, for: nodeID) {
-                component.point = to
+            if let existing = graph.component(WireVertexComponent.self, for: nodeID) {
+                if existing != component {
+                    graph.setComponent(component, for: nodeID)
+                }
+            } else {
                 graph.setComponent(component, for: nodeID)
             }
         }
 
-        if !delta.changedClusterIDs.isEmpty {
-            for (id, change) in delta.changedClusterIDs {
-                let nodeID = NodeID(id)
-                if var component = graph.component(WireVertexComponent.self, for: nodeID) {
-                    component.clusterID = change.to
-                    graph.setComponent(component, for: nodeID)
-                }
+        for (id, edge) in final.edges {
+            let edgeID = EdgeID(id)
+            guard let start = final.vertices[edge.start],
+                let end = final.vertices[edge.end]
+            else { continue }
+            if !graph.edges.contains(edgeID) {
+                graph.addEdge(edgeID)
             }
-            for (edgeID, edge) in final.edges {
-                let nodeID = NodeID(edgeID)
-                guard var component = graph.component(WireEdgeComponent.self, for: nodeID) else {
-                    continue
+            let clusterID = start.clusterID ?? end.clusterID
+            let component = WireEdgeComponent(
+                id: id,
+                start: NodeID(edge.start),
+                end: NodeID(edge.end),
+                startPoint: start.point,
+                endPoint: end.point,
+                clusterID: clusterID
+            )
+            if let existing = graph.component(WireEdgeComponent.self, for: edgeID) {
+                if existing != component {
+                    graph.setComponent(component, for: edgeID)
                 }
-                let clusterID =
-                    final.vertices[edge.start]?.clusterID ?? final.vertices[edge.end]?.clusterID
-                if component.clusterID != clusterID {
-                    component.clusterID = clusterID
-                    graph.setComponent(component, for: nodeID)
-                }
+            } else {
+                graph.setComponent(component, for: edgeID)
             }
         }
 
@@ -744,8 +741,8 @@ final class WireEngine: ConnectionEngine {
         return (vset, eset)
     }
 
-    private func restoreSelection(_ selection: Set<NodeID>) {
-        let restored = selection.filter { graph.nodes.contains($0) }
+    private func restoreSelection(_ selection: Set<GraphElementID>) {
+        let restored = selection.filter { graph.hasAnyComponent(for: $0) }
         if graph.selection != restored {
             graph.selection = restored
         }

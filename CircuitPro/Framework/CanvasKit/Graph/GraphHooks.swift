@@ -9,7 +9,7 @@ import CoreGraphics
 import Foundation
 
 struct GraphHitCandidate {
-    let id: NodeID
+    let id: GraphElementID
     let priority: Int
     let area: CGFloat
 }
@@ -19,10 +19,10 @@ protocol GraphRenderProvider {
 }
 
 protocol GraphHaloProvider {
-    func haloPrimitives(from graph: CanvasGraph, context: RenderContext, highlightedIDs: Set<UUID>) -> [UUID?: [DrawingPrimitive]]
+    func haloPrimitives(from graph: CanvasGraph, context: RenderContext, highlightedIDs: Set<GraphElementID>) -> [UUID?: [DrawingPrimitive]]
 }
 
 protocol GraphHitTestProvider {
     func hitTest(point: CGPoint, tolerance: CGFloat, graph: CanvasGraph, context: RenderContext) -> GraphHitCandidate?
-    func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [NodeID]
+    func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [GraphElementID]
 }

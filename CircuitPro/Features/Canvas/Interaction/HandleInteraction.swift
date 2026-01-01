@@ -16,8 +16,10 @@ final class HandleInteraction: CanvasInteraction {
 
     private func startGraphDrag(point: CGPoint, context: RenderContext) -> Bool {
         let graph = context.graph
-        guard graph.selection.count == 1, let id = graph.selection.first else { return false }
-        guard let primitive = graph.component(AnyCanvasPrimitive.self, for: id) else { return false }
+        guard graph.selection.count == 1, let selection = graph.selection.first else { return false }
+        guard case .node(let nodeID) = selection,
+              let primitive = graph.component(AnyCanvasPrimitive.self, for: nodeID)
+        else { return false }
 
         for handle in primitive.handles() {
             let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
@@ -33,7 +35,7 @@ final class HandleInteraction: CanvasInteraction {
                 }
 
                 self.state = .draggingGraph(
-                    id: id,
+                    id: nodeID,
                     handleKind: handle.kind,
                     oppositeHandleWorldPosition: oppositeWorldPosition
                 )

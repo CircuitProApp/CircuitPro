@@ -72,9 +72,9 @@ final class CanvasEditorManager {
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
             let graphSelection = Set(
-                selection.compactMap { id -> NodeID? in
+                selection.compactMap { id -> GraphElementID? in
                     let nodeID = NodeID(id)
-                    return graph.hasAnyComponent(for: nodeID) ? nodeID : nil
+                    return graph.hasAnyComponent(for: nodeID) ? .node(nodeID) : nil
                 })
             if graph.selection != graphSelection {
                 graph.selection = graphSelection
@@ -87,7 +87,7 @@ final class CanvasEditorManager {
     private func handleGraphDelta(_ delta: UnifiedGraphDelta) {
         switch delta {
         case .selectionChanged(let selection):
-            let graphSelectionIDs = Set(selection.map { $0.rawValue })
+            let graphSelectionIDs = Set(selection.compactMap { $0.nodeID?.rawValue })
             if canvasStore.selection != graphSelectionIDs {
                 suppressGraphSelectionSync = true
                 Task { @MainActor in
@@ -95,7 +95,7 @@ final class CanvasEditorManager {
                     self.suppressGraphSelectionSync = false
                 }
             }
-        case .componentSet(let id, let componentKey):
+        case .nodeComponentSet(let id, let componentKey):
             if componentKey == ObjectIdentifier(CanvasPrimitiveElement.self),
                 let component = graph.component(CanvasPrimitiveElement.self, for: id)
             {
@@ -105,12 +105,16 @@ final class CanvasEditorManager {
         case .nodeRemoved(let id):
             primitiveCache.removeValue(forKey: id)
             canvasStore.invalidate()
-        case .nodeAdded:
-            canvasStore.invalidate()
-        case .componentRemoved(let id, let componentKey):
+        case .nodeComponentRemoved(let id, let componentKey):
             if componentKey == ObjectIdentifier(CanvasPrimitiveElement.self) {
                 primitiveCache.removeValue(forKey: id)
             }
+            canvasStore.invalidate()
+        case .edgeAdded,
+            .edgeRemoved,
+            .nodeAdded,
+            .edgeComponentSet,
+            .edgeComponentRemoved:
             canvasStore.invalidate()
         default:
             break
@@ -382,7 +386,7 @@ extension CanvasEditorManager {
                 graph.removeNode(id)
             }
         }
-        graph.selection.subtract(idsToRemove)
+        graph.selection.subtract(idsToRemove.map { .node($0) })
         selectedElementIDs.subtract(idsToRemove.map { $0.rawValue })
     }
 
@@ -464,7 +468,7 @@ extension CanvasEditorManager {
                 graph.removeNode(id)
             }
         }
-        graph.selection.subtract(idsToRemove)
+        graph.selection.subtract(idsToRemove.map { .node($0) })
         selectedElementIDs.subtract(idsToRemove.map { $0.rawValue })
     }
 }

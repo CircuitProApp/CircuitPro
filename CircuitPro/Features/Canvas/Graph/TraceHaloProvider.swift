@@ -8,26 +8,22 @@
 import AppKit
 
 struct TraceHaloProvider: GraphHaloProvider {
-    func haloPrimitives(from graph: CanvasGraph, context: RenderContext, highlightedIDs: Set<UUID>) -> [UUID?: [DrawingPrimitive]] {
-        var selectedEdges: [(TraceEdgeComponent, TraceVertexComponent, TraceVertexComponent)] = []
+    func haloPrimitives(from graph: CanvasGraph, context: RenderContext, highlightedIDs: Set<GraphElementID>) -> [UUID?: [DrawingPrimitive]] {
+        var selectedEdges: [TraceEdgeComponent] = []
         var maxWidth: CGFloat = 0.0
 
-        for (id, edge) in graph.components(TraceEdgeComponent.self) {
-            guard highlightedIDs.contains(id.rawValue),
-                  let start = graph.component(TraceVertexComponent.self, for: edge.start),
-                  let end = graph.component(TraceVertexComponent.self, for: edge.end) else {
-                continue
-            }
-            selectedEdges.append((edge, start, end))
+        for (edgeID, edge) in graph.edgeComponents(TraceEdgeComponent.self) {
+            guard highlightedIDs.contains(.edge(edgeID)) else { continue }
+            selectedEdges.append(edge)
             maxWidth = max(maxWidth, edge.width)
         }
 
         guard !selectedEdges.isEmpty else { return [:] }
 
         let compositePath = CGMutablePath()
-        for (_, start, end) in selectedEdges {
-            compositePath.move(to: start.point)
-            compositePath.addLine(to: end.point)
+        for edge in selectedEdges {
+            compositePath.move(to: edge.startPoint)
+            compositePath.addLine(to: edge.endPoint)
         }
 
         let haloPadding: CGFloat = 2.0

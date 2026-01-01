@@ -8,20 +8,14 @@
 import AppKit
 
 struct WireGraphHaloProvider: GraphHaloProvider {
-    func haloPrimitives(from graph: CanvasGraph, context: RenderContext, highlightedIDs: Set<UUID>) -> [UUID?: [DrawingPrimitive]] {
+    func haloPrimitives(from graph: CanvasGraph, context: RenderContext, highlightedIDs: Set<GraphElementID>) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
-        let haloIDs = highlightedIDs
-
         let compositePath = CGMutablePath()
 
-        for (id, edge) in graph.components(WireEdgeComponent.self) {
-            guard haloIDs.contains(id.rawValue),
-                  let start = graph.component(WireVertexComponent.self, for: edge.start),
-                  let end = graph.component(WireVertexComponent.self, for: edge.end) else {
-                continue
-            }
-            compositePath.move(to: start.point)
-            compositePath.addLine(to: end.point)
+        for (edgeID, edge) in graph.edgeComponents(WireEdgeComponent.self) {
+            guard highlightedIDs.contains(.edge(edgeID)) else { continue }
+            compositePath.move(to: edge.startPoint)
+            compositePath.addLine(to: edge.endPoint)
         }
 
         guard !compositePath.isEmpty else { return primitivesByLayer }

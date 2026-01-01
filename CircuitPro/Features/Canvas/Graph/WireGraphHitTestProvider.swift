@@ -9,34 +9,27 @@ import CoreGraphics
 
 struct WireGraphHitTestProvider: GraphHitTestProvider {
     func hitTest(point: CGPoint, tolerance: CGFloat, graph: CanvasGraph, context: RenderContext) -> GraphHitCandidate? {
-        for (id, edge) in graph.components(WireEdgeComponent.self) {
-            guard let start = graph.component(WireVertexComponent.self, for: edge.start),
-                  let end = graph.component(WireVertexComponent.self, for: edge.end) else {
-                continue
-            }
-            if isPoint(point, onSegmentBetween: start.point, p2: end.point, tolerance: tolerance, strokeWidth: 0) {
-                return GraphHitCandidate(id: id, priority: 0, area: 0.0)
+        for (edgeID, edge) in graph.edgeComponents(WireEdgeComponent.self) {
+            if isPoint(point, onSegmentBetween: edge.startPoint, p2: edge.endPoint, tolerance: tolerance, strokeWidth: edge.lineWidth) {
+                return GraphHitCandidate(id: .edge(edgeID), priority: 0, area: 0.0)
             }
         }
         return nil
     }
 
-    func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [NodeID] {
-        var hits: [NodeID] = []
+    func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [GraphElementID] {
+        var hits: [GraphElementID] = []
 
-        for (id, edge) in graph.components(WireEdgeComponent.self) {
-            guard let start = graph.component(WireVertexComponent.self, for: edge.start),
-                  let end = graph.component(WireVertexComponent.self, for: edge.end) else {
-                continue
-            }
+        for (edgeID, edge) in graph.edgeComponents(WireEdgeComponent.self) {
+            let inset = max(2.0, edge.lineWidth / 2)
             let bounds = CGRect(
-                x: min(start.point.x, end.point.x),
-                y: min(start.point.y, end.point.y),
-                width: abs(start.point.x - end.point.x),
-                height: abs(start.point.y - end.point.y)
-            ).insetBy(dx: -2.0, dy: -2.0)
+                x: min(edge.startPoint.x, edge.endPoint.x),
+                y: min(edge.startPoint.y, edge.endPoint.y),
+                width: abs(edge.startPoint.x - edge.endPoint.x),
+                height: abs(edge.startPoint.y - edge.endPoint.y)
+            ).insetBy(dx: -inset, dy: -inset)
             if rect.intersects(bounds) {
-                hits.append(id)
+                hits.append(.edge(edgeID))
             }
         }
 

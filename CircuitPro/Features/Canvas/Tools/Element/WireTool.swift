@@ -21,6 +21,12 @@ final class WireTool: CanvasTool {
     }
 
     private var state: State = .idle
+    private let wireEngine: WireEngine
+
+    init(wireEngine: WireEngine) {
+        self.wireEngine = wireEngine
+        super.init()
+    }
 
     // MARK: - Primary Actions
     override func handleTap(at location: CGPoint, context: ToolInteractionContext)
@@ -62,13 +68,7 @@ final class WireTool: CanvasTool {
             }
 
             return .command(
-                CanvasToolCommand { interactionContext, _ in
-                    guard
-                        let wireEngine = interactionContext.renderContext.environment
-                            .connectionEngine as? WireEngine
-                    else {
-                        return
-                    }
+                CanvasToolCommand { [wireEngine] _, _ in
                     wireEngine.connect(from: fromPoint, to: toPoint, preferring: strategy)
                 })
         }
@@ -105,11 +105,15 @@ final class WireTool: CanvasTool {
             return false
         }
 
-        if graph.component(CanvasPin.self, for: graphHit) != nil {
-            return true
+        switch graphHit {
+        case .node(let nodeID):
+            if graph.component(CanvasPin.self, for: nodeID) != nil {
+                return true
+            }
+        case .edge(let edgeID):
+            return graph.component(WireEdgeComponent.self, for: edgeID) != nil
         }
-
-        return graph.component(WireEdgeComponent.self, for: graphHit) != nil
+        return false
     }
 
     // MARK: - Keyboard Actions
@@ -122,7 +126,7 @@ final class WireTool: CanvasTool {
     }
 
     // MARK: - Private Helpers
-    private func determineInitialDirection(graphHit: NodeID?, context: RenderContext)
+    private func determineInitialDirection(graphHit: GraphElementID?, context: RenderContext)
         -> DrawingDirection
     {
         if let graphHit, let orientation = wireOrientation(for: graphHit, in: context) {
@@ -132,16 +136,14 @@ final class WireTool: CanvasTool {
         return .horizontal
     }
 
-    private func wireOrientation(for id: NodeID, in context: RenderContext) -> EdgeOrientation? {
+    private func wireOrientation(for id: GraphElementID, in context: RenderContext) -> EdgeOrientation? {
         let graph = context.graph
-        guard let edge = graph.component(WireEdgeComponent.self, for: id),
-            let start = graph.component(WireVertexComponent.self, for: edge.start),
-            let end = graph.component(WireVertexComponent.self, for: edge.end)
-        else {
-            return nil
-        }
-        let dx = abs(start.point.x - end.point.x)
-        let dy = abs(start.point.y - end.point.y)
+        guard case .edge(let edgeID) = id,
+            let edge = graph.component(WireEdgeComponent.self, for: edgeID)
+        else { return nil }
+        let dx = abs(edge.startPoint.x - edge.endPoint.x)
+        let dy = abs(edge.startPoint.y - edge.endPoint.y)
         return dx < 1e-6 ? .vertical : .horizontal
     }
+
 }

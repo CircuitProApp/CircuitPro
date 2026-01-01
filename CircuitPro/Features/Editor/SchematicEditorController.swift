@@ -261,9 +261,9 @@ final class SchematicEditorController: EditorController {
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
             let graphSelection = Set(
-                selection.compactMap { id -> NodeID? in
+                selection.compactMap { id -> GraphElementID? in
                     let nodeID = NodeID(id)
-                    return graph.hasAnyComponent(for: nodeID) ? nodeID : nil
+                    return graph.hasAnyComponent(for: nodeID) ? .node(nodeID) : nil
                 })
             if graph.selection != graphSelection {
                 suppressGraphSelectionSync = true
@@ -279,7 +279,7 @@ final class SchematicEditorController: EditorController {
         switch delta {
         case .selectionChanged(let selection):
             guard !suppressGraphSelectionSync else { return }
-            let graphSelectionIDs = Set(selection.map { $0.rawValue })
+            let graphSelectionIDs = Set(selection.compactMap { $0.nodeID?.rawValue })
             if canvasStore.selection != graphSelectionIDs {
                 suppressGraphSelectionSync = true
                 Task { @MainActor in
@@ -287,7 +287,7 @@ final class SchematicEditorController: EditorController {
                     self.suppressGraphSelectionSync = false
                 }
             }
-        case .componentSet(let id, let componentKey):
+        case .nodeComponentSet(let id, let componentKey):
             if componentKey == ObjectIdentifier(CanvasText.self),
                 let component = graph.component(CanvasText.self, for: id),
                 !isSyncingTextFromModel
@@ -295,11 +295,13 @@ final class SchematicEditorController: EditorController {
                 applyGraphTextChange(component)
             }
             canvasStore.invalidate()
-        case .nodeRemoved:
-            canvasStore.invalidate()
-        case .nodeAdded:
-            canvasStore.invalidate()
-        case .componentRemoved:
+        case .edgeComponentSet,
+            .edgeComponentRemoved,
+            .edgeAdded,
+            .edgeRemoved,
+            .nodeRemoved,
+            .nodeAdded,
+            .nodeComponentRemoved:
             canvasStore.invalidate()
         default:
             break

@@ -11,15 +11,11 @@ struct TraceHitTestProvider: GraphHitTestProvider {
     func hitTest(point: CGPoint, tolerance: CGFloat, graph: CanvasGraph, context: RenderContext) -> GraphHitCandidate? {
         var best: GraphHitCandidate?
 
-        for (id, edge) in graph.components(TraceEdgeComponent.self) {
-            guard let start = graph.component(TraceVertexComponent.self, for: edge.start),
-                  let end = graph.component(TraceVertexComponent.self, for: edge.end) else {
-                continue
-            }
-            if isPoint(point, onSegmentBetween: start.point, p2: end.point, tolerance: tolerance, strokeWidth: edge.width) {
-                let length = hypot(end.point.x - start.point.x, end.point.y - start.point.y)
+        for (edgeID, edge) in graph.edgeComponents(TraceEdgeComponent.self) {
+            if isPoint(point, onSegmentBetween: edge.startPoint, p2: edge.endPoint, tolerance: tolerance, strokeWidth: edge.width) {
+                let length = hypot(edge.endPoint.x - edge.startPoint.x, edge.endPoint.y - edge.startPoint.y)
                 let area = length * max(edge.width, 1.0)
-                let candidate = GraphHitCandidate(id: id, priority: 1, area: area)
+                let candidate = GraphHitCandidate(id: .edge(edgeID), priority: 1, area: area)
                 if let current = best {
                     if candidate.priority > current.priority ||
                         (candidate.priority == current.priority && candidate.area < current.area) {
@@ -33,23 +29,19 @@ struct TraceHitTestProvider: GraphHitTestProvider {
         return best
     }
 
-    func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [NodeID] {
-        var hits: [NodeID] = []
+    func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [GraphElementID] {
+        var hits: [GraphElementID] = []
 
-        for (id, edge) in graph.components(TraceEdgeComponent.self) {
-            guard let start = graph.component(TraceVertexComponent.self, for: edge.start),
-                  let end = graph.component(TraceVertexComponent.self, for: edge.end) else {
-                continue
-            }
+        for (edgeID, edge) in graph.edgeComponents(TraceEdgeComponent.self) {
             let inset = max(2.0, edge.width / 2)
             let bounds = CGRect(
-                x: min(start.point.x, end.point.x),
-                y: min(start.point.y, end.point.y),
-                width: abs(start.point.x - end.point.x),
-                height: abs(start.point.y - end.point.y)
+                x: min(edge.startPoint.x, edge.endPoint.x),
+                y: min(edge.startPoint.y, edge.endPoint.y),
+                width: abs(edge.startPoint.x - edge.endPoint.x),
+                height: abs(edge.startPoint.y - edge.endPoint.y)
             ).insetBy(dx: -inset, dy: -inset)
             if rect.intersects(bounds) {
-                hits.append(id)
+                hits.append(.edge(edgeID))
             }
         }
 

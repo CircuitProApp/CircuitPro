@@ -11,7 +11,7 @@ final class CanvasController {
 
     // MARK: - Core Data Model
 
-    var interactionHighlightedNodeIDs: Set<UUID> = []
+    var interactionHighlightedElementIDs: Set<GraphElementID> = []
 
     // MARK: - View Reference
 
@@ -87,14 +87,14 @@ final class CanvasController {
 
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
     func currentContext(for hostViewBounds: CGRect, visibleRect: CGRect) -> RenderContext {
-        var allHighlightedIDs = interactionHighlightedNodeIDs
-        allHighlightedIDs.formUnion(graph.selection.map { $0.rawValue })
+        var allHighlightedIDs = interactionHighlightedElementIDs
+        allHighlightedIDs.formUnion(graph.selection)
 
         return RenderContext(
             magnification: self.magnification,
             mouseLocation: self.mouseLocation,
             selectedTool: self.selectedTool,
-            highlightedNodeIDs: allHighlightedIDs,
+            highlightedElementIDs: allHighlightedIDs,
             hostViewBounds: hostViewBounds,
             visibleRect: visibleRect,
             layers: self.layers ?? [],
@@ -119,9 +119,9 @@ final class CanvasController {
 
     // MARK: - Interaction API
 
-    func setInteractionHighlight(nodeIDs: Set<UUID>) {
-        guard self.interactionHighlightedNodeIDs != nodeIDs else { return }
-        self.interactionHighlightedNodeIDs = nodeIDs
+    func setInteractionHighlight(elementIDs: Set<GraphElementID>) {
+        guard self.interactionHighlightedElementIDs != elementIDs else { return }
+        self.interactionHighlightedElementIDs = elementIDs
         view?.performLayerUpdate() // Redraw for transient highlights.
     }
 

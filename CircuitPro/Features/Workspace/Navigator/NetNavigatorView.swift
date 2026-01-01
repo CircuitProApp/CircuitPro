@@ -36,13 +36,9 @@ struct NetNavigatorView: View {
                     graph.component(for: netID).edges
                 }
 
-                // Preserve any selected symbols (which are not edges).
-                let currentSymbolSelection = editorSession.selectedNodeIDs.filter {
-                    graph.edges[$0] == nil
-                }
-
-                editorSession.selectedNodeIDs = currentSymbolSelection
-                editorSession.schematicController.graph.selection = Set(allEdgesOfSelectedNets.map(NodeID.init))
+                let edgeSelection = allEdgesOfSelectedNets.map { GraphElementID.edge(EdgeID($0)) }
+                let nodeSelection = editorSession.selectedNodeIDs.map { GraphElementID.node(NodeID($0)) }
+                editorSession.schematicController.graph.selection = Set(edgeSelection + nodeSelection)
             }
         }
     }

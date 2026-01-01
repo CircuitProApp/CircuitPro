@@ -4,9 +4,14 @@ import AppKit
 ///
 /// Priority order:
 /// 1. Transformable items (symbols, footprints via protocol)
-/// 2. Connection elements (wires, traces via ConnectionEngine)
+/// 2. Connection elements (wires via ConnectionEngine)
 /// 3. Special items (standalone text with anchor drag support)
 final class DragInteraction: CanvasInteraction {
+    private let wireEngine: (any ConnectionEngine)?
+
+    init(wireEngine: (any ConnectionEngine)? = nil) {
+        self.wireEngine = wireEngine
+    }
 
     // MARK: - State Types
 
@@ -111,13 +116,14 @@ final class DragInteraction: CanvasInteraction {
 
     private func tryStartItemDrag(at point: CGPoint, context: RenderContext) -> Bool {
         let selection = context.graph.selection
-        guard !selection.isEmpty else { return false }
+        let selectedNodes = Set(selection.compactMap { $0.nodeID })
+        guard !selectedNodes.isEmpty else { return false }
 
         let graph = context.graph
-        let selectedIDs = Set(selection.map { $0.rawValue })
+        let selectedIDs = Set(selectedNodes.map { $0.rawValue })
         let selectedItems = makeDraggableItems(
             in: graph,
-            selectedIDs: selectedIDs
+            selectedNodeIDs: selectedNodes
         )
 
         guard !selectedItems.isEmpty else { return false }
@@ -134,7 +140,7 @@ final class DragInteraction: CanvasInteraction {
 
         // Start connection engine drag if applicable
         var activeConnectionEngine: (any ConnectionEngine)?
-        if let connectionEngine = context.environment.connectionEngine {
+        if let connectionEngine = wireEngine {
             if connectionEngine.beginDrag(selectedIDs: selectedIDs) {
                 activeConnectionEngine = connectionEngine
             }
@@ -174,7 +180,7 @@ final class DragInteraction: CanvasInteraction {
     // MARK: - Private: Connection Drag (Wires/Traces Only)
 
     private func tryStartConnectionDrag(at point: CGPoint, context: RenderContext) -> Bool {
-        guard let connectionEngine = context.environment.connectionEngine else { return false }
+        guard let connectionEngine = wireEngine else { return false }
 
         let graph = context.graph
         guard let graphHit = GraphHitTester().hitTest(point: point, context: context) else {
@@ -184,18 +190,17 @@ final class DragInteraction: CanvasInteraction {
         let resolvedHit = graph.selectionTarget(for: graphHit)
         guard graph.selection.contains(resolvedHit) else { return false }
 
-        // Check if hit is a wire/trace element
-        let isWire =
-            graph.component(WireEdgeComponent.self, for: graphHit) != nil
-            || graph.component(WireVertexComponent.self, for: graphHit) != nil
-        let isTrace =
-            graph.component(TraceEdgeComponent.self, for: graphHit) != nil
-            || graph.component(TraceVertexComponent.self, for: graphHit) != nil
+        let isWire: Bool
+        switch graphHit {
+        case .edge(let edgeID):
+            isWire = graph.component(WireEdgeComponent.self, for: edgeID) != nil
+        case .node:
+            isWire = false
+        }
+        guard isWire else { return false }
 
-        guard isWire || isTrace else { return false }
-
-        let selectedIDs = Set(graph.selection.map { $0.rawValue })
-        guard connectionEngine.beginDrag(selectedIDs: selectedIDs) else { return false }
+        let selectedEdgeIDs = Set(graph.selection.compactMap { $0.edgeID?.rawValue })
+        guard connectionEngine.beginDrag(selectedIDs: selectedEdgeIDs) else { return false }
 
         self.connectionState = ConnectionDragState(
             origin: point, connectionEngine: connectionEngine)
@@ -226,7 +231,9 @@ final class DragInteraction: CanvasInteraction {
             return false
         }
 
-        guard graph.component(CanvasText.self, for: graphHit) != nil else {
+        guard case .node(let nodeID) = graphHit,
+            graph.component(CanvasText.self, for: nodeID) != nil
+        else {
             return false
         }
 
@@ -235,7 +242,8 @@ final class DragInteraction: CanvasInteraction {
 
         // Collect selected text components
         var originalTexts: [NodeID: CanvasText] = [:]
-        for id in graph.selection {
+        for elementID in graph.selection {
+            guard case .node(let id) = elementID else { continue }
             if let text = graph.component(CanvasText.self, for: id) {
                 originalTexts[id] = text
             }
@@ -254,12 +262,12 @@ final class DragInteraction: CanvasInteraction {
 
     private func makeDraggableItems(
         in graph: CanvasGraph,
-        selectedIDs: Set<UUID>
+        selectedNodeIDs: Set<NodeID>
     ) -> [ItemDragState.Item] {
         var items: [ItemDragState.Item] = []
 
-        for id in graph.selection {
-            guard selectedIDs.contains(id.rawValue) else { continue }
+        for id in selectedNodeIDs {
+            guard graph.selection.contains(.node(id)) else { continue }
 
             if let item = makeItem(from: graph.component(ComponentInstance.self, for: id), id: id, graph: graph) {
                 items.append(item)

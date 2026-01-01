@@ -28,17 +28,7 @@ struct SchematicCanvasView: View {
             tool: selectedTool.unwrapping(
                 withDefault: CursorTool()),
             graph: schematicController.graph,
-            environment: canvasManager.environment
-                .withConnectionEngine(schematicController.wireEngine)
-                .withGraphRenderProviders([
-                    GraphWireRenderAdapter()
-                ])
-                .withGraphHaloProviders([
-                    WireGraphHaloProvider()
-                ])
-                .withGraphHitTestProviders([
-                    WireGraphHitTestProvider()
-                ]),
+            environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),
@@ -49,10 +39,10 @@ struct SchematicCanvasView: View {
             ],
             interactions: [
                 HoverHighlightInteraction(),
-                KeyCommandInteraction(),
+                KeyCommandInteraction(wireEngine: schematicController.wireEngine),
                 ToolInteraction(),
                 SelectionInteraction(),
-                DragInteraction(),
+                DragInteraction(wireEngine: schematicController.wireEngine),
                 MarqueeInteraction(),
             ],
             inputProcessors: [GridSnapProcessor()],
@@ -65,7 +55,8 @@ struct SchematicCanvasView: View {
         }
         .overlay(alignment: .leading) {
             SchematicToolbarView(
-                selectedSchematicTool: selectedTool
+                selectedSchematicTool: selectedTool,
+                wireEngine: schematicController.wireEngine
             )
             .padding(16)
         }

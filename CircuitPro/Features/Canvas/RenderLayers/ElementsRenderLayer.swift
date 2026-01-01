@@ -36,7 +36,11 @@ final class ElementsRenderLayer: RenderLayer {
             haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
         }
         for provider in context.environment.graphHaloProviders {
-            let provided = provider.haloPrimitives(from: graph, context: context, highlightedIDs: context.highlightedNodeIDs)
+            let provided = provider.haloPrimitives(
+                from: graph,
+                context: context,
+                highlightedIDs: context.highlightedElementIDs
+            )
             for (layerId, primitives) in provided {
                 haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
             }
@@ -86,10 +90,10 @@ final class ElementsRenderLayer: RenderLayer {
 
     private func gatherHaloPrimitives(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
-        let haloIDs = context.highlightedNodeIDs
+        let haloIDs = context.highlightedElementIDs
 
-        for (id, item) in graph.componentsConforming((any HaloProviding).self) {
-            guard haloIDs.contains(id.rawValue) else { continue }
+        for (id, item) in graph.allComponentsConforming((any HaloProviding).self) {
+            guard haloIDs.contains(id) else { continue }
             guard let haloPath = item.haloPath() else { continue }
 
             let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor

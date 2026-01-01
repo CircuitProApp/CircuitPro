@@ -9,10 +9,11 @@ import SwiftUI
 
 struct LayoutToolbarView: View {
     @Binding var selectedSchematicTool: CanvasTool
+    let traceEngine: TraceEngine
 
     var body: some View {
         CanvasToolbarView(
-            tools: CanvasToolRegistry.layoutTools,
+            tools: CanvasToolRegistry.layoutTools(traceEngine: traceEngine),
             selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool()),
             dividerAfter: { $0 is CursorTool || $0 is TraceTool }
         )

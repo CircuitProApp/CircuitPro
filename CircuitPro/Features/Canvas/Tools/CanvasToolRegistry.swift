@@ -18,7 +18,7 @@ enum CanvasToolRegistry {
     static let text: [CanvasTool] = [
         TextTool()
     ]
-    
+
     static let graphicsTools: [CanvasTool] = [
         LineTool(),
         RectangleTool(),
@@ -31,9 +31,11 @@ enum CanvasToolRegistry {
     static let footprintDesignTools: [CanvasTool] =
         cursor + graphicsTools + [PadTool()] + ruler
 
-    static let schematicTools: [CanvasTool] =
-        cursor + [WireTool()] + ruler
+    static func schematicTools(wireEngine: WireEngine) -> [CanvasTool] {
+        cursor + [WireTool(wireEngine: wireEngine)] + ruler
+    }
 
-    static let layoutTools: [CanvasTool] =
-        cursor + [TraceTool()] + graphicsTools + ruler
+    static func layoutTools(traceEngine: TraceEngine) -> [CanvasTool] {
+        cursor + [TraceTool(traceEngine: traceEngine)] + graphicsTools + ruler
+    }
 }

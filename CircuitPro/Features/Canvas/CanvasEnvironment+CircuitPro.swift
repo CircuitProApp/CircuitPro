@@ -54,15 +54,6 @@ private struct MarqueeRectKey: CanvasEnvironmentKey {
     static let defaultValue: CGRect? = nil
 }
 
-private struct ConnectionEngineKey: CanvasEnvironmentKey {
-    static let defaultValue: (any ConnectionEngine)? = nil
-}
-
-private struct TraceEngineKey: CanvasEnvironmentKey {
-    static let defaultValue: TraceEngine? = nil
-}
-
-
 enum CanvasInteractionMode {
     case graphAndScene
     case graphOnly
@@ -88,32 +79,9 @@ extension CanvasEnvironmentValues {
         set { self[MarqueeRectKey.self] = newValue }
     }
 
-    var connectionEngine: (any ConnectionEngine)? {
-        get { self[ConnectionEngineKey.self] }
-        set { self[ConnectionEngineKey.self] = newValue }
-    }
-
-    var traceEngine: TraceEngine? {
-        get { self[TraceEngineKey.self] }
-        set { self[TraceEngineKey.self] = newValue }
-    }
-
-
     var interactionMode: CanvasInteractionMode {
         get { self[InteractionModeKey.self] }
         set { self[InteractionModeKey.self] = newValue }
-    }
-
-    func withConnectionEngine(_ engine: (any ConnectionEngine)?) -> CanvasEnvironmentValues {
-        var copy = self
-        copy.connectionEngine = engine
-        return copy
-    }
-
-    func withTraceEngine(_ engine: TraceEngine?) -> CanvasEnvironmentValues {
-        var copy = self
-        copy.traceEngine = engine
-        return copy
     }
 
     func withInteractionMode(_ mode: CanvasInteractionMode) -> CanvasEnvironmentValues {

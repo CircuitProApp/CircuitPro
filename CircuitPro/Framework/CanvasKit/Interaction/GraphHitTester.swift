@@ -8,12 +8,12 @@
 import CoreGraphics
 
 struct GraphHitTester {
-    func hitTest(point: CGPoint, context: RenderContext) -> NodeID? {
+    func hitTest(point: CGPoint, context: RenderContext) -> GraphElementID? {
         let graph = context.graph
         let tolerance = 5.0 / context.magnification
         var best: GraphHitCandidate?
 
-        for (id, item) in graph.componentsConforming((any HitTestable & Bounded).self) {
+        for (id, item) in graph.allComponentsConforming((any HitTestable & Bounded).self) {
             if item.hitTest(point: point, tolerance: tolerance) {
                 let area = item.boundingBox.width * item.boundingBox.height
                 let priority = (item as? HitTestPriorityProviding)?.hitTestPriority ?? 0
@@ -30,11 +30,11 @@ struct GraphHitTester {
         return best?.id
     }
 
-    func hitTestAll(in rect: CGRect, context: RenderContext) -> [NodeID] {
+    func hitTestAll(in rect: CGRect, context: RenderContext) -> [GraphElementID] {
         let graph = context.graph
-        var hits = Set<NodeID>()
+        var hits = Set<GraphElementID>()
 
-        for (id, item) in graph.componentsConforming((any Bounded).self) {
+        for (id, item) in graph.allComponentsConforming((any Bounded).self) {
             if rect.intersects(item.boundingBox) {
                 hits.insert(id)
             }
@@ -47,7 +47,7 @@ struct GraphHitTester {
         return Array(hits)
     }
 
-    private func considerHit(id: NodeID, priority: Int, area: CGFloat, best: inout GraphHitCandidate?) {
+    private func considerHit(id: GraphElementID, priority: Int, area: CGFloat, best: inout GraphHitCandidate?) {
         considerHit(candidate: GraphHitCandidate(id: id, priority: priority, area: area), best: &best)
     }
 

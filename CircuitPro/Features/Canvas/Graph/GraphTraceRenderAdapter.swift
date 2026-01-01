@@ -11,15 +11,10 @@ struct GraphTraceRenderAdapter {
     func primitivesByLayer(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
-        for (_, edge) in graph.components(TraceEdgeComponent.self) {
-            guard let start = graph.component(TraceVertexComponent.self, for: edge.start),
-                  let end = graph.component(TraceVertexComponent.self, for: edge.end) else {
-                continue
-            }
-
+        for (_, edge) in graph.edgeComponents(TraceEdgeComponent.self) {
             let path = CGMutablePath()
-            path.move(to: start.point)
-            path.addLine(to: end.point)
+            path.move(to: edge.startPoint)
+            path.addLine(to: edge.endPoint)
 
             let color = resolveColor(for: edge, in: context)
             let primitive = DrawingPrimitive.stroke(

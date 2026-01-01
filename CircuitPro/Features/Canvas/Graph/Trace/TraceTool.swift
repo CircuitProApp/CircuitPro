@@ -20,6 +20,12 @@ final class TraceTool: CanvasTool {
         case drawing(lastPoint: CGPoint)
     }
     private var state: State = .idle
+    private let traceEngine: TraceEngine
+
+    init(traceEngine: TraceEngine) {
+        self.traceEngine = traceEngine
+        super.init()
+    }
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         guard let activeLayerId = context.activeLayerId else {
@@ -46,10 +52,7 @@ final class TraceTool: CanvasTool {
             let newLastPoint = pathPoints.last ?? location
             self.state = .drawing(lastPoint: newLastPoint)
 
-            return .command(CanvasToolCommand { interactionContext, _ in
-                guard let traceEngine = interactionContext.renderContext.environment.traceEngine else {
-                    return
-                }
+            return .command(CanvasToolCommand { [traceEngine] _, _ in
                 traceEngine.addTrace(
                     path: pathPoints,
                     width: traceWidth,
