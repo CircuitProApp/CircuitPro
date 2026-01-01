@@ -24,6 +24,7 @@ final class LayoutEditorController: EditorController {
     private var isSyncingTextFromModel = false
     private var isApplyingTextChangesToModel = false
     private var isSyncingFootprintsFromModel = false
+    private var cachedFootprintTransforms: [UUID: FootprintTransform] = [:]
 
     // MARK: - Layout-Specific State
 
@@ -42,6 +43,11 @@ final class LayoutEditorController: EditorController {
 
     @ObservationIgnored private let projectManager: ProjectManager
     @ObservationIgnored private let document: CircuitProjectFileDocument
+
+    private struct FootprintTransform: Equatable {
+        let position: CGPoint
+        let rotation: CardinalRotation
+    }
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
@@ -63,6 +69,7 @@ final class LayoutEditorController: EditorController {
         // Start the automatic observation loops upon initialization.
         startTrackingStructureChanges()
         startTrackingTextChanges()
+        startTrackingTransformChanges()
         startTrackingTraceChanges()
 
         Task {
@@ -96,16 +103,50 @@ final class LayoutEditorController: EditorController {
                     _ = fp.textOverrides
                     _ = fp.textInstances
                     _ = fp.resolvedItems
+                }
+            }
+        } onChange: {
+            Task { @MainActor in
+                self.refreshFootprintTextNodes()
+                self.startTrackingTextChanges()
+            }
+        }
+    }
+
+    private func startTrackingTransformChanges() {
+        withObservationTracking {
+            for comp in projectManager.componentInstances {
+                if let fp = comp.footprintInstance {
                     _ = fp.position
                     _ = fp.cardinalRotation
                 }
             }
         } onChange: {
             Task { @MainActor in
-                self.refreshFootprintComponents()
-                self.refreshFootprintTextNodes()
-                self.refreshFootprintPadComponents()
-                self.startTrackingTextChanges()
+                var nextCache: [UUID: FootprintTransform] = [:]
+                for comp in self.projectManager.componentInstances {
+                    guard let fp = comp.footprintInstance,
+                        case .placed = fp.placement
+                    else {
+                        continue
+                    }
+                    let transform = FootprintTransform(
+                        position: fp.position,
+                        rotation: fp.cardinalRotation
+                    )
+                    if self.cachedFootprintTransforms[comp.id] != transform {
+                        let nodeID = NodeID(comp.id)
+                        if let component = self.graph.component(CanvasFootprint.self, for: nodeID) {
+                            component.position = fp.position
+                            component.rotation = fp.rotation
+                            self.syncOwnedComponents(for: component)
+                        }
+                    }
+                    nextCache[comp.id] = transform
+                }
+                self.cachedFootprintTransforms = nextCache
+                self.canvasStore.invalidate()
+                self.startTrackingTransformChanges()
             }
         }
     }
@@ -425,6 +466,7 @@ final class LayoutEditorController: EditorController {
                 !isSyncingFootprintsFromModel
             {
                 applyGraphFootprintChange(component)
+                syncOwnedComponents(for: component)
             }
             canvasStore.invalidate()
         case .nodeRemoved(let id):
@@ -470,6 +512,24 @@ final class LayoutEditorController: EditorController {
         footprintInst.position = component.position
         footprintInst.rotation = component.rotation
         document.scheduleAutosave()
+    }
+
+    private func syncOwnedComponents(for component: CanvasFootprint) {
+        let ownerID = component.ownerID
+        let ownerPosition = component.position
+        let ownerRotation = component.rotation
+
+        for (id, pad) in graph.components(GraphPadComponent.self) where pad.ownerID == ownerID {
+            var updated = pad
+            updated.ownerPosition = ownerPosition
+            updated.ownerRotation = ownerRotation
+            graph.setComponent(updated, for: id)
+        }
+
+        for (_, text) in graph.components(CanvasText.self) where text.ownerID == ownerID {
+            text.ownerPosition = ownerPosition
+            text.ownerRotation = ownerRotation
+        }
     }
 
     func footprintBinding(for id: UUID) -> Binding<CanvasFootprint>? {

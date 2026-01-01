@@ -18,10 +18,16 @@ final class SchematicEditorController: EditorController {
     private var suppressGraphSelectionSync = false
     private var isSyncingTextFromModel = false
     private var isApplyingTextChangesToModel = false
+    private var cachedSymbolTransforms: [UUID: SymbolTransform] = [:]
 
     // Track if initial load has happened
     private var hasPerformedInitialLoad = false
     private var isPerformingInitialLoad = false
+
+    private struct SymbolTransform: Equatable {
+        let position: CGPoint
+        let rotation: CardinalRotation
+    }
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
@@ -51,6 +57,7 @@ final class SchematicEditorController: EditorController {
 
         startTrackingStructureChanges()
         startTrackingTextChanges()
+        startTrackingTransformChanges()
 
         Task {
             await self.initialLoad()
@@ -79,15 +86,38 @@ final class SchematicEditorController: EditorController {
                 _ = comp.symbolInstance.textOverrides
                 _ = comp.symbolInstance.textInstances
                 _ = comp.symbolInstance.resolvedItems
+            }
+        } onChange: {
+            Task { @MainActor in
+                self.refreshSymbolTextNodes()
+                self.canvasStore.invalidate()
+                self.startTrackingTextChanges()
+            }
+        }
+    }
+
+    private func startTrackingTransformChanges() {
+        withObservationTracking {
+            for comp in projectManager.componentInstances {
                 _ = comp.symbolInstance.position
                 _ = comp.symbolInstance.cardinalRotation
             }
         } onChange: {
             Task { @MainActor in
-                self.refreshSymbolTextNodes()
-                self.refreshSymbolPinComponents()
+                var nextCache: [UUID: SymbolTransform] = [:]
+                for comp in self.projectManager.componentInstances {
+                    let transform = SymbolTransform(
+                        position: comp.symbolInstance.position,
+                        rotation: comp.symbolInstance.cardinalRotation
+                    )
+                    if self.cachedSymbolTransforms[comp.id] != transform {
+                        self.syncOwnedComponents(for: comp)
+                    }
+                    nextCache[comp.id] = transform
+                }
+                self.cachedSymbolTransforms = nextCache
                 self.canvasStore.invalidate()
-                self.startTrackingTextChanges()
+                self.startTrackingTransformChanges()
             }
         }
     }
@@ -293,6 +323,10 @@ final class SchematicEditorController: EditorController {
                 !isSyncingTextFromModel
             {
                 applyGraphTextChange(component)
+            } else if componentKey == ObjectIdentifier(ComponentInstance.self),
+                let component = graph.component(ComponentInstance.self, for: id)
+            {
+                syncOwnedComponents(for: component)
             }
             canvasStore.invalidate()
         case .edgeComponentSet,
@@ -319,6 +353,27 @@ final class SchematicEditorController: EditorController {
         inst.apply(component.resolvedText, for: component.target)
         document.scheduleAutosave()
         isApplyingTextChangesToModel = false
+    }
+
+    private func syncOwnedComponents(for component: ComponentInstance) {
+        let ownerID = component.id
+        let ownerPosition = component.symbolInstance.position
+        let ownerRotation = component.symbolInstance.rotation
+
+        for (_, pin) in graph.components(CanvasPin.self) where pin.ownerID == ownerID {
+            pin.ownerPosition = ownerPosition
+            pin.ownerRotation = ownerRotation
+        }
+
+        for (_, text) in graph.components(CanvasText.self) where text.ownerID == ownerID {
+            text.ownerPosition = ownerPosition
+            text.ownerRotation = ownerRotation
+        }
+
+        let symbolDef = component.symbolInstance.definition ?? component.definition?.symbol
+        if let symbolDef {
+            wireEngine.syncPins(for: component.symbolInstance, of: symbolDef, ownerID: ownerID)
+        }
     }
 
     func deleteComponentInstances(ids: Set<UUID>) -> Bool {
