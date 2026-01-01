@@ -62,9 +62,6 @@ private struct TraceEngineKey: CanvasEnvironmentKey {
     static let defaultValue: TraceEngine? = nil
 }
 
-private struct RenderablesKey: CanvasEnvironmentKey {
-    static let defaultValue: [any CanvasRenderable] = []
-}
 
 enum CanvasInteractionMode {
     case graphAndScene
@@ -101,10 +98,6 @@ extension CanvasEnvironmentValues {
         set { self[TraceEngineKey.self] = newValue }
     }
 
-    var renderables: [any CanvasRenderable] {
-        get { self[RenderablesKey.self] }
-        set { self[RenderablesKey.self] = newValue }
-    }
 
     var interactionMode: CanvasInteractionMode {
         get { self[InteractionModeKey.self] }
@@ -129,9 +122,5 @@ extension CanvasEnvironmentValues {
         return copy
     }
 
-    func withRenderables(_ items: [any CanvasRenderable]) -> CanvasEnvironmentValues {
-        var copy = self
-        copy.renderables = items
-        return copy
-    }
+    // Renderables removed; canvas items should live in the graph.
 }

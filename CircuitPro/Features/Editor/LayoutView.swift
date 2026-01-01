@@ -18,16 +18,13 @@ struct LayoutCanvasView: View {
             environment: canvasManager.environment
                 .withTraceEngine(projectManager.layoutController.traceEngine)
                 .withGraphRenderProviders([
-                    GraphTraceRenderAdapter(),
-                    CanvasRenderableProvider(),
+                    GraphTraceRenderAdapter()
                 ])
                 .withGraphHaloProviders([
-                    TraceHaloProvider(),
-                    CanvasRenderableHaloProvider(),
+                    TraceHaloProvider()
                 ])
                 .withGraphHitTestProviders([
-                    TraceHitTestProvider(),
-                    CanvasRenderableHitTestProvider(),
+                    TraceHitTestProvider()
                 ]),
             renderLayers: [
                 GridRenderLayer(),

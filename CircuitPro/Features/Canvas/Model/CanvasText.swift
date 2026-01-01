@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a text element, used for rendering and interaction.
-final class CanvasText: GraphComponent, CanvasDraggable {
+final class CanvasText: GraphComponent, LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
 
     var resolvedText: CircuitText.Resolved
     var displayText: String
@@ -87,13 +87,19 @@ final class CanvasText: GraphComponent, CanvasDraggable {
             .rotated(by: worldRotation)
     }
 
-    // MARK: - CanvasRenderable
+    // MARK: - LayeredDrawable
 
     var id: UUID { resolvedText.id }
 
     var renderBounds: CGRect {
         let path = worldPath()
         return path.boundingBoxOfPath
+    }
+
+    var hitTestPriority: Int { 5 }
+
+    var boundingBox: CGRect {
+        renderBounds
     }
 
     func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
@@ -137,8 +143,17 @@ final class CanvasText: GraphComponent, CanvasDraggable {
         return path.contains(point) || hitArea.contains(point)
     }
 
-    // MARK: - CanvasDraggable
-    // (worldPosition is implemented as a computed property above)
+    // MARK: - Transformable
+
+    var position: CGPoint {
+        get { worldPosition }
+        set { worldPosition = newValue }
+    }
+
+    var rotation: CGFloat {
+        get { worldRotation }
+        set { resolvedText.cardinalRotation = .closest(to: newValue - ownerRotation) }
+    }
 
     // MARK: - Helpers
 

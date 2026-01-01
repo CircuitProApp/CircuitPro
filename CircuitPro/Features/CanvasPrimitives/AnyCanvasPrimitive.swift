@@ -206,24 +206,7 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         }
     }
 
-    // MARK: - CanvasRenderable
-    var renderBounds: CGRect {
-        boundingBox
-    }
-
-    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
-        let color = resolveColor(in: context)
-        return [layerId: makeDrawingPrimitives(with: color)]
-    }
-
-    func haloPath() -> CGPath? {
-        makeHaloPath()
-    }
-
-    func hitTest(point: CGPoint, tolerance: CGFloat) -> Bool {
-        hitTest(point, tolerance: tolerance) != nil
-    }
-
+    // MARK: - Layered Drawing Helpers
     private func resolveColor(in context: RenderContext) -> CGColor {
         if let overrideColor = self.color?.cgColor {
             return overrideColor
@@ -236,6 +219,75 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         return NSColor.systemBlue.cgColor
     }
 
+}
+
+extension AnyCanvasPrimitive: LayeredDrawable, HitTestable, HaloProviding {
+    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+        let color = resolveColor(in: context)
+        let primitives = makeDrawingPrimitives(with: color)
+        var transform = CGAffineTransform(translationX: position.x, y: position.y)
+            .rotated(by: rotation)
+        let worldPrimitives = primitives.map { $0.applying(transform: &transform) }
+
+        let layerTargets: [UUID?]
+        if !layerIds.isEmpty {
+            layerTargets = layerIds.map { Optional($0) }
+        } else {
+            layerTargets = [layerId]
+        }
+
+        var result: [UUID?: [DrawingPrimitive]] = [:]
+        for layerId in layerTargets {
+            result[layerId, default: []].append(contentsOf: worldPrimitives)
+        }
+        return result
+    }
+
+    func haloPath() -> CGPath? {
+        guard let local = makeHaloPath() else { return nil }
+        var transform = CGAffineTransform(translationX: position.x, y: position.y)
+            .rotated(by: rotation)
+        return local.copy(using: &transform)
+    }
+
+    func hitTest(point: CGPoint, tolerance: CGFloat) -> Bool {
+        let transform = CGAffineTransform(translationX: position.x, y: position.y)
+            .rotated(by: rotation)
+        let localPoint = point.applying(transform.inverted())
+        return hitTest(localPoint, tolerance: tolerance) != nil
+    }
+
+    var boundingBox: CGRect {
+        boundingBoxInWorld()
+    }
+
+    private func boundingBoxInWorld() -> CGRect {
+        var box = localBoundingBox()
+        let transform = CGAffineTransform(translationX: position.x, y: position.y)
+            .rotated(by: rotation)
+        box = box.applying(transform)
+        return box
+    }
+
+    private func localBoundingBox() -> CGRect {
+        var box = makePath().boundingBoxOfPath
+        if !filled {
+            let inset = -strokeWidth / 2
+            box = box.insetBy(dx: inset, dy: inset)
+        }
+        return box
+    }
+}
+
+extension AnyCanvasPrimitive: MultiLayerable {
+    var layerIds: [UUID] {
+        get { layerId.map { [$0] } ?? [] }
+        set { layerId = newValue.first }
+    }
+}
+
+extension AnyCanvasPrimitive: HitTestPriorityProviding {
+    var hitTestPriority: Int { 1 }
 }
 
 extension AnyCanvasPrimitive {

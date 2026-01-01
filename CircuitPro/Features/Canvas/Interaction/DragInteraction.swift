@@ -3,17 +3,24 @@ import AppKit
 /// Unified drag interaction for all canvas elements.
 ///
 /// Priority order:
-/// 1. CanvasDraggable items (symbols, footprints via protocol)
+/// 1. Transformable items (symbols, footprints via protocol)
 /// 2. Connection elements (wires, traces via ConnectionEngine)
 /// 3. Special items (standalone text with anchor drag support)
 final class DragInteraction: CanvasInteraction {
 
     // MARK: - State Types
 
-    /// State for dragging CanvasDraggable items (protocol-based)
+    /// State for dragging Transformable items (protocol-based)
     private struct ItemDragState {
+        struct Item {
+            let id: NodeID
+            let originalPosition: CGPoint
+            let hitTest: (CGPoint, CGFloat) -> Bool
+            let updatePosition: (CGPoint) -> Void
+        }
+
         let origin: CGPoint
-        let items: [(item: any CanvasDraggable, originalPosition: CGPoint)]
+        let items: [Item]
         let connectionEngine: (any ConnectionEngine)?
     }
 
@@ -100,22 +107,25 @@ final class DragInteraction: CanvasInteraction {
         didMove = false
     }
 
-    // MARK: - Private: Item Drag (CanvasDraggable Protocol)
+    // MARK: - Private: Item Drag (Transformable Protocol)
 
     private func tryStartItemDrag(at point: CGPoint, context: RenderContext) -> Bool {
         let selection = context.graph.selection
         guard !selection.isEmpty else { return false }
 
+        let graph = context.graph
         let selectedIDs = Set(selection.map { $0.rawValue })
-        let draggables = context.environment.renderables.compactMap { $0 as? (any CanvasDraggable) }
-        let selectedDraggables = draggables.filter { selectedIDs.contains($0.id) }
+        let selectedItems = makeDraggableItems(
+            in: graph,
+            selectedIDs: selectedIDs
+        )
 
-        guard !selectedDraggables.isEmpty else { return false }
+        guard !selectedItems.isEmpty else { return false }
 
         // Check if we hit one of the selected items
         var hitSelected = false
-        for item in selectedDraggables {
-            if item.hitTest(point: point, tolerance: 5.0) {
+        for item in selectedItems {
+            if item.hitTest(point, 5.0) {
                 hitSelected = true
                 break
             }
@@ -130,10 +140,9 @@ final class DragInteraction: CanvasInteraction {
             }
         }
 
-        let items = selectedDraggables.map { ($0, $0.worldPosition) }
         self.itemState = ItemDragState(
             origin: point,
-            items: items,
+            items: selectedItems,
             connectionEngine: activeConnectionEngine
         )
         return true
@@ -150,12 +159,12 @@ final class DragInteraction: CanvasInteraction {
         let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
 
         // Set new position on each item from its original position
-        for (var item, originalPosition) in state.items {
+        for item in state.items {
             let newPosition = CGPoint(
-                x: originalPosition.x + deltaPoint.x,
-                y: originalPosition.y + deltaPoint.y
+                x: item.originalPosition.x + deltaPoint.x,
+                y: item.originalPosition.y + deltaPoint.y
             )
-            item.worldPosition = newPosition
+            item.updatePosition(newPosition)
         }
 
         // Update connection engine
@@ -241,6 +250,64 @@ final class DragInteraction: CanvasInteraction {
             isAnchorDrag: isAnchorDrag
         )
         return true
+    }
+
+    private func makeDraggableItems(
+        in graph: CanvasGraph,
+        selectedIDs: Set<UUID>
+    ) -> [ItemDragState.Item] {
+        var items: [ItemDragState.Item] = []
+
+        for id in graph.selection {
+            guard selectedIDs.contains(id.rawValue) else { continue }
+
+            if let item = makeItem(from: graph.component(ComponentInstance.self, for: id), id: id, graph: graph) {
+                items.append(item)
+                continue
+            }
+            if let item = makeItem(from: graph.component(CanvasFootprint.self, for: id), id: id, graph: graph) {
+                items.append(item)
+                continue
+            }
+            if let item = makeItem(from: graph.component(CanvasText.self, for: id), id: id, graph: graph) {
+                items.append(item)
+                continue
+            }
+            if let item = makeItem(from: graph.component(CanvasPrimitiveElement.self, for: id), id: id, graph: graph) {
+                items.append(item)
+                continue
+            }
+            if let item = makeItem(from: graph.component(CanvasPin.self, for: id), id: id, graph: graph) {
+                items.append(item)
+                continue
+            }
+            if let item = makeItem(from: graph.component(AnyCanvasPrimitive.self, for: id), id: id, graph: graph) {
+                items.append(item)
+            }
+        }
+
+        return items
+    }
+
+    private func makeItem<T: Transformable & HitTestable>(
+        from component: T?,
+        id: NodeID,
+        graph: CanvasGraph
+    ) -> ItemDragState.Item? {
+        guard let component else { return nil }
+
+        return ItemDragState.Item(
+            id: id,
+            originalPosition: component.position,
+            hitTest: { point, tolerance in
+                component.hitTest(point: point, tolerance: tolerance)
+            },
+            updatePosition: { newPosition in
+                var updated = component
+                updated.position = newPosition
+                graph.setComponent(updated, for: id)
+            }
+        )
     }
 
     private func handleTextDrag(to point: CGPoint, state: TextDragState, context: RenderContext) {

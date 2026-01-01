@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a pin, used for rendering and interaction.
-final class CanvasPin: GraphComponent, CanvasDraggable {
+final class CanvasPin: GraphComponent, LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
 
     var pin: Pin
     var ownerID: UUID?
@@ -44,7 +44,7 @@ final class CanvasPin: GraphComponent, CanvasDraggable {
             .concatenating(ownerTransform)
     }
 
-    // MARK: - CanvasRenderable
+    // MARK: - LayeredDrawable
 
     var id: UUID { pin.id }
 
@@ -57,6 +57,12 @@ final class CanvasPin: GraphComponent, CanvasDraggable {
             width: size,
             height: size
         )
+    }
+
+    var hitTestPriority: Int { 10 }
+
+    var boundingBox: CGRect {
+        renderBounds
     }
 
     func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
@@ -104,9 +110,9 @@ final class CanvasPin: GraphComponent, CanvasDraggable {
         return distance <= tolerance + 5
     }
 
-    // MARK: - CanvasDraggable
+    // MARK: - Transformable
 
-    var worldPosition: CGPoint {
+    var position: CGPoint {
         get {
             pin.position.applying(ownerTransform)
         }
@@ -116,7 +122,12 @@ final class CanvasPin: GraphComponent, CanvasDraggable {
         }
     }
 
-    var worldRotation: CGFloat {
-        ownerRotation
+    var rotation: CGFloat {
+        get {
+            ownerRotation + pin.rotation
+        }
+        set {
+            pin.rotation = newValue - ownerRotation
+        }
     }
 }

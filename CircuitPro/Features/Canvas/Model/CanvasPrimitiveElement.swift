@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a graphic primitive (line, rect, etc.), used for rendering and interaction.
-final class CanvasPrimitiveElement: GraphComponent, CanvasDraggable {
+final class CanvasPrimitiveElement: GraphComponent, LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
 
     var primitive: AnyCanvasPrimitive
 
@@ -17,7 +17,7 @@ final class CanvasPrimitiveElement: GraphComponent, CanvasDraggable {
         self.primitive = primitive
     }
 
-    // MARK: - CanvasRenderable
+    // MARK: - LayeredDrawable
 
     var id: UUID { primitive.id }
 
@@ -31,6 +31,12 @@ final class CanvasPrimitiveElement: GraphComponent, CanvasDraggable {
             CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
                 .rotated(by: primitive.rotation)
         )
+    }
+
+    var hitTestPriority: Int { 1 }
+
+    var boundingBox: CGRect {
+        renderBounds
     }
 
     func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
@@ -76,9 +82,9 @@ final class CanvasPrimitiveElement: GraphComponent, CanvasDraggable {
         return NSColor.systemBlue.cgColor
     }
 
-    // MARK: - CanvasDraggable
+    // MARK: - Transformable
 
-    var worldPosition: CGPoint {
+    var position: CGPoint {
         get {
             primitive.position
         }
@@ -87,7 +93,8 @@ final class CanvasPrimitiveElement: GraphComponent, CanvasDraggable {
         }
     }
 
-    var worldRotation: CGFloat {
-        primitive.rotation
+    var rotation: CGFloat {
+        get { primitive.rotation }
+        set { primitive.rotation = newValue }
     }
 }

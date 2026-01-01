@@ -289,17 +289,7 @@ final class CanvasEditorManager {
         graph.reset()
     }
 
-    // Protocol-based renderables provider
-    var renderables: [any CanvasRenderable] {
-        let primitives = graph.components(CanvasPrimitiveElement.self).map { $0.1 }
-        let texts = graph.components(CanvasText.self).map { $0.1 }
-        let pins = graph.components(CanvasPin.self).map { $0.1 }
-        let pads = graph.components(GraphPadComponent.self).map { $0.1 }  // Pads still legacy for now
-
-        // Note: GraphPadComponent is not yet unified, keeping it as-is.
-        return (primitives as [any CanvasRenderable]) + (texts as [any CanvasRenderable])
-            + (pins as [any CanvasRenderable])
-    }
+    // Canvas items should live in the graph; no environment renderables.
 }
 
 // MARK: - Text Management

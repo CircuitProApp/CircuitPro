@@ -76,6 +76,18 @@ final class CanvasGraph {
         }
     }
 
+    func componentsConforming<T>(_ type: T.Type) -> [(NodeID, T)] {
+        var results: [(NodeID, T)] = []
+        for items in componentStorage.values {
+            for (id, value) in items {
+                if let typed = value as? T {
+                    results.append((id, typed))
+                }
+            }
+        }
+        return results
+    }
+
     func hasAnyComponent(for id: NodeID) -> Bool {
         for storage in componentStorage.values {
             if storage[id] != nil {

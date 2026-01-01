@@ -13,12 +13,11 @@ struct GraphHitTester {
         let tolerance = 5.0 / context.magnification
         var best: GraphHitCandidate?
 
-        for (id, primitive) in graph.components(AnyCanvasPrimitive.self) {
-            let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
-                .rotated(by: primitive.rotation)
-            let localPoint = point.applying(transform.inverted())
-            if primitive.hitTest(localPoint, tolerance: tolerance) != nil {
-                considerHit(id: id, priority: 1, area: primitive.boundingBox.width * primitive.boundingBox.height, best: &best)
+        for (id, item) in graph.componentsConforming((any HitTestable & Bounded).self) {
+            if item.hitTest(point: point, tolerance: tolerance) {
+                let area = item.boundingBox.width * item.boundingBox.height
+                let priority = (item as? HitTestPriorityProviding)?.hitTestPriority ?? 0
+                considerHit(id: id, priority: priority, area: area, best: &best)
             }
         }
 
@@ -35,11 +34,8 @@ struct GraphHitTester {
         let graph = context.graph
         var hits = Set<NodeID>()
 
-        for (id, primitive) in graph.components(AnyCanvasPrimitive.self) {
-            let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
-                .rotated(by: primitive.rotation)
-            let localRect = rect.applying(transform.inverted())
-            if primitive.boundingBox.intersects(localRect) {
+        for (id, item) in graph.componentsConforming((any Bounded).self) {
+            if rect.intersects(item.boundingBox) {
                 hits.insert(id)
             }
         }

@@ -1,5 +1,5 @@
 //
-//  ComponentInstance+CanvasRenderable.swift
+//  ComponentInstance+CanvasDrawing.swift
 //  CircuitPro
 //
 //  Created by Codex on 12/29/25.
@@ -7,26 +7,29 @@
 
 import AppKit
 
-// MARK: - CanvasDraggable Conformance (extends CanvasRenderable)
+// MARK: - Canvas Drawing & Interaction
 
-extension ComponentInstance: CanvasDraggable {
+extension ComponentInstance: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, HitTestPriorityProviding {
 
-    var worldPosition: CGPoint {
-        get {
-            symbolInstance.position
-        }
-        set {
-            symbolInstance.position = newValue
-        }
+    var position: CGPoint {
+        get { symbolInstance.position }
+        set { symbolInstance.position = newValue }
     }
 
-    var worldRotation: CGFloat {
-        symbolInstance.rotation
+    var rotation: CGFloat {
+        get { symbolInstance.rotation }
+        set { symbolInstance.rotation = newValue }
     }
 
     var renderBounds: CGRect {
         guard let symbolDef = symbolInstance.definition else { return .null }
         return calculateWorldBounds(for: symbolDef.primitives)
+    }
+
+    var hitTestPriority: Int { 5 }
+
+    var boundingBox: CGRect {
+        renderBounds
     }
 
     func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {

@@ -12,7 +12,7 @@ import AppKit
 protocol Drawable: Identifiable where ID == UUID {
     /// Generates a list of high-level drawing commands that describe the element's appearance.
     func makeDrawingPrimitives() -> [DrawingPrimitive]
-    
+
     /// Provides the CGPath to be used for this element's selection halo.
     /// The renderer will be responsible for styling this path.
     func makeHaloPath() -> CGPath?

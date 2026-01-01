@@ -115,6 +115,7 @@ final class SchematicEditorController: EditorController {
         isPerformingInitialLoad = false
 
         // Load graph components for text and pins (needed for selection/editing)
+        refreshSymbolComponents()
         refreshSymbolTextNodes()
         refreshSymbolPinComponents()
         canvasStore.invalidate()
@@ -124,6 +125,7 @@ final class SchematicEditorController: EditorController {
 
     private func refreshSymbols() async {
         // Update graph components for text and pins
+        refreshSymbolComponents()
         refreshSymbolTextNodes()
         refreshSymbolPinComponents()
 
@@ -142,6 +144,28 @@ final class SchematicEditorController: EditorController {
         canvasStore.invalidate()
     }
 
+    private func refreshSymbolComponents() {
+        let design = projectManager.selectedDesign
+        var updatedIDs = Set<NodeID>()
+
+        for inst in design.componentInstances {
+            let nodeID = NodeID(inst.id)
+            if !graph.nodes.contains(nodeID) {
+                graph.addNode(nodeID)
+            }
+            graph.setComponent(inst, for: nodeID)
+            updatedIDs.insert(nodeID)
+        }
+
+        let existingIDs = Set(graph.nodeIDs(with: ComponentInstance.self))
+        for id in existingIDs.subtracting(updatedIDs) {
+            graph.removeComponent(ComponentInstance.self, for: id)
+            if !graph.hasAnyComponent(for: id) {
+                graph.removeNode(id)
+            }
+        }
+    }
+
     // MARK: - Graph Component Refresh (for text and pin selection/editing)
 
     func refreshSymbolTextNodes() {
@@ -152,10 +176,6 @@ final class SchematicEditorController: EditorController {
         for inst in design.componentInstances {
             let ownerPosition = inst.symbolInstance.position
             let ownerRotation = inst.symbolInstance.rotation
-            let ownerTransform = CGAffineTransform(
-                translationX: ownerPosition.x, y: ownerPosition.y
-            )
-            .rotated(by: ownerRotation)
 
             for resolvedModel in inst.symbolInstance.resolvedItems {
                 let displayString = projectManager.generateString(
@@ -164,10 +184,6 @@ final class SchematicEditorController: EditorController {
                     for: resolvedModel.source, ownerID: inst.id, fallback: resolvedModel.id)
                 let nodeID = NodeID(textID)
 
-                let worldPosition = resolvedModel.relativePosition.applying(ownerTransform)
-                let worldAnchorPosition = resolvedModel.anchorPosition.applying(ownerTransform)
-                let worldRotation = ownerRotation + resolvedModel.cardinalRotation.radians
-
                 let component = CanvasText(
                     resolvedText: resolvedModel,
                     displayText: displayString,
@@ -175,9 +191,6 @@ final class SchematicEditorController: EditorController {
                     target: .symbol,
                     ownerPosition: ownerPosition,
                     ownerRotation: ownerRotation,
-                    worldPosition: worldPosition,
-                    worldRotation: worldRotation,
-                    worldAnchorPosition: worldAnchorPosition,
                     layerId: nil,
                     showsAnchorGuides: true
                 )
@@ -273,8 +286,8 @@ final class SchematicEditorController: EditorController {
                 }
             }
         case .componentSet(let id, let componentKey):
-            if componentKey == ObjectIdentifier(GraphTextComponent.self),
-                let component = graph.component(GraphTextComponent.self, for: id),
+            if componentKey == ObjectIdentifier(CanvasText.self),
+                let component = graph.component(CanvasText.self, for: id),
                 !isSyncingTextFromModel
             {
                 applyGraphTextChange(component)
@@ -291,7 +304,7 @@ final class SchematicEditorController: EditorController {
         }
     }
 
-    private func applyGraphTextChange(_ component: GraphTextComponent) {
+    private func applyGraphTextChange(_ component: CanvasText) {
         guard !isApplyingTextChangesToModel else { return }
         guard
             let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }

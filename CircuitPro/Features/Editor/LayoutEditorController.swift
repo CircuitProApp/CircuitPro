@@ -250,10 +250,6 @@ final class LayoutEditorController: EditorController {
 
             let ownerPosition = footprintInst.position
             let ownerRotation = footprintInst.rotation
-            let ownerTransform = CGAffineTransform(
-                translationX: ownerPosition.x, y: ownerPosition.y
-            )
-            .rotated(by: ownerRotation)
 
             for resolvedModel in footprintInst.resolvedItems {
                 let displayString = projectManager.generateString(
@@ -261,10 +257,6 @@ final class LayoutEditorController: EditorController {
                 let textID = GraphTextID.makeID(
                     for: resolvedModel.source, ownerID: inst.id, fallback: resolvedModel.id)
                 let nodeID = NodeID(textID)
-
-                let worldPosition = resolvedModel.relativePosition.applying(ownerTransform)
-                let worldAnchorPosition = resolvedModel.anchorPosition.applying(ownerTransform)
-                let worldRotation = ownerRotation + resolvedModel.cardinalRotation.radians
 
                 let component = CanvasText(
                     resolvedText: resolvedModel,

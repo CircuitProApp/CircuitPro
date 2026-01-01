@@ -27,16 +27,7 @@ struct FootprintCanvasView: View {
                 layers: $footprintEditor.layers,
                 activeLayerId: $footprintEditor.activeLayerId,
                 environment: canvasManager.environment
-                    .withInteractionMode(.graphOnly)
-                    .withGraphRenderProviders([
-                        CanvasRenderableProvider()
-                    ])
-                    .withGraphHaloProviders([
-                        CanvasRenderableHaloProvider()
-                    ])
-                    .withGraphHitTestProviders([
-                        CanvasRenderableHitTestProvider()
-                    ]),
+                    .withInteractionMode(.graphOnly),
                 renderLayers: [
                     GridRenderLayer(),
                     AxesRenderLayer(),

@@ -31,7 +31,7 @@ final class ElementsRenderLayer: RenderLayer {
         var haloPrimitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
         let graph = context.graph
-        let graphHalos = gatherGraphHaloPrimitives(from: graph, context: context)
+        let graphHalos = gatherHaloPrimitives(from: graph, context: context)
         for (layerId, primitives) in graphHalos {
             haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
         }
@@ -84,13 +84,13 @@ final class ElementsRenderLayer: RenderLayer {
 
     // MARK: - Primitive Gathering
 
-    private func gatherGraphHaloPrimitives(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    private func gatherHaloPrimitives(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
         let haloIDs = context.highlightedNodeIDs
 
-        for (id, primitive) in graph.components(AnyCanvasPrimitive.self) {
+        for (id, item) in graph.componentsConforming((any HaloProviding).self) {
             guard haloIDs.contains(id.rawValue) else { continue }
-            guard let haloPath = primitive.makeHaloPath() else { continue }
+            guard let haloPath = item.haloPath() else { continue }
 
             let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
             let haloPrimitive = DrawingPrimitive.stroke(
@@ -101,11 +101,18 @@ final class ElementsRenderLayer: RenderLayer {
                 lineJoin: .round
             )
 
-            var transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
-                .rotated(by: primitive.rotation)
-            let worldPrimitive = haloPrimitive.applying(transform: &transform)
+            let layerTargets: [UUID?]
+            if let multiLayerable = item as? MultiLayerable, !multiLayerable.layerIds.isEmpty {
+                layerTargets = multiLayerable.layerIds.map { Optional($0) }
+            } else if let layerable = item as? Layerable {
+                layerTargets = [layerable.layerId]
+            } else {
+                layerTargets = [nil]
+            }
 
-            primitivesByLayer[primitive.layerId, default: []].append(worldPrimitive)
+            for layerId in layerTargets {
+                primitivesByLayer[layerId, default: []].append(haloPrimitive)
+            }
         }
 
         return primitivesByLayer

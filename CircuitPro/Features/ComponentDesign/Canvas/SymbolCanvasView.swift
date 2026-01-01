@@ -30,17 +30,7 @@ struct SymbolCanvasView: View {
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
                 graph: symbolEditor.graph,
                 environment: canvasManager.environment
-                    .withInteractionMode(.graphOnly)
-                    .withRenderables(symbolEditor.renderables)
-                    .withGraphRenderProviders([
-                        CanvasRenderableProvider()
-                    ])
-                    .withGraphHaloProviders([
-                        CanvasRenderableHaloProvider()
-                    ])
-                    .withGraphHitTestProviders([
-                        CanvasRenderableHitTestProvider()
-                    ]),
+                    .withInteractionMode(.graphOnly),
                 renderLayers: [
                     GridRenderLayer(),
                     AxesRenderLayer(),

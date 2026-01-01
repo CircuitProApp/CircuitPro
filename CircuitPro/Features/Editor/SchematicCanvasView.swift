@@ -24,18 +24,14 @@ struct SchematicCanvasView: View {
             graph: projectManager.schematicController.graph,
             environment: canvasManager.environment
                 .withConnectionEngine(projectManager.schematicController.wireEngine)
-                .withRenderables(projectManager.componentInstances)
                 .withGraphRenderProviders([
-                    GraphWireRenderAdapter(),
-                    CanvasRenderableProvider(),
+                    GraphWireRenderAdapter()
                 ])
                 .withGraphHaloProviders([
-                    WireGraphHaloProvider(),
-                    CanvasRenderableHaloProvider(),
+                    WireGraphHaloProvider()
                 ])
                 .withGraphHitTestProviders([
-                    WireGraphHitTestProvider(),
-                    CanvasRenderableHitTestProvider(),
+                    WireGraphHitTestProvider()
                 ]),
             renderLayers: [
                 GridRenderLayer(),

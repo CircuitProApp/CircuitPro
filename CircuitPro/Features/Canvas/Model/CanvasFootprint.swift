@@ -10,19 +10,9 @@ import CoreGraphics
 import Foundation
 
 /// A canvas-space representation of a footprint, used for rendering and interaction in the Layout Editor.
-final class CanvasFootprint: GraphComponent, CanvasDraggable {
+final class CanvasFootprint: GraphComponent, LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, HitTestPriorityProviding {
 
     var ownerID: UUID
-
-    /// The footprint's position in world space.
-    var worldPosition: CGPoint {
-        get { position }
-        set { position = newValue }
-    }
-
-    var worldRotation: CGFloat {
-        rotation
-    }
 
     var position: CGPoint
     var rotation: CGFloat
@@ -40,13 +30,19 @@ final class CanvasFootprint: GraphComponent, CanvasDraggable {
         self.primitives = primitives
     }
 
-    // MARK: - CanvasRenderable
+    // MARK: - LayeredDrawable
 
     var id: UUID { ownerID }
 
     var renderBounds: CGRect {
         guard let local = localInteractionBounds() else { return .null }
         return local.applying(ownerTransform)
+    }
+
+    var hitTestPriority: Int { 2 }
+
+    var boundingBox: CGRect {
+        renderBounds
     }
 
     func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
