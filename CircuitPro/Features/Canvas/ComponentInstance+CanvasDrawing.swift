@@ -57,46 +57,6 @@ extension ComponentInstance: LayeredDrawable, Bounded, HitTestable, HaloProvidin
             result[primitive.layerId, default: []].append(contentsOf: worldPrimitives)
         }
 
-        // Pin primitives
-        for pinDef in symbolDef.pins {
-            let localPrimitives = pinDef.makeDrawingPrimitives()
-            guard !localPrimitives.isEmpty else { continue }
-
-            let worldTransform = CGAffineTransform(
-                translationX: pinDef.position.x, y: pinDef.position.y
-            )
-            .concatenating(ownerTransform)
-            var transform = worldTransform
-            let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
-            result[nil, default: []].append(contentsOf: worldPrimitives)
-        }
-
-        // Text primitives
-        for resolvedText in symbolInstance.resolvedItems {
-            guard resolvedText.isVisible else { continue }
-
-            let displayText = generateDisplayString(for: resolvedText)
-            guard !displayText.isEmpty else { continue }
-
-            let worldPosition = resolvedText.relativePosition.applying(ownerTransform)
-            let worldRotation = rotation + resolvedText.cardinalRotation.radians
-
-            let worldPath = makeTextWorldPath(
-                displayText: displayText,
-                font: resolvedText.font.nsFont,
-                anchor: resolvedText.anchor,
-                worldPosition: worldPosition,
-                worldRotation: worldRotation
-            )
-            guard !worldPath.isEmpty else { continue }
-
-            let textPrimitive = DrawingPrimitive.fill(
-                path: worldPath,
-                color: context.environment.canvasTheme.textColor
-            )
-            result[nil, default: []].append(textPrimitive)
-        }
-
         return result
     }
 
@@ -119,36 +79,6 @@ extension ComponentInstance: LayeredDrawable, Bounded, HitTestable, HaloProvidin
             .rotated(by: primitive.rotation)
             .concatenating(ownerTransform)
             compositePath.addPath(halo, transform: primTransform)
-        }
-
-        // Pin halos
-        for pinDef in symbolDef.pins {
-            guard let halo = pinDef.makeHaloPath() else { continue }
-            let worldTransform = CGAffineTransform(
-                translationX: pinDef.position.x, y: pinDef.position.y
-            )
-            .concatenating(ownerTransform)
-            compositePath.addPath(halo, transform: worldTransform)
-        }
-
-        // Text halos
-        for resolvedText in symbolInstance.resolvedItems {
-            guard resolvedText.isVisible else { continue }
-            let displayText = generateDisplayString(for: resolvedText)
-            guard !displayText.isEmpty else { continue }
-
-            let worldPosition = resolvedText.relativePosition.applying(ownerTransform)
-            let worldRotation = rotation + resolvedText.cardinalRotation.radians
-            let worldPath = makeTextWorldPath(
-                displayText: displayText,
-                font: resolvedText.font.nsFont,
-                anchor: resolvedText.anchor,
-                worldPosition: worldPosition,
-                worldRotation: worldRotation
-            )
-            if !worldPath.isEmpty {
-                compositePath.addPath(worldPath)
-            }
         }
 
         return compositePath.isEmpty ? nil : compositePath
@@ -224,46 +154,4 @@ extension ComponentInstance: LayeredDrawable, Bounded, HitTestable, HaloProvidin
         return NSColor.systemBlue.cgColor
     }
 
-    private func generateDisplayString(for resolvedText: CircuitText.Resolved) -> String {
-        switch resolvedText.content {
-        case .static(let text):
-            return text
-        case .componentName:
-            return definition?.name ?? "???"
-        case .componentReferenceDesignator:
-            let prefix = definition?.referenceDesignatorPrefix ?? "REF?"
-            return prefix + String(referenceDesignatorIndex)
-        case .componentProperty(let definitionID, let options):
-            guard let prop = displayedProperties.first(where: { $0.id == definitionID }) else {
-                return ""
-            }
-            var parts: [String] = []
-            if options.showKey { parts.append(prop.key.label) }
-            if options.showValue { parts.append(prop.value.description) }
-            if options.showUnit, !prop.unit.description.isEmpty {
-                parts.append(prop.unit.description)
-            }
-            return parts.joined(separator: " ")
-        }
-    }
-
-    private func makeTextWorldPath(
-        displayText: String,
-        font: NSFont,
-        anchor: TextAnchor,
-        worldPosition: CGPoint,
-        worldRotation: CGFloat
-    ) -> CGPath {
-        let untransformedPath = TextUtilities.path(for: displayText, font: font)
-        guard !untransformedPath.isEmpty else { return untransformedPath }
-
-        let targetPoint = anchor.point(in: untransformedPath.boundingBoxOfPath)
-        let offset = CGVector(dx: -targetPoint.x, dy: -targetPoint.y)
-        var localTransform = CGAffineTransform(translationX: offset.dx, y: offset.dy)
-        let localPath = untransformedPath.copy(using: &localTransform) ?? untransformedPath
-
-        var worldTransform = CGAffineTransform(translationX: worldPosition.x, y: worldPosition.y)
-            .rotated(by: worldRotation)
-        return localPath.copy(using: &worldTransform) ?? localPath
-    }
 }

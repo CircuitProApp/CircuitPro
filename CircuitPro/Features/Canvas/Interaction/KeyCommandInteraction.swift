@@ -15,10 +15,16 @@ struct KeyCommandInteraction: CanvasInteraction {
 
     private let wireEngine: WireEngine?
     private let traceEngine: TraceEngine?
+    private let deleteComponentInstances: ((Set<UUID>) -> Bool)?
 
-    init(wireEngine: WireEngine? = nil, traceEngine: TraceEngine? = nil) {
+    init(
+        wireEngine: WireEngine? = nil,
+        traceEngine: TraceEngine? = nil,
+        deleteComponentInstances: ((Set<UUID>) -> Bool)? = nil
+    ) {
         self.wireEngine = wireEngine
         self.traceEngine = traceEngine
+        self.deleteComponentInstances = deleteComponentInstances
     }
 
     func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool
@@ -145,6 +151,22 @@ struct KeyCommandInteraction: CanvasInteraction {
                 context.environment.canvasStore?.selection.subtract(Set(selectedNodeIDs.map(\.rawValue)))
             }
             return true
+        }
+
+        let componentInstanceIDs = Set(
+            selectedNodeIDs.compactMap { nodeID in
+                graph.component(ComponentInstance.self, for: nodeID) != nil ? nodeID.rawValue : nil
+            }
+        )
+        if !componentInstanceIDs.isEmpty, let deleteComponentInstances {
+            if deleteComponentInstances(componentInstanceIDs) {
+                graph.selection = []
+                Task { @MainActor in
+                    context.environment.canvasStore?.selection.subtract(
+                        Set(selectedNodeIDs.map(\.rawValue)))
+                }
+                return true
+            }
         }
 
         for element in graph.selection {

@@ -321,6 +321,31 @@ final class SchematicEditorController: EditorController {
         isApplyingTextChangesToModel = false
     }
 
+    func deleteComponentInstances(ids: Set<UUID>) -> Bool {
+        guard !ids.isEmpty else { return false }
+        let instances = projectManager.componentInstances.filter { ids.contains($0.id) }
+        guard !instances.isEmpty else { return false }
+
+        var vertexIDs: Set<UUID> = []
+        for inst in instances {
+            let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
+            guard let symbolDef else { continue }
+            for pin in symbolDef.pins {
+                if let vertexID = wireEngine.findVertex(ownedBy: inst.id, pinID: pin.id) {
+                    vertexIDs.insert(vertexID)
+                }
+            }
+        }
+
+        if !vertexIDs.isEmpty {
+            wireEngine.delete(items: vertexIDs)
+        }
+
+        projectManager.componentInstances.removeAll { ids.contains($0.id) }
+        document.scheduleAutosave()
+        return true
+    }
+
     func textBinding(for id: UUID) -> Binding<CanvasText>? {
         let nodeID = NodeID(id)
         guard let component = graph.component(CanvasText.self, for: nodeID) else { return nil }

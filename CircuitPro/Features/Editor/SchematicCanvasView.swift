@@ -39,7 +39,12 @@ struct SchematicCanvasView: View {
             ],
             interactions: [
                 HoverHighlightInteraction(),
-                KeyCommandInteraction(wireEngine: schematicController.wireEngine),
+                KeyCommandInteraction(
+                    wireEngine: schematicController.wireEngine,
+                    deleteComponentInstances: { ids in
+                        schematicController.deleteComponentInstances(ids: ids)
+                    }
+                ),
                 ToolInteraction(),
                 SelectionInteraction(),
                 DragInteraction(wireEngine: schematicController.wireEngine),
