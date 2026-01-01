@@ -13,6 +13,9 @@ struct WorkspaceView: View {
     @BindableEnvironment(\.projectManager)
     private var projectManager
 
+    @BindableEnvironment(\.editorSession)
+    private var editorSession
+
     private var syncManager: SyncManager {
         projectManager.syncManager
     }
@@ -127,7 +130,7 @@ struct WorkspaceView: View {
 
     @ViewBuilder
     private func editorPicker() -> some View {
-        Picker("Editor", selection: $projectManager.selectedEditor) {
+        Picker("Editor", selection: $editorSession.selectedEditor) {
             Text("Schematic")
                 .tag(EditorType.schematic)
             Text("Layout")

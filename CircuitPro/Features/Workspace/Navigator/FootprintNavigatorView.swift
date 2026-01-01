@@ -9,6 +9,7 @@ import SwiftUI
 
 struct FootprintNavigatorView: View {
     @BindableEnvironment(\.projectManager) private var projectManager
+    @BindableEnvironment(\.editorSession) private var editorSession
 
     private var unplacedComponents: [ComponentInstance] {
         projectManager.componentInstances.filter {
@@ -53,7 +54,7 @@ struct FootprintNavigatorView: View {
                     .foregroundColor(.secondary)
                 Spacer()
             } else {
-                List(selection: $projectManager.selectedNodeIDs) { // Apply selection to the entire List
+                List(selection: $editorSession.selectedNodeIDs) { // Apply selection to the entire List
                     Section("Unplaced") {
                         if unplacedComponents.isEmpty {
                             Text("All components placed.")
@@ -67,12 +68,12 @@ struct FootprintNavigatorView: View {
                                     .draggable(TransferablePlacement(componentInstanceID: component.id))
                                     // Add context menu for deletion
                                     .contextMenu {
-                                        let multi = projectManager.selectedNodeIDs.contains(component.id) && projectManager.selectedNodeIDs.count > 1
+                                        let multi = editorSession.selectedNodeIDs.contains(component.id) && editorSession.selectedNodeIDs.count > 1
                                         Button(role: .destructive) {
-                                            performDelete(on: component, selected: &projectManager.selectedNodeIDs)
+                                            performDelete(on: component, selected: &editorSession.selectedNodeIDs)
                                         } label: {
                                             Text(multi
-                                                 ? "Delete Selected (\(projectManager.selectedNodeIDs.count))"
+                                                 ? "Delete Selected (\(editorSession.selectedNodeIDs.count))"
                                                  : "Delete")
                                         }
                                     }
@@ -91,12 +92,12 @@ struct FootprintNavigatorView: View {
                                     .listRowSeparator(.hidden) // Added row separator style
                                     // Add context menu for deletion
                                     .contextMenu {
-                                        let multi = projectManager.selectedNodeIDs.contains(component.id) && projectManager.selectedNodeIDs.count > 1
+                                        let multi = editorSession.selectedNodeIDs.contains(component.id) && editorSession.selectedNodeIDs.count > 1
                                         Button(role: .destructive) {
-                                            performDelete(on: component, selected: &projectManager.selectedNodeIDs)
+                                            performDelete(on: component, selected: &editorSession.selectedNodeIDs)
                                         } label: {
                                             Text(multi
-                                                 ? "Delete Selected (\(projectManager.selectedNodeIDs.count))"
+                                                 ? "Delete Selected (\(editorSession.selectedNodeIDs.count))"
                                                  : "Delete")
                                         }
                                     }
@@ -115,12 +116,12 @@ struct FootprintNavigatorView: View {
                                     .listRowSeparator(.hidden) // Added row separator style
                                     // Add context menu for deletion
                                     .contextMenu {
-                                        let multi = projectManager.selectedNodeIDs.contains(component.id) && projectManager.selectedNodeIDs.count > 1
+                                        let multi = editorSession.selectedNodeIDs.contains(component.id) && editorSession.selectedNodeIDs.count > 1
                                         Button(role: .destructive) {
-                                            performDelete(on: component, selected: &projectManager.selectedNodeIDs)
+                                            performDelete(on: component, selected: &editorSession.selectedNodeIDs)
                                         } label: {
                                             Text(multi
-                                                 ? "Delete Selected (\(projectManager.selectedNodeIDs.count))"
+                                                 ? "Delete Selected (\(editorSession.selectedNodeIDs.count))"
                                                  : "Delete")
                                         }
                                     }

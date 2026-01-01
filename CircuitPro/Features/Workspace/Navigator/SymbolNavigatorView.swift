@@ -10,6 +10,9 @@ struct SymbolNavigatorView: View {
     @BindableEnvironment(\.projectManager)
     private var projectManager
 
+    @BindableEnvironment(\.editorSession)
+    private var editorSession
+
     // Stamp changes when pending records are added/updated/removed
     private var pendingStamp: Int {
         projectManager.syncManager.pendingChanges.map(\.id).hashValue
@@ -38,7 +41,7 @@ struct SymbolNavigatorView: View {
                 List(
                     componentInstances,
                     id: \.id,
-                    selection: $projectManager.selectedNodeIDs
+                    selection: $editorSession.selectedNodeIDs
                 ) { instance in
                     HStack {
                         Text(instance.definition?.name ?? "Missing Definition")
@@ -54,12 +57,12 @@ struct SymbolNavigatorView: View {
                     .frame(height: 14)
                     .listRowSeparator(.hidden)
                     .contextMenu {
-                        let multi = projectManager.selectedNodeIDs.contains(instance.id) && projectManager.selectedNodeIDs.count > 1
+                        let multi = editorSession.selectedNodeIDs.contains(instance.id) && editorSession.selectedNodeIDs.count > 1
                         Button(role: .destructive) {
-                            performDelete(on: instance, selected: &projectManager.selectedNodeIDs)
+                            performDelete(on: instance, selected: &editorSession.selectedNodeIDs)
                         } label: {
                             Text(multi
-                                 ? "Delete Selected (\(projectManager.selectedNodeIDs.count))"
+                                 ? "Delete Selected (\(editorSession.selectedNodeIDs.count))"
                                  : "Delete")
                         }
                     }

@@ -9,12 +9,12 @@ import SwiftUI
 
 struct ProjectNavigatorView: View {
 
-    @Environment(\.projectManager)
-    private var projectManager
+    @Environment(\.editorSession)
+    private var editorSession
 
     var body: some View {
         VStack(spacing: 0) {
-            switch projectManager.selectedEditor {
+            switch editorSession.selectedEditor {
             case .schematic:
                 SchematicNavigatorView()
             case .layout:

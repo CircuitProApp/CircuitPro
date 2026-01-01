@@ -33,7 +33,7 @@ struct CircuitProApp: App {
 
         WindowGroup(for: DocumentID.self) { $docID in
             if let id = docID, let doc = DocumentRegistry.shared.document(for: id) {
-                ProjectManagerContainer(document: doc, documentID: id)
+                WorkspaceContainer(document: doc, documentID: id)
                     .packContainer(packManager)
                     .focusedSceneValue(\.activeDocumentID, id)
                     .onReceive(doc.objectWillChange) { _ in

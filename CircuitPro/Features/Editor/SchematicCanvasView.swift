@@ -10,20 +10,26 @@ import SwiftUI
 
 struct SchematicCanvasView: View {
 
-    @BindableEnvironment(\.projectManager) private var projectManager
+    @BindableEnvironment(\.editorSession) private var editorSession
     @PackManager private var packManager
 
     @Bindable var canvasManager: CanvasManager
 
     var body: some View {
+        let schematicController = editorSession.schematicController
+        let selectedTool = Binding(
+            get: { schematicController.selectedTool },
+            set: { schematicController.selectedTool = $0 }
+        )
+
         CanvasView(
             viewport: $canvasManager.viewport,
-            store: projectManager.schematicController.canvasStore,
-            tool: $projectManager.schematicController.selectedTool.unwrapping(
+            store: schematicController.canvasStore,
+            tool: selectedTool.unwrapping(
                 withDefault: CursorTool()),
-            graph: projectManager.schematicController.graph,
+            graph: schematicController.graph,
             environment: canvasManager.environment
-                .withConnectionEngine(projectManager.schematicController.wireEngine)
+                .withConnectionEngine(schematicController.wireEngine)
                 .withGraphRenderProviders([
                     GraphWireRenderAdapter()
                 ])
@@ -59,7 +65,7 @@ struct SchematicCanvasView: View {
         }
         .overlay(alignment: .leading) {
             SchematicToolbarView(
-                selectedSchematicTool: $projectManager.schematicController.selectedTool
+                selectedSchematicTool: selectedTool
             )
             .padding(16)
         }
@@ -74,7 +80,7 @@ struct SchematicCanvasView: View {
             return false
         }
 
-        return projectManager.schematicController.handleComponentDrop(
+        return editorSession.schematicController.handleComponentDrop(
             from: transferable,
             at: location,
             packManager: packManager

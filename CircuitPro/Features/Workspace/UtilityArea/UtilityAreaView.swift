@@ -30,9 +30,6 @@ enum UtilityAreaTab: Displayable {
 
 struct UtilityAreaView: View {
 
-    @Environment(\.projectManager)
-    private var projectManager
-    
     @State private var selectedTab: UtilityAreaTab = .canvasConsole
 
     var body: some View {
@@ -86,7 +83,7 @@ struct UtilityAreaView: View {
         Group {
 
                 Text("WIP")
-            
+
         }
     }
 }

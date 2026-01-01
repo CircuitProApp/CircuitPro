@@ -10,20 +10,21 @@ import SwiftUI
 struct InspectorView: View {
 
     @BindableEnvironment(\.projectManager) private var projectManager
+    @BindableEnvironment(\.editorSession) private var editorSession
 
     @State private var selectedTab: InspectorTab = .attributes
 
     private var singleSelectedID: UUID? {
-        guard projectManager.selectedNodeIDs.count == 1 else { return nil }
-        return projectManager.selectedNodeIDs.first
+        guard editorSession.selectedNodeIDs.count == 1 else { return nil }
+        return editorSession.selectedNodeIDs.first
     }
 
     private var activeGraph: CanvasGraph? {
-        switch projectManager.selectedEditor {
+        switch editorSession.selectedEditor {
         case .schematic:
-            return projectManager.schematicController.graph
+            return editorSession.schematicController.graph
         case .layout:
-            return projectManager.layoutController.graph
+            return editorSession.layoutController.graph
         }
     }
 
@@ -37,7 +38,7 @@ struct InspectorView: View {
 
     /// A computed property that finds the ComponentInstance for a selected schematic symbol.
     private var selectedSymbolComponent: ComponentInstance? {
-        guard projectManager.selectedEditor == .schematic,
+        guard editorSession.selectedEditor == .schematic,
             let selectedID = singleSelectedID,
             let componentInstance = projectManager.componentInstances.first(where: {
                 $0.id == selectedID
@@ -50,9 +51,9 @@ struct InspectorView: View {
     private var selectedFootprintContext:
         (component: ComponentInstance, footprint: Binding<CanvasFootprint>)?
     {
-        guard projectManager.selectedEditor == .layout,
+        guard editorSession.selectedEditor == .layout,
             let nodeID = selectedGraphID,
-            let footprintBinding = projectManager.layoutController.footprintBinding(
+            let footprintBinding = editorSession.layoutController.footprintBinding(
                 for: nodeID.rawValue),
             let componentInstance = projectManager.componentInstances.first(where: {
                 $0.id == nodeID.rawValue
@@ -64,17 +65,17 @@ struct InspectorView: View {
 
     private var selectedTextBinding: Binding<CanvasText>? {
         guard let nodeID = selectedGraphID else { return nil }
-        switch projectManager.selectedEditor {
+        switch editorSession.selectedEditor {
         case .schematic:
-            return projectManager.schematicController.textBinding(for: nodeID.rawValue)
+            return editorSession.schematicController.textBinding(for: nodeID.rawValue)
         case .layout:
-            return projectManager.layoutController.textBinding(for: nodeID.rawValue)
+            return editorSession.layoutController.textBinding(for: nodeID.rawValue)
         }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            switch projectManager.selectedEditor {
+            switch editorSession.selectedEditor {
 
             case .schematic:
                 schematicInspectorView
@@ -113,8 +114,8 @@ struct InspectorView: View {
             )
             .id(context.component.id)
 
-        } else if let selection = projectManager.layoutController.singleSelectedPrimitive,
-            let binding = projectManager.layoutController.primitiveBinding(
+        } else if let selection = editorSession.layoutController.singleSelectedPrimitive,
+            let binding = editorSession.layoutController.primitiveBinding(
                 for: selection.id.rawValue)
         {
             ScrollView {
@@ -134,7 +135,7 @@ struct InspectorView: View {
         VStack {
             Spacer()
             Text(
-                projectManager.selectedNodeIDs.isEmpty ? "No Selection" : "Multiple Items Selected"
+                editorSession.selectedNodeIDs.isEmpty ? "No Selection" : "Multiple Items Selected"
             )
             .foregroundColor(.secondary)
             Spacer()

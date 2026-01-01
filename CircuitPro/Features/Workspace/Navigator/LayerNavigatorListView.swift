@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LayerNavigatorListView: View {
     @BindableEnvironment(\.projectManager) private var projectManager
+    @BindableEnvironment(\.editorSession) private var editorSession
 
     private var groupedLayers: [LayerSide: [LayerType]] {
         Dictionary(grouping: projectManager.selectedDesign.layers, by: { $0.side ?? .none })
@@ -17,16 +18,16 @@ struct LayerNavigatorListView: View {
     private var layerGroupOrder: [LayerSide] = [.front, .inner(1), .back, .none]
 
     private var isTraceToolActive: Bool {
-        projectManager.layoutController.selectedTool is TraceTool
+        editorSession.layoutController.selectedTool is TraceTool
     }
 
     // 1) Gate selection writes so invalid IDs never land
     private var validatedSelection: Binding<UUID?> {
         Binding(
-            get: { projectManager.layoutController.activeLayerId },
+            get: { editorSession.layoutController.activeLayerId },
             set: { newValue in
                 guard shouldAcceptSelection(newValue) else { return }
-                projectManager.layoutController.activeLayerId = newValue
+                editorSession.layoutController.activeLayerId = newValue
             }
         )
     }
@@ -62,7 +63,7 @@ struct LayerNavigatorListView: View {
             }
         }
         .listStyle(.sidebar)
-        .onChange(of: projectManager.layoutController.selectedTool, initial: true) {
+        .onChange(of: editorSession.layoutController.selectedTool, initial: true) {
             handleToolChange()
         }
     }
@@ -92,11 +93,11 @@ struct LayerNavigatorListView: View {
         guard isTraceToolActive else { return }
         let allLayers = groupedLayers.values.flatMap { $0 }
 
-        if let activeId = projectManager.layoutController.activeLayerId,
+        if let activeId = editorSession.layoutController.activeLayerId,
            let activeLayer = allLayers.first(where: { $0.id == activeId }),
            activeLayer.isTraceable {
             return
         }
-        projectManager.layoutController.activeLayerId = allLayers.first(where: { $0.isTraceable })?.id
+        editorSession.layoutController.activeLayerId = allLayers.first(where: { $0.isTraceable })?.id
     }
 }

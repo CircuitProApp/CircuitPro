@@ -4,28 +4,35 @@ struct LayoutCanvasView: View {
     @BindableEnvironment(\.projectManager)
     private var projectManager
 
+    @BindableEnvironment(\.editorSession)
+    private var editorSession
+
     @Bindable var canvasManager: CanvasManager
 
     var body: some View {
+        let layoutController = editorSession.layoutController
+        let selectedTool = Binding(
+            get: { layoutController.selectedTool },
+            set: { layoutController.selectedTool = $0 }
+        )
+        let layers = Binding(
+            get: { layoutController.canvasLayers },
+            set: { layoutController.canvasLayers = $0 }
+        )
+        let activeLayerId = Binding(
+            get: { layoutController.activeLayerId },
+            set: { layoutController.activeLayerId = $0 }
+        )
+
         CanvasView(
             viewport: $canvasManager.viewport,
-            store: projectManager.layoutController.canvasStore,
-            tool: $projectManager.layoutController.selectedTool.unwrapping(
+            store: layoutController.canvasStore,
+            tool: selectedTool.unwrapping(
                 withDefault: CursorTool()),
-            graph: projectManager.layoutController.graph,
-            layers: $projectManager.layoutController.canvasLayers,
-            activeLayerId: $projectManager.layoutController.activeLayerId,
-            environment: canvasManager.environment
-                .withTraceEngine(projectManager.layoutController.traceEngine)
-                .withGraphRenderProviders([
-                    GraphTraceRenderAdapter()
-                ])
-                .withGraphHaloProviders([
-                    TraceHaloProvider()
-                ])
-                .withGraphHitTestProviders([
-                    TraceHitTestProvider()
-                ]),
+            graph: layoutController.graph,
+            layers: layers,
+            activeLayerId: activeLayerId,
+            environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),
@@ -53,7 +60,7 @@ struct LayoutCanvasView: View {
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
         .overlay(alignment: .leading) {
-            LayoutToolbarView(selectedSchematicTool: $projectManager.layoutController.selectedTool)
+            LayoutToolbarView(selectedSchematicTool: selectedTool)
                 .padding(16)
         }
     }

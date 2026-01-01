@@ -77,7 +77,11 @@ struct FootprintNodeInspectorView: View {
                 guard newIndex != current else { return }
                 withCommitSession { session in
                     projectManager.updateReferenceDesignator(
-                        for: component, newIndex: newIndex, sessionID: session)
+                        for: component,
+                        newIndex: newIndex,
+                        source: .layout,
+                        sessionID: session
+                    )
                 }
             }
         )

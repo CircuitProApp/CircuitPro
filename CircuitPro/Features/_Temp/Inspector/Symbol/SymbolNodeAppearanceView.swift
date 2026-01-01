@@ -140,7 +140,7 @@ struct SymbolNodeAppearanceView: View {
             projectManager.toggleDynamicTextVisibility(for: component, content: content)
         } else {
             let instance = makeDefaultTextInstance(for: content)
-            projectManager.addText(instance, to: component)
+            projectManager.addText(instance, to: component, target: .symbol)
         }
     }
 

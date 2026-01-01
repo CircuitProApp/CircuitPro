@@ -10,8 +10,8 @@ import SwiftUI
 
 struct EditorView: View {
 
-    @Environment(\.projectManager)
-    private var projectManager
+    @BindableEnvironment(\.editorSession)
+    private var editorSession
 
     @Environment(\.colorScheme)
     private var colorScheme
@@ -30,7 +30,7 @@ struct EditorView: View {
     @State private var layoutCanvasManager = CanvasManager()
 
     var selectedEditor: EditorType {
-        projectManager.selectedEditor
+        editorSession.selectedEditor
     }
 
     var selectedCanvasManager: CanvasManager {

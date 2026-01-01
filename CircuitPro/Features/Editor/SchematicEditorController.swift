@@ -178,8 +178,10 @@ final class SchematicEditorController: EditorController {
             let ownerRotation = inst.symbolInstance.rotation
 
             for resolvedModel in inst.symbolInstance.resolvedItems {
+                let overlaySource: ChangeSource? =
+                    projectManager.syncManager.syncMode == .manualECO ? .schematic : nil
                 let displayString = projectManager.generateString(
-                    for: resolvedModel, component: inst)
+                    for: resolvedModel, component: inst, overlaySource: overlaySource)
                 let textID = GraphTextID.makeID(
                     for: resolvedModel.source, ownerID: inst.id, fallback: resolvedModel.id)
                 let nodeID = NodeID(textID)

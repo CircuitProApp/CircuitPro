@@ -17,6 +17,7 @@ import SwiftUI
 
 struct SymbolNodeAttributesView: View {
     @Environment(\.projectManager) private var projectManager
+    @Environment(\.editorSession) private var editorSession
 
     @Bindable var component: ComponentInstance
 
@@ -71,7 +72,11 @@ struct SymbolNodeAttributesView: View {
                 guard newIndex != current else { return }
                 withCommitSession { session in
                     projectManager.updateReferenceDesignator(
-                        for: self.component, newIndex: newIndex, sessionID: session)
+                        for: self.component,
+                        newIndex: newIndex,
+                        source: editorSession.changeSource,
+                        sessionID: session
+                    )
                 }
             }
         )
@@ -87,10 +92,18 @@ struct SymbolNodeAttributesView: View {
                 withCommitSession { session in
                     if let id = newUUID, let fp = allFootprints.first(where: { $0.uuid == id }) {
                         projectManager.assignFootprint(
-                            to: component, footprint: fp, sessionID: session)
+                            to: component,
+                            footprint: fp,
+                            source: editorSession.changeSource,
+                            sessionID: session
+                        )
                     } else {
                         projectManager.assignFootprint(
-                            to: component, footprint: nil, sessionID: session)
+                            to: component,
+                            footprint: nil,
+                            source: editorSession.changeSource,
+                            sessionID: session
+                        )
                     }
                 }
             }
@@ -124,7 +137,11 @@ struct SymbolNodeAttributesView: View {
                         if newProp.value != cur.value || newProp.unit != cur.unit {
                             didChange = true
                             projectManager.updateProperty(
-                                for: component, with: newProp, sessionID: session)
+                                for: component,
+                                with: newProp,
+                                source: editorSession.changeSource,
+                                sessionID: session
+                            )
                         }
                     }
                 }
