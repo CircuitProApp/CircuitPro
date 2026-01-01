@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a graphic primitive (line, rect, etc.), used for rendering and interaction.
-final class CanvasPrimitiveElement: GraphComponent, LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
+final class CanvasPrimitiveElement: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
 
     var primitive: AnyCanvasPrimitive
 

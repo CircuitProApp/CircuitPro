@@ -1,5 +1,5 @@
 //
-//  GraphPadComponent.swift
+//  CanvasPad.swift
 //  CircuitPro
 //
 //  Created by Codex on 9/22/25.
@@ -8,7 +8,7 @@
 import CoreGraphics
 import Foundation
 
-struct GraphPadComponent: GraphComponent {
+struct CanvasPad {
     var pad: Pad
     var ownerID: UUID?
     var ownerPosition: CGPoint
@@ -21,7 +21,7 @@ struct GraphPadComponent: GraphComponent {
     }
 }
 
-extension GraphPadComponent: CanvasItem {
+extension CanvasPad: CanvasItem {
     var elementID: GraphElementID { .node(NodeID(GraphPadID.makeID(ownerID: ownerID, padID: pad.id))) }
 
     func apply(to graph: CanvasGraph) {
@@ -33,7 +33,7 @@ extension GraphPadComponent: CanvasItem {
     }
 }
 
-extension GraphPadComponent {
+extension CanvasPad {
     var ownerTransform: CGAffineTransform {
         CGAffineTransform(translationX: ownerPosition.x, y: ownerPosition.y)
             .rotated(by: ownerRotation)

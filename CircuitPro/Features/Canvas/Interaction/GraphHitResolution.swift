@@ -10,7 +10,7 @@ extension CanvasGraph {
         {
             return .node(NodeID(ownerID))
         }
-        if let pad = component(GraphPadComponent.self, for: nodeID),
+        if let pad = component(CanvasPad.self, for: nodeID),
             let ownerID = pad.ownerID,
             !pad.isSelectable,
             hasAnyComponent(for: NodeID(ownerID))

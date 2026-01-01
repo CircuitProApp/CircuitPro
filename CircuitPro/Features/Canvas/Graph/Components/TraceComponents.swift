@@ -8,11 +8,11 @@
 import AppKit
 import Foundation
 
-struct TraceVertexComponent: GraphComponent {
+struct TraceVertexComponent {
     var point: CGPoint
 }
 
-struct TraceEdgeComponent: GraphComponent, LayeredDrawable, HitTestable, HaloProviding, Bounded, HitTestPriorityProviding {
+struct TraceEdgeComponent: LayeredDrawable, HitTestable, HaloProviding, Bounded, HitTestPriorityProviding {
     let id: UUID
     var start: NodeID
     var end: NodeID

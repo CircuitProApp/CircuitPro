@@ -40,7 +40,7 @@ final class CanvasEditorManager {
     }
 
     var pads: [Pad] {
-        graph.components(GraphPadComponent.self).map { $0.1.pad }
+        graph.components(CanvasPad.self).map { $0.1.pad }
     }
 
     var primitives: [AnyCanvasPrimitive] {
@@ -126,7 +126,7 @@ final class CanvasEditorManager {
             case primitive(NodeID, CanvasPrimitiveElement)
             case text(NodeID, CanvasText)
             case pin(NodeID, CanvasPin)
-            case pad(NodeID, GraphPadComponent)
+            case pad(NodeID, CanvasPad)
         }
 
         let kind: Kind
@@ -164,7 +164,7 @@ final class CanvasEditorManager {
         let pinItems = graph.components(CanvasPin.self).map { id, pin in
             ElementItem(kind: .pin(id, pin))
         }
-        let padItems = graph.components(GraphPadComponent.self).map { id, pad in
+        let padItems = graph.components(CanvasPad.self).map { id, pad in
             ElementItem(kind: .pad(id, pad))
         }
         return primitiveItems + textItems + pinItems + padItems
@@ -193,10 +193,10 @@ final class CanvasEditorManager {
         return (nodeID, pin)
     }
 
-    var singleSelectedPad: (id: NodeID, pad: GraphPadComponent)? {
+    var singleSelectedPad: (id: NodeID, pad: CanvasPad)? {
         guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else { return nil }
         let nodeID = NodeID(id)
-        guard let pad = graph.component(GraphPadComponent.self, for: nodeID) else { return nil }
+        guard let pad = graph.component(CanvasPad.self, for: nodeID) else { return nil }
         return (nodeID, pad)
     }
 
@@ -247,7 +247,7 @@ final class CanvasEditorManager {
 
     func padBinding(for id: UUID) -> Binding<Pad>? {
         let nodeID = NodeID(id)
-        guard let component = graph.component(GraphPadComponent.self, for: nodeID) else {
+        guard let component = graph.component(CanvasPad.self, for: nodeID) else {
             return nil
         }
         return Binding(

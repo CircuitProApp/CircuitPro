@@ -11,7 +11,7 @@ struct GraphPadHitTestProvider: GraphHitTestProvider {
     func hitTest(point: CGPoint, tolerance: CGFloat, graph: CanvasGraph, context: RenderContext) -> GraphHitCandidate? {
         var best: GraphHitCandidate?
 
-        for (id, component) in graph.components(GraphPadComponent.self) {
+        for (id, component) in graph.components(CanvasPad.self) {
             let localPoint = point.applying(component.worldTransform.inverted())
             let bodyPath = component.pad.calculateCompositePath()
             let hitArea = bodyPath.copy(
@@ -40,7 +40,7 @@ struct GraphPadHitTestProvider: GraphHitTestProvider {
 
     func hitTestAll(in rect: CGRect, graph: CanvasGraph, context: RenderContext) -> [GraphElementID] {
         var hits = Set<GraphElementID>()
-        for (id, component) in graph.components(GraphPadComponent.self) {
+        for (id, component) in graph.components(CanvasPad.self) {
             let bodyPath = component.pad.calculateCompositePath()
             let bounds = bodyPath.boundingBoxOfPath
             if bounds.isNull { continue }

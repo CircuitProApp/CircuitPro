@@ -43,7 +43,7 @@ final class PadTool: CanvasTool {
 
         return .command(CanvasToolCommand { interactionContext, _ in
             let graph = interactionContext.renderContext.graph
-            let component = GraphPadComponent(
+            let component = CanvasPad(
                 pad: pad,
                 ownerID: nil,
                 ownerPosition: .zero,
@@ -105,7 +105,7 @@ final class PadTool: CanvasTool {
 
     private func nextPadNumber(in context: RenderContext) -> Int {
         let graph = context.graph
-        let numbers = graph.components(GraphPadComponent.self).map { $0.1.pad.number }
+        let numbers = graph.components(CanvasPad.self).map { $0.1.pad.number }
         return numbers.max().map { $0 + 1 } ?? 1
     }
 }

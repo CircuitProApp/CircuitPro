@@ -11,7 +11,7 @@ struct GraphPadHaloProvider: GraphHaloProvider {
     func haloPrimitives(from graph: CanvasGraph, context: RenderContext, highlightedIDs: Set<GraphElementID>) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
-        for (id, component) in graph.components(GraphPadComponent.self) {
+        for (id, component) in graph.components(CanvasPad.self) {
             guard highlightedIDs.contains(.node(id)) else { continue }
             if let ownerID = component.ownerID, highlightedIDs.contains(.node(NodeID(ownerID))) {
                 continue

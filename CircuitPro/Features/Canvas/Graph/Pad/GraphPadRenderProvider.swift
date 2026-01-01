@@ -11,7 +11,7 @@ struct GraphPadRenderProvider: GraphRenderProvider {
     func primitivesByLayer(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
-        for (_, component) in graph.components(GraphPadComponent.self) {
+        for (_, component) in graph.components(CanvasPad.self) {
             let localPath = component.pad.calculateCompositePath()
             guard !localPath.isEmpty else { continue }
 

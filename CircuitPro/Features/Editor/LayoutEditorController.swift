@@ -348,7 +348,7 @@ final class LayoutEditorController: EditorController {
             for padDef in footprintDef.pads {
                 let padID = GraphPadID.makeID(ownerID: inst.id, padID: padDef.id)
                 let nodeID = NodeID(padID)
-                let component = GraphPadComponent(
+                let component = CanvasPad(
                     pad: padDef,
                     ownerID: inst.id,
                     ownerPosition: ownerPosition,
@@ -365,9 +365,9 @@ final class LayoutEditorController: EditorController {
             }
         }
 
-        let existingIDs = Set(graph.nodeIDs(with: GraphPadComponent.self))
+        let existingIDs = Set(graph.nodeIDs(with: CanvasPad.self))
         for id in existingIDs.subtracting(updatedIDs) {
-            graph.removeComponent(GraphPadComponent.self, for: id)
+            graph.removeComponent(CanvasPad.self, for: id)
             if !graph.hasAnyComponent(for: id) {
                 graph.removeNode(id)
             }
@@ -519,7 +519,7 @@ final class LayoutEditorController: EditorController {
         let ownerPosition = component.position
         let ownerRotation = component.rotation
 
-        for (id, pad) in graph.components(GraphPadComponent.self) where pad.ownerID == ownerID {
+        for (id, pad) in graph.components(CanvasPad.self) where pad.ownerID == ownerID {
             var updated = pad
             updated.ownerPosition = ownerPosition
             updated.ownerRotation = ownerRotation
