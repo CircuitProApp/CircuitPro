@@ -195,6 +195,19 @@ extension CanvasText: CanvasItem {
         if !graph.nodes.contains(nodeID) {
             graph.addNode(nodeID)
         }
+        if let existing = graph.component(CanvasText.self, for: nodeID) {
+            if existing !== self {
+                existing.resolvedText = resolvedText
+                existing.displayText = displayText
+                existing.ownerID = ownerID
+                existing.target = target
+                existing.ownerPosition = ownerPosition
+                existing.ownerRotation = ownerRotation
+                existing.layerId = layerId
+                existing.showsAnchorGuides = showsAnchorGuides
+            }
+            return
+        }
         graph.setComponent(self, for: nodeID)
     }
 }

@@ -21,6 +21,8 @@ struct CanvasPad {
     }
 }
 
+extension CanvasPad: Equatable {}
+
 extension CanvasPad: CanvasItem {
     var elementID: GraphElementID { .node(NodeID(GraphPadID.makeID(ownerID: ownerID, padID: pad.id))) }
 
@@ -28,6 +30,9 @@ extension CanvasPad: CanvasItem {
         let nodeID = NodeID(GraphPadID.makeID(ownerID: ownerID, padID: pad.id))
         if !graph.nodes.contains(nodeID) {
             graph.addNode(nodeID)
+        }
+        if let existing = graph.component(CanvasPad.self, for: nodeID), existing == self {
+            return
         }
         graph.setComponent(self, for: nodeID)
     }

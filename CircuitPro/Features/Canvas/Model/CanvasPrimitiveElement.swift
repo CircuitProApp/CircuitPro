@@ -107,6 +107,12 @@ extension CanvasPrimitiveElement: CanvasItem {
         if !graph.nodes.contains(nodeID) {
             graph.addNode(nodeID)
         }
+        if let existing = graph.component(CanvasPrimitiveElement.self, for: nodeID) {
+            if existing !== self {
+                existing.primitive = primitive
+            }
+            return
+        }
         graph.setComponent(self, for: nodeID)
     }
 }

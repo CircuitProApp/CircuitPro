@@ -124,6 +124,17 @@ extension CanvasPin: CanvasItem {
         if !graph.nodes.contains(nodeID) {
             graph.addNode(nodeID)
         }
+        if let existing = graph.component(CanvasPin.self, for: nodeID) {
+            if existing !== self {
+                existing.pin = pin
+                existing.ownerID = ownerID
+                existing.ownerPosition = ownerPosition
+                existing.ownerRotation = ownerRotation
+                existing.layerId = layerId
+                existing.isSelectable = isSelectable
+            }
+            return
+        }
         graph.setComponent(self, for: nodeID)
     }
 }

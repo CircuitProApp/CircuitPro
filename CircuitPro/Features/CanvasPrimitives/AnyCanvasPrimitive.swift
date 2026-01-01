@@ -229,6 +229,11 @@ extension AnyCanvasPrimitive: CanvasItem {
         if !graph.nodes.contains(nodeID) {
             graph.addNode(nodeID)
         }
+        if let existing = graph.component(AnyCanvasPrimitive.self, for: nodeID),
+            existing == self
+        {
+            return
+        }
         graph.setComponent(self, for: nodeID)
     }
 }

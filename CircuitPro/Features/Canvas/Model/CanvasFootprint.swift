@@ -145,6 +145,15 @@ extension CanvasFootprint: CanvasItem {
         if !graph.nodes.contains(nodeID) {
             graph.addNode(nodeID)
         }
+        if let existing = graph.component(CanvasFootprint.self, for: nodeID) {
+            if existing !== self {
+                existing.ownerID = ownerID
+                existing.position = position
+                existing.rotation = rotation
+                existing.primitives = primitives
+            }
+            return
+        }
         graph.setComponent(self, for: nodeID)
     }
 }
