@@ -174,3 +174,27 @@ final class CanvasText: GraphComponent, LayeredDrawable, Bounded, HitTestable, H
         return local.copy(using: &transform) ?? local
     }
 }
+
+extension CanvasText: CanvasItem {
+    var elementID: GraphElementID {
+        let textID = GraphTextID.makeID(
+            for: resolvedText.source,
+            ownerID: ownerID,
+            fallback: resolvedText.id
+        )
+        return .node(NodeID(textID))
+    }
+
+    func apply(to graph: CanvasGraph) {
+        let textID = GraphTextID.makeID(
+            for: resolvedText.source,
+            ownerID: ownerID,
+            fallback: resolvedText.id
+        )
+        let nodeID = NodeID(textID)
+        if !graph.nodes.contains(nodeID) {
+            graph.addNode(nodeID)
+        }
+        graph.setComponent(self, for: nodeID)
+    }
+}

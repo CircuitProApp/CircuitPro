@@ -136,3 +136,15 @@ final class CanvasFootprint: GraphComponent, LayeredDrawable, Bounded, HitTestab
         return NSColor.systemBlue.cgColor
     }
 }
+
+extension CanvasFootprint: CanvasItem {
+    var elementID: GraphElementID { .node(NodeID(ownerID)) }
+
+    func apply(to graph: CanvasGraph) {
+        let nodeID = NodeID(ownerID)
+        if !graph.nodes.contains(nodeID) {
+            graph.addNode(nodeID)
+        }
+        graph.setComponent(self, for: nodeID)
+    }
+}

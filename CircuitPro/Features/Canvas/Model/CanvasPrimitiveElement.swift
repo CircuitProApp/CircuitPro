@@ -98,3 +98,15 @@ final class CanvasPrimitiveElement: GraphComponent, LayeredDrawable, Bounded, Hi
         set { primitive.rotation = newValue }
     }
 }
+
+extension CanvasPrimitiveElement: CanvasItem {
+    var elementID: GraphElementID { .node(NodeID(id)) }
+
+    func apply(to graph: CanvasGraph) {
+        let nodeID = NodeID(id)
+        if !graph.nodes.contains(nodeID) {
+            graph.addNode(nodeID)
+        }
+        graph.setComponent(self, for: nodeID)
+    }
+}

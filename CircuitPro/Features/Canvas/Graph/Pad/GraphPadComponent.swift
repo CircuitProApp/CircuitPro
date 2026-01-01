@@ -15,6 +15,22 @@ struct GraphPadComponent: GraphComponent {
     var ownerRotation: CGFloat
     var layerId: UUID?
     var isSelectable: Bool
+
+    var id: UUID {
+        GraphPadID.makeID(ownerID: ownerID, padID: pad.id)
+    }
+}
+
+extension GraphPadComponent: CanvasItem {
+    var elementID: GraphElementID { .node(NodeID(GraphPadID.makeID(ownerID: ownerID, padID: pad.id))) }
+
+    func apply(to graph: CanvasGraph) {
+        let nodeID = NodeID(GraphPadID.makeID(ownerID: ownerID, padID: pad.id))
+        if !graph.nodes.contains(nodeID) {
+            graph.addNode(nodeID)
+        }
+        graph.setComponent(self, for: nodeID)
+    }
 }
 
 extension GraphPadComponent {

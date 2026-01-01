@@ -18,15 +18,56 @@ final class SchematicEditorController: EditorController {
     private var suppressGraphSelectionSync = false
     private var isSyncingTextFromModel = false
     private var isApplyingTextChangesToModel = false
-    private var cachedSymbolTransforms: [UUID: SymbolTransform] = [:]
 
     // Track if initial load has happened
     private var hasPerformedInitialLoad = false
     private var isPerformingInitialLoad = false
 
-    private struct SymbolTransform: Equatable {
-        let position: CGPoint
-        let rotation: CardinalRotation
+
+    var items: [any CanvasItem] {
+        let design = projectManager.selectedDesign
+        var result: [any CanvasItem] = []
+
+        for inst in design.componentInstances {
+            result.append(inst)
+
+            let ownerPosition = inst.symbolInstance.position
+            let ownerRotation = inst.symbolInstance.rotation
+
+            for resolvedModel in inst.symbolInstance.resolvedItems {
+                let overlaySource: ChangeSource? =
+                    projectManager.syncManager.syncMode == .manualECO ? .schematic : nil
+                let displayString = projectManager.generateString(
+                    for: resolvedModel, component: inst, overlaySource: overlaySource)
+                let component = CanvasText(
+                    resolvedText: resolvedModel,
+                    displayText: displayString,
+                    ownerID: inst.id,
+                    target: .symbol,
+                    ownerPosition: ownerPosition,
+                    ownerRotation: ownerRotation,
+                    layerId: nil,
+                    showsAnchorGuides: true
+                )
+                result.append(component)
+            }
+
+            let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
+            guard let symbolDef else { continue }
+            for pinDef in symbolDef.pins {
+                let component = CanvasPin(
+                    pin: pinDef,
+                    ownerID: inst.id,
+                    ownerPosition: ownerPosition,
+                    ownerRotation: ownerRotation,
+                    layerId: nil,
+                    isSelectable: false
+                )
+                result.append(component)
+            }
+        }
+
+        return result
     }
 
     init(projectManager: ProjectManager) {
@@ -55,70 +96,8 @@ final class SchematicEditorController: EditorController {
             self?.handleGraphDelta(delta)
         }
 
-        startTrackingStructureChanges()
-        startTrackingTextChanges()
-        startTrackingTransformChanges()
-
         Task {
             await self.initialLoad()
-        }
-    }
-
-    private func startTrackingStructureChanges() {
-        withObservationTracking {
-            _ = projectManager.selectedDesign
-            _ = projectManager.componentInstances
-        } onChange: {
-            Task { @MainActor in
-                await self.refreshSymbols()
-                self.startTrackingStructureChanges()
-            }
-        }
-    }
-
-    private func startTrackingTextChanges() {
-        withObservationTracking {
-            _ = projectManager.syncManager.pendingChanges
-            for comp in projectManager.componentInstances {
-                _ = comp.propertyOverrides
-                _ = comp.propertyInstances
-                _ = comp.referenceDesignatorIndex
-                _ = comp.symbolInstance.textOverrides
-                _ = comp.symbolInstance.textInstances
-                _ = comp.symbolInstance.resolvedItems
-            }
-        } onChange: {
-            Task { @MainActor in
-                self.refreshSymbolTextNodes()
-                self.canvasStore.invalidate()
-                self.startTrackingTextChanges()
-            }
-        }
-    }
-
-    private func startTrackingTransformChanges() {
-        withObservationTracking {
-            for comp in projectManager.componentInstances {
-                _ = comp.symbolInstance.position
-                _ = comp.symbolInstance.cardinalRotation
-            }
-        } onChange: {
-            Task { @MainActor in
-                var nextCache: [UUID: SymbolTransform] = [:]
-                for comp in self.projectManager.componentInstances {
-                    let transform = SymbolTransform(
-                        position: comp.symbolInstance.position,
-                        rotation: comp.symbolInstance.cardinalRotation
-                    )
-                    if self.cachedSymbolTransforms[comp.id] != transform {
-                        self.syncOwnedComponents(for: comp)
-                    }
-                    nextCache[comp.id] = transform
-                }
-                self.cachedSymbolTransforms = nextCache
-                self.canvasStore.invalidate()
-                self.startTrackingTransformChanges()
-            }
         }
     }
 
@@ -144,146 +123,7 @@ final class SchematicEditorController: EditorController {
 
         isPerformingInitialLoad = false
 
-        // Load graph components for text and pins (needed for selection/editing)
-        refreshSymbolComponents()
-        refreshSymbolTextNodes()
-        refreshSymbolPinComponents()
         canvasStore.invalidate()
-    }
-
-    // MARK: - Symbol Refresh (when structure changes)
-
-    private func refreshSymbols() async {
-        // Update graph components for text and pins
-        refreshSymbolComponents()
-        refreshSymbolTextNodes()
-        refreshSymbolPinComponents()
-
-        // Sync pins when symbols change (component added/moved)
-        let wasLoading = isPerformingInitialLoad
-        isPerformingInitialLoad = true
-
-        let design = projectManager.selectedDesign
-        for inst in design.componentInstances {
-            let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
-            guard let symbolDef else { continue }
-            wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
-        }
-
-        isPerformingInitialLoad = wasLoading
-        canvasStore.invalidate()
-    }
-
-    private func refreshSymbolComponents() {
-        let design = projectManager.selectedDesign
-        var updatedIDs = Set<NodeID>()
-
-        for inst in design.componentInstances {
-            let nodeID = NodeID(inst.id)
-            if !graph.nodes.contains(nodeID) {
-                graph.addNode(nodeID)
-            }
-            graph.setComponent(inst, for: nodeID)
-            updatedIDs.insert(nodeID)
-        }
-
-        let existingIDs = Set(graph.nodeIDs(with: ComponentInstance.self))
-        for id in existingIDs.subtracting(updatedIDs) {
-            graph.removeComponent(ComponentInstance.self, for: id)
-            if !graph.hasAnyComponent(for: id) {
-                graph.removeNode(id)
-            }
-        }
-    }
-
-    // MARK: - Graph Component Refresh (for text and pin selection/editing)
-
-    func refreshSymbolTextNodes() {
-        let design = projectManager.selectedDesign
-        isSyncingTextFromModel = true
-        var updatedIDs = Set<NodeID>()
-
-        for inst in design.componentInstances {
-            let ownerPosition = inst.symbolInstance.position
-            let ownerRotation = inst.symbolInstance.rotation
-
-            for resolvedModel in inst.symbolInstance.resolvedItems {
-                let overlaySource: ChangeSource? =
-                    projectManager.syncManager.syncMode == .manualECO ? .schematic : nil
-                let displayString = projectManager.generateString(
-                    for: resolvedModel, component: inst, overlaySource: overlaySource)
-                let textID = GraphTextID.makeID(
-                    for: resolvedModel.source, ownerID: inst.id, fallback: resolvedModel.id)
-                let nodeID = NodeID(textID)
-
-                let component = CanvasText(
-                    resolvedText: resolvedModel,
-                    displayText: displayString,
-                    ownerID: inst.id,
-                    target: .symbol,
-                    ownerPosition: ownerPosition,
-                    ownerRotation: ownerRotation,
-                    layerId: nil,
-                    showsAnchorGuides: true
-                )
-
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
-                }
-                graph.setComponent(component, for: nodeID)
-                updatedIDs.insert(nodeID)
-            }
-        }
-
-        let existingIDs = Set(graph.nodeIDs(with: CanvasText.self))
-        for id in existingIDs.subtracting(updatedIDs) {
-            graph.removeComponent(CanvasText.self, for: id)
-            if !graph.hasAnyComponent(for: id) {
-                graph.removeNode(id)
-            }
-        }
-
-        isSyncingTextFromModel = false
-        canvasStore.invalidate()
-    }
-
-    private func refreshSymbolPinComponents() {
-        let design = projectManager.selectedDesign
-        var updatedIDs = Set<NodeID>()
-
-        for inst in design.componentInstances {
-            guard let symbolDef = inst.symbolInstance.definition else { continue }
-
-            let ownerPosition = inst.symbolInstance.position
-            let ownerRotation = inst.symbolInstance.rotation
-
-            for pinDef in symbolDef.pins {
-                let pinID = GraphPinID.makeID(ownerID: inst.id, pinID: pinDef.id)
-                let nodeID = NodeID(pinID)
-                let component = CanvasPin(
-                    pin: pinDef,
-                    ownerID: inst.id,
-                    ownerPosition: ownerPosition,
-                    ownerRotation: ownerRotation,
-                    layerId: nil,
-                    isSelectable: false
-                )
-
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
-                }
-                graph.setComponent(component, for: nodeID)
-                updatedIDs.insert(nodeID)
-            }
-        }
-
-        let existingIDs = Set(graph.nodeIDs(with: CanvasPin.self))
-        for id in existingIDs.subtracting(updatedIDs) {
-            graph.removeComponent(CanvasPin.self, for: id)
-            if !graph.hasAnyComponent(for: id) {
-                graph.removeNode(id)
-            }
-        }
     }
 
     private func handleStoreDelta(_ delta: CanvasStoreDelta) {
@@ -348,6 +188,26 @@ final class SchematicEditorController: EditorController {
             let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }
             )
         else { return }
+
+        if let current = inst.symbolInstance.resolvedItems.first(where: {
+            $0.id == component.resolvedText.id
+        }) {
+            let currentPosition = current.relativePosition
+            let currentAnchor = current.anchorPosition
+            let currentRotation = current.cardinalRotation
+            let currentVisibility = current.isVisible
+            let nextPosition = component.resolvedText.relativePosition
+            let nextAnchor = component.resolvedText.anchorPosition
+            let nextRotation = component.resolvedText.cardinalRotation
+            let nextVisibility = component.resolvedText.isVisible
+            if currentPosition == nextPosition,
+                currentAnchor == nextAnchor,
+                currentRotation == nextRotation,
+                currentVisibility == nextVisibility
+            {
+                return
+            }
+        }
 
         isApplyingTextChangesToModel = true
         inst.apply(component.resolvedText, for: component.target)
@@ -472,6 +332,13 @@ final class SchematicEditorController: EditorController {
 
         // The @Observable chain will automatically handle the rest.
         projectManager.document.scheduleAutosave()
+        wireEngine.syncPins(
+            for: newSymbolInstance,
+            of: symbolDefinition,
+            ownerID: newComponentInstance.id
+        )
+        wireEngine.repairPinConnections()
+        canvasStore.invalidate()
         return true
     }
 }

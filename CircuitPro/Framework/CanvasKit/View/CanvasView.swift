@@ -14,6 +14,9 @@ struct CanvasView: NSViewRepresentable {
 
     @Binding var activeLayerId: UUID?
 
+    private var itemsBinding: Binding<[any CanvasItem]>?
+    private var selectedIDsBinding: Binding<Set<UUID>>?
+
     // MARK: - Callbacks & Configuration
     let environment: CanvasEnvironmentValues
     let renderLayers: [any RenderLayer]
@@ -46,6 +49,42 @@ struct CanvasView: NSViewRepresentable {
         self.graph = graph
         self._layers = layers
         self._activeLayerId = activeLayerId
+        self.itemsBinding = nil
+        self.selectedIDsBinding = nil
+        self.environment = environment.withCanvasStore(store)
+        self.renderLayers = renderLayers
+        self.interactions = interactions
+        self.inputProcessors = inputProcessors
+        self.snapProvider = snapProvider
+        self.registeredDraggedTypes = registeredDraggedTypes
+        self.onPasteboardDropped = onPasteboardDropped
+    }
+
+    init(
+        viewport: Binding<CanvasViewport>,
+        store: CanvasStore,
+        tool: Binding<CanvasTool?> = .constant(nil),
+        items: Binding<[any CanvasItem]>,
+        selectedIDs: Binding<Set<UUID>>,
+        graph: CanvasGraph,
+        layers: Binding<[CanvasLayer]> = .constant([]),
+        activeLayerId: Binding<UUID?> = .constant(nil),
+        environment: CanvasEnvironmentValues = .init(),
+        renderLayers: [any RenderLayer],
+        interactions: [any CanvasInteraction],
+        inputProcessors: [any InputProcessor] = [],
+        snapProvider: any SnapProvider = NoOpSnapProvider(),
+        registeredDraggedTypes: [NSPasteboard.PasteboardType] = [],
+        onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil
+    ) {
+        self._viewport = viewport
+        self.store = store
+        self._tool = tool
+        self.graph = graph
+        self._layers = layers
+        self._activeLayerId = activeLayerId
+        self.itemsBinding = items
+        self.selectedIDsBinding = selectedIDs
         self.environment = environment.withCanvasStore(store)
         self.renderLayers = renderLayers
         self.interactions = interactions
@@ -59,6 +98,7 @@ struct CanvasView: NSViewRepresentable {
 
     final class Coordinator: NSObject {
         let canvasController: CanvasController
+        let itemGraphSync = CanvasItemGraphSync()
 
         private var viewportBinding: Binding<CanvasViewport>
 
@@ -152,6 +192,22 @@ struct CanvasView: NSViewRepresentable {
         controller.onCanvasChange = self.onCanvasChange
         _ = store.revision
 
+        if let itemsBinding = itemsBinding {
+            let items = itemsBinding.wrappedValue
+            context.coordinator.itemGraphSync.sync(items: items, graph: graph)
+        }
+
+        if let selectedIDsBinding = selectedIDsBinding {
+            let selectedIDs = selectedIDsBinding.wrappedValue
+            let desiredSelection = Set(selectedIDs.map { GraphElementID.node(NodeID($0)) })
+            if graph.selection != desiredSelection {
+                graph.selection = desiredSelection
+            }
+            if store.selection != selectedIDs {
+                store.selection = selectedIDs
+            }
+        }
+
         controller.sync(
             tool: self.tool,
             magnification: self.viewport.magnification,
@@ -160,6 +216,16 @@ struct CanvasView: NSViewRepresentable {
             activeLayerId: self.activeLayerId,
             graph: graph
         )
+
+        if let selectedIDsBinding = selectedIDsBinding {
+            let graphSelectionIDs = Set(graph.selection.compactMap { $0.nodeID?.rawValue })
+            if selectedIDsBinding.wrappedValue != graphSelectionIDs {
+                selectedIDsBinding.wrappedValue = graphSelectionIDs
+            }
+            if store.selection != graphSelectionIDs {
+                store.selection = graphSelectionIDs
+            }
+        }
 
         if let hostView = scrollView.documentView, hostView.frame.size != self.viewport.size {
             hostView.frame.size = self.viewport.size

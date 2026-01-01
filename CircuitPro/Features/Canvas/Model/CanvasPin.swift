@@ -112,3 +112,18 @@ final class CanvasPin: GraphComponent, LayeredDrawable, Bounded, HitTestable, Ha
         }
     }
 }
+
+extension CanvasPin: CanvasItem {
+    var elementID: GraphElementID {
+        let pinID = GraphPinID.makeID(ownerID: ownerID, pinID: pin.id)
+        return .node(NodeID(pinID))
+    }
+
+    func apply(to graph: CanvasGraph) {
+        let nodeID = NodeID(GraphPinID.makeID(ownerID: ownerID, pinID: pin.id))
+        if !graph.nodes.contains(nodeID) {
+            graph.addNode(nodeID)
+        }
+        graph.setComponent(self, for: nodeID)
+    }
+}

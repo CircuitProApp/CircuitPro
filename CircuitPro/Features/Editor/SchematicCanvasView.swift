@@ -21,12 +21,23 @@ struct SchematicCanvasView: View {
             get: { schematicController.selectedTool },
             set: { schematicController.selectedTool = $0 }
         )
+        let itemsValue = schematicController.items
+        let items = Binding<[any CanvasItem]>(
+            get: { itemsValue },
+            set: { _ in }
+        )
+        let selectedIDs = Binding<Set<UUID>>(
+            get: { editorSession.selectedNodeIDs },
+            set: { editorSession.selectedNodeIDs = $0 }
+        )
 
         CanvasView(
             viewport: $canvasManager.viewport,
             store: schematicController.canvasStore,
             tool: selectedTool.unwrapping(
                 withDefault: CursorTool()),
+            items: items,
+            selectedIDs: selectedIDs,
             graph: schematicController.graph,
             environment: canvasManager.environment,
             renderLayers: [

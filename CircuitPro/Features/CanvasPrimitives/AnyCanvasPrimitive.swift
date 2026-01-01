@@ -221,6 +221,18 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
 
 }
 
+extension AnyCanvasPrimitive: CanvasItem {
+    var elementID: GraphElementID { .node(NodeID(id)) }
+
+    func apply(to graph: CanvasGraph) {
+        let nodeID = NodeID(id)
+        if !graph.nodes.contains(nodeID) {
+            graph.addNode(nodeID)
+        }
+        graph.setComponent(self, for: nodeID)
+    }
+}
+
 extension AnyCanvasPrimitive: LayeredDrawable, HitTestable, HaloProviding {
     func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         let color = resolveColor(in: context)
