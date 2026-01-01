@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 9/19/25.
 //
 
-
 //
 //  FootprintNodeInspectorView.swift
 //  CircuitPro
@@ -25,12 +24,12 @@ struct FootprintNodeInspectorView: View {
     var component: ComponentInstance
 
     /// The graph-backed footprint component being inspected.
-    @Binding var footprint: GraphFootprintComponent
+    @Binding var footprint: CanvasFootprint
 
     @State private var selectedTab: InspectorTab = .attributes
     private var availableTabs: [InspectorTab] = [.attributes]
 
-    @State private var commitSessionID: UUID? // NEW
+    @State private var commitSessionID: UUID?  // NEW
 
     private func withCommitSession(_ perform: (UUID) -> Void) {
         let id: UUID
@@ -68,12 +67,17 @@ struct FootprintNodeInspectorView: View {
 
     private var refdesIndexBinding: Binding<Int> {
         Binding(
-            get: { projectManager.syncManager.resolvedReferenceDesignator(for: component, onlyFrom: .layout) },
+            get: {
+                projectManager.syncManager.resolvedReferenceDesignator(
+                    for: component, onlyFrom: .layout)
+            },
             set: { newIndex in
-                let current = projectManager.syncManager.resolvedReferenceDesignator(for: component, onlyFrom: .layout)
+                let current = projectManager.syncManager.resolvedReferenceDesignator(
+                    for: component, onlyFrom: .layout)
                 guard newIndex != current else { return }
                 withCommitSession { session in
-                    projectManager.updateReferenceDesignator(for: component, newIndex: newIndex, sessionID: session)
+                    projectManager.updateReferenceDesignator(
+                        for: component, newIndex: newIndex, sessionID: session)
                 }
             }
         )
@@ -90,7 +94,7 @@ struct FootprintNodeInspectorView: View {
         )
     }
 
-    init(component: ComponentInstance, footprint: Binding<GraphFootprintComponent>) {
+    init(component: ComponentInstance, footprint: Binding<CanvasFootprint>) {
         self.component = component
         self._footprint = footprint
     }
@@ -107,7 +111,7 @@ struct FootprintNodeInspectorView: View {
                         InspectorRow("Refdes", style: .leading) {
                             InspectorNumericField(
                                 label: component.definition?.referenceDesignatorPrefix,
-                                value: refdesIndexBinding, // This now gets the resolved value
+                                value: refdesIndexBinding,  // This now gets the resolved value
                                 placeholder: "?",
                                 labelStyle: .prominent
                             )

@@ -26,7 +26,7 @@ final class DragInteraction: CanvasInteraction {
     /// State for dragging text elements (with anchor support)
     private struct TextDragState {
         let origin: CGPoint
-        let originalTexts: [NodeID: GraphTextComponent]
+        let originalTexts: [NodeID: CanvasText]
         let isAnchorDrag: Bool
     }
 
@@ -149,17 +149,13 @@ final class DragInteraction: CanvasInteraction {
         let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
         let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
 
-        // Move each item from its original position
-        for (item, originalPosition) in state.items {
+        // Set new position on each item from its original position
+        for (var item, originalPosition) in state.items {
             let newPosition = CGPoint(
                 x: originalPosition.x + deltaPoint.x,
                 y: originalPosition.y + deltaPoint.y
             )
-            let delta = CGPoint(
-                x: newPosition.x - item.worldPosition.x,
-                y: newPosition.y - item.worldPosition.y
-            )
-            item.move(by: delta)
+            item.worldPosition = newPosition
         }
 
         // Update connection engine
@@ -221,7 +217,7 @@ final class DragInteraction: CanvasInteraction {
             return false
         }
 
-        guard graph.component(GraphTextComponent.self, for: graphHit) != nil else {
+        guard graph.component(CanvasText.self, for: graphHit) != nil else {
             return false
         }
 
@@ -229,9 +225,9 @@ final class DragInteraction: CanvasInteraction {
         guard graph.selection.contains(resolvedHit) else { return false }
 
         // Collect selected text components
-        var originalTexts: [NodeID: GraphTextComponent] = [:]
+        var originalTexts: [NodeID: CanvasText] = [:]
         for id in graph.selection {
-            if let text = graph.component(GraphTextComponent.self, for: id) {
+            if let text = graph.component(CanvasText.self, for: id) {
                 originalTexts[id] = text
             }
         }

@@ -105,7 +105,7 @@ final class WireTool: CanvasTool {
             return false
         }
 
-        if graph.component(GraphPinComponent.self, for: graphHit) != nil {
+        if graph.component(CanvasPin.self, for: graphHit) != nil {
             return true
         }
 

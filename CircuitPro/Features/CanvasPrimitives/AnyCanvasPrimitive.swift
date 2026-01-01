@@ -5,9 +5,10 @@
 //  Created by Giorgi Tchelidze on 21.06.25.
 //
 
-import Foundation
-import CoreGraphics
 import AppKit
+import CoreGraphics
+import Foundation
+import SwiftUI
 
 /// A type-erased wrapper so we can store heterogeneous canvas primitives in one array.
 enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
@@ -23,7 +24,7 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         case .circle(let circle): return circle.id
         }
     }
-    
+
     var layerId: UUID? {
         get {
             switch self {
@@ -34,9 +35,15 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         }
         set {
             switch self {
-            case .line(var primitive): primitive.layerId = newValue; self = .line(primitive)
-            case .rectangle(var primitive): primitive.layerId = newValue; self = .rectangle(primitive)
-            case .circle(var primitive): primitive.layerId = newValue; self = .circle(primitive)
+            case .line(var primitive):
+                primitive.layerId = newValue
+                self = .line(primitive)
+            case .rectangle(var primitive):
+                primitive.layerId = newValue
+                self = .rectangle(primitive)
+            case .circle(var primitive):
+                primitive.layerId = newValue
+                self = .circle(primitive)
             }
         }
     }
@@ -52,9 +59,15 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         }
         set {
             switch self {
-            case .line(var line): line.position = newValue; self = .line(line)
-            case .rectangle(var rectangle): rectangle.position = newValue; self = .rectangle(rectangle)
-            case .circle(var circle): circle.position = newValue; self = .circle(circle)
+            case .line(var line):
+                line.position = newValue
+                self = .line(line)
+            case .rectangle(var rectangle):
+                rectangle.position = newValue
+                self = .rectangle(rectangle)
+            case .circle(var circle):
+                circle.position = newValue
+                self = .circle(circle)
             }
         }
     }
@@ -69,9 +82,15 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         }
         set {
             switch self {
-            case .line(var line): line.rotation = newValue; self = .line(line)
-            case .rectangle(var rectangle): rectangle.rotation = newValue; self = .rectangle(rectangle)
-            case .circle(var circle): circle.rotation = newValue; self = .circle(circle)
+            case .line(var line):
+                line.rotation = newValue
+                self = .line(line)
+            case .rectangle(var rectangle):
+                rectangle.rotation = newValue
+                self = .rectangle(rectangle)
+            case .circle(var circle):
+                circle.rotation = newValue
+                self = .circle(circle)
             }
         }
     }
@@ -86,9 +105,15 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         }
         set {
             switch self {
-            case .line(var line): line.strokeWidth = newValue; self = .line(line)
-            case .rectangle(var rectangle): rectangle.strokeWidth = newValue; self = .rectangle(rectangle)
-            case .circle(var circle): circle.strokeWidth = newValue; self = .circle(circle)
+            case .line(var line):
+                line.strokeWidth = newValue
+                self = .line(line)
+            case .rectangle(var rectangle):
+                rectangle.strokeWidth = newValue
+                self = .rectangle(rectangle)
+            case .circle(var circle):
+                circle.strokeWidth = newValue
+                self = .circle(circle)
             }
         }
     }
@@ -103,9 +128,15 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         }
         set {
             switch self {
-            case .line(var line): line.color = newValue; self = .line(line)
-            case .rectangle(var rectangle): rectangle.color = newValue; self = .rectangle(rectangle)
-            case .circle(var circle): circle.color = newValue; self = .circle(circle)
+            case .line(var line):
+                line.color = newValue
+                self = .line(line)
+            case .rectangle(var rectangle):
+                rectangle.color = newValue
+                self = .rectangle(rectangle)
+            case .circle(var circle):
+                circle.color = newValue
+                self = .circle(circle)
             }
         }
     }
@@ -120,9 +151,15 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         }
         set {
             switch self {
-            case .line(var line): line.filled = newValue; self = .line(line)
-            case .rectangle(var rectangle): rectangle.filled = newValue; self = .rectangle(rectangle)
-            case .circle(var circle): circle.filled = newValue; self = .circle(circle)
+            case .line(var line):
+                line.filled = newValue
+                self = .line(line)
+            case .rectangle(var rectangle):
+                rectangle.filled = newValue
+                self = .rectangle(rectangle)
+            case .circle(var circle):
+                circle.filled = newValue
+                self = .circle(circle)
             }
         }
     }
@@ -138,8 +175,8 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
 
     var snapsToCenter: Bool {
         switch self {
-        case .rectangle: return false // uses corner snapping
-        case .line, .circle: return true // uses center snapping
+        case .rectangle: return false  // uses corner snapping
+        case .line, .circle: return true  // uses center snapping
         }
     }
 
@@ -158,13 +195,47 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
     ) {
         switch self {
         case .line(var line):
-            line.updateHandle(kind, to: newPos, opposite: opp); self = .line(line)
+            line.updateHandle(kind, to: newPos, opposite: opp)
+            self = .line(line)
         case .rectangle(var rectangle):
-            rectangle.updateHandle(kind, to: newPos, opposite: opp); self = .rectangle(rectangle)
+            rectangle.updateHandle(kind, to: newPos, opposite: opp)
+            self = .rectangle(rectangle)
         case .circle(var circle):
-            circle.updateHandle(kind, to: newPos, opposite: opp); self = .circle(circle)
+            circle.updateHandle(kind, to: newPos, opposite: opp)
+            self = .circle(circle)
         }
     }
+
+    // MARK: - CanvasRenderable
+    var renderBounds: CGRect {
+        boundingBox
+    }
+
+    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+        let color = resolveColor(in: context)
+        return [layerId: makeDrawingPrimitives(with: color)]
+    }
+
+    func haloPath() -> CGPath? {
+        makeHaloPath()
+    }
+
+    func hitTest(point: CGPoint, tolerance: CGFloat) -> Bool {
+        hitTest(point, tolerance: tolerance) != nil
+    }
+
+    private func resolveColor(in context: RenderContext) -> CGColor {
+        if let overrideColor = self.color?.cgColor {
+            return overrideColor
+        }
+        if let layerId = self.layerId,
+            let layer = context.layers.first(where: { $0.id == layerId })
+        {
+            return layer.color
+        }
+        return NSColor.systemBlue.cgColor
+    }
+
 }
 
 extension AnyCanvasPrimitive {
@@ -192,8 +263,6 @@ extension AnyCanvasPrimitive {
         }
     }
 }
-
-import SwiftUI
 
 // Allows creating bindings to the specific canvas primitive within an AnyCanvasPrimitive binding.
 extension Binding where Value == AnyCanvasPrimitive {

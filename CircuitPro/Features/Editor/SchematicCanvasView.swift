@@ -31,12 +31,11 @@ struct SchematicCanvasView: View {
                 ])
                 .withGraphHaloProviders([
                     WireGraphHaloProvider(),
-                    CanvasRenderableHaloProvider(),  // New: uses protocol
+                    CanvasRenderableHaloProvider(),
                 ])
                 .withGraphHitTestProviders([
                     WireGraphHitTestProvider(),
-                    CanvasRenderableHitTestProvider(),  // New: uses protocol
-                    GraphTextHitTestProvider(),  // Keep: for text selection
+                    CanvasRenderableHitTestProvider(),
                 ]),
             renderLayers: [
                 GridRenderLayer(),

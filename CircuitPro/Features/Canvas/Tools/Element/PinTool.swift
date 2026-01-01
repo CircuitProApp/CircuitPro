@@ -9,37 +9,44 @@ final class PinTool: CanvasTool {
 
     // MARK: - Overridden Properties
 
-    override var symbolName: String { CircuitProSymbols.Symbol.pin } // Assuming you have a symbol asset named this.
+    override var symbolName: String { CircuitProSymbols.Symbol.pin }  // Assuming you have a symbol asset named this.
     override var label: String { "Pin" }
 
     // MARK: - Overridden Methods
 
-    override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
+    override func handleTap(at location: CGPoint, context: ToolInteractionContext)
+        -> CanvasToolResult
+    {
         let number = nextPinNumber(in: context.renderContext)
-        let pin = Pin(name: "", number: number, position: location, cardinalRotation: rotation, type: .unknown, lengthType: .regular)
-        return .command(CanvasToolCommand { interactionContext, _ in
-            let graph = interactionContext.renderContext.graph
-            let component = GraphPinComponent(
-                pin: pin,
-                ownerID: nil,
-                ownerPosition: .zero,
-                ownerRotation: 0,
-                layerId: nil,
-                isSelectable: true
-            )
-            let nodeID = NodeID(GraphPinID.makeID(ownerID: nil, pinID: pin.id))
-            if !graph.nodes.contains(nodeID) {
-                graph.addNode(nodeID)
-            }
-            graph.setComponent(component, for: nodeID)
-        })
+        let pin = Pin(
+            name: "", number: number, position: location, cardinalRotation: rotation,
+            type: .unknown, lengthType: .regular)
+        return .command(
+            CanvasToolCommand { interactionContext, _ in
+                let graph = interactionContext.renderContext.graph
+                let component = CanvasPin(
+                    pin: pin,
+                    ownerID: nil,
+                    ownerPosition: .zero,
+                    ownerRotation: 0,
+                    layerId: nil,
+                    isSelectable: true
+                )
+                let nodeID = NodeID(GraphPinID.makeID(ownerID: nil, pinID: pin.id))
+                if !graph.nodes.contains(nodeID) {
+                    graph.addNode(nodeID)
+                }
+                graph.setComponent(component, for: nodeID)
+            })
     }
 
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         // 1. Create a temporary pin model to represent the preview.
         // Its position can be .zero since we are describing it in a local space.
         let number = nextPinNumber(in: context)
-        let previewPin = Pin(name: "", number: number, position: .zero, cardinalRotation: rotation, type: .unknown, lengthType: .regular)
+        let previewPin = Pin(
+            name: "", number: number, position: .zero, cardinalRotation: rotation, type: .unknown,
+            lengthType: .regular)
 
         // 2. Get the model's drawing commands in its local coordinate space.
         let localPrimitives = previewPin.makeDrawingPrimitives()
@@ -58,7 +65,7 @@ final class PinTool: CanvasTool {
 
     private func nextPinNumber(in context: RenderContext) -> Int {
         let graph = context.graph
-        let numbers = graph.components(GraphPinComponent.self).map { $0.1.pin.number }
+        let numbers = graph.components(CanvasPin.self).map { $0.1.pin.number }
         return numbers.max().map { $0 + 1 } ?? 1
     }
 

@@ -16,10 +16,13 @@ struct TextPropertiesView: View {
     private var editor
 
     let textID: NodeID
-    @Binding var text: GraphTextComponent
+    @Binding var text: CanvasText
 
     private var componentData: (name: String, prefix: String, properties: [Property.Definition]) {
-        (componentDesignManager.componentName, componentDesignManager.referenceDesignatorPrefix, componentDesignManager.componentProperties)
+        (
+            componentDesignManager.componentName, componentDesignManager.referenceDesignatorPrefix,
+            componentDesignManager.componentProperties
+        )
     }
 
     // MARK: - Custom Bindings
@@ -56,8 +59,10 @@ struct TextPropertiesView: View {
             Divider()
 
             InspectorSection("Transform") {
-                PointControlView(title: "Position", point: positionBinding, displayOffset: PaperSize.component.centerOffset())
-//                RotationControlView(object: $textModel, tickStepDegrees: 45, snapsToTicks: true)
+                PointControlView(
+                    title: "Position", point: positionBinding,
+                    displayOffset: PaperSize.component.centerOffset())
+                //                RotationControlView(object: $textModel, tickStepDegrees: 45, snapsToTicks: true)
             }
 
             Divider()
@@ -87,25 +92,30 @@ struct TextPropertiesView: View {
             // If the content is static, provide an editable text field.
             if case .static = content {
                 InspectorRow("Text") {
-                    TextField("Static Text", text: Binding(
-                        get: {
-                            text.displayText
-                        },
-                        set: { newText in
-                            var updated = text
-                            updated.displayText = newText
-                            // Persist the change to the *model* for static text.
-                            updated.resolvedText.content = .static(text: newText)
-                            text = updated
-                        }
-                    )).inspectorField()
+                    TextField(
+                        "Static Text",
+                        text: Binding(
+                            get: {
+                                text.displayText
+                            },
+                            set: { newText in
+                                var updated = text
+                                updated.displayText = newText
+                                // Persist the change to the *model* for static text.
+                                updated.resolvedText.content = .static(text: newText)
+                                text = updated
+                            }
+                        )
+                    ).inspectorField()
                 }
             }
 
             // Check for component properties and bind to their display options.
             if case .componentProperty = content {
                 // Use the manager's helper to get a binding that handles the complex enum update.
-                if let optionsBinding = editor.bindingForDisplayOptions(with: textID.rawValue, componentData: componentData) {
+                if let optionsBinding = editor.bindingForDisplayOptions(
+                    with: textID.rawValue, componentData: componentData)
+                {
 
                     Text("Display Options").font(.caption).foregroundColor(.secondary)
 
@@ -134,10 +144,11 @@ struct TextPropertiesView: View {
         case .componentReferenceDesignator:
             return "Reference Designator"
 
-        case .componentProperty(let defID, _): // Correctly ignore the options
-            return componentDesignManager.componentProperties.first { $0.id == defID }?.key.label ?? "Property"
+        case .componentProperty(let defID, _):  // Correctly ignore the options
+            return componentDesignManager.componentProperties.first { $0.id == defID }?.key.label
+                ?? "Property"
 
-        case .static: // Correctly ignore the associated text
+        case .static:  // Correctly ignore the associated text
             return "Static Text"
         }
     }

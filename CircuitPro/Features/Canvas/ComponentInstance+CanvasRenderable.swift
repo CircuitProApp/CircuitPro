@@ -12,18 +12,16 @@ import AppKit
 extension ComponentInstance: CanvasDraggable {
 
     var worldPosition: CGPoint {
-        symbolInstance.position
+        get {
+            symbolInstance.position
+        }
+        set {
+            symbolInstance.position = newValue
+        }
     }
 
     var worldRotation: CGFloat {
         symbolInstance.rotation
-    }
-
-    func move(by delta: CGPoint) {
-        symbolInstance.position = CGPoint(
-            x: symbolInstance.position.x + delta.x,
-            y: symbolInstance.position.y + delta.y
-        )
     }
 
     var renderBounds: CGRect {

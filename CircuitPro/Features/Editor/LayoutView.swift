@@ -10,7 +10,8 @@ struct LayoutCanvasView: View {
         CanvasView(
             viewport: $canvasManager.viewport,
             store: projectManager.layoutController.canvasStore,
-            tool: $projectManager.layoutController.selectedTool.unwrapping(withDefault: CursorTool()),
+            tool: $projectManager.layoutController.selectedTool.unwrapping(
+                withDefault: CursorTool()),
             graph: projectManager.layoutController.graph,
             layers: $projectManager.layoutController.canvasLayers,
             activeLayerId: $projectManager.layoutController.activeLayerId,
@@ -18,21 +19,15 @@ struct LayoutCanvasView: View {
                 .withTraceEngine(projectManager.layoutController.traceEngine)
                 .withGraphRenderProviders([
                     GraphTraceRenderAdapter(),
-                    GraphFootprintRenderProvider(),
-                    GraphTextRenderProvider(),
-                    GraphPadRenderProvider()
+                    CanvasRenderableProvider(),
                 ])
                 .withGraphHaloProviders([
                     TraceHaloProvider(),
-                    GraphFootprintHaloProvider(),
-                    GraphTextHaloProvider(),
-                    GraphPadHaloProvider()
+                    CanvasRenderableHaloProvider(),
                 ])
                 .withGraphHitTestProviders([
                     TraceHitTestProvider(),
-                    GraphFootprintHitTestProvider(),
-                    GraphTextHitTestProvider(),
-                    GraphPadHitTestProvider()
+                    CanvasRenderableHitTestProvider(),
                 ]),
             renderLayers: [
                 GridRenderLayer(),
@@ -41,7 +36,7 @@ struct LayoutCanvasView: View {
                 PreviewRenderLayer(),
                 HandlesRenderLayer(),
                 MarqueeRenderLayer(),
-                CrosshairsRenderLayer()
+                CrosshairsRenderLayer(),
             ],
             interactions: [
                 HoverHighlightInteraction(),
@@ -50,9 +45,9 @@ struct LayoutCanvasView: View {
                 ToolInteraction(),
                 SelectionInteraction(),
                 DragInteraction(),
-                MarqueeInteraction()
+                MarqueeInteraction(),
             ],
-            inputProcessors: [ GridSnapProcessor() ],
+            inputProcessors: [GridSnapProcessor()],
             snapProvider: CircuitProSnapProvider(),
             registeredDraggedTypes: [.transferablePlacement],
             onPasteboardDropped: handlePlacementDrop
@@ -68,7 +63,8 @@ struct LayoutCanvasView: View {
 
     private func handlePlacementDrop(pasteboard: NSPasteboard, location: CGPoint) -> Bool {
         guard let data = pasteboard.data(forType: .transferablePlacement),
-              let transferable = try? JSONDecoder().decode(TransferablePlacement.self, from: data) else {
+            let transferable = try? JSONDecoder().decode(TransferablePlacement.self, from: data)
+        else {
             return false
         }
 

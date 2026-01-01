@@ -226,7 +226,7 @@ struct ComponentDesignView: View {
     private func createTextDefinitions(from editor: CanvasEditorManager, anchor: CGPoint)
         -> [CircuitText.Definition]
     {
-        let textItems = editor.graph.components(GraphTextComponent.self)
+        let textItems = editor.graph.components(CanvasText.self)
 
         return textItems.map { _, component in
             let model = component.resolvedText

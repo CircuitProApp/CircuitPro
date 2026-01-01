@@ -12,14 +12,10 @@ import Foundation
 /// Conforming types provide their current position and can update it.
 protocol CanvasDraggable: CanvasRenderable {
     /// The current world position of this item.
-    var worldPosition: CGPoint { get }
+    var worldPosition: CGPoint { get set }
 
     /// The current rotation of this item in radians.
     var worldRotation: CGFloat { get }
-
-    /// Moves this item by the given delta.
-    /// - Parameter delta: The amount to move in world coordinates.
-    func move(by delta: CGPoint)
 }
 
 /// State for tracking a drag operation on CanvasDraggable items.

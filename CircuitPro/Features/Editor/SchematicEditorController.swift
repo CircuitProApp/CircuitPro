@@ -168,7 +168,7 @@ final class SchematicEditorController: EditorController {
                 let worldAnchorPosition = resolvedModel.anchorPosition.applying(ownerTransform)
                 let worldRotation = ownerRotation + resolvedModel.cardinalRotation.radians
 
-                let component = GraphTextComponent(
+                let component = CanvasText(
                     resolvedText: resolvedModel,
                     displayText: displayString,
                     ownerID: inst.id,
@@ -190,9 +190,9 @@ final class SchematicEditorController: EditorController {
             }
         }
 
-        let existingIDs = Set(graph.nodeIDs(with: GraphTextComponent.self))
+        let existingIDs = Set(graph.nodeIDs(with: CanvasText.self))
         for id in existingIDs.subtracting(updatedIDs) {
-            graph.removeComponent(GraphTextComponent.self, for: id)
+            graph.removeComponent(CanvasText.self, for: id)
             if !graph.hasAnyComponent(for: id) {
                 graph.removeNode(id)
             }
@@ -215,7 +215,7 @@ final class SchematicEditorController: EditorController {
             for pinDef in symbolDef.pins {
                 let pinID = GraphPinID.makeID(ownerID: inst.id, pinID: pinDef.id)
                 let nodeID = NodeID(pinID)
-                let component = GraphPinComponent(
+                let component = CanvasPin(
                     pin: pinDef,
                     ownerID: inst.id,
                     ownerPosition: ownerPosition,
@@ -232,9 +232,9 @@ final class SchematicEditorController: EditorController {
             }
         }
 
-        let existingIDs = Set(graph.nodeIDs(with: GraphPinComponent.self))
+        let existingIDs = Set(graph.nodeIDs(with: CanvasPin.self))
         for id in existingIDs.subtracting(updatedIDs) {
-            graph.removeComponent(GraphPinComponent.self, for: id)
+            graph.removeComponent(CanvasPin.self, for: id)
             if !graph.hasAnyComponent(for: id) {
                 graph.removeNode(id)
             }
@@ -304,28 +304,22 @@ final class SchematicEditorController: EditorController {
         isApplyingTextChangesToModel = false
     }
 
-    func textBinding(for id: UUID) -> Binding<GraphTextComponent>? {
+    func textBinding(for id: UUID) -> Binding<CanvasText>? {
         let nodeID = NodeID(id)
-        guard graph.component(GraphTextComponent.self, for: nodeID) != nil else { return nil }
+        guard let component = graph.component(CanvasText.self, for: nodeID) else { return nil }
         return Binding(
-            get: { self.graph.component(GraphTextComponent.self, for: nodeID)! },
+            get: { component },
             set: { newValue in
                 self.setTextComponent(newValue, for: nodeID)
             }
         )
     }
 
-    private func setTextComponent(_ component: GraphTextComponent, for id: NodeID) {
-        var updated = component
-        let ownerTransform = component.ownerTransform
-        updated.worldPosition = component.resolvedText.relativePosition.applying(ownerTransform)
-        updated.worldAnchorPosition = component.resolvedText.anchorPosition.applying(ownerTransform)
-        updated.worldRotation =
-            component.ownerRotation + component.resolvedText.cardinalRotation.radians
+    private func setTextComponent(_ component: CanvasText, for id: NodeID) {
         if !graph.nodes.contains(id) {
             graph.addNode(id)
         }
-        graph.setComponent(updated, for: id)
+        graph.setComponent(component, for: id)
     }
 
     // MARK: - Persistence

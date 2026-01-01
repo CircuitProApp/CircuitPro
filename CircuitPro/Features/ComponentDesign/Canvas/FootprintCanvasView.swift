@@ -29,16 +29,13 @@ struct FootprintCanvasView: View {
                 environment: canvasManager.environment
                     .withInteractionMode(.graphOnly)
                     .withGraphRenderProviders([
-                        GraphTextRenderProvider(),
-                        GraphPadRenderProvider()
+                        CanvasRenderableProvider()
                     ])
                     .withGraphHaloProviders([
-                        GraphTextHaloProvider(),
-                        GraphPadHaloProvider()
+                        CanvasRenderableHaloProvider()
                     ])
                     .withGraphHitTestProviders([
-                        GraphTextHitTestProvider(),
-                        GraphPadHitTestProvider()
+                        CanvasRenderableHitTestProvider()
                     ]),
                 renderLayers: [
                     GridRenderLayer(),
@@ -48,7 +45,7 @@ struct FootprintCanvasView: View {
                     PreviewRenderLayer(),
                     HandlesRenderLayer(),
                     MarqueeRenderLayer(),
-                    CrosshairsRenderLayer()
+                    CrosshairsRenderLayer(),
                 ],
                 interactions: [
                     HoverHighlightInteraction(),
@@ -57,7 +54,7 @@ struct FootprintCanvasView: View {
                     ToolInteraction(),
                     SelectionInteraction(),
                     DragInteraction(),
-                    MarqueeInteraction()
+                    MarqueeInteraction(),
                 ],
                 inputProcessors: [
                     GridSnapProcessor()

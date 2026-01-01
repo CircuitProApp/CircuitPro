@@ -9,7 +9,7 @@ import SwiftUI
 
 struct GraphTextInspectorView: View {
 
-    @Binding var text: GraphTextComponent
+    @Binding var text: CanvasText
 
     @State private var selectedTab: InspectorTab = .attributes
 
@@ -52,12 +52,12 @@ struct GraphTextInspectorView: View {
         SidebarView(selectedTab: $selectedTab, availableTabs: availableTabs) {
             ScrollView {
                 VStack(spacing: 5) {
-//                    InspectorSection("Identity and Type") {
-//                        InspectorRow("Visibility") {
-//
-//                        }
-//
-//                    }
+                    //                    InspectorSection("Identity and Type") {
+                    //                        InspectorRow("Visibility") {
+                    //
+                    //                        }
+                    //
+                    //                    }
                     InspectorSection("Transform") {
                         PointControlView(
                             title: "Anchor",
@@ -68,7 +68,7 @@ struct GraphTextInspectorView: View {
                             point: positionBinding
                         )
 
-//                        RotationControlView(object: $anchoredText)
+                        //                        RotationControlView(object: $anchoredText)
 
                     }
                     Divider()

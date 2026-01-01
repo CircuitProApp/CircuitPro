@@ -15,13 +15,13 @@ struct CanvasElementRowView: View {
         componentDesignManager.componentProperties
     }
 
-
     var body: some View {
 
-
         switch element.kind {
-        case .primitive(_, let primitive):
-            Label(primitive.displayName, systemImage: primitive.symbol)
+        case .primitive(_, let primitiveElement):
+            Label(
+                primitiveElement.primitive.displayName,
+                systemImage: primitiveElement.primitive.symbol)
         case .pin(_, let pin):
             Label("Pin \(pin.pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
         case .pad(_, let pad):
@@ -35,7 +35,9 @@ struct CanvasElementRowView: View {
             case .componentReferenceDesignator:
                 Label("Reference Designator", systemImage: "textformat.alt")
             case .componentProperty(let definitionID, _):
-                let displayName = componentProperties.first { $0.id == definitionID }?.key.label ?? "Dynamic Property"
+                let displayName =
+                    componentProperties.first { $0.id == definitionID }?.key.label
+                    ?? "Dynamic Property"
                 Label(displayName, systemImage: "tag.fill")
             }
         }

@@ -31,17 +31,15 @@ struct SymbolCanvasView: View {
                 graph: symbolEditor.graph,
                 environment: canvasManager.environment
                     .withInteractionMode(.graphOnly)
+                    .withRenderables(symbolEditor.renderables)
                     .withGraphRenderProviders([
-                        GraphTextRenderProvider(),
-                        GraphPinRenderProvider()
+                        CanvasRenderableProvider()
                     ])
                     .withGraphHaloProviders([
-                        GraphTextHaloProvider(),
-                        GraphPinHaloProvider()
+                        CanvasRenderableHaloProvider()
                     ])
                     .withGraphHitTestProviders([
-                        GraphTextHitTestProvider(),
-                        GraphPinHitTestProvider()
+                        CanvasRenderableHitTestProvider()
                     ]),
                 renderLayers: [
                     GridRenderLayer(),
@@ -51,7 +49,7 @@ struct SymbolCanvasView: View {
                     PreviewRenderLayer(),
                     HandlesRenderLayer(),
                     MarqueeRenderLayer(),
-                    CrosshairsRenderLayer()
+                    CrosshairsRenderLayer(),
                 ],
                 interactions: [
                     HoverHighlightInteraction(),
@@ -60,7 +58,7 @@ struct SymbolCanvasView: View {
                     ToolInteraction(),
                     SelectionInteraction(),
                     DragInteraction(),
-                    MarqueeInteraction()
+                    MarqueeInteraction(),
                 ],
                 inputProcessors: [
                     GridSnapProcessor()

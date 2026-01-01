@@ -48,7 +48,7 @@ struct InspectorView: View {
 
     /// A computed property that finds the ComponentInstance for a selected layout footprint.
     private var selectedFootprintContext:
-        (component: ComponentInstance, footprint: Binding<GraphFootprintComponent>)?
+        (component: ComponentInstance, footprint: Binding<CanvasFootprint>)?
     {
         guard projectManager.selectedEditor == .layout,
             let nodeID = selectedGraphID,
@@ -62,7 +62,7 @@ struct InspectorView: View {
         return (componentInstance, footprintBinding)
     }
 
-    private var selectedTextBinding: Binding<GraphTextComponent>? {
+    private var selectedTextBinding: Binding<CanvasText>? {
         guard let nodeID = selectedGraphID else { return nil }
         switch projectManager.selectedEditor {
         case .schematic:
