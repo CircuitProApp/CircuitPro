@@ -10,7 +10,7 @@ import CoreGraphics
 import Foundation
 
 /// A canvas-space representation of a footprint, used for rendering and interaction in the Layout Editor.
-final class CanvasFootprint: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, HitTestPriorityProviding {
+struct CanvasFootprint: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, HitTestPriorityProviding {
 
     var ownerID: UUID
 
@@ -137,23 +137,4 @@ final class CanvasFootprint: LayeredDrawable, Bounded, HitTestable, HaloProvidin
     }
 }
 
-extension CanvasFootprint: CanvasItem {
-    var elementID: GraphElementID { .node(NodeID(ownerID)) }
-
-    func apply(to graph: CanvasGraph) {
-        let nodeID = NodeID(ownerID)
-        if !graph.nodes.contains(nodeID) {
-            graph.addNode(nodeID)
-        }
-        if let existing = graph.component(CanvasFootprint.self, for: nodeID) {
-            if existing !== self {
-                existing.ownerID = ownerID
-                existing.position = position
-                existing.rotation = rotation
-                existing.primitives = primitives
-            }
-            return
-        }
-        graph.setComponent(self, for: nodeID)
-    }
-}
+extension CanvasFootprint: CanvasItem {}

@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a text element, used for rendering and interaction.
-final class CanvasText: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
+struct CanvasText: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
 
     var resolvedText: CircuitText.Resolved
     var displayText: String
@@ -89,7 +89,9 @@ final class CanvasText: LayeredDrawable, Bounded, HitTestable, HaloProviding, Tr
 
     // MARK: - LayeredDrawable
 
-    var id: UUID { resolvedText.id }
+    var id: UUID {
+        GraphTextID.makeID(for: resolvedText.source, ownerID: ownerID, fallback: resolvedText.id)
+    }
 
     var renderBounds: CGRect {
         let path = worldPath()
@@ -175,39 +177,4 @@ final class CanvasText: LayeredDrawable, Bounded, HitTestable, HaloProviding, Tr
     }
 }
 
-extension CanvasText: CanvasItem {
-    var elementID: GraphElementID {
-        let textID = GraphTextID.makeID(
-            for: resolvedText.source,
-            ownerID: ownerID,
-            fallback: resolvedText.id
-        )
-        return .node(NodeID(textID))
-    }
-
-    func apply(to graph: CanvasGraph) {
-        let textID = GraphTextID.makeID(
-            for: resolvedText.source,
-            ownerID: ownerID,
-            fallback: resolvedText.id
-        )
-        let nodeID = NodeID(textID)
-        if !graph.nodes.contains(nodeID) {
-            graph.addNode(nodeID)
-        }
-        if let existing = graph.component(CanvasText.self, for: nodeID) {
-            if existing !== self {
-                existing.resolvedText = resolvedText
-                existing.displayText = displayText
-                existing.ownerID = ownerID
-                existing.target = target
-                existing.ownerPosition = ownerPosition
-                existing.ownerRotation = ownerRotation
-                existing.layerId = layerId
-                existing.showsAnchorGuides = showsAnchorGuides
-            }
-            return
-        }
-        graph.setComponent(self, for: nodeID)
-    }
-}
+extension CanvasText: CanvasItem {}

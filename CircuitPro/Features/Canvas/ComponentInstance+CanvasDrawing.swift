@@ -156,19 +156,4 @@ extension ComponentInstance: LayeredDrawable, Bounded, HitTestable, HaloProvidin
 
 }
 
-extension ComponentInstance: CanvasItem {
-    var elementID: GraphElementID { .node(NodeID(id)) }
-
-    func apply(to graph: CanvasGraph) {
-        let nodeID = NodeID(id)
-        if !graph.nodes.contains(nodeID) {
-            graph.addNode(nodeID)
-        }
-        if let existing = graph.component(ComponentInstance.self, for: nodeID),
-            existing === self
-        {
-            return
-        }
-        graph.setComponent(self, for: nodeID)
-    }
-}
+extension ComponentInstance: CanvasItem {}

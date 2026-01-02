@@ -109,6 +109,11 @@ final class WireTool: CanvasTool {
 
         switch graphHit {
         case .node(let nodeID):
+            if let item = context.items.first(where: { $0.id == nodeID.rawValue }),
+                item is CanvasPin
+            {
+                return true
+            }
             if graph.component(CanvasPin.self, for: nodeID) != nil {
                 return true
             }

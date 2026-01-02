@@ -233,14 +233,18 @@ final class SchematicEditorController: EditorController {
         let ownerPosition = component.symbolInstance.position
         let ownerRotation = component.symbolInstance.rotation
 
-        for (_, pin) in graph.components(CanvasPin.self) where pin.ownerID == ownerID {
-            pin.ownerPosition = ownerPosition
-            pin.ownerRotation = ownerRotation
+        for (id, pin) in graph.components(CanvasPin.self) where pin.ownerID == ownerID {
+            var updated = pin
+            updated.ownerPosition = ownerPosition
+            updated.ownerRotation = ownerRotation
+            graph.setComponent(updated, for: id)
         }
 
-        for (_, text) in graph.components(CanvasText.self) where text.ownerID == ownerID {
-            text.ownerPosition = ownerPosition
-            text.ownerRotation = ownerRotation
+        for (id, text) in graph.components(CanvasText.self) where text.ownerID == ownerID {
+            var updated = text
+            updated.ownerPosition = ownerPosition
+            updated.ownerRotation = ownerRotation
+            graph.setComponent(updated, for: id)
         }
 
         let symbolDef = component.symbolInstance.definition ?? component.definition?.symbol

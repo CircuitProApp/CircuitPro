@@ -136,9 +136,10 @@ final class LayoutEditorController: EditorController {
                     )
                     if self.cachedFootprintTransforms[comp.id] != transform {
                         let nodeID = NodeID(comp.id)
-                        if let component = self.graph.component(CanvasFootprint.self, for: nodeID) {
+                        if var component = self.graph.component(CanvasFootprint.self, for: nodeID) {
                             component.position = fp.position
                             component.rotation = fp.rotation
+                            self.graph.setComponent(component, for: nodeID)
                             self.syncOwnedComponents(for: component)
                         }
                     }
@@ -526,9 +527,11 @@ final class LayoutEditorController: EditorController {
             graph.setComponent(updated, for: id)
         }
 
-        for (_, text) in graph.components(CanvasText.self) where text.ownerID == ownerID {
-            text.ownerPosition = ownerPosition
-            text.ownerRotation = ownerRotation
+        for (id, text) in graph.components(CanvasText.self) where text.ownerID == ownerID {
+            var updated = text
+            updated.ownerPosition = ownerPosition
+            updated.ownerRotation = ownerRotation
+            graph.setComponent(updated, for: id)
         }
     }
 

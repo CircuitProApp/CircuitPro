@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a graphic primitive (line, rect, etc.), used for rendering and interaction.
-final class CanvasPrimitiveElement: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
+struct CanvasPrimitiveElement: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
 
     var primitive: AnyCanvasPrimitive
 
@@ -99,20 +99,4 @@ final class CanvasPrimitiveElement: LayeredDrawable, Bounded, HitTestable, HaloP
     }
 }
 
-extension CanvasPrimitiveElement: CanvasItem {
-    var elementID: GraphElementID { .node(NodeID(id)) }
-
-    func apply(to graph: CanvasGraph) {
-        let nodeID = NodeID(id)
-        if !graph.nodes.contains(nodeID) {
-            graph.addNode(nodeID)
-        }
-        if let existing = graph.component(CanvasPrimitiveElement.self, for: nodeID) {
-            if existing !== self {
-                existing.primitive = primitive
-            }
-            return
-        }
-        graph.setComponent(self, for: nodeID)
-    }
-}
+extension CanvasPrimitiveElement: CanvasItem {}

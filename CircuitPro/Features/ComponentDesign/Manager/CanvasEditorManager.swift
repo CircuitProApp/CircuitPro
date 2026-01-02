@@ -208,9 +208,10 @@ final class CanvasEditorManager {
         return Binding(
             get: { component.primitive },
             set: {
-                component.primitive = $0
+                var updated = component
+                updated.primitive = $0
                 self.primitiveCache[nodeID] = $0
-                self.graph.setComponent(component, for: nodeID)
+                self.graph.setComponent(updated, for: nodeID)
             }
         )
     }
@@ -239,8 +240,9 @@ final class CanvasEditorManager {
         return Binding(
             get: { component.pin },
             set: { newPin in
-                component.pin = newPin
-                self.graph.setComponent(component, for: nodeID)
+                var updated = component
+                updated.pin = newPin
+                self.graph.setComponent(updated, for: nodeID)
             }
         )
     }
@@ -362,8 +364,9 @@ extension CanvasEditorManager {
             let newText = resolveText(
                 for: component.resolvedText.content, componentData: componentData)
             guard component.displayText != newText else { continue }
-            component.displayText = newText
-            setTextComponent(component, for: id)
+            var updated = component
+            updated.displayText = newText
+            setTextComponent(updated, for: id)
         }
     }
 
@@ -446,11 +449,12 @@ extension CanvasEditorManager {
                 guard let current = self.graph.component(CanvasText.self, for: nodeID) else {
                     return
                 }
-                current.resolvedText.content = .componentProperty(
+                var updated = current
+                updated.resolvedText.content = .componentProperty(
                     definitionID: definitionID, options: newOptions)
-                current.displayText = self.resolveText(
-                    for: current.resolvedText.content, componentData: componentData)
-                self.setTextComponent(current, for: nodeID)
+                updated.displayText = self.resolveText(
+                    for: updated.resolvedText.content, componentData: componentData)
+                self.setTextComponent(updated, for: nodeID)
             }
         )
     }

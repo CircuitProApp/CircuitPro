@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a pin, used for rendering and interaction.
-final class CanvasPin: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
+struct CanvasPin: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
 
     var pin: Pin
     var ownerID: UUID?
@@ -46,7 +46,7 @@ final class CanvasPin: LayeredDrawable, Bounded, HitTestable, HaloProviding, Tra
 
     // MARK: - LayeredDrawable
 
-    var id: UUID { pin.id }
+    var id: UUID { GraphPinID.makeID(ownerID: ownerID, pinID: pin.id) }
 
     var renderBounds: CGRect {
         let worldPos = pin.position.applying(ownerTransform)
@@ -113,31 +113,7 @@ final class CanvasPin: LayeredDrawable, Bounded, HitTestable, HaloProviding, Tra
     }
 }
 
-extension CanvasPin: CanvasItem {
-    var elementID: GraphElementID {
-        let pinID = GraphPinID.makeID(ownerID: ownerID, pinID: pin.id)
-        return .node(NodeID(pinID))
-    }
-
-    func apply(to graph: CanvasGraph) {
-        let nodeID = NodeID(GraphPinID.makeID(ownerID: ownerID, pinID: pin.id))
-        if !graph.nodes.contains(nodeID) {
-            graph.addNode(nodeID)
-        }
-        if let existing = graph.component(CanvasPin.self, for: nodeID) {
-            if existing !== self {
-                existing.pin = pin
-                existing.ownerID = ownerID
-                existing.ownerPosition = ownerPosition
-                existing.ownerRotation = ownerRotation
-                existing.layerId = layerId
-                existing.isSelectable = isSelectable
-            }
-            return
-        }
-        graph.setComponent(self, for: nodeID)
-    }
-}
+extension CanvasPin: CanvasItem {}
 
 extension CanvasPin: ConnectionPoint {}
 

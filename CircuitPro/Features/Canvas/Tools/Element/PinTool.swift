@@ -24,6 +24,20 @@ final class PinTool: CanvasTool {
         return .command(
             CanvasToolCommand { interactionContext, _ in
                 let graph = interactionContext.renderContext.graph
+                if let itemsBinding = interactionContext.renderContext.environment.items {
+                    var items = itemsBinding.wrappedValue
+                    let component = CanvasPin(
+                        pin: pin,
+                        ownerID: nil,
+                        ownerPosition: .zero,
+                        ownerRotation: 0,
+                        layerId: nil,
+                        isSelectable: true
+                    )
+                    items.append(component)
+                    itemsBinding.wrappedValue = items
+                    return
+                }
                 let component = CanvasPin(
                     pin: pin,
                     ownerID: nil,
@@ -64,9 +78,17 @@ final class PinTool: CanvasTool {
     }
 
     private func nextPinNumber(in context: RenderContext) -> Int {
+        let itemNumbers = context.items.compactMap { item -> Int? in
+            guard let pin = item as? CanvasPin else { return nil }
+            return pin.pin.number
+        }
+        if let maxItem = itemNumbers.max() {
+            return maxItem + 1
+        }
+
         let graph = context.graph
-        let numbers = graph.components(CanvasPin.self).map { $0.1.pin.number }
-        return numbers.max().map { $0 + 1 } ?? 1
+        let graphNumbers = graph.components(CanvasPin.self).map { $0.1.pin.number }
+        return graphNumbers.max().map { $0 + 1 } ?? 1
     }
 
     override func handleEscape() -> Bool {
