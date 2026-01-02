@@ -6,9 +6,8 @@ final class HoverHighlightInteraction: CanvasInteraction {
 
     func mouseMoved(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard controller.selectedTool is CursorTool else { return }
-        let graph = context.graph
-        if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
-            let resolved = context.selectionTarget(for: graphHit)
+        if let itemHit = ItemHitTester().hitTest(point: point, context: context) {
+            let resolved = context.selectionTarget(for: itemHit)
             controller.setInteractionHighlight(elementIDs: [resolved])
         } else {
             controller.setInteractionHighlight(elementIDs: [])

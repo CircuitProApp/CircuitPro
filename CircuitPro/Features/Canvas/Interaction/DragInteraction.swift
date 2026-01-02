@@ -227,7 +227,7 @@ final class DragInteraction: CanvasInteraction {
         at point: CGPoint, event: NSEvent, context: RenderContext
     ) -> Bool {
         let graph = context.graph
-        guard let graphHit = GraphHitTester().hitTest(point: point, context: context) else {
+        guard let graphHit = ItemHitTester().hitTest(point: point, context: context) else {
             return false
         }
 

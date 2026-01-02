@@ -24,7 +24,7 @@ final class MarqueeInteraction: CanvasInteraction {
         guard controller.selectedTool is CursorTool else { return false }
 
         let graph = context.graph
-        if GraphHitTester().hitTest(point: point, context: context) != nil {
+        if ItemHitTester().hitTest(point: point, context: context) != nil {
             return false
         }
 
@@ -51,8 +51,7 @@ final class MarqueeInteraction: CanvasInteraction {
             $0.marqueeRect = marqueeRect
         }
 
-        let graph = context.graph
-        let hitTester = GraphHitTester()
+        let hitTester = ItemHitTester()
         let rawHits = hitTester.hitTestAll(in: marqueeRect, context: context)
         let resolved = Set(rawHits.map { context.selectionTarget(for: $0) })
         controller.setInteractionHighlight(elementIDs: resolved)
