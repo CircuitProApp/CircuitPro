@@ -7,7 +7,7 @@
 
 import AppKit
 
-protocol CanvasPrimitive: Transformable, Drawable, Bounded, HandleEditable, Identifiable, Codable, Equatable, Hashable {
+protocol CanvasPrimitive: Transformable, Drawable, Bounded, HandleEditable, Identifiable, Codable, Equatable, Hashable, Layerable {
 
     var id: UUID { get }
     var layerId: UUID? { get set }
@@ -20,10 +20,10 @@ protocol CanvasPrimitive: Transformable, Drawable, Bounded, HandleEditable, Iden
 
 // MARK: - Drawable Conformance
 extension CanvasPrimitive {
-    func makeDrawingPrimitives() -> [DrawingPrimitive] {
+    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
         // We crash intentionally to alert the developer that they are using the wrong code path.
-        // The renderer should always use `makeDrawingPrimitives(with:)` for this type.
-        fatalError("`makeDrawingPrimitives()` should not be called directly on a CanvasPrimitive. The renderer must resolve the color first and call `makeDrawingPrimitives(with: resolvedColor)`.")
+        // The renderer should always resolve colors before drawing primitives.
+        fatalError("`makeDrawingPrimitives(in:)` should not be called directly on a CanvasPrimitive. The renderer must resolve the color first and call `makeDrawingPrimitives(with: resolvedColor)`.")
     }
 
     // --- NEW METHOD: This is the correct way to draw a primitive. ---
@@ -59,6 +59,10 @@ extension CanvasPrimitive {
             let totalWidth = self.strokeWidth + haloPadding
             return path.copy(strokingWithWidth: totalWidth, lineCap: .round, lineJoin: .miter, miterLimit: 10)
         }
+    }
+
+    func haloPath() -> CGPath? {
+        makeHaloPath()
     }
 }
 

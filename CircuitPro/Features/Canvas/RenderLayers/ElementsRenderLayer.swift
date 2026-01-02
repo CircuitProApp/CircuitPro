@@ -113,14 +113,14 @@ final class ElementsRenderLayer: RenderLayer {
         var layerTargetsByID: [UUID: [UUID?]] = [:]
 
         for item in items {
-            guard let drawable = item as? LayeredDrawable else { continue }
-            let primitives = drawable.primitivesByLayer(in: context)
-            for (layerId, list) in primitives {
-                primitivesByLayer[layerId, default: []].append(contentsOf: list)
+            guard let drawable = item as? Drawable else { continue }
+            let primitives = drawable.makeDrawingPrimitives(in: context)
+            for layered in primitives {
+                primitivesByLayer[layered.layerId, default: []].append(layered.primitive)
             }
-            let layerTargets = Array(primitives.keys)
+            let layerTargets = primitives.map { $0.layerId }
             if !layerTargets.isEmpty {
-                layerTargetsByID[item.id] = layerTargets
+                layerTargetsByID[item.id] = Array(Set(layerTargets))
             }
         }
 
@@ -136,9 +136,9 @@ final class ElementsRenderLayer: RenderLayer {
         let haloIDs = context.highlightedElementIDs
 
         for item in items {
-            guard let haloProvider = item as? HaloProviding else { continue }
+            guard let drawable = item as? Drawable else { continue }
             guard haloIDs.contains(.node(NodeID(item.id))) else { continue }
-            guard let haloPath = haloProvider.haloPath() else { continue }
+            guard let haloPath = drawable.haloPath() else { continue }
 
             let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
             let haloPrimitive = DrawingPrimitive.stroke(
@@ -149,7 +149,8 @@ final class ElementsRenderLayer: RenderLayer {
                 lineJoin: .round
             )
 
-            let layerTargets = layerTargetsByID[item.id] ?? [nil]
+            let fallbackTargets = layerTargetsByID[item.id] ?? []
+            let layerTargets = layerTargets(for: item, fallback: fallbackTargets)
 
             for layerId in layerTargets {
                 primitivesByLayer[layerId, default: []].append(haloPrimitive)
@@ -163,7 +164,7 @@ final class ElementsRenderLayer: RenderLayer {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
         let haloIDs = context.highlightedElementIDs
 
-        for (id, item) in graph.allComponentsConforming((any HaloProviding).self) {
+        for (id, item) in graph.allComponentsConforming((any Drawable).self) {
             guard haloIDs.contains(id) else { continue }
             guard let haloPath = item.haloPath() else { continue }
 
@@ -176,7 +177,8 @@ final class ElementsRenderLayer: RenderLayer {
                 lineJoin: .round
             )
 
-            let layerTargets = layerTargets(for: item, context: context)
+            let fallbackTargets = layerTargets(for: item, context: context)
+            let layerTargets = layerTargets(for: item, fallback: fallbackTargets)
 
             for layerId in layerTargets {
                 primitivesByLayer[layerId, default: []].append(haloPrimitive)
@@ -221,17 +223,25 @@ final class ElementsRenderLayer: RenderLayer {
     }
 
     private func layerTargets(
-        for item: any HaloProviding,
+        for item: Any,
+        fallback: [UUID?]
+    ) -> [UUID?] {
+        if let multiLayerable = item as? MultiLayerable, !multiLayerable.layerIds.isEmpty {
+            return multiLayerable.layerIds.map { Optional($0) }
+        }
+        if let layerable = item as? Layerable {
+            return [layerable.layerId]
+        }
+        return fallback.isEmpty ? [nil] : fallback
+    }
+
+    private func layerTargets(
+        for item: any Drawable,
         context: RenderContext
     ) -> [UUID?] {
-        if let drawable = item as? LayeredDrawable {
-            let primitives = drawable.primitivesByLayer(in: context)
-            let targets = Array(primitives.keys)
-            if !targets.isEmpty {
-                return targets
-            }
-        }
-        return [nil]
+        let primitives = item.makeDrawingPrimitives(in: context)
+        let targets = Array(Set(primitives.map { $0.layerId }))
+        return targets.isEmpty ? [nil] : targets
     }
 
     private func createShapeLayer(for primitive: DrawingPrimitive) -> CAShapeLayer {

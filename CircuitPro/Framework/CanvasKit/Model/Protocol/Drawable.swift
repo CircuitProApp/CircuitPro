@@ -10,12 +10,16 @@ import AppKit
 /// Describes an object's visual representation for rendering.
 /// Conforming types are also identifiable, allowing for selection tracking.
 protocol Drawable: Identifiable where ID == UUID {
-    /// Generates a list of high-level drawing commands that describe the element's appearance.
-    func makeDrawingPrimitives() -> [DrawingPrimitive]
+    /// Generates a list of drawing commands and their optional layer targets.
+    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive]
 
     /// Provides the CGPath to be used for this element's selection halo.
     /// The renderer will be responsible for styling this path.
-    func makeHaloPath() -> CGPath?
+    func haloPath() -> CGPath?
+}
+
+extension Drawable {
+    func haloPath() -> CGPath? { nil }
 }
 
 // MARK: - Helpers

@@ -223,26 +223,24 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
 
 extension AnyCanvasPrimitive: CanvasItem {}
 
-extension AnyCanvasPrimitive: LayeredDrawable, HitTestable, HaloProviding {
-    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+extension AnyCanvasPrimitive: Drawable, HitTestable {
+    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
         let color = resolveColor(in: context)
         let primitives = makeDrawingPrimitives(with: color)
         var transform = CGAffineTransform(translationX: position.x, y: position.y)
             .rotated(by: rotation)
         let worldPrimitives = primitives.map { $0.applying(transform: &transform) }
 
-        let layerTargets: [UUID?]
+        let targets: [UUID?]
         if !layerIds.isEmpty {
-            layerTargets = layerIds.map { Optional($0) }
+            targets = layerIds.map { Optional($0) }
         } else {
-            layerTargets = [layerId]
+            targets = [layerId]
         }
 
-        var result: [UUID?: [DrawingPrimitive]] = [:]
-        for layerId in layerTargets {
-            result[layerId, default: []].append(contentsOf: worldPrimitives)
+        return targets.flatMap { layerId in
+            worldPrimitives.map { LayeredDrawingPrimitive($0, layerId: layerId) }
         }
-        return result
     }
 
     func haloPath() -> CGPath? {
@@ -281,7 +279,7 @@ extension AnyCanvasPrimitive: LayeredDrawable, HitTestable, HaloProviding {
     }
 }
 
-extension AnyCanvasPrimitive {
+extension AnyCanvasPrimitive: MultiLayerable {
     var layerIds: [UUID] {
         get { layerId.map { [$0] } ?? [] }
         set { layerId = newValue.first }

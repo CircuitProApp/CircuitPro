@@ -9,14 +9,14 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-struct WireVertexComponent: Hashable, LayeredDrawable {
+struct WireVertexComponent: Hashable, Drawable {
     let id: UUID
     var point: CGPoint
     var clusterID: UUID?
     var ownership: VertexOwnership
     var degree: Int
 
-    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
         let needsDot: Bool
         switch ownership {
         case .pin:
@@ -24,7 +24,7 @@ struct WireVertexComponent: Hashable, LayeredDrawable {
         default:
             needsDot = degree > 2
         }
-        guard needsDot else { return [:] }
+        guard needsDot else { return [] }
 
         let dotRect = CGRect(x: point.x - 2, y: point.y - 2, width: 4, height: 4)
         let dotPath = CGPath(ellipseIn: dotRect, transform: nil)
@@ -32,11 +32,11 @@ struct WireVertexComponent: Hashable, LayeredDrawable {
             path: dotPath,
             color: NSColor.controlAccentColor.cgColor
         )
-        return [nil: [dotPrimitive]]
+        return [LayeredDrawingPrimitive(dotPrimitive, layerId: nil)]
     }
 }
 
-struct WireEdgeComponent: Hashable, LayeredDrawable, HitTestable, HaloProviding, Bounded {
+struct WireEdgeComponent: Hashable, Drawable, HitTestable, Bounded, Layerable {
     let id: UUID
     var start: NodeID
     var end: NodeID
@@ -46,7 +46,7 @@ struct WireEdgeComponent: Hashable, LayeredDrawable, HitTestable, HaloProviding,
     var layerId: UUID? = nil
     var lineWidth: CGFloat = 1.0
 
-    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
         let path = CGMutablePath()
         path.move(to: startPoint)
         path.addLine(to: endPoint)
@@ -56,7 +56,7 @@ struct WireEdgeComponent: Hashable, LayeredDrawable, HitTestable, HaloProviding,
             lineWidth: lineWidth,
             lineCap: .round
         )
-        return [layerId: [primitive]]
+        return [LayeredDrawingPrimitive(primitive, layerId: layerId)]
     }
 
     func haloPath() -> CGPath? {

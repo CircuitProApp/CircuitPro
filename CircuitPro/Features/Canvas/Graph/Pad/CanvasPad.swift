@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-struct CanvasPad: LayeredDrawable, Bounded, HitTestable, HaloProviding {
+struct CanvasPad: Drawable, Bounded, HitTestable, Layerable {
     var pad: Pad
     var ownerID: UUID?
     var ownerPosition: CGPoint
@@ -29,9 +29,9 @@ struct CanvasPad: LayeredDrawable, Bounded, HitTestable, HaloProviding {
         return localBounds.applying(worldTransform)
     }
 
-    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
         let localPath = pad.calculateCompositePath()
-        guard !localPath.isEmpty else { return [:] }
+        guard !localPath.isEmpty else { return [] }
 
         let color: CGColor
         if let layerId,
@@ -45,7 +45,7 @@ struct CanvasPad: LayeredDrawable, Bounded, HitTestable, HaloProviding {
         let primitive = DrawingPrimitive.fill(path: localPath, color: color)
         var transform = worldTransform
         let worldPrimitive = primitive.applying(transform: &transform)
-        return [layerId: [worldPrimitive]]
+        return [LayeredDrawingPrimitive(worldPrimitive, layerId: layerId)]
     }
 
     func haloPath() -> CGPath? {

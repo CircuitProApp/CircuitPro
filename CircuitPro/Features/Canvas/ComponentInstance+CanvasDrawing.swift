@@ -9,7 +9,7 @@ import AppKit
 
 // MARK: - Canvas Drawing & Interaction
 
-extension ComponentInstance: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable {
+extension ComponentInstance: Drawable, Bounded, HitTestable, Transformable {
 
     var position: CGPoint {
         get { symbolInstance.position }
@@ -32,8 +32,8 @@ extension ComponentInstance: LayeredDrawable, Bounded, HitTestable, HaloProvidin
         renderBounds
     }
 
-    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
-        var result: [UUID?: [DrawingPrimitive]] = [:]
+    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
+        var result: [LayeredDrawingPrimitive] = []
 
         guard let symbolDef = symbolInstance.definition else { return result }
 
@@ -54,7 +54,9 @@ extension ComponentInstance: LayeredDrawable, Bounded, HitTestable, HaloProvidin
             .rotated(by: primitive.rotation)
             .concatenating(ownerTransform)
             let worldPrimitives = drawPrimitives.map { $0.applying(transform: &transform) }
-            result[primitive.layerId, default: []].append(contentsOf: worldPrimitives)
+            for worldPrimitive in worldPrimitives {
+                result.append(LayeredDrawingPrimitive(worldPrimitive, layerId: primitive.layerId))
+            }
         }
 
         return result

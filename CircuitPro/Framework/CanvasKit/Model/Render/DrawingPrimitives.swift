@@ -7,6 +7,17 @@
 
 import AppKit
 
+/// A drawing primitive paired with an optional layer target.
+struct LayeredDrawingPrimitive {
+    var primitive: DrawingPrimitive
+    var layerId: UUID?
+
+    init(_ primitive: DrawingPrimitive, layerId: UUID?) {
+        self.primitive = primitive
+        self.layerId = layerId
+    }
+}
+
 /// An enum that describes a single, high-level drawing operation.
 enum DrawingPrimitive {
     case fill(path: CGPath, color: CGColor, rule: CAShapeLayerFillRule = .nonZero)

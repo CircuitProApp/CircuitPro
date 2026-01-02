@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a pin, used for rendering and interaction.
-struct CanvasPin: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable {
+struct CanvasPin: Drawable, Bounded, HitTestable, Transformable, Layerable {
 
     var pin: Pin
     var ownerID: UUID?
@@ -44,7 +44,7 @@ struct CanvasPin: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transfor
             .concatenating(ownerTransform)
     }
 
-    // MARK: - LayeredDrawable
+    // MARK: - Drawable
 
     var id: UUID { GraphPinID.makeID(ownerID: ownerID, pinID: pin.id) }
 
@@ -65,14 +65,14 @@ struct CanvasPin: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transfor
         renderBounds
     }
 
-    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
         let localPrimitives = pin.makeDrawingPrimitives()
-        guard !localPrimitives.isEmpty else { return [:] }
+        guard !localPrimitives.isEmpty else { return [] }
 
         var transform = worldTransform
         let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
 
-        return [layerId: worldPrimitives]
+        return worldPrimitives.map { LayeredDrawingPrimitive($0, layerId: layerId) }
     }
 
     func haloPath() -> CGPath? {

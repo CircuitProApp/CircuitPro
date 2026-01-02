@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a text element, used for rendering and interaction.
-struct CanvasText: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable {
+struct CanvasText: Drawable, Bounded, HitTestable, Transformable, Layerable {
 
     var resolvedText: CircuitText.Resolved
     var displayText: String
@@ -87,7 +87,7 @@ struct CanvasText: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transfo
             .rotated(by: worldRotation)
     }
 
-    // MARK: - LayeredDrawable
+    // MARK: - Drawable
 
     var id: UUID {
         GraphTextID.makeID(for: resolvedText.source, ownerID: ownerID, fallback: resolvedText.id)
@@ -104,11 +104,11 @@ struct CanvasText: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transfo
         renderBounds
     }
 
-    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
-        guard isVisible else { return [:] }
+    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
+        guard isVisible else { return [] }
 
         let path = worldPath()
-        guard !path.isEmpty else { return [:] }
+        guard !path.isEmpty else { return [] }
 
         var primitives: [DrawingPrimitive] = []
 
@@ -131,7 +131,7 @@ struct CanvasText: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transfo
                     lineWidth: 1 / context.magnification))
         }
 
-        return [layerId: primitives]
+        return primitives.map { LayeredDrawingPrimitive($0, layerId: layerId) }
     }
 
     func haloPath() -> CGPath? {

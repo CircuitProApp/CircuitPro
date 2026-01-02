@@ -11,10 +11,10 @@ struct GraphRenderAdapter {
     func primitivesByLayer(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
-        for (_, item) in graph.allComponentsConforming(LayeredDrawable.self) {
-            let primitives = item.primitivesByLayer(in: context)
-            for (layerId, list) in primitives {
-                primitivesByLayer[layerId, default: []].append(contentsOf: list)
+        for (_, item) in graph.allComponentsConforming(Drawable.self) {
+            let primitives = item.makeDrawingPrimitives(in: context)
+            for layered in primitives {
+                primitivesByLayer[layered.layerId, default: []].append(layered.primitive)
             }
         }
 

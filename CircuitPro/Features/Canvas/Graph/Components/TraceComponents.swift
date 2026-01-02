@@ -12,7 +12,7 @@ struct TraceVertexComponent {
     var point: CGPoint
 }
 
-struct TraceEdgeComponent: LayeredDrawable, HitTestable, HaloProviding, Bounded {
+struct TraceEdgeComponent: Drawable, HitTestable, Bounded, Layerable {
     let id: UUID
     var start: NodeID
     var end: NodeID
@@ -21,7 +21,7 @@ struct TraceEdgeComponent: LayeredDrawable, HitTestable, HaloProviding, Bounded 
     var width: CGFloat
     var layerId: UUID?
 
-    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
         let path = CGMutablePath()
         path.move(to: startPoint)
         path.addLine(to: endPoint)
@@ -33,8 +33,7 @@ struct TraceEdgeComponent: LayeredDrawable, HitTestable, HaloProviding, Bounded 
             lineWidth: width,
             lineCap: .round
         )
-
-        return [layerId: [primitive]]
+        return [LayeredDrawingPrimitive(primitive, layerId: layerId)]
     }
 
     func haloPath() -> CGPath? {
