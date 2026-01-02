@@ -21,13 +21,12 @@ struct FootprintCanvasView: View {
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
                 viewport: $canvasManager.viewport,
-                store: footprintEditor.canvasStore,
                 tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
-                graph: footprintEditor.graph,
+                items: $footprintEditor.items,
+                selectedIDs: $footprintEditor.selectedElementIDs,
                 layers: $footprintEditor.layers,
                 activeLayerId: $footprintEditor.activeLayerId,
-                environment: canvasManager.environment
-                    .withInteractionMode(.graphOnly),
+                environment: canvasManager.environment,
                 renderLayers: [
                     GridRenderLayer(),
                     AxesRenderLayer(),

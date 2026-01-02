@@ -226,9 +226,9 @@ struct ComponentDesignView: View {
     private func createTextDefinitions(from editor: CanvasEditorManager, anchor: CGPoint)
         -> [CircuitText.Definition]
     {
-        let textItems = editor.graph.components(CanvasText.self)
+        let textItems = editor.items.compactMap { $0 as? CanvasText }
 
-        return textItems.map { _, component in
+        return textItems.map { component in
             let model = component.resolvedText
             let centeredPosition = CGPoint(
                 x: model.relativePosition.x - anchor.x,

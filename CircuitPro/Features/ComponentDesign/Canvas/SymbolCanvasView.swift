@@ -26,11 +26,10 @@ struct SymbolCanvasView: View {
         SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
                 viewport: $canvasManager.viewport,
-                store: symbolEditor.canvasStore,
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
-                graph: symbolEditor.graph,
-                environment: canvasManager.environment
-                    .withInteractionMode(.graphOnly),
+                items: $symbolEditor.items,
+                selectedIDs: $symbolEditor.selectedElementIDs,
+                environment: canvasManager.environment,
                 renderLayers: [
                     GridRenderLayer(),
                     AxesRenderLayer(),

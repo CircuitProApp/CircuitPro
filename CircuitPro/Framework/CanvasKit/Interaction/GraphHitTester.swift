@@ -17,7 +17,7 @@ struct GraphHitTester {
             guard let hitTestable = item as? (any HitTestable & Bounded) else { continue }
             if hitTestable.hitTest(point: point, tolerance: tolerance) {
                 let area = hitTestable.boundingBox.width * hitTestable.boundingBox.height
-                let priority = item.hitTestPriority
+                let priority = hitTestable.hitTestPriority
                 considerHit(
                     id: .node(NodeID(item.id)),
                     priority: priority,

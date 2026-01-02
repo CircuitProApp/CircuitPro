@@ -16,13 +16,13 @@ struct SymbolPropertiesView: View {
         VStack {
             ScrollView {
                 if let selection = symbolEditor.singleSelectedPin,
-                   let binding = symbolEditor.pinBinding(for: selection.id.rawValue) {
+                   let binding = symbolEditor.pinBinding(for: selection.id) {
                     PinPropertiesView(pin: binding)
                 } else if let selection = symbolEditor.singleSelectedText,
-                          let binding = symbolEditor.textBinding(for: selection.id.rawValue) {
+                          let binding = symbolEditor.textBinding(for: selection.id) {
                     TextPropertiesView(textID: selection.id, text: binding)
                 } else if let selection = symbolEditor.singleSelectedPrimitive,
-                          let binding = symbolEditor.primitiveBinding(for: selection.id.rawValue) {
+                          let binding = symbolEditor.primitiveBinding(for: selection.id) {
                     PrimitivePropertiesView(primitive: binding)
                 } else {
                     Text(symbolEditor.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")

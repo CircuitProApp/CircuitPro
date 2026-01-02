@@ -18,15 +18,15 @@ struct CanvasElementRowView: View {
     var body: some View {
 
         switch element.kind {
-        case .primitive(_, let primitiveElement):
+        case .primitive(let primitive):
             Label(
-                primitiveElement.primitive.displayName,
-                systemImage: primitiveElement.primitive.symbol)
-        case .pin(_, let pin):
+                primitive.displayName,
+                systemImage: primitive.symbol)
+        case .pin(let pin):
             Label("Pin \(pin.pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
-        case .pad(_, let pad):
+        case .pad(let pad):
             Label("Pad \(pad.pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
-        case .text(_, let text):
+        case .text(let text):
             switch text.resolvedText.content {
             case .static:
                 Label("\"\(text.displayText)\"", systemImage: "text.bubble.fill")

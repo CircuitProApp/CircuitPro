@@ -15,7 +15,7 @@ struct TextPropertiesView: View {
     @Environment(CanvasEditorManager.self)
     private var editor
 
-    let textID: NodeID
+    let textID: UUID
     @Binding var text: CanvasText
 
     private var componentData: (name: String, prefix: String, properties: [Property.Definition]) {
@@ -114,7 +114,7 @@ struct TextPropertiesView: View {
             if case .componentProperty = content {
                 // Use the manager's helper to get a binding that handles the complex enum update.
                 if let optionsBinding = editor.bindingForDisplayOptions(
-                    with: textID.rawValue, componentData: componentData)
+                    with: textID, componentData: componentData)
                 {
 
                     Text("Display Options").font(.caption).foregroundColor(.secondary)
