@@ -9,13 +9,12 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a pin, used for rendering and interaction.
-struct CanvasPin: Drawable, Bounded, HitTestable, Transformable, Layerable {
+struct CanvasPin: Drawable, Bounded, HitTestable, Transformable {
 
     var pin: Pin
     var ownerID: UUID?
     var ownerPosition: CGPoint
     var ownerRotation: CGFloat
-    var layerId: UUID?
     var isSelectable: Bool
 
     init(
@@ -23,14 +22,12 @@ struct CanvasPin: Drawable, Bounded, HitTestable, Transformable, Layerable {
         ownerID: UUID? = nil,
         ownerPosition: CGPoint = .zero,
         ownerRotation: CGFloat = 0,
-        layerId: UUID? = nil,
         isSelectable: Bool = true
     ) {
         self.pin = pin
         self.ownerID = ownerID
         self.ownerPosition = ownerPosition
         self.ownerRotation = ownerRotation
-        self.layerId = layerId
         self.isSelectable = isSelectable
     }
 
@@ -72,7 +69,7 @@ struct CanvasPin: Drawable, Bounded, HitTestable, Transformable, Layerable {
         var transform = worldTransform
         let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
 
-        return worldPrimitives.map { LayeredDrawingPrimitive($0, layerId: layerId) }
+        return worldPrimitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
     }
 
     func haloPath() -> CGPath? {

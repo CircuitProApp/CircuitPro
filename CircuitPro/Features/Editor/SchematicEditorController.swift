@@ -102,7 +102,6 @@ final class SchematicEditorController: EditorController {
                     ownerID: inst.id,
                     ownerPosition: ownerPosition,
                     ownerRotation: ownerRotation,
-                    layerId: nil,
                     isSelectable: false
                 )
                 result.append(component)
@@ -253,7 +252,6 @@ final class SchematicEditorController: EditorController {
                 ownerID: inst.id,
                 ownerPosition: ownerPosition,
                 ownerRotation: ownerRotation,
-                layerId: nil,
                 isSelectable: false
             )
             items.append(component)

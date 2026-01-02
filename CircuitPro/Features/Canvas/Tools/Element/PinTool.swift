@@ -31,7 +31,6 @@ final class PinTool: CanvasTool {
                         ownerID: nil,
                         ownerPosition: .zero,
                         ownerRotation: 0,
-                        layerId: nil,
                         isSelectable: true
                     )
                     items.append(component)
@@ -43,7 +42,6 @@ final class PinTool: CanvasTool {
                     ownerID: nil,
                     ownerPosition: .zero,
                     ownerRotation: 0,
-                    layerId: nil,
                     isSelectable: true
                 )
                 let nodeID = NodeID(GraphPinID.makeID(ownerID: nil, pinID: pin.id))

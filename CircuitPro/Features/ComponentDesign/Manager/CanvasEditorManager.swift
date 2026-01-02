@@ -147,7 +147,7 @@ final class CanvasEditorManager {
             case .text(_, let text):
                 return text.layerId
             case .pin(_, let pin):
-                return pin.layerId
+                return nil
             case .pad(_, let pad):
                 return pad.layerId
             }
