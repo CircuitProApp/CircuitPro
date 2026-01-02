@@ -23,9 +23,66 @@ final class SchematicEditorController: EditorController {
     private var hasPerformedInitialLoad = false
     private var isPerformingInitialLoad = false
 
+    var items: [any CanvasItem] = []
 
-    var items: [any CanvasItem] {
+    init(projectManager: ProjectManager) {
+        self.projectManager = projectManager
+        self.document = projectManager.document
+        self.wireEngine = WireEngine(graph: CanvasGraph())
+
+        // When wires change in the engine, persist to document.
+        self.wireEngine.onWiresChanged = { [weak self] wires in
+            guard let self = self else { return }
+            guard !self.isPerformingInitialLoad else { return }
+            if Thread.isMainThread {
+                self.persistWiresToDocument(wires)
+            } else {
+                Task { @MainActor in
+                    self.persistWiresToDocument(wires)
+                }
+            }
+        }
+
+        self.canvasStore.onDelta = { [weak self] delta in
+            self?.handleStoreDelta(delta)
+        }
+        self.graph.onDelta = { [weak self] delta in
+            self?.handleGraphDelta(delta)
+        }
+
+        Task {
+            await self.initialLoad()
+        }
+    }
+
+    // MARK: - Initial Load (once at startup)
+
+    private func initialLoad() async {
+        guard !hasPerformedInitialLoad else { return }
+        hasPerformedInitialLoad = true
+        isPerformingInitialLoad = true
+
         let design = projectManager.selectedDesign
+
+        items = buildItems(from: design)
+
+        // Load wires from model into engine (one time)
+        wireEngine.build(from: design.wires)
+
+        // Sync pin positions
+        for inst in design.componentInstances {
+            let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
+            guard let symbolDef else { continue }
+            wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
+        }
+        wireEngine.repairPinConnections()
+
+        isPerformingInitialLoad = false
+
+        canvasStore.invalidate()
+    }
+
+    private func buildItems(from design: CircuitDesign) -> [any CanvasItem] {
         var result: [any CanvasItem] = []
 
         for inst in design.componentInstances {
@@ -68,61 +125,6 @@ final class SchematicEditorController: EditorController {
         }
 
         return result
-    }
-
-    init(projectManager: ProjectManager) {
-        self.projectManager = projectManager
-        self.document = projectManager.document
-        self.wireEngine = WireEngine(graph: CanvasGraph())
-
-        // When wires change in the engine, persist to document.
-        self.wireEngine.onWiresChanged = { [weak self] wires in
-            guard let self = self else { return }
-            guard !self.isPerformingInitialLoad else { return }
-            if Thread.isMainThread {
-                self.persistWiresToDocument(wires)
-            } else {
-                Task { @MainActor in
-                    self.persistWiresToDocument(wires)
-                }
-            }
-        }
-
-        self.canvasStore.onDelta = { [weak self] delta in
-            self?.handleStoreDelta(delta)
-        }
-        self.graph.onDelta = { [weak self] delta in
-            self?.handleGraphDelta(delta)
-        }
-
-        Task {
-            await self.initialLoad()
-        }
-    }
-
-    // MARK: - Initial Load (once at startup)
-
-    private func initialLoad() async {
-        guard !hasPerformedInitialLoad else { return }
-        hasPerformedInitialLoad = true
-        isPerformingInitialLoad = true
-
-        let design = projectManager.selectedDesign
-
-        // Load wires from model into engine (one time)
-        wireEngine.build(from: design.wires)
-
-        // Sync pin positions
-        for inst in design.componentInstances {
-            let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
-            guard let symbolDef else { continue }
-            wireEngine.syncPins(for: inst.symbolInstance, of: symbolDef, ownerID: inst.id)
-        }
-        wireEngine.repairPinConnections()
-
-        isPerformingInitialLoad = false
-
-        canvasStore.invalidate()
     }
 
     private func handleStoreDelta(_ delta: CanvasStoreDelta) {

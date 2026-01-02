@@ -16,27 +16,13 @@ struct SchematicCanvasView: View {
     @Bindable var canvasManager: CanvasManager
 
     var body: some View {
-        let schematicController = editorSession.schematicController
-        let selectedTool = Binding(
-            get: { schematicController.selectedTool },
-            set: { schematicController.selectedTool = $0 }
-        )
-        let itemsValue = schematicController.items
-        let items = Binding<[any CanvasItem]>(
-            get: { itemsValue },
-            set: { _ in }
-        )
-        let selectedIDs = Binding<Set<UUID>>(
-            get: { editorSession.selectedNodeIDs },
-            set: { editorSession.selectedNodeIDs = $0 }
-        )
 
         CanvasView(
             viewport: $canvasManager.viewport,
-            tool: selectedTool.unwrapping(
+            tool: $editorSession.schematicController.selectedTool.unwrapping(
                 withDefault: CursorTool()),
-            items: items,
-            selectedIDs: selectedIDs,
+            items: $editorSession.schematicController.items,
+            selectedIDs: $editorSession.selectedNodeIDs,
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
@@ -50,7 +36,7 @@ struct SchematicCanvasView: View {
                 HoverHighlightInteraction(),
                 KeyCommandInteraction(
                     deleteComponentInstances: { ids in
-                        schematicController.deleteComponentInstances(ids: ids)
+                        editorSession.schematicController.deleteComponentInstances(ids: ids)
                     }
                 ),
                 ToolInteraction(),
