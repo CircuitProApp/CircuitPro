@@ -104,6 +104,7 @@ struct CanvasView: NSViewRepresentable {
         let canvasController: CanvasController
         let scene: CanvasScene
         private var graphObserverToken: UUID?
+        private var detachGraphObserver: (() -> Void)?
 
         private var viewportBinding: Binding<CanvasViewport>
 
@@ -127,16 +128,18 @@ struct CanvasView: NSViewRepresentable {
         }
 
         private func attachGraphObserver() {
-            graphObserverToken = scene.graph.addObserver { [weak self] _ in
+            let graph = scene.graph
+            graphObserverToken = graph.addObserver { [weak self] _ in
                 self?.scene.store.invalidate()
+            }
+            if let token = graphObserverToken {
+                detachGraphObserver = { graph.removeObserver(token) }
             }
         }
 
         func updateGraphIfNeeded(_ graph: CanvasGraph) {
             if scene.graph === graph { return }
-            if let token = graphObserverToken {
-                scene.graph.removeObserver(token)
-            }
+            detachGraphObserver?()
             scene.graph = graph
             attachGraphObserver()
         }
@@ -174,9 +177,7 @@ struct CanvasView: NSViewRepresentable {
             if let observer = boundsChangeObserver {
                 NotificationCenter.default.removeObserver(observer)
             }
-            if let token = graphObserverToken {
-                scene.graph.removeObserver(token)
-            }
+            detachGraphObserver?()
         }
     }
 
