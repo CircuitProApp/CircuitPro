@@ -7,9 +7,10 @@
 
 import AppKit
 
-protocol CanvasPrimitive: Transformable, Drawable, Bounded, HandleEditable, Identifiable, Codable, Equatable, Hashable, Layerable {
+protocol CanvasPrimitive: Transformable, Drawable, Bounded, HandleEditable, Identifiable, Codable, Equatable, Hashable {
 
     var id: UUID { get }
+    var layerId: UUID? { get set }
     var color: SDColor? { get set }
     var strokeWidth: CGFloat { get set }
     var filled: Bool { get set }

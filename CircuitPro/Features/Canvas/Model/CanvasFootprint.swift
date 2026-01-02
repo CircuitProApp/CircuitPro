@@ -10,7 +10,7 @@ import CoreGraphics
 import Foundation
 
 /// A canvas-space representation of a footprint, used for rendering and interaction in the Layout Editor.
-struct CanvasFootprint: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, HitTestPriorityProviding {
+struct CanvasFootprint: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable {
 
     var ownerID: UUID
     var footprint: FootprintInstance

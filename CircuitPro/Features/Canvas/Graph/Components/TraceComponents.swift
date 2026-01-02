@@ -12,7 +12,7 @@ struct TraceVertexComponent {
     var point: CGPoint
 }
 
-struct TraceEdgeComponent: LayeredDrawable, HitTestable, HaloProviding, Bounded, HitTestPriorityProviding {
+struct TraceEdgeComponent: LayeredDrawable, HitTestable, HaloProviding, Bounded {
     let id: UUID
     var start: NodeID
     var end: NodeID

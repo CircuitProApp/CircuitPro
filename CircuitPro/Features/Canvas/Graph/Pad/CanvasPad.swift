@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-struct CanvasPad: LayeredDrawable, Bounded, HitTestable, HaloProviding, HitTestPriorityProviding {
+struct CanvasPad: LayeredDrawable, Bounded, HitTestable, HaloProviding {
     var pad: Pad
     var ownerID: UUID?
     var ownerPosition: CGPoint

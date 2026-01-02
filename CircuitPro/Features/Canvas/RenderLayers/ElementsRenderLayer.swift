@@ -31,7 +31,15 @@ final class ElementsRenderLayer: RenderLayer {
         var haloPrimitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
         let graph = context.graph
-        let itemHalos = gatherItemHaloPrimitives(from: context.items, context: context)
+        let (itemPrimitivesByLayer, itemLayerTargetsByID) = gatherItemPrimitives(
+            from: context.items,
+            context: context
+        )
+        let itemHalos = gatherItemHaloPrimitives(
+            from: context.items,
+            context: context,
+            layerTargetsByID: itemLayerTargetsByID
+        )
         for (layerId, primitives) in itemHalos {
             haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
         }
@@ -51,7 +59,6 @@ final class ElementsRenderLayer: RenderLayer {
         }
         }
 
-        let itemPrimitivesByLayer = gatherItemPrimitives(from: context.items, context: context)
         for (layerId, primitives) in itemPrimitivesByLayer {
             bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
         }
@@ -98,10 +105,12 @@ final class ElementsRenderLayer: RenderLayer {
 
     // MARK: - Primitive Gathering
 
-    private func gatherItemPrimitives(from items: [any CanvasItem], context: RenderContext)
-        -> [UUID?: [DrawingPrimitive]]
-    {
+    private func gatherItemPrimitives(
+        from items: [any CanvasItem],
+        context: RenderContext
+    ) -> (primitivesByLayer: [UUID?: [DrawingPrimitive]], layerTargetsByID: [UUID: [UUID?]]) {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
+        var layerTargetsByID: [UUID: [UUID?]] = [:]
 
         for item in items {
             guard let drawable = item as? LayeredDrawable else { continue }
@@ -109,14 +118,20 @@ final class ElementsRenderLayer: RenderLayer {
             for (layerId, list) in primitives {
                 primitivesByLayer[layerId, default: []].append(contentsOf: list)
             }
+            let layerTargets = Array(primitives.keys)
+            if !layerTargets.isEmpty {
+                layerTargetsByID[item.id] = layerTargets
+            }
         }
 
-        return primitivesByLayer
+        return (primitivesByLayer, layerTargetsByID)
     }
 
-    private func gatherItemHaloPrimitives(from items: [any CanvasItem], context: RenderContext)
-        -> [UUID?: [DrawingPrimitive]]
-    {
+    private func gatherItemHaloPrimitives(
+        from items: [any CanvasItem],
+        context: RenderContext,
+        layerTargetsByID: [UUID: [UUID?]]
+    ) -> [UUID?: [DrawingPrimitive]] {
         var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
         let haloIDs = context.highlightedElementIDs
 
@@ -134,14 +149,7 @@ final class ElementsRenderLayer: RenderLayer {
                 lineJoin: .round
             )
 
-            let layerTargets: [UUID?]
-            if let multiLayerable = item as? MultiLayerable, !multiLayerable.layerIds.isEmpty {
-                layerTargets = multiLayerable.layerIds.map { Optional($0) }
-            } else if let layerable = item as? Layerable {
-                layerTargets = [layerable.layerId]
-            } else {
-                layerTargets = [nil]
-            }
+            let layerTargets = layerTargetsByID[item.id] ?? [nil]
 
             for layerId in layerTargets {
                 primitivesByLayer[layerId, default: []].append(haloPrimitive)
@@ -168,14 +176,7 @@ final class ElementsRenderLayer: RenderLayer {
                 lineJoin: .round
             )
 
-            let layerTargets: [UUID?]
-            if let multiLayerable = item as? MultiLayerable, !multiLayerable.layerIds.isEmpty {
-                layerTargets = multiLayerable.layerIds.map { Optional($0) }
-            } else if let layerable = item as? Layerable {
-                layerTargets = [layerable.layerId]
-            } else {
-                layerTargets = [nil]
-            }
+            let layerTargets = layerTargets(for: item, context: context)
 
             for layerId in layerTargets {
                 primitivesByLayer[layerId, default: []].append(haloPrimitive)
@@ -217,6 +218,20 @@ final class ElementsRenderLayer: RenderLayer {
     private func getOrCreateDefaultLayer(on hostLayer: CALayer) -> CALayer {
         if let defaultLayer = self.defaultLayer { return defaultLayer }
         let newLayer = CALayer(); newLayer.zPosition = -1; hostLayer.addSublayer(newLayer); self.defaultLayer = newLayer; return newLayer
+    }
+
+    private func layerTargets(
+        for item: any HaloProviding,
+        context: RenderContext
+    ) -> [UUID?] {
+        if let drawable = item as? LayeredDrawable {
+            let primitives = drawable.primitivesByLayer(in: context)
+            let targets = Array(primitives.keys)
+            if !targets.isEmpty {
+                return targets
+            }
+        }
+        return [nil]
     }
 
     private func createShapeLayer(for primitive: DrawingPrimitive) -> CAShapeLayer {

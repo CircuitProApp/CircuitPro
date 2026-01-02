@@ -281,14 +281,14 @@ extension AnyCanvasPrimitive: LayeredDrawable, HitTestable, HaloProviding {
     }
 }
 
-extension AnyCanvasPrimitive: MultiLayerable {
+extension AnyCanvasPrimitive {
     var layerIds: [UUID] {
         get { layerId.map { [$0] } ?? [] }
         set { layerId = newValue.first }
     }
 }
 
-extension AnyCanvasPrimitive: HitTestPriorityProviding {
+extension AnyCanvasPrimitive {
     var hitTestPriority: Int { 1 }
 }
 

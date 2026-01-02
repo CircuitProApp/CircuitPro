@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a text element, used for rendering and interaction.
-struct CanvasText: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
+struct CanvasText: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable {
 
     var resolvedText: CircuitText.Resolved
     var displayText: String

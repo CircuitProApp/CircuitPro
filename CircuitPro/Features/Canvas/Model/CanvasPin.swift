@@ -9,7 +9,7 @@ import AppKit
 import CoreGraphics
 
 /// A canvas-space representation of a pin, used for rendering and interaction.
-struct CanvasPin: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, Layerable, HitTestPriorityProviding {
+struct CanvasPin: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable {
 
     var pin: Pin
     var ownerID: UUID?

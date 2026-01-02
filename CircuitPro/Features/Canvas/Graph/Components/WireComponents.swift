@@ -36,7 +36,7 @@ struct WireVertexComponent: Hashable, LayeredDrawable {
     }
 }
 
-struct WireEdgeComponent: Hashable, LayeredDrawable, HitTestable, HaloProviding, Bounded, HitTestPriorityProviding {
+struct WireEdgeComponent: Hashable, LayeredDrawable, HitTestable, HaloProviding, Bounded {
     let id: UUID
     var start: NodeID
     var end: NodeID

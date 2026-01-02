@@ -9,7 +9,7 @@ import AppKit
 
 // MARK: - Canvas Drawing & Interaction
 
-extension ComponentInstance: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, HitTestPriorityProviding {
+extension ComponentInstance: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable {
 
     var position: CGPoint {
         get { symbolInstance.position }

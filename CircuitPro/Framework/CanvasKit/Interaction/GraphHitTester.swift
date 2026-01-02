@@ -17,7 +17,7 @@ struct GraphHitTester {
             guard let hitTestable = item as? (any HitTestable & Bounded) else { continue }
             if hitTestable.hitTest(point: point, tolerance: tolerance) {
                 let area = hitTestable.boundingBox.width * hitTestable.boundingBox.height
-                let priority = (item as? HitTestPriorityProviding)?.hitTestPriority ?? 0
+                let priority = item.hitTestPriority
                 considerHit(
                     id: .node(NodeID(item.id)),
                     priority: priority,
@@ -30,7 +30,7 @@ struct GraphHitTester {
         for (id, item) in graph.allComponentsConforming((any HitTestable & Bounded).self) {
             if item.hitTest(point: point, tolerance: tolerance) {
                 let area = item.boundingBox.width * item.boundingBox.height
-                let priority = (item as? HitTestPriorityProviding)?.hitTestPriority ?? 0
+                let priority = item.hitTestPriority
                 considerHit(id: id, priority: priority, area: area, best: &best)
             }
         }
