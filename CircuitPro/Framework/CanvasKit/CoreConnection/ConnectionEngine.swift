@@ -27,3 +27,8 @@ protocol ConnectionEngine: AnyObject {
     /// Ends the current drag operation.
     func endDrag()
 }
+
+/// Connection engines that project their state into a CanvasGraph.
+protocol GraphBackedConnectionEngine: ConnectionEngine {
+    var graph: CanvasGraph { get set }
+}

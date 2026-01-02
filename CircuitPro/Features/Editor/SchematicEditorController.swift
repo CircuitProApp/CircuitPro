@@ -6,10 +6,8 @@ import SwiftUI
 @Observable
 final class SchematicEditorController: EditorController {
 
-    let scene: CanvasScene
-
-    var canvasStore: CanvasStore { scene.store }
-    var graph: CanvasGraph { scene.graph }
+    let canvasStore = CanvasStore()
+    var graph: CanvasGraph { wireEngine.graph }
 
     var selectedTool: CanvasTool = CursorTool()
 
@@ -75,8 +73,7 @@ final class SchematicEditorController: EditorController {
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
         self.document = projectManager.document
-        self.scene = CanvasScene()
-        self.wireEngine = WireEngine(graph: scene.graph)
+        self.wireEngine = WireEngine(graph: CanvasGraph())
 
         // When wires change in the engine, persist to document.
         self.wireEngine.onWiresChanged = { [weak self] wires in

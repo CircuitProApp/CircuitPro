@@ -7,8 +7,8 @@
 
 import Foundation
 
-final class TraceEngine: TraceMetadataStore {
-    let graph: CanvasGraph
+final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
+    var graph: CanvasGraph
     let engine: GraphEngine
     private let geometry: GeometryPolicy
     private let edgePolicy: TraceEdgePolicy

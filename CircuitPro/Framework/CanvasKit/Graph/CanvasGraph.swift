@@ -13,10 +13,29 @@ final class CanvasGraph {
     private(set) var nodes: Set<NodeID> = []
     private(set) var edges: Set<EdgeID> = []
     var selection: Set<GraphElementID> = [] {
-        didSet { onDelta?(.selectionChanged(selection)) }
+        didSet { emit(.selectionChanged(selection)) }
     }
 
     var onDelta: ((UnifiedGraphDelta) -> Void)?
+    private var observers: [UUID: (UnifiedGraphDelta) -> Void] = [:]
+
+    @discardableResult
+    func addObserver(_ handler: @escaping (UnifiedGraphDelta) -> Void) -> UUID {
+        let token = UUID()
+        observers[token] = handler
+        return token
+    }
+
+    func removeObserver(_ token: UUID) {
+        observers.removeValue(forKey: token)
+    }
+
+    private func emit(_ delta: UnifiedGraphDelta) {
+        onDelta?(delta)
+        for handler in observers.values {
+            handler(delta)
+        }
+    }
 
     private var nodeComponentStorage: [ObjectIdentifier: [NodeID: Any]] = [:]
     private var edgeComponentStorage: [ObjectIdentifier: [EdgeID: Any]] = [:]
@@ -24,7 +43,7 @@ final class CanvasGraph {
     @discardableResult
     func addNode(_ id: NodeID = NodeID()) -> NodeID {
         nodes.insert(id)
-        onDelta?(.nodeAdded(id))
+        emit(.nodeAdded(id))
         return id
     }
 
@@ -34,13 +53,13 @@ final class CanvasGraph {
             nodeComponentStorage[key]?.removeValue(forKey: id)
         }
         selection.remove(.node(id))
-        onDelta?(.nodeRemoved(id))
+        emit(.nodeRemoved(id))
     }
 
     @discardableResult
     func addEdge(_ id: EdgeID = EdgeID()) -> EdgeID {
         edges.insert(id)
-        onDelta?(.edgeAdded(id))
+        emit(.edgeAdded(id))
         return id
     }
 
@@ -50,7 +69,7 @@ final class CanvasGraph {
             edgeComponentStorage[key]?.removeValue(forKey: id)
         }
         selection.remove(.edge(id))
-        onDelta?(.edgeRemoved(id))
+        emit(.edgeRemoved(id))
     }
 
     func reset() {
@@ -67,7 +86,7 @@ final class CanvasGraph {
             nodeComponentStorage[key] = [:]
         }
         nodeComponentStorage[key]?[id] = component
-        onDelta?(.nodeComponentSet(id, key))
+        emit(.nodeComponentSet(id, key))
     }
 
     func setComponent<T>(_ component: T, for id: EdgeID) {
@@ -76,19 +95,19 @@ final class CanvasGraph {
             edgeComponentStorage[key] = [:]
         }
         edgeComponentStorage[key]?[id] = component
-        onDelta?(.edgeComponentSet(id, key))
+        emit(.edgeComponentSet(id, key))
     }
 
     func removeComponent<T>(_ type: T.Type, for id: NodeID) {
         let key = ObjectIdentifier(T.self)
         nodeComponentStorage[key]?.removeValue(forKey: id)
-        onDelta?(.nodeComponentRemoved(id, key))
+        emit(.nodeComponentRemoved(id, key))
     }
 
     func removeComponent<T>(_ type: T.Type, for id: EdgeID) {
         let key = ObjectIdentifier(T.self)
         edgeComponentStorage[key]?.removeValue(forKey: id)
-        onDelta?(.edgeComponentRemoved(id, key))
+        emit(.edgeComponentRemoved(id, key))
     }
 
     func component<T>(_ type: T.Type, for id: NodeID) -> T? {

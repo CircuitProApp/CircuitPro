@@ -10,7 +10,7 @@ import Observation
 @MainActor
 @Observable
 final class CanvasScene {
-    let graph: CanvasGraph
+    var graph: CanvasGraph
     let store: CanvasStore
 
     init(graph: CanvasGraph = CanvasGraph(), store: CanvasStore = CanvasStore()) {

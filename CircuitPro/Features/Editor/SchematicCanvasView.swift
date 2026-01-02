@@ -33,7 +33,6 @@ struct SchematicCanvasView: View {
 
         CanvasView(
             viewport: $canvasManager.viewport,
-            scene: schematicController.scene,
             tool: selectedTool.unwrapping(
                 withDefault: CursorTool()),
             items: items,

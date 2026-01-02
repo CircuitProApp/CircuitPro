@@ -224,9 +224,9 @@ private final class DragHandler {
     }
 }
 
-final class WireEngine: ConnectionEngine {
+final class WireEngine: GraphBackedConnectionEngine {
     // MARK: - Engine and State
-    let graph: CanvasGraph
+    var graph: CanvasGraph
     let engine: GraphEngine
     private let geometry: GeometryPolicy
     private let ownershipBox = OwnershipLookupBox()
@@ -758,6 +758,14 @@ extension WireEngine: ConnectionPointConsumer {
         next.reserveCapacity(points.count)
         for point in points {
             next[point.id] = point.position
+            guard let ownerID = point.ownerID else { continue }
+            if let existingID = findVertex(ownedBy: ownerID, pinID: point.id) {
+                var tx = MoveVertexTransaction(id: existingID, newPoint: point.position)
+                _ = engine.execute(transaction: &tx)
+                setOwnership(.pin(ownerID: ownerID, pinID: point.id), for: existingID)
+            } else {
+                _ = getOrCreatePinVertex(at: point.position, ownerID: ownerID, pinID: point.id)
+            }
         }
         connectionPoints = next
     }
