@@ -123,7 +123,9 @@ struct KeyCommandInteraction: CanvasInteraction {
         if hasWireSelection,
             let wireEngine = context.environment.connectionEngine as? WireEngine
         {
-            wireEngine.delete(items: selectedIDs)
+            Task { @MainActor in
+                wireEngine.delete(items: selectedIDs)
+            }
             graph.selection = []
             Task { @MainActor in
                 context.environment.canvasStore?.selection.subtract(Set(selectedNodeIDs.map(\.rawValue)))
@@ -143,7 +145,9 @@ struct KeyCommandInteraction: CanvasInteraction {
         if hasTraceSelection,
             let traceEngine = context.environment.connectionEngine as? TraceEngine
         {
-            traceEngine.delete(items: selectedIDs)
+            Task { @MainActor in
+                traceEngine.delete(items: selectedIDs)
+            }
             graph.selection = []
             Task { @MainActor in
                 context.environment.canvasStore?.selection.subtract(Set(selectedNodeIDs.map(\.rawValue)))

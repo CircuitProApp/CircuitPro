@@ -69,7 +69,9 @@ final class WireTool: CanvasTool {
 
             return .command(
                 CanvasToolCommand { [wireEngine] _, _ in
-                    wireEngine.connect(from: fromPoint, to: toPoint, preferring: strategy)
+                    Task { @MainActor in
+                        wireEngine.connect(from: fromPoint, to: toPoint, preferring: strategy)
+                    }
                 })
         }
     }

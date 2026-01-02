@@ -139,11 +139,7 @@ extension CanvasPin: CanvasItem {
     }
 }
 
-extension CanvasPin: ConnectionPoint {
-    var position: CGPoint {
-        CGPoint.zero.applying(worldTransform)
-    }
-}
+extension CanvasPin: ConnectionPoint {}
 
 extension CanvasPin: ConnectionPointProvider {
     var connectionPoints: [any ConnectionPoint] { [self] }

@@ -99,6 +99,7 @@ struct CanvasView: NSViewRepresentable {
 
     // MARK: - Coordinator
 
+    @MainActor
     final class Coordinator: NSObject {
         let canvasController: CanvasController
         let itemGraphSync = CanvasItemGraphSync()
@@ -175,11 +176,14 @@ struct CanvasView: NSViewRepresentable {
                 NotificationCenter.default.removeObserver(observer)
             }
             if let token = graphObserverToken {
-                scene.graph.removeObserver(token)
+                Task { @MainActor in
+                    self.scene.graph.removeObserver(token)
+                }
             }
         }
     }
 
+    @MainActor
     func makeCoordinator() -> Coordinator {
         let graph: CanvasGraph
         if let graphBacked = connectionEngine as? GraphBackedConnectionEngine {
@@ -207,6 +211,7 @@ struct CanvasView: NSViewRepresentable {
 
     // MARK: - NSViewRepresentable Lifecycle
 
+    @MainActor
     func makeNSView(context: Context) -> NSScrollView {
         let coordinator = context.coordinator
         let canvasHostView = CanvasHostView(controller: coordinator.canvasController, registeredDraggedTypes: self.registeredDraggedTypes)
@@ -226,6 +231,7 @@ struct CanvasView: NSViewRepresentable {
         return scrollView
     }
 
+    @MainActor
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
         controller.onCanvasChange = self.onCanvasChange
@@ -241,16 +247,17 @@ struct CanvasView: NSViewRepresentable {
             let items = itemsBinding.wrappedValue
             context.coordinator.itemGraphSync.sync(items: items, graph: scene.graph)
 
-            if let consumer = connectionEngine as? ConnectionPointConsumer {
-                var points: [any ConnectionPoint] = []
-                points.reserveCapacity(items.count)
-                for item in items {
-                    if let provider = item as? ConnectionPointProvider {
-                        points.append(contentsOf: provider.connectionPoints)
-                    }
-                }
-                consumer.updateConnectionPoints(points)
-            }
+            // TODO: Re-enable connection point sync after stabilizing engine updates.
+            // if let consumer = connectionEngine as? ConnectionPointConsumer {
+            //     var points: [any ConnectionPoint] = []
+            //     points.reserveCapacity(items.count)
+            //     for item in items {
+            //         if let provider = item as? ConnectionPointProvider {
+            //             points.append(contentsOf: provider.connectionPoints)
+            //         }
+            //     }
+            //     consumer.updateConnectionPoints(points)
+            // }
         }
 
         if let selectedIDsBinding = selectedIDsBinding {

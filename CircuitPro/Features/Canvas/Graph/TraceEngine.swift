@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor
 final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
     var graph: CanvasGraph
     let engine: GraphEngine
@@ -108,6 +109,17 @@ final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
     }
 
     private func syncGraphComponents(delta: GraphDelta, final: GraphState) {
+        if Thread.isMainThread {
+            syncGraphComponentsOnMain(delta: delta, final: final)
+        } else {
+            Task { @MainActor in
+                self.syncGraphComponentsOnMain(delta: delta, final: final)
+            }
+        }
+    }
+
+    @MainActor
+    private func syncGraphComponentsOnMain(delta: GraphDelta, final: GraphState) {
         for id in delta.deletedEdges {
             graph.removeEdge(EdgeID(id))
         }
@@ -118,14 +130,18 @@ final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
         for id in delta.createdVertices {
             guard let v = final.vertices[id] else { continue }
             let nodeID = NodeID(id)
-            graph.addNode(nodeID)
+            if !graph.nodes.contains(nodeID) {
+                graph.addNode(nodeID)
+            }
             graph.setComponent(TraceVertexComponent(point: v.point), for: nodeID)
         }
 
         for id in delta.createdEdges {
             guard let e = final.edges[id] else { continue }
             let edgeID = EdgeID(id)
-            graph.addEdge(edgeID)
+            if !graph.edges.contains(edgeID) {
+                graph.addEdge(edgeID)
+            }
             let metadata = edgeMetadata[id]
             guard let start = final.vertices[e.start],
                 let end = final.vertices[e.end]
@@ -191,4 +207,11 @@ final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
         }
         return state.addVertex(at: point).id
     }
+}
+
+// MARK: - ConnectionEngine
+extension TraceEngine {
+    func beginDrag(selectedIDs: Set<UUID>) -> Bool { false }
+    func updateDrag(by delta: CGPoint) {}
+    func endDrag() {}
 }

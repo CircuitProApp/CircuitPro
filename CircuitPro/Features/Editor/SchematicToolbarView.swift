@@ -9,11 +9,10 @@ import SwiftUI
 
 struct SchematicToolbarView: View {
     @Binding var selectedSchematicTool: CanvasTool
-    let wireEngine: WireEngine
 
     var body: some View {
         CanvasToolbarView(
-            tools: CanvasToolRegistry.schematicTools(wireEngine: wireEngine),
+            tools: CanvasToolRegistry.schematicTools,
             selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool()),
             dividerAfter: { $0 is CursorTool }
         )

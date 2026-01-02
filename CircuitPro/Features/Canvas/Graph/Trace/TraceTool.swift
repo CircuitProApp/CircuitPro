@@ -53,11 +53,13 @@ final class TraceTool: CanvasTool {
             self.state = .drawing(lastPoint: newLastPoint)
 
             return .command(CanvasToolCommand { [traceEngine] _, _ in
-                traceEngine.addTrace(
-                    path: pathPoints,
-                    width: traceWidth,
-                    layerId: activeLayerId
-                )
+                Task { @MainActor in
+                    traceEngine.addTrace(
+                        path: pathPoints,
+                        width: traceWidth,
+                        layerId: activeLayerId
+                    )
+                }
             })
         }
     }

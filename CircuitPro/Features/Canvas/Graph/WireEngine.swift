@@ -224,6 +224,7 @@ private final class DragHandler {
     }
 }
 
+@MainActor
 final class WireEngine: GraphBackedConnectionEngine {
     // MARK: - Engine and State
     var graph: CanvasGraph
@@ -235,6 +236,7 @@ final class WireEngine: GraphBackedConnectionEngine {
     private var lastPosition: [UUID: CGPoint] = [:]
     private var dragHandler: DragHandler?
     private var connectionPoints: [UUID: CGPoint] = [:]
+    private var suppressWireNotifications = false
 
     // Read-only convenience accessors to current state
     var vertices: [GraphVertex.ID: GraphVertex] { engine.currentState.vertices }
@@ -636,10 +638,23 @@ final class WireEngine: GraphBackedConnectionEngine {
         }
 
         syncGraphComponents(delta: delta, final: final)
-        onWiresChanged?(toWires())
+        if !suppressWireNotifications {
+            onWiresChanged?(toWires())
+        }
     }
 
     private func syncGraphComponents(delta: GraphDelta, final: GraphState) {
+        if Thread.isMainThread {
+            syncGraphComponentsOnMain(delta: delta, final: final)
+        } else {
+            Task { @MainActor in
+                self.syncGraphComponentsOnMain(delta: delta, final: final)
+            }
+        }
+    }
+
+    @MainActor
+    private func syncGraphComponentsOnMain(delta: GraphDelta, final: GraphState) {
         for id in delta.deletedEdges {
             graph.removeEdge(EdgeID(id))
         }
@@ -753,20 +768,83 @@ final class WireEngine: GraphBackedConnectionEngine {
 }
 
 extension WireEngine: ConnectionPointConsumer {
+    private struct MoveVerticesTransaction: GraphTransaction {
+        let moves: [UUID: CGPoint]
+        var snapToGrid: Bool = true
+
+        mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<UUID> {
+            var touched: Set<UUID> = []
+            for (id, point) in moves {
+                guard var v = state.vertices[id] else { continue }
+                let target = snapToGrid ? context.geometry.snap(point) : point
+                let dx = v.point.x - target.x
+                let dy = v.point.y - target.y
+                if (dx * dx + dy * dy).squareRoot() <= context.tolerance { continue }
+                v.point = target
+                state.vertices[id] = v
+                touched.insert(id)
+            }
+            return touched
+        }
+    }
+
     func updateConnectionPoints(_ points: [any ConnectionPoint]) {
         var next: [UUID: CGPoint] = [:]
         next.reserveCapacity(points.count)
+        var pendingMoves: [UUID: CGPoint] = [:]
+        var pendingInserts: [(ownerID: UUID, pointID: UUID, position: CGPoint)] = []
+
         for point in points {
-            next[point.id] = point.position
+            let newPosition = point.position
+            next[point.id] = newPosition
+            if let existing = connectionPoints[point.id] {
+                let dx = existing.x - newPosition.x
+                let dy = existing.y - newPosition.y
+                if hypot(dx, dy) <= geometry.epsilon {
+                    continue
+                }
+            }
             guard let ownerID = point.ownerID else { continue }
             if let existingID = findVertex(ownedBy: ownerID, pinID: point.id) {
-                var tx = MoveVertexTransaction(id: existingID, newPoint: point.position)
-                _ = engine.execute(transaction: &tx)
-                setOwnership(.pin(ownerID: ownerID, pinID: point.id), for: existingID)
+                pendingMoves[existingID] = newPosition
             } else {
-                _ = getOrCreatePinVertex(at: point.position, ownerID: ownerID, pinID: point.id)
+                pendingInserts.append((ownerID: ownerID, pointID: point.id, position: newPosition))
             }
         }
+
+        let hasChanges = !pendingMoves.isEmpty || !pendingInserts.isEmpty
+        if hasChanges {
+            suppressWireNotifications = true
+            if !pendingMoves.isEmpty {
+                if engine.currentState.edges.isEmpty {
+                    var nextState = engine.currentState
+                    for (id, position) in pendingMoves {
+                        guard var v = nextState.vertices[id] else { continue }
+                        let target = geometry.snap(position)
+                        let dx = v.point.x - target.x
+                        let dy = v.point.y - target.y
+                        if hypot(dx, dy) <= geometry.epsilon { continue }
+                        v.point = target
+                        nextState.vertices[id] = v
+                    }
+                    engine.replaceState(nextState)
+                } else {
+                    var tx = MoveVerticesTransaction(moves: pendingMoves)
+                    _ = engine.execute(transaction: &tx)
+                }
+            }
+            for update in pendingInserts {
+                _ = getOrCreatePinVertex(
+                    at: update.position,
+                    ownerID: update.ownerID,
+                    pinID: update.pointID
+                )
+            }
+            suppressWireNotifications = false
+        }
         connectionPoints = next
+        if hasChanges {
+            onWiresChanged?(toWires())
+        }
     }
 }

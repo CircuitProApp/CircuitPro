@@ -37,7 +37,6 @@ struct SchematicCanvasView: View {
                 withDefault: CursorTool()),
             items: items,
             selectedIDs: selectedIDs,
-            connections: schematicController.wireEngine,
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
@@ -69,8 +68,7 @@ struct SchematicCanvasView: View {
         }
         .overlay(alignment: .leading) {
             SchematicToolbarView(
-                selectedSchematicTool: selectedTool,
-                wireEngine: schematicController.wireEngine
+                selectedSchematicTool: selectedTool
             )
             .padding(16)
         }
