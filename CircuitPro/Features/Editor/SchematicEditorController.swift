@@ -7,8 +7,6 @@ import SwiftUI
 final class SchematicEditorController: EditorController {
 
     let canvasStore = CanvasStore()
-    var graph: CanvasGraph { wireEngine.graph }
-
     var selectedTool: CanvasTool = CursorTool()
 
     private let projectManager: ProjectManager
@@ -142,21 +140,22 @@ final class SchematicEditorController: EditorController {
     }
 
     func textBinding(for id: UUID) -> Binding<CanvasText>? {
-        let nodeID = NodeID(id)
-        guard let component = graph.component(CanvasText.self, for: nodeID) else { return nil }
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
+        guard items[index] is CanvasText else { return nil }
         return Binding(
-            get: { component },
+            get: {
+                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }),
+                    let current = self.items[currentIndex] as? CanvasText
+                else {
+                    return self.items[index] as! CanvasText
+                }
+                return current
+            },
             set: { newValue in
-                self.setTextComponent(newValue, for: nodeID)
+                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }) else { return }
+                self.items[currentIndex] = newValue
             }
         )
-    }
-
-    private func setTextComponent(_ component: CanvasText, for id: NodeID) {
-        if !graph.nodes.contains(id) {
-            graph.addNode(id)
-        }
-        graph.setComponent(component, for: id)
     }
 
     // MARK: - Persistence
