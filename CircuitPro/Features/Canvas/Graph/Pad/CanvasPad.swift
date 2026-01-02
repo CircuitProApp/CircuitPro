@@ -5,10 +5,11 @@
 //  Created by Codex on 9/22/25.
 //
 
+import AppKit
 import CoreGraphics
 import Foundation
 
-struct CanvasPad {
+struct CanvasPad: LayeredDrawable, Bounded, HitTestable, HaloProviding, HitTestPriorityProviding {
     var pad: Pad
     var ownerID: UUID?
     var ownerPosition: CGPoint
@@ -18,6 +19,60 @@ struct CanvasPad {
 
     var id: UUID {
         GraphPadID.makeID(ownerID: ownerID, padID: pad.id)
+    }
+
+    var hitTestPriority: Int { 2 }
+
+    var boundingBox: CGRect {
+        let localBounds = pad.calculateCompositePath().boundingBoxOfPath
+        guard !localBounds.isNull else { return .null }
+        return localBounds.applying(worldTransform)
+    }
+
+    func primitivesByLayer(in context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
+        let localPath = pad.calculateCompositePath()
+        guard !localPath.isEmpty else { return [:] }
+
+        let color: CGColor
+        if let layerId,
+            let layer = context.layers.first(where: { $0.id == layerId })
+        {
+            color = layer.color
+        } else {
+            color = NSColor.systemRed.cgColor
+        }
+
+        let primitive = DrawingPrimitive.fill(path: localPath, color: color)
+        var transform = worldTransform
+        let worldPrimitive = primitive.applying(transform: &transform)
+        return [layerId: [worldPrimitive]]
+    }
+
+    func haloPath() -> CGPath? {
+        let shapePath = pad.calculateShapePath()
+        guard !shapePath.isEmpty else { return nil }
+        let haloWidth: CGFloat = 1.0
+        let thickOutline = shapePath.copy(
+            strokingWithWidth: haloWidth * 2,
+            lineCap: .round,
+            lineJoin: .round,
+            miterLimit: 1
+        )
+        let haloPath = thickOutline.union(shapePath)
+        var transform = worldTransform
+        return haloPath.copy(using: &transform)
+    }
+
+    func hitTest(point: CGPoint, tolerance: CGFloat) -> Bool {
+        let localPoint = point.applying(worldTransform.inverted())
+        let bodyPath = pad.calculateCompositePath()
+        let hitArea = bodyPath.copy(
+            strokingWithWidth: tolerance,
+            lineCap: .round,
+            lineJoin: .round,
+            miterLimit: 1
+        )
+        return hitArea.contains(localPoint) || bodyPath.contains(localPoint)
     }
 }
 

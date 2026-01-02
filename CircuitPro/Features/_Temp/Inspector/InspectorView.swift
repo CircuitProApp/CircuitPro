@@ -24,12 +24,9 @@ struct InspectorView: View {
         return singleSelectedID
     }
 
-    private var selectedLayoutNodeID: NodeID? {
-        guard editorSession.selectedEditor == .layout,
-            let selectedID = singleSelectedID
-        else { return nil }
-        let nodeID = NodeID(selectedID)
-        return editorSession.layoutController.graph.hasAnyComponent(for: nodeID) ? nodeID : nil
+    private var selectedLayoutID: UUID? {
+        guard editorSession.selectedEditor == .layout else { return nil }
+        return singleSelectedID
     }
 
     /// A computed property that finds the ComponentInstance for a selected schematic symbol.
@@ -48,11 +45,10 @@ struct InspectorView: View {
         (component: ComponentInstance, footprint: Binding<CanvasFootprint>)?
     {
         guard editorSession.selectedEditor == .layout,
-            let nodeID = selectedLayoutNodeID,
-            let footprintBinding = editorSession.layoutController.footprintBinding(
-                for: nodeID.rawValue),
+            let selectedID = selectedLayoutID,
+            let footprintBinding = editorSession.layoutController.footprintBinding(for: selectedID),
             let componentInstance = projectManager.componentInstances.first(where: {
-                $0.id == nodeID.rawValue
+                $0.id == selectedID
             })
         else { return nil }
 
@@ -65,8 +61,8 @@ struct InspectorView: View {
             guard let id = selectedSchematicID else { return nil }
             return editorSession.schematicController.textBinding(for: id)
         case .layout:
-            guard let nodeID = selectedLayoutNodeID else { return nil }
-            return editorSession.layoutController.textBinding(for: nodeID.rawValue)
+            guard let selectedID = selectedLayoutID else { return nil }
+            return editorSession.layoutController.textBinding(for: selectedID)
         }
     }
 
@@ -111,13 +107,6 @@ struct InspectorView: View {
             )
             .id(context.component.id)
 
-        } else if let selection = editorSession.layoutController.singleSelectedPrimitive,
-            let binding = editorSession.layoutController.primitiveBinding(
-                for: selection.id.rawValue)
-        {
-            ScrollView {
-                PrimitivePropertiesView(primitive: binding)
-            }
         } else if let textBinding = selectedTextBinding {
             GraphTextInspectorView(text: textBinding)
 

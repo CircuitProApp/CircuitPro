@@ -19,6 +19,7 @@ final class EditorSession {
     var selectedEditor: EditorType = .schematic
     var selectedNetIDs: Set<UUID> = []
     var schematicSelection: Set<UUID> = []
+    var layoutSelection: Set<UUID> = []
 
     var selectedNodeIDs: Set<UUID> {
         get {
@@ -26,7 +27,7 @@ final class EditorSession {
             case .schematic:
                 return schematicSelection
             case .layout:
-                return layoutController.canvasStore.selection
+                return layoutSelection
             }
         }
         set {
@@ -34,7 +35,7 @@ final class EditorSession {
             case .schematic:
                 schematicSelection = newValue
             case .layout:
-                layoutController.canvasStore.selection = newValue
+                layoutSelection = newValue
             }
         }
     }

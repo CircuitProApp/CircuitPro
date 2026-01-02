@@ -4,7 +4,7 @@ import SwiftUI
 /// The high-level controller for the layout editor.
 ///
 /// This class is the single source of truth for the layout canvas's view state. It observes the
-/// core `ProjectManager` data and is responsible for building the renderable scene graph
+/// core `ProjectManager` data and is responsible for building the renderable item list
 /// of footprints and traces. It also manages layout-specific UI state like the active layer.
 @MainActor
 @Observable
@@ -12,18 +12,12 @@ final class LayoutEditorController: EditorController {
 
     // MARK: - EditorController Conformance
 
-    /// The canvas store for view invalidation and selection.
-    let canvasStore = CanvasStore()
+    var items: [any CanvasItem] = []
 
     let graph = CanvasGraph()
-    private var suppressGraphSelectionSync = false
-    private var primitiveCache: [NodeID: AnyCanvasPrimitive] = [:]
     private var activeDesignID: UUID?
     private var isSyncingTracesFromModel = false
     private var isApplyingTraceChangesToModel = false
-    private var isSyncingTextFromModel = false
-    private var isApplyingTextChangesToModel = false
-    private var isSyncingFootprintsFromModel = false
     private var cachedFootprintTransforms: [UUID: FootprintTransform] = [:]
 
     // MARK: - Layout-Specific State
@@ -59,12 +53,6 @@ final class LayoutEditorController: EditorController {
                 self.handleTraceEngineChange()
             }
         }
-        self.canvasStore.onDelta = { [weak self] delta in
-            self?.handleStoreDelta(delta)
-        }
-        self.graph.onDelta = { [weak self] delta in
-            self?.handleGraphDelta(delta)
-        }
 
         // Start the automatic observation loops upon initialization.
         startTrackingStructureChanges()
@@ -73,7 +61,7 @@ final class LayoutEditorController: EditorController {
         startTrackingTraceChanges()
 
         Task {
-            await self.rebuildNodes()
+            await self.rebuildItems()
         }
     }
 
@@ -83,9 +71,15 @@ final class LayoutEditorController: EditorController {
             _ = projectManager.selectedDesign
             _ = projectManager.componentInstances
             _ = projectManager.selectedDesign.layers
+            for comp in projectManager.componentInstances {
+                if let footprint = comp.footprintInstance {
+                    _ = footprint.placement
+                    _ = footprint.definitionUUID
+                }
+            }
         } onChange: {
             Task { @MainActor in
-                await self.rebuildNodes()
+                await self.rebuildItems()
                 self.startTrackingStructureChanges()
             }
         }
@@ -107,7 +101,7 @@ final class LayoutEditorController: EditorController {
             }
         } onChange: {
             Task { @MainActor in
-                self.refreshFootprintTextNodes()
+                self.refreshFootprintTextItems()
                 self.startTrackingTextChanges()
             }
         }
@@ -124,6 +118,8 @@ final class LayoutEditorController: EditorController {
         } onChange: {
             Task { @MainActor in
                 var nextCache: [UUID: FootprintTransform] = [:]
+                var updatedItems = self.items
+                var didUpdate = false
                 for comp in self.projectManager.componentInstances {
                     guard let fp = comp.footprintInstance,
                         case .placed = fp.placement
@@ -135,18 +131,20 @@ final class LayoutEditorController: EditorController {
                         rotation: fp.cardinalRotation
                     )
                     if self.cachedFootprintTransforms[comp.id] != transform {
-                        let nodeID = NodeID(comp.id)
-                        if var component = self.graph.component(CanvasFootprint.self, for: nodeID) {
-                            component.position = fp.position
-                            component.rotation = fp.rotation
-                            self.graph.setComponent(component, for: nodeID)
-                            self.syncOwnedComponents(for: component)
-                        }
+                        self.updateOwnerTransform(
+                            ownerID: comp.id,
+                            position: fp.position,
+                            rotation: fp.rotation,
+                            items: &updatedItems
+                        )
+                        didUpdate = true
                     }
                     nextCache[comp.id] = transform
                 }
                 self.cachedFootprintTransforms = nextCache
-                self.canvasStore.invalidate()
+                if didUpdate {
+                    self.items = updatedItems
+                }
                 self.startTrackingTransformChanges()
             }
         }
@@ -168,10 +166,10 @@ final class LayoutEditorController: EditorController {
         }
     }
 
-    // MARK: - Node Building
+    // MARK: - Item Building
 
-    /// The primary method to rebuild the node graph. It's called automatically by the tracking system.
-    private func rebuildNodes() async {
+    /// The primary method to rebuild the item list. It's called automatically by the tracking system.
+    private func rebuildItems() async {
         let design = projectManager.selectedDesign
         resetGraphIfNeeded(for: design)
 
@@ -199,18 +197,12 @@ final class LayoutEditorController: EditorController {
             return sideA.drawingOrder < sideB.drawingOrder
         }
 
-        canvasStore.selection = []
         syncTracesFromModel()
-        refreshFootprintComponents()
-        refreshFootprintTextNodes()
-        refreshFootprintPadComponents()
-        canvasStore.invalidate()
+        items = buildItems(from: design)
     }
 
-    private func refreshFootprintComponents() {
-        let design = projectManager.selectedDesign
-        isSyncingFootprintsFromModel = true
-        var updatedIDs = Set<NodeID>()
+    private func buildItems(from design: CircuitDesign) -> [any CanvasItem] {
+        var result: [any CanvasItem] = []
 
         for inst in design.componentInstances {
             guard let footprintInst = inst.footprintInstance,
@@ -220,32 +212,48 @@ final class LayoutEditorController: EditorController {
                 continue
             }
 
-            let nodeID = NodeID(inst.id)
             let primitives = resolveFootprintPrimitives(
                 for: footprintInst, definition: footprintDef)
-            let component = CanvasFootprint(
+            let footprint = CanvasFootprint(
                 ownerID: inst.id,
-                position: footprintInst.position,
-                rotation: footprintInst.rotation,
+                footprint: footprintInst,
                 primitives: primitives
             )
+            result.append(footprint)
 
-            if !graph.nodes.contains(nodeID) {
-                graph.addNode(nodeID)
+            let ownerPosition = footprintInst.position
+            let ownerRotation = footprintInst.rotation
+
+            for resolvedModel in footprintInst.resolvedItems {
+                let displayString = projectManager.generateString(
+                    for: resolvedModel, component: inst)
+                let text = CanvasText(
+                    resolvedText: resolvedModel,
+                    displayText: displayString,
+                    ownerID: inst.id,
+                    target: .footprint,
+                    ownerPosition: ownerPosition,
+                    ownerRotation: ownerRotation,
+                    layerId: nil,
+                    showsAnchorGuides: true
+                )
+                result.append(text)
             }
-            graph.setComponent(component, for: nodeID)
-            updatedIDs.insert(nodeID)
+
+            for padDef in footprintDef.pads {
+                let pad = CanvasPad(
+                    pad: padDef,
+                    ownerID: inst.id,
+                    ownerPosition: ownerPosition,
+                    ownerRotation: ownerRotation,
+                    layerId: nil,
+                    isSelectable: false
+                )
+                result.append(pad)
+            }
         }
 
-        let existingIDs = Set(graph.nodeIDs(with: CanvasFootprint.self))
-        for id in existingIDs.subtracting(updatedIDs) {
-            graph.removeComponent(CanvasFootprint.self, for: id)
-            if !graph.hasAnyComponent(for: id) {
-                graph.removeNode(id)
-            }
-        }
-
-        isSyncingFootprintsFromModel = false
+        return result
     }
 
     private func resolveFootprintPrimitives(
@@ -278,10 +286,12 @@ final class LayoutEditorController: EditorController {
         }
     }
 
-    func refreshFootprintTextNodes() {
+    func refreshFootprintTextItems() {
         let design = projectManager.selectedDesign
-        isSyncingTextFromModel = true
-        var updatedIDs = Set<NodeID>()
+        var updatedItems: [any CanvasItem] = items.filter { item in
+            guard let text = item as? CanvasText else { return true }
+            return text.target != .footprint
+        }
 
         for inst in design.componentInstances {
             guard let footprintInst = inst.footprintInstance,
@@ -296,9 +306,6 @@ final class LayoutEditorController: EditorController {
             for resolvedModel in footprintInst.resolvedItems {
                 let displayString = projectManager.generateString(
                     for: resolvedModel, component: inst)
-                let textID = GraphTextID.makeID(
-                    for: resolvedModel.source, ownerID: inst.id, fallback: resolvedModel.id)
-                let nodeID = NodeID(textID)
 
                 let component = CanvasText(
                     resolvedText: resolvedModel,
@@ -311,102 +318,77 @@ final class LayoutEditorController: EditorController {
                     showsAnchorGuides: true
                 )
 
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
-                }
-                graph.setComponent(component, for: nodeID)
-                updatedIDs.insert(nodeID)
+                updatedItems.append(component)
             }
         }
 
-        let existingIDs = Set(graph.nodeIDs(with: CanvasText.self))
-        for id in existingIDs.subtracting(updatedIDs) {
-            graph.removeComponent(CanvasText.self, for: id)
-            if !graph.hasAnyComponent(for: id) {
-                graph.removeNode(id)
-            }
-        }
-
-        isSyncingTextFromModel = false
-        canvasStore.invalidate()
-    }
-
-    private func refreshFootprintPadComponents() {
-        let design = projectManager.selectedDesign
-        var updatedIDs = Set<NodeID>()
-
-        for inst in design.componentInstances {
-            guard let footprintInst = inst.footprintInstance,
-                case .placed = footprintInst.placement,
-                let footprintDef = footprintInst.definition
-            else {
-                continue
-            }
-
-            let ownerPosition = footprintInst.position
-            let ownerRotation = footprintInst.rotation
-
-            for padDef in footprintDef.pads {
-                let padID = GraphPadID.makeID(ownerID: inst.id, padID: padDef.id)
-                let nodeID = NodeID(padID)
-                let component = CanvasPad(
-                    pad: padDef,
-                    ownerID: inst.id,
-                    ownerPosition: ownerPosition,
-                    ownerRotation: ownerRotation,
-                    layerId: nil,
-                    isSelectable: false
-                )
-
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
-                }
-                graph.setComponent(component, for: nodeID)
-                updatedIDs.insert(nodeID)
-            }
-        }
-
-        let existingIDs = Set(graph.nodeIDs(with: CanvasPad.self))
-        for id in existingIDs.subtracting(updatedIDs) {
-            graph.removeComponent(CanvasPad.self, for: id)
-            if !graph.hasAnyComponent(for: id) {
-                graph.removeNode(id)
-            }
-        }
+        items = updatedItems
     }
 
     // MARK: - Private Helpers
-
-    var primitives: [AnyCanvasPrimitive] {
-        graph.components(AnyCanvasPrimitive.self).map { $0.1 }
+    private func updateOwnerTransform(
+        ownerID: UUID,
+        position: CGPoint,
+        rotation: CGFloat,
+        items: inout [any CanvasItem]
+    ) {
+        for index in items.indices {
+            if var footprint = items[index] as? CanvasFootprint, footprint.ownerID == ownerID {
+                footprint.position = position
+                footprint.rotation = rotation
+                items[index] = footprint
+            } else if var pad = items[index] as? CanvasPad, pad.ownerID == ownerID {
+                pad.ownerPosition = position
+                pad.ownerRotation = rotation
+                items[index] = pad
+            } else if var text = items[index] as? CanvasText, text.ownerID == ownerID {
+                text.ownerPosition = position
+                text.ownerRotation = rotation
+                items[index] = text
+            }
+        }
     }
 
-    var singleSelectedPrimitive: (id: NodeID, primitive: AnyCanvasPrimitive)? {
-        guard canvasStore.selection.count == 1, let id = canvasStore.selection.first else {
-            return nil
-        }
-        let nodeID = NodeID(id)
-        guard let primitive = graph.component(AnyCanvasPrimitive.self, for: nodeID) else {
-            return nil
-        }
-        return (nodeID, primitive)
-    }
-
-    func primitiveBinding(for id: UUID) -> Binding<AnyCanvasPrimitive>? {
-        let nodeID = NodeID(id)
-        guard graph.component(AnyCanvasPrimitive.self, for: nodeID) != nil else { return nil }
-        let fallback =
-            primitiveCache[nodeID]
-            ?? AnyCanvasPrimitive.line(
-                CanvasLine(start: .zero, end: .zero, strokeWidth: 1, layerId: nil))
+    func footprintBinding(for id: UUID) -> Binding<CanvasFootprint>? {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
+        guard items[index] is CanvasFootprint else { return nil }
         return Binding(
             get: {
-                self.graph.component(AnyCanvasPrimitive.self, for: nodeID) ?? self.primitiveCache[
-                    nodeID] ?? fallback
+                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }),
+                    let current = self.items[currentIndex] as? CanvasFootprint
+                else {
+                    return self.items[index] as! CanvasFootprint
+                }
+                return current
             },
-            set: {
-                self.primitiveCache[nodeID] = $0
-                self.graph.setComponent($0, for: nodeID)
+            set: { newValue in
+                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }) else { return }
+                self.items[currentIndex] = newValue
+            }
+        )
+    }
+
+    func textBinding(for id: UUID) -> Binding<CanvasText>? {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
+        guard items[index] is CanvasText else { return nil }
+        return Binding(
+            get: {
+                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }),
+                    let current = self.items[currentIndex] as? CanvasText
+                else {
+                    return self.items[index] as! CanvasText
+                }
+                return current
+            },
+            set: { newValue in
+                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }) else { return }
+                self.items[currentIndex] = newValue
+                if let inst = self.projectManager.componentInstances.first(
+                    where: { $0.id == newValue.ownerID }
+                ) {
+                    inst.apply(newValue.resolvedText, for: newValue.target)
+                    self.document.scheduleAutosave()
+                }
             }
         )
     }
@@ -414,162 +396,14 @@ final class LayoutEditorController: EditorController {
     private func resetGraphIfNeeded(for design: CircuitDesign) {
         guard activeDesignID != design.id else { return }
         activeDesignID = design.id
-        primitiveCache.removeAll()
         isSyncingTracesFromModel = true
         traceEngine.reset()
         isSyncingTracesFromModel = false
         graph.reset()
     }
 
-    private func handleStoreDelta(_ delta: CanvasStoreDelta) {
-        switch delta {
-        case .selectionChanged(let selection):
-            guard !suppressGraphSelectionSync else { return }
-            let graphSelection = Set(
-                selection.compactMap { id -> GraphElementID? in
-                    let nodeID = NodeID(id)
-                    return graph.hasAnyComponent(for: nodeID) ? .node(nodeID) : nil
-                })
-            if graph.selection != graphSelection {
-                suppressGraphSelectionSync = true
-                graph.selection = graphSelection
-                suppressGraphSelectionSync = false
-            }
-        default:
-            break
-        }
-    }
-
-    private func handleGraphDelta(_ delta: UnifiedGraphDelta) {
-        switch delta {
-        case .selectionChanged(let selection):
-            guard !suppressGraphSelectionSync else { return }
-            let graphSelectionIDs = Set(selection.compactMap { $0.nodeID?.rawValue })
-            if canvasStore.selection != graphSelectionIDs {
-                suppressGraphSelectionSync = true
-                Task { @MainActor in
-                    self.canvasStore.selection = graphSelectionIDs
-                    self.suppressGraphSelectionSync = false
-                }
-            }
-        case .nodeComponentSet(let id, let componentKey):
-            if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self),
-                let primitive = graph.component(AnyCanvasPrimitive.self, for: id)
-            {
-                primitiveCache[id] = primitive
-            } else if componentKey == ObjectIdentifier(CanvasText.self),
-                let component = graph.component(CanvasText.self, for: id),
-                !isSyncingTextFromModel
-            {
-                applyGraphTextChange(component)
-            } else if componentKey == ObjectIdentifier(CanvasFootprint.self),
-                let component = graph.component(CanvasFootprint.self, for: id),
-                !isSyncingFootprintsFromModel
-            {
-                applyGraphFootprintChange(component)
-                syncOwnedComponents(for: component)
-            }
-            canvasStore.invalidate()
-        case .nodeRemoved(let id):
-            primitiveCache.removeValue(forKey: id)
-            canvasStore.invalidate()
-        case .nodeComponentRemoved(let id, let componentKey):
-            if componentKey == ObjectIdentifier(AnyCanvasPrimitive.self) {
-                primitiveCache.removeValue(forKey: id)
-            }
-            canvasStore.invalidate()
-        case .edgeAdded,
-            .edgeRemoved,
-            .nodeAdded,
-            .edgeComponentSet,
-            .edgeComponentRemoved:
-            canvasStore.invalidate()
-        default:
-            break
-        }
-    }
-
-    private func applyGraphTextChange(_ component: CanvasText) {
-        guard !isApplyingTextChangesToModel else { return }
-        guard
-            let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }
-            )
-        else { return }
-
-        isApplyingTextChangesToModel = true
-        inst.apply(component.resolvedText, for: component.target)
-        document.scheduleAutosave()
-        isApplyingTextChangesToModel = false
-    }
-
-    private func applyGraphFootprintChange(_ component: CanvasFootprint) {
-        guard
-            let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }
-            ),
-            let footprintInst = inst.footprintInstance
-        else {
-            return
-        }
-        footprintInst.position = component.position
-        footprintInst.rotation = component.rotation
-        document.scheduleAutosave()
-    }
-
-    private func syncOwnedComponents(for component: CanvasFootprint) {
-        let ownerID = component.ownerID
-        let ownerPosition = component.position
-        let ownerRotation = component.rotation
-
-        for (id, pad) in graph.components(CanvasPad.self) where pad.ownerID == ownerID {
-            var updated = pad
-            updated.ownerPosition = ownerPosition
-            updated.ownerRotation = ownerRotation
-            graph.setComponent(updated, for: id)
-        }
-
-        for (id, text) in graph.components(CanvasText.self) where text.ownerID == ownerID {
-            var updated = text
-            updated.ownerPosition = ownerPosition
-            updated.ownerRotation = ownerRotation
-            graph.setComponent(updated, for: id)
-        }
-    }
-
-    func footprintBinding(for id: UUID) -> Binding<CanvasFootprint>? {
-        let nodeID = NodeID(id)
-        guard let component = graph.component(CanvasFootprint.self, for: nodeID) else { return nil }
-        return Binding(
-            get: { component },
-            set: { newValue in
-                if !self.graph.nodes.contains(nodeID) {
-                    self.graph.addNode(nodeID)
-                }
-                self.graph.setComponent(newValue, for: nodeID)
-            }
-        )
-    }
-
-    func textBinding(for id: UUID) -> Binding<CanvasText>? {
-        let nodeID = NodeID(id)
-        guard let component = graph.component(CanvasText.self, for: nodeID) else { return nil }
-        return Binding(
-            get: { component },
-            set: { newValue in
-                self.setTextComponent(newValue, for: nodeID)
-            }
-        )
-    }
-
-    private func setTextComponent(_ component: CanvasText, for id: NodeID) {
-        if !graph.nodes.contains(id) {
-            graph.addNode(id)
-        }
-        graph.setComponent(component, for: id)
-    }
-
     private func handleTraceEngineChange() {
         persistTraces()
-        canvasStore.invalidate()
     }
 
     private func persistTraces() {

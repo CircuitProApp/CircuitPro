@@ -105,7 +105,7 @@ struct CanvasView: NSViewRepresentable {
         let scene: CanvasScene
         private var graphObserverToken: UUID?
         private var detachGraphObserver: (() -> Void)?
-        private var updateSelectedIDs: ((Set<UUID>) -> Void)?
+        fileprivate var updateSelectedIDs: ((Set<UUID>) -> Void)?
 
         private var viewportBinding: Binding<CanvasViewport>
 

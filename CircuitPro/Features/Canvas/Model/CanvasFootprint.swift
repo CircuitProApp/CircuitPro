@@ -13,20 +13,16 @@ import Foundation
 struct CanvasFootprint: LayeredDrawable, Bounded, HitTestable, HaloProviding, Transformable, HitTestPriorityProviding {
 
     var ownerID: UUID
-
-    var position: CGPoint
-    var rotation: CGFloat
+    var footprint: FootprintInstance
     var primitives: [AnyCanvasPrimitive]
 
     init(
         ownerID: UUID,
-        position: CGPoint,
-        rotation: CGFloat,
+        footprint: FootprintInstance,
         primitives: [AnyCanvasPrimitive]
     ) {
         self.ownerID = ownerID
-        self.position = position
-        self.rotation = rotation
+        self.footprint = footprint
         self.primitives = primitives
     }
 
@@ -102,6 +98,16 @@ struct CanvasFootprint: LayeredDrawable, Bounded, HitTestable, HaloProviding, Tr
     }
 
     // MARK: - Helpers
+
+    var position: CGPoint {
+        get { footprint.position }
+        set { footprint.position = newValue }
+    }
+
+    var rotation: CGFloat {
+        get { footprint.rotation }
+        set { footprint.rotation = newValue }
+    }
 
     var ownerTransform: CGAffineTransform {
         CGAffineTransform(translationX: position.x, y: position.y)

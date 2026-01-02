@@ -444,12 +444,41 @@ final class DragInteraction: CanvasInteraction {
         itemsBinding: Binding<[any CanvasItem]>
     ) {
         var items = itemsBinding.wrappedValue
+        var ownerID: UUID?
+        var ownerPosition: CGPoint?
+        var ownerRotation: CGFloat?
         for index in items.indices where items[index].id == id {
             if var transformable = items[index] as? (any CanvasItem & Transformable) {
                 transformable.position = newPosition
                 items[index] = transformable
+                if let component = transformable as? ComponentInstance {
+                    ownerID = component.id
+                    ownerPosition = component.position
+                    ownerRotation = component.rotation
+                } else if let footprint = transformable as? CanvasFootprint {
+                    ownerID = footprint.ownerID
+                    ownerPosition = footprint.position
+                    ownerRotation = footprint.rotation
+                }
             }
             break
+        }
+        if let ownerID, let ownerPosition, let ownerRotation {
+            for index in items.indices {
+                if var pin = items[index] as? CanvasPin, pin.ownerID == ownerID {
+                    pin.ownerPosition = ownerPosition
+                    pin.ownerRotation = ownerRotation
+                    items[index] = pin
+                } else if var pad = items[index] as? CanvasPad, pad.ownerID == ownerID {
+                    pad.ownerPosition = ownerPosition
+                    pad.ownerRotation = ownerRotation
+                    items[index] = pad
+                } else if var text = items[index] as? CanvasText, text.ownerID == ownerID {
+                    text.ownerPosition = ownerPosition
+                    text.ownerRotation = ownerRotation
+                    items[index] = text
+                }
+            }
         }
         itemsBinding.wrappedValue = items
     }
