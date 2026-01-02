@@ -15,10 +15,6 @@ final class SchematicEditorController: EditorController {
     private let document: CircuitProjectFileDocument
 
     let wireEngine: WireEngine
-    private var suppressGraphSelectionSync = false
-    private var isSyncingTextFromModel = false
-    private var isApplyingTextChangesToModel = false
-
     // Track if initial load has happened
     private var hasPerformedInitialLoad = false
     private var isPerformingInitialLoad = false
@@ -41,13 +37,6 @@ final class SchematicEditorController: EditorController {
                     self.persistWiresToDocument(wires)
                 }
             }
-        }
-
-        self.canvasStore.onDelta = { [weak self] delta in
-            self?.handleStoreDelta(delta)
-        }
-        self.graph.onDelta = { [weak self] delta in
-            self?.handleGraphDelta(delta)
         }
 
         Task {
@@ -125,134 +114,6 @@ final class SchematicEditorController: EditorController {
         }
 
         return result
-    }
-
-    private func handleStoreDelta(_ delta: CanvasStoreDelta) {
-        switch delta {
-        case .selectionChanged(let selection):
-            guard !suppressGraphSelectionSync else { return }
-            let graphSelection = Set(
-                selection.compactMap { id -> GraphElementID? in
-                    let nodeID = NodeID(id)
-                    return graph.hasAnyComponent(for: nodeID) ? .node(nodeID) : nil
-                })
-            if graph.selection != graphSelection {
-                suppressGraphSelectionSync = true
-                graph.selection = graphSelection
-                suppressGraphSelectionSync = false
-            }
-        default:
-            break
-        }
-    }
-
-    private func handleGraphDelta(_ delta: UnifiedGraphDelta) {
-        switch delta {
-        case .selectionChanged(let selection):
-            guard !suppressGraphSelectionSync else { return }
-            let graphSelectionIDs = Set(selection.compactMap { $0.nodeID?.rawValue })
-            if canvasStore.selection != graphSelectionIDs {
-                suppressGraphSelectionSync = true
-                Task { @MainActor in
-                    self.canvasStore.selection = graphSelectionIDs
-                    self.suppressGraphSelectionSync = false
-                }
-            }
-        case .nodeComponentSet(let id, let componentKey):
-            if componentKey == ObjectIdentifier(CanvasText.self),
-                let component = graph.component(CanvasText.self, for: id),
-                !isSyncingTextFromModel
-            {
-                applyGraphTextChange(component)
-            } else if componentKey == ObjectIdentifier(ComponentInstance.self),
-                let component = graph.component(ComponentInstance.self, for: id)
-            {
-                syncOwnedComponents(for: component)
-            }
-            canvasStore.invalidate()
-        case .edgeComponentSet(let id, let componentKey):
-            if componentKey == ObjectIdentifier(WireEdgeComponent.self),
-                graph.component(WireEdgeComponent.self, for: id) != nil
-            {
-                persistWiresToDocument()
-            }
-            canvasStore.invalidate()
-        case .edgeComponentRemoved(let id, let componentKey):
-            if componentKey == ObjectIdentifier(WireEdgeComponent.self),
-                graph.component(WireEdgeComponent.self, for: id) == nil
-            {
-                persistWiresToDocument()
-            }
-            canvasStore.invalidate()
-        case .edgeAdded,
-            .edgeRemoved:
-            persistWiresToDocument()
-            canvasStore.invalidate()
-        case .nodeRemoved,
-            .nodeAdded,
-            .nodeComponentRemoved:
-            canvasStore.invalidate()
-        default:
-            break
-        }
-    }
-
-    private func applyGraphTextChange(_ component: CanvasText) {
-        guard !isApplyingTextChangesToModel else { return }
-        guard
-            let inst = projectManager.componentInstances.first(where: { $0.id == component.ownerID }
-            )
-        else { return }
-
-        if let current = inst.symbolInstance.resolvedItems.first(where: {
-            $0.id == component.resolvedText.id
-        }) {
-            let currentPosition = current.relativePosition
-            let currentAnchor = current.anchorPosition
-            let currentRotation = current.cardinalRotation
-            let currentVisibility = current.isVisible
-            let nextPosition = component.resolvedText.relativePosition
-            let nextAnchor = component.resolvedText.anchorPosition
-            let nextRotation = component.resolvedText.cardinalRotation
-            let nextVisibility = component.resolvedText.isVisible
-            if currentPosition == nextPosition,
-                currentAnchor == nextAnchor,
-                currentRotation == nextRotation,
-                currentVisibility == nextVisibility
-            {
-                return
-            }
-        }
-
-        isApplyingTextChangesToModel = true
-        inst.apply(component.resolvedText, for: component.target)
-        document.scheduleAutosave()
-        isApplyingTextChangesToModel = false
-    }
-
-    private func syncOwnedComponents(for component: ComponentInstance) {
-        let ownerID = component.id
-        let ownerPosition = component.symbolInstance.position
-        let ownerRotation = component.symbolInstance.rotation
-
-        for (id, pin) in graph.components(CanvasPin.self) where pin.ownerID == ownerID {
-            var updated = pin
-            updated.ownerPosition = ownerPosition
-            updated.ownerRotation = ownerRotation
-            graph.setComponent(updated, for: id)
-        }
-
-        for (id, text) in graph.components(CanvasText.self) where text.ownerID == ownerID {
-            var updated = text
-            updated.ownerPosition = ownerPosition
-            updated.ownerRotation = ownerRotation
-            graph.setComponent(updated, for: id)
-        }
-
-        let symbolDef = component.symbolInstance.definition ?? component.definition?.symbol
-        if let symbolDef {
-            wireEngine.syncPins(for: component.symbolInstance, of: symbolDef, ownerID: ownerID)
-        }
     }
 
     func deleteComponentInstances(ids: Set<UUID>) -> Bool {
