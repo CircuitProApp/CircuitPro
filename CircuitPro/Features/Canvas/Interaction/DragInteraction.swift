@@ -7,12 +7,6 @@ import AppKit
 /// 2. Connection elements (wires via ConnectionEngine)
 /// 3. Special items (standalone text with anchor drag support)
 final class DragInteraction: CanvasInteraction {
-    private let wireEngine: (any ConnectionEngine)?
-
-    init(wireEngine: (any ConnectionEngine)? = nil) {
-        self.wireEngine = wireEngine
-    }
-
     // MARK: - State Types
 
     /// State for dragging Transformable items (protocol-based)
@@ -140,7 +134,7 @@ final class DragInteraction: CanvasInteraction {
 
         // Start connection engine drag if applicable
         var activeConnectionEngine: (any ConnectionEngine)?
-        if let connectionEngine = wireEngine {
+        if let connectionEngine = context.environment.connectionEngine {
             if connectionEngine.beginDrag(selectedIDs: selectedIDs) {
                 activeConnectionEngine = connectionEngine
             }
@@ -180,7 +174,7 @@ final class DragInteraction: CanvasInteraction {
     // MARK: - Private: Connection Drag (Wires/Traces Only)
 
     private func tryStartConnectionDrag(at point: CGPoint, context: RenderContext) -> Bool {
-        guard let connectionEngine = wireEngine else { return false }
+        guard let connectionEngine = context.environment.connectionEngine else { return false }
 
         let graph = context.graph
         guard let graphHit = GraphHitTester().hitTest(point: point, context: context) else {

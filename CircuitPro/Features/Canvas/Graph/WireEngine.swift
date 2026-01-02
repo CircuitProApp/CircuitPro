@@ -234,6 +234,7 @@ final class WireEngine: ConnectionEngine {
     private var ownership: [UUID: VertexOwnership] = [:]
     private var lastPosition: [UUID: CGPoint] = [:]
     private var dragHandler: DragHandler?
+    private var connectionPoints: [UUID: CGPoint] = [:]
 
     // Read-only convenience accessors to current state
     var vertices: [GraphVertex.ID: GraphVertex] { engine.currentState.vertices }
@@ -242,6 +243,7 @@ final class WireEngine: ConnectionEngine {
 
     private(set) var groupLabels: [UUID: String] = [:]
     var onChange: (() -> Void)?
+    var onWiresChanged: (([Wire]) -> Void)?
 
     // MARK: - Init
     init(graph: CanvasGraph) {
@@ -634,6 +636,7 @@ final class WireEngine: ConnectionEngine {
         }
 
         syncGraphComponents(delta: delta, final: final)
+        onWiresChanged?(toWires())
     }
 
     private func syncGraphComponents(delta: GraphDelta, final: GraphState) {
@@ -746,5 +749,16 @@ final class WireEngine: ConnectionEngine {
         if graph.selection != restored {
             graph.selection = restored
         }
+    }
+}
+
+extension WireEngine: ConnectionPointConsumer {
+    func updateConnectionPoints(_ points: [any ConnectionPoint]) {
+        var next: [UUID: CGPoint] = [:]
+        next.reserveCapacity(points.count)
+        for point in points {
+            next[point.id] = point.position
+        }
+        connectionPoints = next
     }
 }

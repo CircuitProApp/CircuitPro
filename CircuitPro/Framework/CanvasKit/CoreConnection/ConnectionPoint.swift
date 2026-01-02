@@ -20,5 +20,15 @@ protocol ConnectionPoint: Identifiable where ID == UUID {
     var position: CGPoint { get }
 
     /// The ID of the item that owns this connection point.
-    var ownerID: UUID { get }
+    var ownerID: UUID? { get }
+}
+
+/// A type that can expose one or more connection points.
+protocol ConnectionPointProvider {
+    var connectionPoints: [any ConnectionPoint] { get }
+}
+
+/// Optional extension for engines that want live updates of connection points.
+protocol ConnectionPointConsumer: ConnectionEngine {
+    func updateConnectionPoints(_ points: [any ConnectionPoint])
 }

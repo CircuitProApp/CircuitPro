@@ -32,6 +32,7 @@ struct LayoutCanvasView: View {
             graph: layoutController.graph,
             layers: layers,
             activeLayerId: activeLayerId,
+            connections: layoutController.traceEngine,
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
@@ -44,7 +45,7 @@ struct LayoutCanvasView: View {
             ],
             interactions: [
                 HoverHighlightInteraction(),
-                KeyCommandInteraction(traceEngine: layoutController.traceEngine),
+                KeyCommandInteraction(),
                 HandleInteraction(),
                 ToolInteraction(),
                 SelectionInteraction(),

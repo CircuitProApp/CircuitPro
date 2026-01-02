@@ -13,17 +13,11 @@ import Carbon.HIToolbox  // For kVK constants
 /// (like deleting selected elements) if the tool doesn't handle the command.
 struct KeyCommandInteraction: CanvasInteraction {
 
-    private let wireEngine: WireEngine?
-    private let traceEngine: TraceEngine?
     private let deleteComponentInstances: ((Set<UUID>) -> Bool)?
 
     init(
-        wireEngine: WireEngine? = nil,
-        traceEngine: TraceEngine? = nil,
         deleteComponentInstances: ((Set<UUID>) -> Bool)? = nil
     ) {
-        self.wireEngine = wireEngine
-        self.traceEngine = traceEngine
         self.deleteComponentInstances = deleteComponentInstances
     }
 
@@ -126,7 +120,9 @@ struct KeyCommandInteraction: CanvasInteraction {
             }
         }
 
-        if hasWireSelection, let wireEngine = wireEngine {
+        if hasWireSelection,
+            let wireEngine = context.environment.connectionEngine as? WireEngine
+        {
             wireEngine.delete(items: selectedIDs)
             graph.selection = []
             Task { @MainActor in
@@ -144,7 +140,9 @@ struct KeyCommandInteraction: CanvasInteraction {
             }
         }
 
-        if hasTraceSelection, let traceEngine = traceEngine {
+        if hasTraceSelection,
+            let traceEngine = context.environment.connectionEngine as? TraceEngine
+        {
             traceEngine.delete(items: selectedIDs)
             graph.selection = []
             Task { @MainActor in

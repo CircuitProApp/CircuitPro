@@ -38,6 +38,16 @@ extension CanvasPad: CanvasItem {
     }
 }
 
+extension CanvasPad: ConnectionPoint {
+    var position: CGPoint {
+        CGPoint.zero.applying(worldTransform)
+    }
+}
+
+extension CanvasPad: ConnectionPointProvider {
+    var connectionPoints: [any ConnectionPoint] { [self] }
+}
+
 extension CanvasPad {
     var ownerTransform: CGAffineTransform {
         CGAffineTransform(translationX: ownerPosition.x, y: ownerPosition.y)

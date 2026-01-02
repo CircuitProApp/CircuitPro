@@ -6,14 +6,16 @@ import SwiftUI
 @Observable
 final class SchematicEditorController: EditorController {
 
-    let canvasStore = CanvasStore()
+    let scene: CanvasScene
+
+    var canvasStore: CanvasStore { scene.store }
+    var graph: CanvasGraph { scene.graph }
 
     var selectedTool: CanvasTool = CursorTool()
 
     private let projectManager: ProjectManager
     private let document: CircuitProjectFileDocument
 
-    let graph = CanvasGraph()
     let wireEngine: WireEngine
     private var suppressGraphSelectionSync = false
     private var isSyncingTextFromModel = false
@@ -73,18 +75,18 @@ final class SchematicEditorController: EditorController {
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
         self.document = projectManager.document
-        self.wireEngine = WireEngine(graph: graph)
+        self.scene = CanvasScene()
+        self.wireEngine = WireEngine(graph: scene.graph)
 
-        // When wires change in the engine, persist to document
-        self.wireEngine.onChange = { [weak self] in
+        // When wires change in the engine, persist to document.
+        self.wireEngine.onWiresChanged = { [weak self] wires in
             guard let self = self else { return }
-            // Don't persist during initial load
             guard !self.isPerformingInitialLoad else { return }
             if Thread.isMainThread {
-                self.persistWiresToDocument()
+                self.persistWiresToDocument(wires)
             } else {
                 Task { @MainActor in
-                    self.persistWiresToDocument()
+                    self.persistWiresToDocument(wires)
                 }
             }
         }
@@ -169,11 +171,25 @@ final class SchematicEditorController: EditorController {
                 syncOwnedComponents(for: component)
             }
             canvasStore.invalidate()
-        case .edgeComponentSet,
-            .edgeComponentRemoved,
-            .edgeAdded,
-            .edgeRemoved,
-            .nodeRemoved,
+        case .edgeComponentSet(let id, let componentKey):
+            if componentKey == ObjectIdentifier(WireEdgeComponent.self),
+                graph.component(WireEdgeComponent.self, for: id) != nil
+            {
+                persistWiresToDocument()
+            }
+            canvasStore.invalidate()
+        case .edgeComponentRemoved(let id, let componentKey):
+            if componentKey == ObjectIdentifier(WireEdgeComponent.self),
+                graph.component(WireEdgeComponent.self, for: id) == nil
+            {
+                persistWiresToDocument()
+            }
+            canvasStore.invalidate()
+        case .edgeAdded,
+            .edgeRemoved:
+            persistWiresToDocument()
+            canvasStore.invalidate()
+        case .nodeRemoved,
             .nodeAdded,
             .nodeComponentRemoved:
             canvasStore.invalidate()
@@ -282,11 +298,12 @@ final class SchematicEditorController: EditorController {
     // MARK: - Persistence
 
     /// Called by WireEngine.onChange - saves wires to document model
-    private func persistWiresToDocument() {
+    private func persistWiresToDocument(_ newWires: [Wire]? = nil) {
+        guard !isPerformingInitialLoad else { return }
         let design = projectManager.selectedDesign
-        let newWires = wireEngine.toWires()
-        guard newWires != design.wires else { return }
-        design.wires = newWires
+        let resolvedWires = newWires ?? wireEngine.toWires()
+        guard resolvedWires != design.wires else { return }
+        design.wires = resolvedWires
         document.scheduleAutosave()
     }
 

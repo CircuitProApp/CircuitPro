@@ -33,12 +33,12 @@ struct SchematicCanvasView: View {
 
         CanvasView(
             viewport: $canvasManager.viewport,
-            store: schematicController.canvasStore,
+            scene: schematicController.scene,
             tool: selectedTool.unwrapping(
                 withDefault: CursorTool()),
             items: items,
             selectedIDs: selectedIDs,
-            graph: schematicController.graph,
+            connections: schematicController.wireEngine,
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
@@ -51,14 +51,13 @@ struct SchematicCanvasView: View {
             interactions: [
                 HoverHighlightInteraction(),
                 KeyCommandInteraction(
-                    wireEngine: schematicController.wireEngine,
                     deleteComponentInstances: { ids in
                         schematicController.deleteComponentInstances(ids: ids)
                     }
                 ),
                 ToolInteraction(),
                 SelectionInteraction(),
-                DragInteraction(wireEngine: schematicController.wireEngine),
+                DragInteraction(),
                 MarqueeInteraction(),
             ],
             inputProcessors: [GridSnapProcessor()],

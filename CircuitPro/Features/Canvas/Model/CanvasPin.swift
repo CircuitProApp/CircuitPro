@@ -138,3 +138,13 @@ extension CanvasPin: CanvasItem {
         graph.setComponent(self, for: nodeID)
     }
 }
+
+extension CanvasPin: ConnectionPoint {
+    var position: CGPoint {
+        CGPoint.zero.applying(worldTransform)
+    }
+}
+
+extension CanvasPin: ConnectionPointProvider {
+    var connectionPoints: [any ConnectionPoint] { [self] }
+}
