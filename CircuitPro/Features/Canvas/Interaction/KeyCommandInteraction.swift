@@ -7,6 +7,7 @@
 
 import AppKit
 import Carbon.HIToolbox  // For kVK constants
+import SwiftUI
 
 /// An interaction that handles global keyboard commands like Escape, Return, Delete, and Rotate.
 /// It prioritizes sending commands to the active tool first, falling back to graph actions
@@ -84,13 +85,20 @@ struct KeyCommandInteraction: CanvasInteraction {
                 controller: controller)
             return true
         case .newPrimitive(let primitive):
-            let graph = context.graph
-            let nodeID = NodeID(primitive.id)
-            if !graph.nodes.contains(nodeID) {
-                graph.addNode(nodeID)
+            if let itemsBinding = context.environment.items {
+                var items = itemsBinding.wrappedValue
+                items.append(primitive)
+                itemsBinding.wrappedValue = items
+                return true
+            } else {
+                let graph = context.graph
+                let nodeID = NodeID(primitive.id)
+                if !graph.nodes.contains(nodeID) {
+                    graph.addNode(nodeID)
+                }
+                graph.setComponent(primitive, for: nodeID)
+                return true
             }
-            graph.setComponent(primitive, for: nodeID)
-            return true
         }
     }
 
@@ -111,6 +119,7 @@ struct KeyCommandInteraction: CanvasInteraction {
         let selectedNodeIDs = graph.selection.compactMap { $0.nodeID }
         let selectedEdgeIDs = graph.selection.compactMap { $0.edgeID }
         let selectedIDs = Set(selectedNodeIDs.map(\.rawValue) + selectedEdgeIDs.map(\.rawValue))
+        let selectedItemIDs = Set(selectedNodeIDs.map(\.rawValue))
         let hasWireSelection = graph.selection.contains { id in
             switch id {
             case .node(let nodeID):
@@ -155,13 +164,30 @@ struct KeyCommandInteraction: CanvasInteraction {
             return true
         }
 
-        let componentInstanceIDs = Set(
-            selectedNodeIDs.compactMap { nodeID in
-                graph.component(ComponentInstance.self, for: nodeID) != nil ? nodeID.rawValue : nil
+        if let itemsBinding = context.environment.items {
+            let items = itemsBinding.wrappedValue
+            let componentInstanceIDs = Set(
+                items.compactMap { item in
+                    if selectedItemIDs.contains(item.id), item is ComponentInstance {
+                        return item.id
+                    }
+                    return nil
+                }
+            )
+            if !componentInstanceIDs.isEmpty, let deleteComponentInstances {
+                if deleteComponentInstances(componentInstanceIDs) {
+                    graph.selection = []
+                    Task { @MainActor in
+                        context.environment.canvasStore?.selection.subtract(
+                            Set(selectedNodeIDs.map(\.rawValue)))
+                    }
+                    return true
+                }
             }
-        )
-        if !componentInstanceIDs.isEmpty, let deleteComponentInstances {
-            if deleteComponentInstances(componentInstanceIDs) {
+
+            let remaining = items.filter { !selectedItemIDs.contains($0.id) }
+            if remaining.count != items.count {
+                itemsBinding.wrappedValue = remaining
                 graph.selection = []
                 Task { @MainActor in
                     context.environment.canvasStore?.selection.subtract(
@@ -194,6 +220,23 @@ struct KeyCommandInteraction: CanvasInteraction {
 
         let graph = context.graph
         guard !graph.selection.isEmpty else { return false }
+        if let itemsBinding = context.environment.items {
+            var items = itemsBinding.wrappedValue
+            var didRotate = false
+            for index in items.indices {
+                guard graph.selection.contains(.node(NodeID(items[index].id))) else { continue }
+                if var primitive = items[index] as? AnyCanvasPrimitive {
+                    primitive.rotation += .pi / 2
+                    items[index] = primitive
+                    didRotate = true
+                }
+            }
+            if didRotate {
+                itemsBinding.wrappedValue = items
+                return true
+            }
+        }
+
         for element in graph.selection {
             guard case .node(let nodeID) = element,
                 var primitive = graph.component(AnyCanvasPrimitive.self, for: nodeID)

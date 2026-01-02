@@ -38,6 +38,7 @@ final class CanvasController {
     var layers: [CanvasLayer]?
     var activeLayerId: UUID?
     var graph: CanvasGraph = CanvasGraph()
+    var items: [any CanvasItem] = []
 
     // MARK: - Pluggable Pipelines
 
@@ -74,7 +75,8 @@ final class CanvasController {
         environment: CanvasEnvironmentValues,
         layers: [CanvasLayer]?,
         activeLayerId: UUID?,
-        graph: CanvasGraph
+        graph: CanvasGraph,
+        items: [any CanvasItem]
     ) {
         // --- Other State ---
         if self.selectedTool?.id != tool?.id { self.selectedTool = tool }
@@ -83,6 +85,7 @@ final class CanvasController {
         self.layers = layers
         self.activeLayerId = activeLayerId
         self.graph = graph
+        self.items = items
     }
 
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
@@ -101,6 +104,7 @@ final class CanvasController {
             activeLayerId: self.activeLayerId,
             snapProvider: snapProvider,
             graph: graph,
+            items: items,
             environment: self.environment,
             inputProcessors: self.inputProcessors
         )

@@ -102,7 +102,6 @@ struct CanvasView: NSViewRepresentable {
     @MainActor
     final class Coordinator: NSObject {
         let canvasController: CanvasController
-        let itemGraphSync = CanvasItemGraphSync()
         let scene: CanvasScene
         private var graphObserverToken: UUID?
 
@@ -243,22 +242,18 @@ struct CanvasView: NSViewRepresentable {
             }
         }
 
-        if let itemsBinding = itemsBinding {
-            let items = itemsBinding.wrappedValue
-            context.coordinator.itemGraphSync.sync(items: items, graph: scene.graph)
-
-            // TODO: Re-enable connection point sync after stabilizing engine updates.
-            // if let consumer = connectionEngine as? ConnectionPointConsumer {
-            //     var points: [any ConnectionPoint] = []
-            //     points.reserveCapacity(items.count)
-            //     for item in items {
-            //         if let provider = item as? ConnectionPointProvider {
-            //             points.append(contentsOf: provider.connectionPoints)
-            //         }
-            //     }
-            //     consumer.updateConnectionPoints(points)
-            // }
-        }
+        let items = itemsBinding?.wrappedValue ?? []
+        // TODO: Re-enable connection point sync after stabilizing engine updates.
+        // if let consumer = connectionEngine as? ConnectionPointConsumer {
+        //     var points: [any ConnectionPoint] = []
+        //     points.reserveCapacity(items.count)
+        //     for item in items {
+        //         if let provider = item as? ConnectionPointProvider {
+        //             points.append(contentsOf: provider.connectionPoints)
+        //         }
+        //     }
+        //     consumer.updateConnectionPoints(points)
+        // }
 
         if let selectedIDsBinding = selectedIDsBinding {
             let selectedIDs = selectedIDsBinding.wrappedValue
@@ -271,9 +266,12 @@ struct CanvasView: NSViewRepresentable {
             }
         }
 
-        let environment = self.environment
+        var environment = self.environment
             .withCanvasStore(scene.store)
             .withConnectionEngine(connectionEngine)
+        if let itemsBinding {
+            environment = environment.withItems(itemsBinding)
+        }
 
         controller.sync(
             tool: self.tool,
@@ -281,7 +279,8 @@ struct CanvasView: NSViewRepresentable {
             environment: environment,
             layers: self.layers,
             activeLayerId: self.activeLayerId,
-            graph: scene.graph
+            graph: scene.graph,
+            items: items
         )
 
         if let selectedIDsBinding = selectedIDsBinding {

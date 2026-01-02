@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 /// An application-specific interaction handler that knows how to process results from schematic tools.
 /// It acts as the orchestrator that translates tool intents into concrete model mutations.
@@ -29,13 +30,20 @@ struct ToolInteraction: CanvasInteraction {
             return true
 
         case .newPrimitive(let primitive):
-            let graph = context.graph
-            let nodeID = NodeID(primitive.id)
-            if !graph.nodes.contains(nodeID) {
-                graph.addNode(nodeID)
+            if let itemsBinding = context.environment.items {
+                var items = itemsBinding.wrappedValue
+                items.append(primitive)
+                itemsBinding.wrappedValue = items
+                return true
+            } else {
+                let graph = context.graph
+                let nodeID = NodeID(primitive.id)
+                if !graph.nodes.contains(nodeID) {
+                    graph.addNode(nodeID)
+                }
+                graph.setComponent(primitive, for: nodeID)
+                return true
             }
-            graph.setComponent(primitive, for: nodeID)
-            return true
         }
     }
 }

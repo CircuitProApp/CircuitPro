@@ -16,7 +16,7 @@ class HandlesRenderLayer: RenderLayer {
 
     func update(using context: RenderContext) {
         // Attempt to find a single, selected, editable node.
-        if let graphHandle = findGraphEditable(in: context) {
+        if let graphHandle = findEditable(in: context) {
             render(handles: graphHandle.handles, transform: graphHandle.transform, context: context)
             return
         }
@@ -24,13 +24,21 @@ class HandlesRenderLayer: RenderLayer {
         shapeLayer.path = nil
     }
 
-    private func findGraphEditable(in context: RenderContext) -> (handles: [CanvasHandle], transform: CGAffineTransform)? {
+    private func findEditable(in context: RenderContext) -> (handles: [CanvasHandle], transform: CGAffineTransform)? {
         let graph = context.graph
         let selectionIDs = graph.selection
         guard selectionIDs.count == 1, let selectedElement = selectionIDs.first else { return nil }
-        guard case .node(let selectedID) = selectedElement,
-            let primitive = graph.component(AnyCanvasPrimitive.self, for: selectedID)
-        else { return nil }
+        guard case .node(let selectedID) = selectedElement else { return nil }
+
+        let primitive: AnyCanvasPrimitive?
+        if let item = context.items.first(where: { $0.id == selectedID.rawValue }),
+            let itemPrimitive = item as? AnyCanvasPrimitive
+        {
+            primitive = itemPrimitive
+        } else {
+            primitive = graph.component(AnyCanvasPrimitive.self, for: selectedID)
+        }
+        guard let primitive else { return nil }
 
         let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)
             .rotated(by: primitive.rotation)

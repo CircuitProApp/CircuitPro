@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 /// Unified drag interaction for all canvas elements.
 ///
@@ -12,7 +13,7 @@ final class DragInteraction: CanvasInteraction {
     /// State for dragging Transformable items (protocol-based)
     private struct ItemDragState {
         struct Item {
-            let id: NodeID
+            let id: UUID
             let originalPosition: CGPoint
             let hitTest: (CGPoint, CGFloat) -> Bool
             let updatePosition: (CGPoint) -> Void
@@ -32,7 +33,7 @@ final class DragInteraction: CanvasInteraction {
     /// State for dragging text elements (with anchor support)
     private struct TextDragState {
         let origin: CGPoint
-        let originalTexts: [NodeID: CanvasText]
+        let originalTexts: [UUID: CanvasText]
         let isAnchorDrag: Bool
     }
 
@@ -109,15 +110,15 @@ final class DragInteraction: CanvasInteraction {
     // MARK: - Private: Item Drag (Transformable Protocol)
 
     private func tryStartItemDrag(at point: CGPoint, context: RenderContext) -> Bool {
+        guard let itemsBinding = context.environment.items else { return false }
         let selection = context.graph.selection
-        let selectedNodes = Set(selection.compactMap { $0.nodeID })
-        guard !selectedNodes.isEmpty else { return false }
+        let selectedIDs = Set(selection.compactMap { $0.nodeID?.rawValue })
+        guard !selectedIDs.isEmpty else { return false }
 
-        let graph = context.graph
-        let selectedIDs = Set(selectedNodes.map { $0.rawValue })
         let selectedItems = makeDraggableItems(
-            in: graph,
-            selectedNodeIDs: selectedNodes
+            selectedIDs: selectedIDs,
+            items: itemsBinding.wrappedValue,
+            itemsBinding: itemsBinding
         )
 
         guard !selectedItems.isEmpty else { return false }
@@ -225,8 +226,11 @@ final class DragInteraction: CanvasInteraction {
             return false
         }
 
+        guard let itemsBinding = context.environment.items else { return false }
+        let items = itemsBinding.wrappedValue
+
         guard case .node(let nodeID) = graphHit,
-            graph.component(CanvasText.self, for: nodeID) != nil
+            itemText(for: nodeID.rawValue, in: items) != nil
         else {
             return false
         }
@@ -235,11 +239,11 @@ final class DragInteraction: CanvasInteraction {
         guard graph.selection.contains(resolvedHit) else { return false }
 
         // Collect selected text components
-        var originalTexts: [NodeID: CanvasText] = [:]
+        var originalTexts: [UUID: CanvasText] = [:]
         for elementID in graph.selection {
             guard case .node(let id) = elementID else { continue }
-            if let text = graph.component(CanvasText.self, for: id) {
-                originalTexts[id] = text
+            if let text = itemText(for: id.rawValue, in: items) {
+                originalTexts[id.rawValue] = text
             }
         }
 
@@ -255,61 +259,39 @@ final class DragInteraction: CanvasInteraction {
     }
 
     private func makeDraggableItems(
-        in graph: CanvasGraph,
-        selectedNodeIDs: Set<NodeID>
+        selectedIDs: Set<UUID>,
+        items: [any CanvasItem],
+        itemsBinding: Binding<[any CanvasItem]>
     ) -> [ItemDragState.Item] {
-        var items: [ItemDragState.Item] = []
+        var draggableItems: [ItemDragState.Item] = []
 
-        for id in selectedNodeIDs {
-            guard graph.selection.contains(.node(id)) else { continue }
+        for item in items where selectedIDs.contains(item.id) {
+            guard let transformable = item as? (any CanvasItem & Transformable),
+                let hitTestable = item as? (any CanvasItem & HitTestable)
+            else { continue }
 
-            if let item = makeItem(from: graph.component(ComponentInstance.self, for: id), id: id, graph: graph) {
-                items.append(item)
-                continue
+            let itemID = item.id
+            let originalPosition = transformable.position
+            let hitTest: (CGPoint, CGFloat) -> Bool = { point, tolerance in
+                hitTestable.hitTest(point: point, tolerance: tolerance)
             }
-            if let item = makeItem(from: graph.component(CanvasFootprint.self, for: id), id: id, graph: graph) {
-                items.append(item)
-                continue
+            let updatePosition: (CGPoint) -> Void = { newPosition in
+                self.updateTransformableItem(
+                    id: itemID,
+                    newPosition: newPosition,
+                    itemsBinding: itemsBinding
+                )
             }
-            if let item = makeItem(from: graph.component(CanvasText.self, for: id), id: id, graph: graph) {
-                items.append(item)
-                continue
-            }
-            if let item = makeItem(from: graph.component(CanvasPrimitiveElement.self, for: id), id: id, graph: graph) {
-                items.append(item)
-                continue
-            }
-            if let item = makeItem(from: graph.component(CanvasPin.self, for: id), id: id, graph: graph) {
-                items.append(item)
-                continue
-            }
-            if let item = makeItem(from: graph.component(AnyCanvasPrimitive.self, for: id), id: id, graph: graph) {
-                items.append(item)
-            }
+
+            draggableItems.append(ItemDragState.Item(
+                id: itemID,
+                originalPosition: originalPosition,
+                hitTest: hitTest,
+                updatePosition: updatePosition
+            ))
         }
 
-        return items
-    }
-
-    private func makeItem<T: Transformable & HitTestable>(
-        from component: T?,
-        id: NodeID,
-        graph: CanvasGraph
-    ) -> ItemDragState.Item? {
-        guard let component else { return nil }
-
-        return ItemDragState.Item(
-            id: id,
-            originalPosition: component.position,
-            hitTest: { point, tolerance in
-                component.hitTest(point: point, tolerance: tolerance)
-            },
-            updatePosition: { newPosition in
-                var updated = component
-                updated.position = newPosition
-                graph.setComponent(updated, for: id)
-            }
-        )
+        return draggableItems
     }
 
     private func handleTextDrag(to point: CGPoint, state: TextDragState, context: RenderContext) {
@@ -321,7 +303,9 @@ final class DragInteraction: CanvasInteraction {
 
         let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
         let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
-        let graph = context.graph
+
+        guard let itemsBinding = context.environment.items else { return }
+        var items = itemsBinding.wrappedValue
 
         for (id, original) in state.originalTexts {
             var updated = original
@@ -335,7 +319,39 @@ final class DragInteraction: CanvasInteraction {
                     inverseOwner)
             }
 
-            graph.setComponent(updated, for: id)
+            for index in items.indices where items[index].id == id {
+                if items[index] is CanvasText {
+                    items[index] = updated
+                }
+                break
+            }
         }
+
+        itemsBinding.wrappedValue = items
+    }
+
+    private func updateTransformableItem(
+        id: UUID,
+        newPosition: CGPoint,
+        itemsBinding: Binding<[any CanvasItem]>
+    ) {
+        var items = itemsBinding.wrappedValue
+        for index in items.indices where items[index].id == id {
+            if var transformable = items[index] as? (any CanvasItem & Transformable) {
+                transformable.position = newPosition
+                items[index] = transformable
+            }
+            break
+        }
+        itemsBinding.wrappedValue = items
+    }
+
+    private func itemText(for id: UUID, in items: [any CanvasItem]) -> CanvasText? {
+        for item in items where item.id == id {
+            if let text = item as? CanvasText {
+                return text
+            }
+        }
+        return nil
     }
 }

@@ -13,6 +13,20 @@ struct GraphHitTester {
         let tolerance = 5.0 / context.magnification
         var best: GraphHitCandidate?
 
+        for item in context.items {
+            guard let hitTestable = item as? (any HitTestable & Bounded) else { continue }
+            if hitTestable.hitTest(point: point, tolerance: tolerance) {
+                let area = hitTestable.boundingBox.width * hitTestable.boundingBox.height
+                let priority = (item as? HitTestPriorityProviding)?.hitTestPriority ?? 0
+                considerHit(
+                    id: .node(NodeID(item.id)),
+                    priority: priority,
+                    area: area,
+                    best: &best
+                )
+            }
+        }
+
         for (id, item) in graph.allComponentsConforming((any HitTestable & Bounded).self) {
             if item.hitTest(point: point, tolerance: tolerance) {
                 let area = item.boundingBox.width * item.boundingBox.height
@@ -33,6 +47,13 @@ struct GraphHitTester {
     func hitTestAll(in rect: CGRect, context: RenderContext) -> [GraphElementID] {
         let graph = context.graph
         var hits = Set<GraphElementID>()
+
+        for item in context.items {
+            guard let bounded = item as? Bounded else { continue }
+            if rect.intersects(bounded.boundingBox) {
+                hits.insert(.node(NodeID(item.id)))
+            }
+        }
 
         for (id, item) in graph.allComponentsConforming((any Bounded).self) {
             if rect.intersects(item.boundingBox) {

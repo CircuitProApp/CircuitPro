@@ -63,10 +63,9 @@ final class MarqueeInteraction: CanvasInteraction {
 
         let graph = context.graph
         let highlightedIDs = controller.interactionHighlightedElementIDs
-        let graphHitIDs = highlightedIDs.filter { graph.hasAnyComponent(for: $0) }
         let finalGraphSelection = isAdditive
-            ? initialGraphSelection.union(graphHitIDs)
-            : Set(graphHitIDs)
+            ? initialGraphSelection.union(highlightedIDs)
+            : Set(highlightedIDs)
         if graph.selection != finalGraphSelection {
             graph.selection = finalGraphSelection
         }

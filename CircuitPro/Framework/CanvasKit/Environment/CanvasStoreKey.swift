@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 private struct CanvasStoreKey: CanvasEnvironmentKey {
     static let defaultValue: CanvasStore? = nil
@@ -13,6 +14,10 @@ private struct CanvasStoreKey: CanvasEnvironmentKey {
 
 private struct ConnectionEngineKey: CanvasEnvironmentKey {
     static let defaultValue: (any ConnectionEngine)? = nil
+}
+
+private struct CanvasItemsKey: CanvasEnvironmentKey {
+    static let defaultValue: Binding<[any CanvasItem]>? = nil
 }
 
 extension CanvasEnvironmentValues {
@@ -26,6 +31,11 @@ extension CanvasEnvironmentValues {
         set { self[ConnectionEngineKey.self] = newValue }
     }
 
+    var items: Binding<[any CanvasItem]>? {
+        get { self[CanvasItemsKey.self] }
+        set { self[CanvasItemsKey.self] = newValue }
+    }
+
     func withCanvasStore(_ store: CanvasStore?) -> CanvasEnvironmentValues {
         var copy = self
         copy.canvasStore = store
@@ -35,6 +45,12 @@ extension CanvasEnvironmentValues {
     func withConnectionEngine(_ engine: (any ConnectionEngine)?) -> CanvasEnvironmentValues {
         var copy = self
         copy.connectionEngine = engine
+        return copy
+    }
+
+    func withItems(_ items: Binding<[any CanvasItem]>) -> CanvasEnvironmentValues {
+        var copy = self
+        copy.items = items
         return copy
     }
 }
