@@ -12,9 +12,9 @@ struct SelectionInteraction: CanvasInteraction {
 
         let modifierFlags = event.modifierFlags
 
-        let graph = context.graph
         if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
-            let resolvedHit = graph.selectionTarget(for: graphHit)
+            let resolvedHit = context.selectionTarget(for: graphHit)
+            let graph = context.graph
             let currentSelectionIDs = graph.selection
             var newSelectionIDs = currentSelectionIDs
 
@@ -31,8 +31,8 @@ struct SelectionInteraction: CanvasInteraction {
             if newSelectionIDs != currentSelectionIDs {
                 graph.selection = newSelectionIDs
             }
-        } else if !modifierFlags.contains(.shift), !graph.selection.isEmpty {
-            graph.selection = []
+        } else if !modifierFlags.contains(.shift), !context.graph.selection.isEmpty {
+            context.graph.selection = []
         }
         return false
     }

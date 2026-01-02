@@ -175,9 +175,7 @@ struct CanvasView: NSViewRepresentable {
                 NotificationCenter.default.removeObserver(observer)
             }
             if let token = graphObserverToken {
-                Task { @MainActor in
-                    self.scene.graph.removeObserver(token)
-                }
+                scene.graph.removeObserver(token)
             }
         }
     }

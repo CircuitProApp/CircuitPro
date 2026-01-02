@@ -182,7 +182,7 @@ final class DragInteraction: CanvasInteraction {
             return false
         }
 
-        let resolvedHit = graph.selectionTarget(for: graphHit)
+        let resolvedHit = context.selectionTarget(for: graphHit)
         guard graph.selection.contains(resolvedHit) else { return false }
 
         let isWire: Bool
@@ -235,7 +235,7 @@ final class DragInteraction: CanvasInteraction {
             return false
         }
 
-        let resolvedHit = graph.selectionTarget(for: graphHit)
+        let resolvedHit = context.selectionTarget(for: graphHit)
         guard graph.selection.contains(resolvedHit) else { return false }
 
         // Collect selected text components

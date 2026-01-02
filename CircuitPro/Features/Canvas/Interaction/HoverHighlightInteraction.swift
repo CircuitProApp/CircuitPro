@@ -8,7 +8,7 @@ final class HoverHighlightInteraction: CanvasInteraction {
         guard controller.selectedTool is CursorTool else { return }
         let graph = context.graph
         if let graphHit = GraphHitTester().hitTest(point: point, context: context) {
-            let resolved = graph.selectionTarget(for: graphHit)
+            let resolved = context.selectionTarget(for: graphHit)
             controller.setInteractionHighlight(elementIDs: [resolved])
         } else {
             controller.setInteractionHighlight(elementIDs: [])

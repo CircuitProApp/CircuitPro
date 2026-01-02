@@ -54,7 +54,7 @@ final class MarqueeInteraction: CanvasInteraction {
         let graph = context.graph
         let hitTester = GraphHitTester()
         let rawHits = hitTester.hitTestAll(in: marqueeRect, context: context)
-        let resolved = Set(rawHits.map { graph.selectionTarget(for: $0) })
+        let resolved = Set(rawHits.map { context.selectionTarget(for: $0) })
         controller.setInteractionHighlight(elementIDs: resolved)
     }
 

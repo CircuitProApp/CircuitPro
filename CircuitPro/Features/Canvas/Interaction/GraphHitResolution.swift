@@ -1,19 +1,20 @@
 import Foundation
 
-extension CanvasGraph {
+extension RenderContext {
     func selectionTarget(for id: GraphElementID) -> GraphElementID {
         guard case .node(let nodeID) = id else { return id }
-        if let pin = component(CanvasPin.self, for: nodeID),
+        let itemID = nodeID.rawValue
+        guard let item = items.first(where: { $0.id == itemID }) else { return id }
+
+        if let pin = item as? CanvasPin,
             let ownerID = pin.ownerID,
-            !pin.isSelectable,
-            hasAnyComponent(for: NodeID(ownerID))
+            !pin.isSelectable
         {
             return .node(NodeID(ownerID))
         }
-        if let pad = component(CanvasPad.self, for: nodeID),
+        if let pad = item as? CanvasPad,
             let ownerID = pad.ownerID,
-            !pad.isSelectable,
-            hasAnyComponent(for: NodeID(ownerID))
+            !pad.isSelectable
         {
             return .node(NodeID(ownerID))
         }
