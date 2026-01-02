@@ -12,14 +12,9 @@ import Foundation
 @Observable
 final class EditorSession {
 
-    @ObservationIgnored
-    let projectManager: ProjectManager
-
-    @ObservationIgnored
-    let schematicController: SchematicEditorController
-
-    @ObservationIgnored
-    let layoutController: LayoutEditorController
+    var projectManager: ProjectManager
+    var schematicController: SchematicEditorController
+    var layoutController: LayoutEditorController
 
     var selectedEditor: EditorType = .schematic
     var selectedNetIDs: Set<UUID> = []

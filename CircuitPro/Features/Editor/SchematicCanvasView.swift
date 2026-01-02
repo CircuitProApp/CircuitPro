@@ -54,7 +54,7 @@ struct SchematicCanvasView: View {
         }
         .overlay(alignment: .leading) {
             SchematicToolbarView(
-                selectedSchematicTool: editorSession.schematicController.selectedTool
+                selectedSchematicTool: $editorSession.schematicController.selectedTool
             )
             .padding(16)
         }
