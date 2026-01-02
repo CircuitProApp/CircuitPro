@@ -18,23 +18,31 @@ final class EditorSession {
 
     var selectedEditor: EditorType = .schematic
     var selectedNetIDs: Set<UUID> = []
+    var schematicSelection: Set<UUID> = []
 
     var selectedNodeIDs: Set<UUID> {
-        get { activeCanvasStore.selection }
-        set { activeCanvasStore.selection = newValue }
+        get {
+            switch selectedEditor {
+            case .schematic:
+                return schematicSelection
+            case .layout:
+                return layoutController.canvasStore.selection
+            }
+        }
+        set {
+            switch selectedEditor {
+            case .schematic:
+                schematicSelection = newValue
+            case .layout:
+                layoutController.canvasStore.selection = newValue
+            }
+        }
     }
 
     var activeEditorController: EditorController {
         switch selectedEditor {
         case .schematic: return schematicController
         case .layout: return layoutController
-        }
-    }
-
-    var activeCanvasStore: CanvasStore {
-        switch selectedEditor {
-        case .schematic: return schematicController.canvasStore
-        case .layout: return layoutController.canvasStore
         }
     }
 

@@ -19,21 +19,17 @@ struct InspectorView: View {
         return editorSession.selectedNodeIDs.first
     }
 
-    private var activeGraph: CanvasGraph? {
-        switch editorSession.selectedEditor {
-        case .schematic:
-            return editorSession.schematicController.graph
-        case .layout:
-            return editorSession.layoutController.graph
-        }
+    private var selectedSchematicID: UUID? {
+        guard editorSession.selectedEditor == .schematic else { return nil }
+        return singleSelectedID
     }
 
-    private var selectedGraphID: NodeID? {
-        guard let selectedID = singleSelectedID,
-            let graph = activeGraph
+    private var selectedLayoutNodeID: NodeID? {
+        guard editorSession.selectedEditor == .layout,
+            let selectedID = singleSelectedID
         else { return nil }
         let nodeID = NodeID(selectedID)
-        return graph.hasAnyComponent(for: nodeID) ? nodeID : nil
+        return editorSession.layoutController.graph.hasAnyComponent(for: nodeID) ? nodeID : nil
     }
 
     /// A computed property that finds the ComponentInstance for a selected schematic symbol.
@@ -52,7 +48,7 @@ struct InspectorView: View {
         (component: ComponentInstance, footprint: Binding<CanvasFootprint>)?
     {
         guard editorSession.selectedEditor == .layout,
-            let nodeID = selectedGraphID,
+            let nodeID = selectedLayoutNodeID,
             let footprintBinding = editorSession.layoutController.footprintBinding(
                 for: nodeID.rawValue),
             let componentInstance = projectManager.componentInstances.first(where: {
@@ -64,11 +60,12 @@ struct InspectorView: View {
     }
 
     private var selectedTextBinding: Binding<CanvasText>? {
-        guard let nodeID = selectedGraphID else { return nil }
         switch editorSession.selectedEditor {
         case .schematic:
-            return editorSession.schematicController.textBinding(for: nodeID.rawValue)
+            guard let id = selectedSchematicID else { return nil }
+            return editorSession.schematicController.textBinding(for: id)
         case .layout:
+            guard let nodeID = selectedLayoutNodeID else { return nil }
             return editorSession.layoutController.textBinding(for: nodeID.rawValue)
         }
     }

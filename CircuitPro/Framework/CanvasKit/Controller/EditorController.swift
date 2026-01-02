@@ -15,11 +15,5 @@ import SwiftUI
 @MainActor
 protocol EditorController {
 
-    /// The canvas store that drives view invalidation and selection.
-    var canvasStore: CanvasStore { get }
-
-    /// The unified graph backing this editor.
-    var graph: CanvasGraph { get }
-
     var selectedTool: CanvasTool { get set }
 }

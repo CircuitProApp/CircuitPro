@@ -11,9 +11,9 @@ import Observation
 @Observable
 final class CanvasScene {
     var graph: CanvasGraph
-    let store: CanvasStore
+    let store: CanvasStore?
 
-    init(graph: CanvasGraph, store: CanvasStore) {
+    init(graph: CanvasGraph, store: CanvasStore?) {
         self.graph = graph
         self.store = store
     }

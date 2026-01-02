@@ -105,6 +105,7 @@ struct CanvasView: NSViewRepresentable {
         let scene: CanvasScene
         private var graphObserverToken: UUID?
         private var detachGraphObserver: (() -> Void)?
+        private var updateSelectedIDs: ((Set<UUID>) -> Void)?
 
         private var viewportBinding: Binding<CanvasViewport>
 
@@ -118,7 +119,7 @@ struct CanvasView: NSViewRepresentable {
             inputProcessors: [any InputProcessor],
             snapProvider: any SnapProvider,
             graph: CanvasGraph,
-            store: CanvasStore
+            store: CanvasStore?
         ) {
             self.viewportBinding = viewport
             self.canvasController = CanvasController(renderLayers: renderLayers, interactions: interactions, inputProcessors: inputProcessors, snapProvider: snapProvider)
@@ -130,7 +131,15 @@ struct CanvasView: NSViewRepresentable {
         private func attachGraphObserver() {
             let graph = scene.graph
             graphObserverToken = graph.addObserver { [weak self] _ in
-                self?.scene.store.invalidate()
+                if let store = self?.scene.store {
+                    store.invalidate()
+                } else {
+                    self?.canvasController.view?.performLayerUpdate()
+                    if let selection = self?.scene.graph.selection {
+                        let selectedIDs = Set(selection.compactMap { $0.nodeID?.rawValue })
+                        self?.updateSelectedIDs?(selectedIDs)
+                    }
+                }
             }
             if let token = graphObserverToken {
                 detachGraphObserver = { graph.removeObserver(token) }
@@ -192,7 +201,7 @@ struct CanvasView: NSViewRepresentable {
             graph = CanvasGraph()
         }
 
-        let store = initialStore ?? CanvasStore()
+        let store = initialStore
         let coordinator = Coordinator(
             viewport: $viewport,
             renderLayers: self.renderLayers,
@@ -234,7 +243,9 @@ struct CanvasView: NSViewRepresentable {
         let controller = context.coordinator.canvasController
         controller.onCanvasChange = self.onCanvasChange
         let scene = context.coordinator.scene
-        _ = scene.store.revision
+        if let store = scene.store {
+            _ = store.revision
+        }
         if let graphBacked = connectionEngine as? GraphBackedConnectionEngine {
             if graphBacked.graph !== scene.graph {
                 context.coordinator.updateGraphIfNeeded(graphBacked.graph)
@@ -255,13 +266,18 @@ struct CanvasView: NSViewRepresentable {
         // }
 
         if let selectedIDsBinding = selectedIDsBinding {
+            context.coordinator.updateSelectedIDs = { newSelection in
+                if selectedIDsBinding.wrappedValue != newSelection {
+                    selectedIDsBinding.wrappedValue = newSelection
+                }
+            }
             let selectedIDs = selectedIDsBinding.wrappedValue
             let desiredSelection = Set(selectedIDs.map { GraphElementID.node(NodeID($0)) })
             if scene.graph.selection != desiredSelection {
                 scene.graph.selection = desiredSelection
             }
-            if scene.store.selection != selectedIDs {
-                scene.store.selection = selectedIDs
+            if let store = scene.store, store.selection != selectedIDs {
+                store.selection = selectedIDs
             }
         }
 
@@ -287,8 +303,8 @@ struct CanvasView: NSViewRepresentable {
             if selectedIDsBinding.wrappedValue != graphSelectionIDs {
                 selectedIDsBinding.wrappedValue = graphSelectionIDs
             }
-            if scene.store.selection != graphSelectionIDs {
-                scene.store.selection = graphSelectionIDs
+            if let store = scene.store, store.selection != graphSelectionIDs {
+                store.selection = graphSelectionIDs
             }
         }
 

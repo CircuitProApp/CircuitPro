@@ -6,7 +6,6 @@ import SwiftUI
 @Observable
 final class SchematicEditorController: EditorController {
 
-    let canvasStore = CanvasStore()
     var selectedTool: CanvasTool = CursorTool()
 
     private let projectManager: ProjectManager
@@ -66,7 +65,6 @@ final class SchematicEditorController: EditorController {
 
         isPerformingInitialLoad = false
 
-        canvasStore.invalidate()
     }
 
     private func buildItems(from design: CircuitDesign) -> [any CanvasItem] {
@@ -135,6 +133,7 @@ final class SchematicEditorController: EditorController {
         }
 
         projectManager.componentInstances.removeAll { ids.contains($0.id) }
+        removeItems(ownedBy: ids)
         document.scheduleAutosave()
         return true
     }
@@ -209,6 +208,7 @@ final class SchematicEditorController: EditorController {
 
         // This part is already correct. We just mutate the model.
         projectManager.componentInstances.append(newComponentInstance)
+        appendItems(for: newComponentInstance)
 
         // The @Observable chain will automatically handle the rest.
         projectManager.document.scheduleAutosave()
@@ -218,7 +218,58 @@ final class SchematicEditorController: EditorController {
             ownerID: newComponentInstance.id
         )
         wireEngine.repairPinConnections()
-        canvasStore.invalidate()
         return true
+    }
+
+    private func appendItems(for inst: ComponentInstance) {
+        items.append(inst)
+
+        let ownerPosition = inst.symbolInstance.position
+        let ownerRotation = inst.symbolInstance.rotation
+
+        for resolvedModel in inst.symbolInstance.resolvedItems {
+            let overlaySource: ChangeSource? =
+                projectManager.syncManager.syncMode == .manualECO ? .schematic : nil
+            let displayString = projectManager.generateString(
+                for: resolvedModel, component: inst, overlaySource: overlaySource)
+            let component = CanvasText(
+                resolvedText: resolvedModel,
+                displayText: displayString,
+                ownerID: inst.id,
+                target: .symbol,
+                ownerPosition: ownerPosition,
+                ownerRotation: ownerRotation,
+                layerId: nil,
+                showsAnchorGuides: true
+            )
+            items.append(component)
+        }
+
+        let symbolDef = inst.symbolInstance.definition ?? inst.definition?.symbol
+        guard let symbolDef else { return }
+        for pinDef in symbolDef.pins {
+            let component = CanvasPin(
+                pin: pinDef,
+                ownerID: inst.id,
+                ownerPosition: ownerPosition,
+                ownerRotation: ownerRotation,
+                layerId: nil,
+                isSelectable: false
+            )
+            items.append(component)
+        }
+    }
+
+    private func removeItems(ownedBy ownerIDs: Set<UUID>) {
+        items.removeAll { item in
+            if ownerIDs.contains(item.id) { return true }
+            if let pin = item as? CanvasPin, let ownerID = pin.ownerID {
+                return ownerIDs.contains(ownerID)
+            }
+            if let text = item as? CanvasText {
+                return ownerIDs.contains(text.ownerID)
+            }
+            return false
+        }
     }
 }
