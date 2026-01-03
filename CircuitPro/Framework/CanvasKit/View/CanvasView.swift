@@ -285,7 +285,6 @@ struct CanvasView: NSViewRepresentable {
         }
 
         var environment = self.environment
-            .withCanvasStore(context.coordinator.store)
             .withConnectionEngine(connectionEngine)
         if let itemsBinding {
             environment = environment.withItems(itemsBinding)

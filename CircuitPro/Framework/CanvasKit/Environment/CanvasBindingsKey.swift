@@ -1,16 +1,11 @@
 //
-//  CanvasStoreKey.swift
+//  CanvasBindingsKey.swift
 //  CircuitPro
 //
-//  Created by Codex on 9/20/25.
+//  Created by Codex on 1/2/26.
 //
 
-import Foundation
 import SwiftUI
-
-private struct CanvasStoreKey: CanvasEnvironmentKey {
-    static let defaultValue: CanvasStore? = nil
-}
 
 private struct ConnectionEngineKey: CanvasEnvironmentKey {
     static let defaultValue: (any ConnectionEngine)? = nil
@@ -21,11 +16,6 @@ private struct CanvasItemsKey: CanvasEnvironmentKey {
 }
 
 extension CanvasEnvironmentValues {
-    var canvasStore: CanvasStore? {
-        get { self[CanvasStoreKey.self] }
-        set { self[CanvasStoreKey.self] = newValue }
-    }
-
     var connectionEngine: (any ConnectionEngine)? {
         get { self[ConnectionEngineKey.self] }
         set { self[ConnectionEngineKey.self] = newValue }
@@ -34,12 +24,6 @@ extension CanvasEnvironmentValues {
     var items: Binding<[any CanvasItem]>? {
         get { self[CanvasItemsKey.self] }
         set { self[CanvasItemsKey.self] = newValue }
-    }
-
-    func withCanvasStore(_ store: CanvasStore?) -> CanvasEnvironmentValues {
-        var copy = self
-        copy.canvasStore = store
-        return copy
     }
 
     func withConnectionEngine(_ engine: (any ConnectionEngine)?) -> CanvasEnvironmentValues {

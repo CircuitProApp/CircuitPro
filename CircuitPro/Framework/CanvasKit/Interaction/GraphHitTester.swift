@@ -35,12 +35,6 @@ struct GraphHitTester {
             }
         }
 
-        for provider in context.environment.graphHitTestProviders {
-            if let candidate = provider.hitTest(point: point, tolerance: tolerance, graph: graph, context: context) {
-                considerHit(candidate: candidate, best: &best)
-            }
-        }
-
         return best?.id
     }
 
@@ -59,10 +53,6 @@ struct GraphHitTester {
             if rect.intersects(item.boundingBox) {
                 hits.insert(id)
             }
-        }
-
-        for provider in context.environment.graphHitTestProviders {
-            hits.formUnion(provider.hitTestAll(in: rect, graph: graph, context: context))
         }
 
         return Array(hits)

@@ -131,9 +131,6 @@ struct KeyCommandInteraction: CanvasInteraction {
                 wireEngine.delete(items: selectedIDs)
             }
             graph.selection = []
-            Task { @MainActor in
-                context.environment.canvasStore?.selection.subtract(Set(selectedNodeIDs.map(\.rawValue)))
-            }
             return true
         }
 
@@ -153,9 +150,6 @@ struct KeyCommandInteraction: CanvasInteraction {
                 traceEngine.delete(items: selectedIDs)
             }
             graph.selection = []
-            Task { @MainActor in
-                context.environment.canvasStore?.selection.subtract(Set(selectedNodeIDs.map(\.rawValue)))
-            }
             return true
         }
 
@@ -172,10 +166,6 @@ struct KeyCommandInteraction: CanvasInteraction {
             if !componentInstanceIDs.isEmpty, let deleteComponentInstances {
                 if deleteComponentInstances(componentInstanceIDs) {
                     graph.selection = []
-                    Task { @MainActor in
-                        context.environment.canvasStore?.selection.subtract(
-                            Set(selectedNodeIDs.map(\.rawValue)))
-                    }
                     return true
                 }
             }
@@ -184,10 +174,6 @@ struct KeyCommandInteraction: CanvasInteraction {
             if remaining.count != items.count {
                 itemsBinding.wrappedValue = remaining
                 graph.selection = []
-                Task { @MainActor in
-                    context.environment.canvasStore?.selection.subtract(
-                        Set(selectedNodeIDs.map(\.rawValue)))
-                }
                 return true
             }
         }
@@ -197,9 +183,6 @@ struct KeyCommandInteraction: CanvasInteraction {
             graph.removeNode(nodeID)
         }
         graph.selection = []
-        Task { @MainActor in
-            context.environment.canvasStore?.selection.subtract(Set(selectedNodeIDs.map(\.rawValue)))
-        }
         return true
     }
 
