@@ -23,32 +23,11 @@ final class PinTool: CanvasTool {
             type: .unknown, lengthType: .regular)
         return .command(
             CanvasToolCommand { interactionContext, _ in
-                let graph = interactionContext.renderContext.graph
                 if let itemsBinding = interactionContext.renderContext.environment.items {
                     var items = itemsBinding.wrappedValue
-                    let component = CanvasPin(
-                        pin: pin,
-                        ownerID: nil,
-                        ownerPosition: .zero,
-                        ownerRotation: 0,
-                        isSelectable: true
-                    )
-                    items.append(component)
+                    items.append(pin)
                     itemsBinding.wrappedValue = items
-                    return
                 }
-                let component = CanvasPin(
-                    pin: pin,
-                    ownerID: nil,
-                    ownerPosition: .zero,
-                    ownerRotation: 0,
-                    isSelectable: true
-                )
-                let nodeID = NodeID(GraphPinID.makeID(ownerID: nil, pinID: pin.id))
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
-                }
-                graph.setComponent(component, for: nodeID)
             })
     }
 
@@ -77,16 +56,13 @@ final class PinTool: CanvasTool {
 
     private func nextPinNumber(in context: RenderContext) -> Int {
         let itemNumbers = context.items.compactMap { item -> Int? in
-            guard let pin = item as? CanvasPin else { return nil }
-            return pin.pin.number
+            guard let pin = item as? Pin else { return nil }
+            return pin.number
         }
         if let maxItem = itemNumbers.max() {
             return maxItem + 1
         }
-
-        let graph = context.graph
-        let graphNumbers = graph.components(CanvasPin.self).map { $0.1.pin.number }
-        return graphNumbers.max().map { $0 + 1 } ?? 1
+        return 1
     }
 
     override func handleEscape() -> Bool {

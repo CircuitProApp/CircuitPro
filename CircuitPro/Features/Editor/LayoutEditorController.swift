@@ -18,7 +18,6 @@ final class LayoutEditorController: EditorController {
     private var activeDesignID: UUID?
     private var isSyncingTracesFromModel = false
     private var isApplyingTraceChangesToModel = false
-    private var cachedFootprintTransforms: [UUID: FootprintTransform] = [:]
 
     // MARK: - Layout-Specific State
 
@@ -38,10 +37,6 @@ final class LayoutEditorController: EditorController {
     @ObservationIgnored private let projectManager: ProjectManager
     @ObservationIgnored private let document: CircuitProjectFileDocument
 
-    private struct FootprintTransform: Equatable {
-        let position: CGPoint
-        let rotation: CardinalRotation
-    }
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
@@ -101,7 +96,8 @@ final class LayoutEditorController: EditorController {
             }
         } onChange: {
             Task { @MainActor in
-                self.refreshFootprintTextItems()
+                let design = self.projectManager.selectedDesign
+                self.items = self.buildItems(from: design)
                 self.startTrackingTextChanges()
             }
         }
@@ -117,34 +113,8 @@ final class LayoutEditorController: EditorController {
             }
         } onChange: {
             Task { @MainActor in
-                var nextCache: [UUID: FootprintTransform] = [:]
-                var updatedItems = self.items
-                var didUpdate = false
-                for comp in self.projectManager.componentInstances {
-                    guard let fp = comp.footprintInstance,
-                        case .placed = fp.placement
-                    else {
-                        continue
-                    }
-                    let transform = FootprintTransform(
-                        position: fp.position,
-                        rotation: fp.cardinalRotation
-                    )
-                    if self.cachedFootprintTransforms[comp.id] != transform {
-                        self.updateOwnerTransform(
-                            ownerID: comp.id,
-                            position: fp.position,
-                            rotation: fp.rotation,
-                            items: &updatedItems
-                        )
-                        didUpdate = true
-                    }
-                    nextCache[comp.id] = transform
-                }
-                self.cachedFootprintTransforms = nextCache
-                if didUpdate {
-                    self.items = updatedItems
-                }
+                let design = self.projectManager.selectedDesign
+                self.items = self.buildItems(from: design)
                 self.startTrackingTransformChanges()
             }
         }
@@ -202,58 +172,11 @@ final class LayoutEditorController: EditorController {
     }
 
     private func buildItems(from design: CircuitDesign) -> [any CanvasItem] {
-        var result: [any CanvasItem] = []
-
-        for inst in design.componentInstances {
-            guard let footprintInst = inst.footprintInstance,
-                case .placed = footprintInst.placement,
-                let footprintDef = footprintInst.definition
-            else {
-                continue
-            }
-
-            let primitives = resolveFootprintPrimitives(
-                for: footprintInst, definition: footprintDef)
-            let footprint = CanvasFootprint(
-                ownerID: inst.id,
-                footprint: footprintInst,
-                primitives: primitives
-            )
-            result.append(footprint)
-
-            let ownerPosition = footprintInst.position
-            let ownerRotation = footprintInst.rotation
-
-            for resolvedModel in footprintInst.resolvedItems {
-                let displayString = projectManager.generateString(
-                    for: resolvedModel, component: inst)
-                let text = CanvasText(
-                    resolvedText: resolvedModel,
-                    displayText: displayString,
-                    ownerID: inst.id,
-                    target: .footprint,
-                    ownerPosition: ownerPosition,
-                    ownerRotation: ownerRotation,
-                    layerId: nil,
-                    showsAnchorGuides: true
-                )
-                result.append(text)
-            }
-
-            for padDef in footprintDef.pads {
-                let pad = CanvasPad(
-                    pad: padDef,
-                    ownerID: inst.id,
-                    ownerPosition: ownerPosition,
-                    ownerRotation: ownerRotation,
-                    layerId: nil,
-                    isSelectable: false
-                )
-                result.append(pad)
-            }
+        design.componentInstances.filter { inst in
+            guard let footprint = inst.footprintInstance else { return false }
+            if case .placed = footprint.placement { return true }
+            return false
         }
-
-        return result
     }
 
     private func resolveFootprintPrimitives(
@@ -286,113 +209,7 @@ final class LayoutEditorController: EditorController {
         }
     }
 
-    func refreshFootprintTextItems() {
-        let design = projectManager.selectedDesign
-        var updatedItems: [any CanvasItem] = items.filter { item in
-            guard let text = item as? CanvasText else { return true }
-            return text.target != .footprint
-        }
-
-        for inst in design.componentInstances {
-            guard let footprintInst = inst.footprintInstance,
-                case .placed = footprintInst.placement
-            else {
-                continue
-            }
-
-            let ownerPosition = footprintInst.position
-            let ownerRotation = footprintInst.rotation
-
-            for resolvedModel in footprintInst.resolvedItems {
-                let displayString = projectManager.generateString(
-                    for: resolvedModel, component: inst)
-
-                let component = CanvasText(
-                    resolvedText: resolvedModel,
-                    displayText: displayString,
-                    ownerID: inst.id,
-                    target: .footprint,
-                    ownerPosition: ownerPosition,
-                    ownerRotation: ownerRotation,
-                    layerId: nil,
-                    showsAnchorGuides: true
-                )
-
-                updatedItems.append(component)
-            }
-        }
-
-        items = updatedItems
-    }
-
     // MARK: - Private Helpers
-    private func updateOwnerTransform(
-        ownerID: UUID,
-        position: CGPoint,
-        rotation: CGFloat,
-        items: inout [any CanvasItem]
-    ) {
-        for index in items.indices {
-            if var footprint = items[index] as? CanvasFootprint, footprint.ownerID == ownerID {
-                footprint.position = position
-                footprint.rotation = rotation
-                items[index] = footprint
-            } else if var pad = items[index] as? CanvasPad, pad.ownerID == ownerID {
-                pad.ownerPosition = position
-                pad.ownerRotation = rotation
-                items[index] = pad
-            } else if var text = items[index] as? CanvasText, text.ownerID == ownerID {
-                text.ownerPosition = position
-                text.ownerRotation = rotation
-                items[index] = text
-            }
-        }
-    }
-
-    func footprintBinding(for id: UUID) -> Binding<CanvasFootprint>? {
-        guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
-        guard items[index] is CanvasFootprint else { return nil }
-        return Binding(
-            get: {
-                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }),
-                    let current = self.items[currentIndex] as? CanvasFootprint
-                else {
-                    return self.items[index] as! CanvasFootprint
-                }
-                return current
-            },
-            set: { newValue in
-                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }) else { return }
-                self.items[currentIndex] = newValue
-            }
-        )
-    }
-
-    func textBinding(for id: UUID) -> Binding<CanvasText>? {
-        guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
-        guard items[index] is CanvasText else { return nil }
-        return Binding(
-            get: {
-                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }),
-                    let current = self.items[currentIndex] as? CanvasText
-                else {
-                    return self.items[index] as! CanvasText
-                }
-                return current
-            },
-            set: { newValue in
-                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }) else { return }
-                self.items[currentIndex] = newValue
-                if let inst = self.projectManager.componentInstances.first(
-                    where: { $0.id == newValue.ownerID }
-                ) {
-                    inst.apply(newValue.resolvedText, for: newValue.target)
-                    self.document.scheduleAutosave()
-                }
-            }
-        )
-    }
-
     private func resetGraphIfNeeded(for design: CircuitDesign) {
         guard activeDesignID != design.id else { return }
         activeDesignID = design.id

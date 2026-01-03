@@ -24,7 +24,7 @@ struct FootprintNodeInspectorView: View {
     var component: ComponentInstance
 
     /// The graph-backed footprint component being inspected.
-    @Binding var footprint: CanvasFootprint
+    @Binding var footprint: FootprintInstance
 
     @State private var selectedTab: InspectorTab = .attributes
     private var availableTabs: [InspectorTab] = [.attributes]
@@ -98,7 +98,7 @@ struct FootprintNodeInspectorView: View {
         )
     }
 
-    init(component: ComponentInstance, footprint: Binding<CanvasFootprint>) {
+    init(component: ComponentInstance, footprint: Binding<FootprintInstance>) {
         self.component = component
         self._footprint = footprint
     }

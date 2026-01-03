@@ -29,29 +29,24 @@ final class CanvasEditorManager {
     // MARK: - Computed Properties
 
     var pins: [Pin] {
-        items.compactMap { ($0 as? CanvasPin)?.pin }
+        items.compactMap { $0 as? Pin }
     }
 
     var pads: [Pad] {
-        items.compactMap { ($0 as? CanvasPad)?.pad }
+        items.compactMap { $0 as? Pad }
     }
 
     var primitives: [AnyCanvasPrimitive] {
-        items.compactMap { item in
-            if let primitive = item as? AnyCanvasPrimitive {
-                return primitive
-            }
-            if let element = item as? CanvasPrimitiveElement {
-                return element.primitive
-            }
-            return nil
-        }
+        items.compactMap { $0 as? AnyCanvasPrimitive }
     }
 
-    /// UPDATED: This now inspects the `resolvedText.content` property.
+    var textDefinitions: [CircuitText.Definition] {
+        items.compactMap { $0 as? CircuitText.Definition }
+    }
+
+    /// UPDATED: This now inspects the `content` property.
     var placedTextContents: Set<CircuitTextContent> {
-        let contents = items.compactMap { ($0 as? CanvasText)?.resolvedText.content }
-        return Set(contents)
+        Set(textDefinitions.map { $0.content })
     }
 
     // MARK: - State Management
@@ -64,9 +59,9 @@ final class CanvasEditorManager {
     struct ElementItem: Identifiable {
         enum Kind {
             case primitive(AnyCanvasPrimitive)
-            case text(CanvasText)
-            case pin(CanvasPin)
-            case pad(CanvasPad)
+            case text(CircuitText.Definition)
+            case pin(Pin)
+            case pad(Pad)
         }
 
         let kind: Kind
@@ -84,12 +79,12 @@ final class CanvasEditorManager {
             switch kind {
             case .primitive(let primitive):
                 return primitive.layerId
-            case .text(let text):
-                return text.layerId
+            case .text:
+                return nil
             case .pin:
                 return nil
-            case .pad(let pad):
-                return pad.layerId
+            case .pad:
+                return nil
             }
         }
     }
@@ -99,16 +94,13 @@ final class CanvasEditorManager {
             if let primitive = item as? AnyCanvasPrimitive {
                 return ElementItem(kind: .primitive(primitive))
             }
-            if let element = item as? CanvasPrimitiveElement {
-                return ElementItem(kind: .primitive(element.primitive))
-            }
-            if let text = item as? CanvasText {
+            if let text = item as? CircuitText.Definition {
                 return ElementItem(kind: .text(text))
             }
-            if let pin = item as? CanvasPin {
+            if let pin = item as? Pin {
                 return ElementItem(kind: .pin(pin))
             }
-            if let pad = item as? CanvasPad {
+            if let pad = item as? Pad {
                 return ElementItem(kind: .pad(pad))
             }
             return nil
@@ -117,77 +109,59 @@ final class CanvasEditorManager {
 
     var singleSelectedPrimitive: (id: UUID, primitive: AnyCanvasPrimitive)? {
         guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else { return nil }
-        if let primitive = items.first(where: { $0.id == id }) as? AnyCanvasPrimitive {
-            return (id, primitive)
+        guard let primitive = items.first(where: { $0.id == id }) as? AnyCanvasPrimitive else {
+            return nil
         }
-        if let element = items.first(where: { $0.id == id }) as? CanvasPrimitiveElement {
-            return (id, element.primitive)
-        }
-        return nil
+        return (id, primitive)
     }
 
-    var singleSelectedText: (id: UUID, text: CanvasText)? {
-        guard let (id, text) = singleSelectedItem(as: CanvasText.self) else { return nil }
+    var singleSelectedText: (id: UUID, text: CircuitText.Definition)? {
+        guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else { return nil }
+        guard let text = items.first(where: { $0.id == id }) as? CircuitText.Definition else {
+            return nil
+        }
         return (id, text)
     }
 
-    var singleSelectedPin: (id: UUID, pin: CanvasPin)? {
-        guard let (id, pin) = singleSelectedItem(as: CanvasPin.self) else { return nil }
+    var singleSelectedPin: (id: UUID, pin: Pin)? {
+        guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else { return nil }
+        guard let pin = items.first(where: { $0.id == id }) as? Pin else { return nil }
         return (id, pin)
     }
 
-    var singleSelectedPad: (id: UUID, pad: CanvasPad)? {
-        guard let (id, pad) = singleSelectedItem(as: CanvasPad.self) else { return nil }
+    var singleSelectedPad: (id: UUID, pad: Pad)? {
+        guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else { return nil }
+        guard let pad = items.first(where: { $0.id == id }) as? Pad else { return nil }
         return (id, pad)
     }
 
-    private func singleSelectedItem<T>(as type: T.Type) -> (UUID, T)? {
-        guard selectedElementIDs.count == 1, let id = selectedElementIDs.first else { return nil }
-        guard let item = items.first(where: { $0.id == id }) as? T else { return nil }
-        return (id, item)
-    }
-
     func primitiveBinding(for id: UUID) -> Binding<AnyCanvasPrimitive>? {
-        guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
-
-        let fallback: AnyCanvasPrimitive
-        if let primitive = items[index] as? AnyCanvasPrimitive {
-            fallback = primitive
-        } else if let element = items[index] as? CanvasPrimitiveElement {
-            fallback = element.primitive
-        } else {
+        guard let index = items.firstIndex(where: { $0.id == id }),
+              let primitive = items[index] as? AnyCanvasPrimitive else {
             return nil
         }
-
+        let fallback = primitive
         return Binding(
             get: {
-                if let current = self.items.first(where: { $0.id == id }) as? AnyCanvasPrimitive {
-                    return current
+                guard let current = self.items.first(where: { $0.id == id }) as? AnyCanvasPrimitive else {
+                    return fallback
                 }
-                if let element = self.items.first(where: { $0.id == id }) as? CanvasPrimitiveElement {
-                    return element.primitive
-                }
-                return fallback
+                return current
             },
             set: { newPrimitive in
                 guard let currentIndex = self.items.firstIndex(where: { $0.id == id }) else { return }
-                if var current = self.items[currentIndex] as? CanvasPrimitiveElement {
-                    current.primitive = newPrimitive
-                    self.items[currentIndex] = current
-                } else {
-                    self.items[currentIndex] = newPrimitive
-                }
+                self.items[currentIndex] = newPrimitive
             }
         )
     }
 
-    func textBinding(for id: UUID) -> Binding<CanvasText>? {
+    func textBinding(for id: UUID) -> Binding<CircuitText.Definition>? {
         guard let index = items.firstIndex(where: { $0.id == id }),
-              let component = items[index] as? CanvasText else { return nil }
-        let fallback = component
+              let text = items[index] as? CircuitText.Definition else { return nil }
+        let fallback = text
         return Binding(
             get: {
-                guard let current = self.items.first(where: { $0.id == id }) as? CanvasText else {
+                guard let current = self.items.first(where: { $0.id == id }) as? CircuitText.Definition else {
                     return fallback
                 }
                 return current
@@ -201,46 +175,38 @@ final class CanvasEditorManager {
 
     func pinBinding(for id: UUID) -> Binding<Pin>? {
         guard let index = items.firstIndex(where: { $0.id == id }),
-              let component = items[index] as? CanvasPin else { return nil }
-        let fallback = component.pin
+              let pin = items[index] as? Pin else { return nil }
+        let fallback = pin
         return Binding(
             get: {
-                guard let current = self.items.first(where: { $0.id == id }) as? CanvasPin else {
+                guard let current = self.items.first(where: { $0.id == id }) as? Pin else {
                     return fallback
                 }
-                return current.pin
+                return current
             },
             set: { newPin in
-                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }),
-                      var current = self.items[currentIndex] as? CanvasPin else {
-                    return
-                }
-                current.pin = newPin
-                self.items[currentIndex] = current
+                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }) else { return }
+                self.items[currentIndex] = newPin
             }
         )
     }
 
     func padBinding(for id: UUID) -> Binding<Pad>? {
         guard let index = items.firstIndex(where: { $0.id == id }),
-              let component = items[index] as? CanvasPad else {
+              let pad = items[index] as? Pad else {
             return nil
         }
-        let fallback = component.pad
+        let fallback = pad
         return Binding(
             get: {
-                guard let current = self.items.first(where: { $0.id == id }) as? CanvasPad else {
+                guard let current = self.items.first(where: { $0.id == id }) as? Pad else {
                     return fallback
                 }
-                return current.pad
+                return current
             },
             set: { newPad in
-                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }),
-                      var current = self.items[currentIndex] as? CanvasPad else {
-                    return
-                }
-                current.pad = newPad
-                self.items[currentIndex] = current
+                guard let currentIndex = self.items.firstIndex(where: { $0.id == id }) else { return }
+                self.items[currentIndex] = newPad
             }
         )
     }
@@ -282,7 +248,7 @@ final class CanvasEditorManager {
 // MARK: - Text Management
 extension CanvasEditorManager {
 
-    /// REWRITTEN: Creates text based on the new `CircuitTextContent` model.
+    /// Creates text based on the `CircuitTextContent` model.
     func addTextToSymbol(
         content: CircuitTextContent,
         componentData: (name: String, prefix: String, properties: [Property.Definition])
@@ -299,8 +265,7 @@ extension CanvasEditorManager {
             x: PaperSize.component.canvasSize().width / 2,
             y: PaperSize.component.canvasSize().height / 2)
 
-        // This assumes a new Resolvable model where `id` is the identity and `content` is an overridable property.
-        let tempDefinition = CircuitText.Definition(
+        let definition = CircuitText.Definition(
             id: newElementID,
             content: content,
             relativePosition: centerPoint,
@@ -313,46 +278,25 @@ extension CanvasEditorManager {
             isVisible: true
         )
 
-        let resolvedText = CircuitText.Resolver.resolve(definition: tempDefinition, override: nil)
-
-        let placeholder = self.resolveText(for: resolvedText.content, componentData: componentData)
-        let component = CanvasText(
-            resolvedText: resolvedText,
-            displayText: placeholder,
-            ownerID: textOwnerID,
-            target: textTarget,
-            ownerPosition: .zero,
-            ownerRotation: 0,
-            layerId: activeLayerId,
-            showsAnchorGuides: false
-        )
-
-        items.append(component)
+        _ = componentData
+        items.append(definition)
     }
 
-    /// REWRITTEN: Updates placeholder text in the item-backed text components.
+    /// Dynamic text is resolved at render time; nothing to persist here.
     func updateDynamicTextElements(
         componentData: (name: String, prefix: String, properties: [Property.Definition])
     ) {
-        for index in items.indices {
-            guard var component = items[index] as? CanvasText else { continue }
-            guard !component.resolvedText.content.isStatic else { continue }
-            let newText = resolveText(
-                for: component.resolvedText.content, componentData: componentData)
-            guard component.displayText != newText else { continue }
-            component.displayText = newText
-            items[index] = component
-        }
+        _ = componentData
     }
 
-    /// UPDATED: Switches on the new `content` enum.
+    /// Removes property text entries that no longer exist.
     func synchronizeSymbolTextWithProperties(properties: [Property.Definition]) {
         let validPropertyIDs = Set(properties.map { $0.id })
 
         var idsToRemove = Set<UUID>()
         for item in items {
-            guard let component = item as? CanvasText else { continue }
-            guard case .componentProperty(let definitionID, _) = component.resolvedText.content else {
+            guard let component = item as? CircuitText.Definition else { continue }
+            guard case .componentProperty(let definitionID, _) = component.content else {
                 continue
             }
             if !validPropertyIDs.contains(definitionID) {
@@ -365,8 +309,8 @@ extension CanvasEditorManager {
         selectedElementIDs.subtract(idsToRemove)
     }
 
-    /// REWRITTEN: Takes a `CircuitTextContent` and resolves the placeholder string.
-    private func resolveText(
+    /// Resolves placeholder strings for dynamic text when needed by the UI.
+    func resolveText(
         for content: CircuitTextContent,
         componentData: (name: String, prefix: String, properties: [Property.Definition])
     ) -> String {
@@ -395,21 +339,21 @@ extension CanvasEditorManager {
         }
     }
 
-    /// REWRITTEN: Creates a custom binding to an enum's associated value.
+    /// Creates a binding to a component property text's display options.
     func bindingForDisplayOptions(
         with id: UUID,
         componentData: (name: String, prefix: String, properties: [Property.Definition])
     ) -> Binding<TextDisplayOptions>? {
-        guard let component = items.first(where: { $0.id == id }) as? CanvasText,
-              case .componentProperty(let definitionID, _) = component.resolvedText.content
+        guard let component = items.first(where: { $0.id == id }) as? CircuitText.Definition,
+              case .componentProperty(let definitionID, _) = component.content
         else {
             return nil
         }
 
         return Binding<TextDisplayOptions>(
             get: {
-                guard let current = self.items.first(where: { $0.id == id }) as? CanvasText,
-                      case .componentProperty(_, let options) = current.resolvedText.content
+                guard let current = self.items.first(where: { $0.id == id }) as? CircuitText.Definition,
+                      case .componentProperty(_, let options) = current.content
                 else {
                     return .default
                 }
@@ -417,23 +361,21 @@ extension CanvasEditorManager {
             },
             set: { newOptions in
                 guard let currentIndex = self.items.firstIndex(where: { $0.id == id }),
-                      var current = self.items[currentIndex] as? CanvasText else {
+                      var current = self.items[currentIndex] as? CircuitText.Definition else {
                     return
                 }
-                current.resolvedText.content = .componentProperty(
+                current.content = .componentProperty(
                     definitionID: definitionID, options: newOptions)
-                current.displayText = self.resolveText(
-                    for: current.resolvedText.content, componentData: componentData)
                 self.items[currentIndex] = current
             }
         )
     }
 
-    /// UPDATED: Switches on the new `content` enum.
+    /// Removes a text item from the canvas.
     func removeTextFromSymbol(content: CircuitTextContent) {
         let idsToRemove = items.compactMap { item -> UUID? in
-            guard let component = item as? CanvasText else { return nil }
-            return component.resolvedText.content.isSameType(as: content) ? component.id : nil
+            guard let component = item as? CircuitText.Definition else { return nil }
+            return component.content.isSameType(as: content) ? component.id : nil
         }
 
         guard !idsToRemove.isEmpty else { return }

@@ -42,26 +42,11 @@ final class PadTool: CanvasTool {
         )
 
         return .command(CanvasToolCommand { interactionContext, _ in
-            let graph = interactionContext.renderContext.graph
-            let component = CanvasPad(
-                pad: pad,
-                ownerID: nil,
-                ownerPosition: .zero,
-                ownerRotation: 0,
-                layerId: interactionContext.renderContext.activeLayerId,
-                isSelectable: true
-            )
             if let itemsBinding = interactionContext.renderContext.environment.items {
                 var items = itemsBinding.wrappedValue
-                items.append(component)
+                items.append(pad)
                 itemsBinding.wrappedValue = items
-                return
             }
-            let nodeID = NodeID(GraphPadID.makeID(ownerID: nil, padID: pad.id))
-            if !graph.nodes.contains(nodeID) {
-                graph.addNode(nodeID)
-            }
-            graph.setComponent(component, for: nodeID)
         })
     }
 
@@ -111,15 +96,12 @@ final class PadTool: CanvasTool {
 
     private func nextPadNumber(in context: RenderContext) -> Int {
         let itemNumbers = context.items.compactMap { item -> Int? in
-            guard let pad = item as? CanvasPad else { return nil }
-            return pad.pad.number
+            guard let pad = item as? Pad else { return nil }
+            return pad.number
         }
         if let maxItem = itemNumbers.max() {
             return maxItem + 1
         }
-
-        let graph = context.graph
-        let graphNumbers = graph.components(CanvasPad.self).map { $0.1.pad.number }
-        return graphNumbers.max().map { $0 + 1 } ?? 1
+        return 1
     }
 }

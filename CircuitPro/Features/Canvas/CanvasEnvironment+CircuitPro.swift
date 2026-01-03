@@ -42,6 +42,9 @@ struct Snapping {
     // var snapToObjects: Bool = false
 }
 
+typealias ComponentTextResolver = (_ text: CircuitText.Resolved, _ component: ComponentInstance, _ target: TextTarget) -> String
+typealias DefinitionTextResolver = (_ text: CircuitText.Definition) -> String
+
 private struct ConfigurationKey: CanvasEnvironmentKey {
     static let defaultValue = CanvasConfiguration()
 }
@@ -52,6 +55,18 @@ private struct CanvasThemeKey: CanvasEnvironmentKey {
 
 private struct MarqueeRectKey: CanvasEnvironmentKey {
     static let defaultValue: CGRect? = nil
+}
+
+private struct TextTargetKey: CanvasEnvironmentKey {
+    static let defaultValue: TextTarget = .symbol
+}
+
+private struct ComponentTextResolverKey: CanvasEnvironmentKey {
+    static let defaultValue: ComponentTextResolver? = nil
+}
+
+private struct DefinitionTextResolverKey: CanvasEnvironmentKey {
+    static let defaultValue: DefinitionTextResolver? = nil
 }
 
 enum CanvasInteractionMode {
@@ -79,6 +94,21 @@ extension CanvasEnvironmentValues {
         set { self[MarqueeRectKey.self] = newValue }
     }
 
+    var textTarget: TextTarget {
+        get { self[TextTargetKey.self] }
+        set { self[TextTargetKey.self] = newValue }
+    }
+
+    var componentTextResolver: ComponentTextResolver? {
+        get { self[ComponentTextResolverKey.self] }
+        set { self[ComponentTextResolverKey.self] = newValue }
+    }
+
+    var definitionTextResolver: DefinitionTextResolver? {
+        get { self[DefinitionTextResolverKey.self] }
+        set { self[DefinitionTextResolverKey.self] = newValue }
+    }
+
     var interactionMode: CanvasInteractionMode {
         get { self[InteractionModeKey.self] }
         set { self[InteractionModeKey.self] = newValue }
@@ -87,6 +117,24 @@ extension CanvasEnvironmentValues {
     func withInteractionMode(_ mode: CanvasInteractionMode) -> CanvasEnvironmentValues {
         var copy = self
         copy.interactionMode = mode
+        return copy
+    }
+
+    func withTextTarget(_ target: TextTarget) -> CanvasEnvironmentValues {
+        var copy = self
+        copy.textTarget = target
+        return copy
+    }
+
+    func withComponentTextResolver(_ resolver: ComponentTextResolver?) -> CanvasEnvironmentValues {
+        var copy = self
+        copy.componentTextResolver = resolver
+        return copy
+    }
+
+    func withDefinitionTextResolver(_ resolver: DefinitionTextResolver?) -> CanvasEnvironmentValues {
+        var copy = self
+        copy.definitionTextResolver = resolver
         return copy
     }
 

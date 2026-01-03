@@ -42,28 +42,21 @@ struct InspectorView: View {
 
     /// A computed property that finds the ComponentInstance for a selected layout footprint.
     private var selectedFootprintContext:
-        (component: ComponentInstance, footprint: Binding<CanvasFootprint>)?
+        (component: ComponentInstance, footprint: Binding<FootprintInstance>)?
     {
         guard editorSession.selectedEditor == .layout,
             let selectedID = selectedLayoutID,
-            let footprintBinding = editorSession.layoutController.footprintBinding(for: selectedID),
             let componentInstance = projectManager.componentInstances.first(where: {
                 $0.id == selectedID
-            })
+            }),
+            let footprintInstance = componentInstance.footprintInstance
         else { return nil }
 
+        let footprintBinding = Binding(
+            get: { componentInstance.footprintInstance ?? footprintInstance },
+            set: { componentInstance.footprintInstance = $0 }
+        )
         return (componentInstance, footprintBinding)
-    }
-
-    private var selectedTextBinding: Binding<CanvasText>? {
-        switch editorSession.selectedEditor {
-        case .schematic:
-            guard let id = selectedSchematicID else { return nil }
-            return editorSession.schematicController.textBinding(for: id)
-        case .layout:
-            guard let selectedID = selectedLayoutID else { return nil }
-            return editorSession.layoutController.textBinding(for: selectedID)
-        }
     }
 
     var body: some View {
@@ -88,10 +81,6 @@ struct InspectorView: View {
                 selectedTab: $selectedTab
             )
             .id(component.id)
-
-        } else if let textBinding = selectedTextBinding {
-            GraphTextInspectorView(text: textBinding)
-
         } else {
             selectionStatusView
         }
@@ -106,10 +95,6 @@ struct InspectorView: View {
                 footprint: context.footprint
             )
             .id(context.component.id)
-
-        } else if let textBinding = selectedTextBinding {
-            GraphTextInspectorView(text: textBinding)
-
         } else {
             selectionStatusView
         }

@@ -10,6 +10,12 @@ final class ElementsRenderLayer: RenderLayer {
     private var defaultLayer: CALayer?
     private weak var hostLayer: CALayer?
 
+    private struct RenderableItem {
+        let id: UUID
+        let primitives: [LayeredDrawingPrimitive]
+        let haloPath: CGPath?
+    }
+
     func install(on hostLayer: CALayer) {
         self.hostLayer = hostLayer
     }
@@ -31,17 +37,31 @@ final class ElementsRenderLayer: RenderLayer {
         var haloPrimitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
         let graph = context.graph
-        let (itemPrimitivesByLayer, itemLayerTargetsByID) = gatherItemPrimitives(
-            from: context.items,
-            context: context
-        )
-        let itemHalos = gatherItemHaloPrimitives(
-            from: context.items,
-            context: context,
-            layerTargetsByID: itemLayerTargetsByID
-        )
-        for (layerId, primitives) in itemHalos {
-            haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
+        let renderables = gatherItemRenderables(from: context.items, context: context)
+
+        for renderable in renderables {
+            for layered in renderable.primitives {
+                bodyPrimitivesByLayer[layered.layerId, default: []].append(layered.primitive)
+            }
+
+            guard let haloPath = renderable.haloPath else { continue }
+            guard context.highlightedElementIDs.contains(.node(NodeID(renderable.id))) else {
+                continue
+            }
+
+            let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
+            let haloPrimitive = DrawingPrimitive.stroke(
+                path: haloPath,
+                color: haloColor,
+                lineWidth: 5.0,
+                lineCap: .round,
+                lineJoin: .round
+            )
+
+            let layerTargets = layerTargets(for: renderable.primitives)
+            for layerId in layerTargets {
+                haloPrimitivesByLayer[layerId, default: []].append(haloPrimitive)
+            }
         }
 
         let graphHalos = gatherHaloPrimitives(from: graph, context: context)
@@ -57,10 +77,6 @@ final class ElementsRenderLayer: RenderLayer {
         for (layerId, primitives) in provided {
             haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
         }
-        }
-
-        for (layerId, primitives) in itemPrimitivesByLayer {
-            bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
         }
 
         let graphAdapter = GraphRenderAdapter()
@@ -105,59 +121,417 @@ final class ElementsRenderLayer: RenderLayer {
 
     // MARK: - Primitive Gathering
 
-    private func gatherItemPrimitives(
+    private func gatherItemRenderables(
         from items: [any CanvasItem],
         context: RenderContext
-    ) -> (primitivesByLayer: [UUID?: [DrawingPrimitive]], layerTargetsByID: [UUID: [UUID?]]) {
-        var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
-        var layerTargetsByID: [UUID: [UUID?]] = [:]
+    ) -> [RenderableItem] {
+        var collected: [RenderableItem] = []
 
         for item in items {
-            guard let drawable = item as? Drawable else { continue }
-            let primitives = drawable.makeDrawingPrimitives(in: context)
-            for layered in primitives {
-                primitivesByLayer[layered.layerId, default: []].append(layered.primitive)
+            if let component = item as? ComponentInstance {
+                collected.append(contentsOf: renderables(for: component, context: context))
+                continue
             }
-            let layerTargets = primitives.map { $0.layerId }
-            if !layerTargets.isEmpty {
-                layerTargetsByID[item.id] = Array(Set(layerTargets))
+            if let primitive = item as? AnyCanvasPrimitive {
+                collected.append(renderable(for: primitive, context: context))
+                continue
+            }
+            if let pin = item as? Pin {
+                collected.append(renderable(for: pin, context: context))
+                continue
+            }
+            if let pad = item as? Pad {
+                collected.append(renderable(for: pad, context: context))
+                continue
+            }
+            if let text = item as? CircuitText.Definition {
+                if let renderable = renderable(for: text, context: context) {
+                    collected.append(renderable)
+                }
+                continue
             }
         }
 
-        return (primitivesByLayer, layerTargetsByID)
+        return collected
     }
 
-    private func gatherItemHaloPrimitives(
-        from items: [any CanvasItem],
-        context: RenderContext,
-        layerTargetsByID: [UUID: [UUID?]]
-    ) -> [UUID?: [DrawingPrimitive]] {
-        var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
-        let haloIDs = context.highlightedElementIDs
+    private func renderables(for component: ComponentInstance, context: RenderContext) -> [RenderableItem] {
+        let target = context.environment.textTarget
 
-        for item in items {
-            guard let drawable = item as? Drawable else { continue }
-            guard haloIDs.contains(.node(NodeID(item.id))) else { continue }
-            guard let haloPath = drawable.haloPath() else { continue }
+        switch target {
+        case .symbol:
+            guard let symbolDef = component.symbolInstance.definition else { return [] }
+            let ownerTransform = CGAffineTransform(
+                translationX: component.symbolInstance.position.x,
+                y: component.symbolInstance.position.y
+            ).rotated(by: component.symbolInstance.rotation)
 
-            let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
-            let haloPrimitive = DrawingPrimitive.stroke(
-                path: haloPath,
-                color: haloColor,
-                lineWidth: 5.0,
-                lineCap: .round,
-                lineJoin: .round
+            var bodyPrimitives: [LayeredDrawingPrimitive] = []
+
+            for primitive in symbolDef.primitives {
+                let color = resolveColor(for: primitive, in: context)
+                let drawPrimitives = primitive.makeDrawingPrimitives(with: color)
+                guard !drawPrimitives.isEmpty else { continue }
+
+                var transform = CGAffineTransform(
+                    translationX: primitive.position.x, y: primitive.position.y
+                )
+                .rotated(by: primitive.rotation)
+                .concatenating(ownerTransform)
+                let worldPrimitives = drawPrimitives.map { $0.applying(transform: &transform) }
+                for worldPrimitive in worldPrimitives {
+                    bodyPrimitives.append(LayeredDrawingPrimitive(worldPrimitive, layerId: primitive.layerId))
+                }
+            }
+
+            for pin in symbolDef.pins {
+                let localPrimitives = pin.makeDrawingPrimitives()
+                guard !localPrimitives.isEmpty else { continue }
+                var transform = CGAffineTransform(
+                    translationX: pin.position.x, y: pin.position.y
+                )
+                .rotated(by: pin.rotation)
+                .concatenating(ownerTransform)
+                let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
+                for worldPrimitive in worldPrimitives {
+                    bodyPrimitives.append(LayeredDrawingPrimitive(worldPrimitive, layerId: nil))
+                }
+            }
+
+            var renderables: [RenderableItem] = []
+            let bodyHalo = componentBodyHalo(
+                primitives: symbolDef.primitives,
+                pins: symbolDef.pins,
+                ownerTransform: ownerTransform
+            )
+            renderables.append(RenderableItem(id: component.id, primitives: bodyPrimitives, haloPath: bodyHalo))
+
+            let textEntries = componentTextEntries(component, target: .symbol, context: context)
+            renderables.append(contentsOf: textEntries)
+
+            return renderables
+
+        case .footprint:
+            guard let footprint = component.footprintInstance,
+                  case .placed = footprint.placement,
+                  let definition = footprint.definition
+            else {
+                return []
+            }
+
+            let ownerTransform = CGAffineTransform(
+                translationX: footprint.position.x,
+                y: footprint.position.y
+            ).rotated(by: footprint.rotation)
+
+            var bodyPrimitives: [LayeredDrawingPrimitive] = []
+            let primitives = resolveFootprintPrimitives(
+                for: footprint,
+                definition: definition,
+                context: context
             )
 
-            let fallbackTargets = layerTargetsByID[item.id] ?? []
-            let layerTargets = layerTargets(for: item, fallback: fallbackTargets)
+            for primitive in primitives {
+                let color = resolveColor(for: primitive, in: context)
+                let drawPrimitives = primitive.makeDrawingPrimitives(with: color)
+                guard !drawPrimitives.isEmpty else { continue }
 
-            for layerId in layerTargets {
-                primitivesByLayer[layerId, default: []].append(haloPrimitive)
+                var transform = CGAffineTransform(
+                    translationX: primitive.position.x, y: primitive.position.y
+                )
+                .rotated(by: primitive.rotation)
+                .concatenating(ownerTransform)
+                let worldPrimitives = drawPrimitives.map { $0.applying(transform: &transform) }
+                for worldPrimitive in worldPrimitives {
+                    bodyPrimitives.append(LayeredDrawingPrimitive(worldPrimitive, layerId: primitive.layerId))
+                }
             }
+
+            for pad in definition.pads {
+                let localPath = pad.calculateCompositePath()
+                guard !localPath.isEmpty else { continue }
+                let color = NSColor.systemRed.cgColor
+                let primitive = DrawingPrimitive.fill(path: localPath, color: color)
+                var transform = CGAffineTransform(
+                    translationX: pad.position.x, y: pad.position.y
+                )
+                .rotated(by: pad.rotation)
+                .concatenating(ownerTransform)
+                let worldPrimitive = primitive.applying(transform: &transform)
+                bodyPrimitives.append(LayeredDrawingPrimitive(worldPrimitive, layerId: nil))
+            }
+
+            var renderables: [RenderableItem] = []
+            let bodyHalo = componentBodyHalo(
+                primitives: primitives,
+                pads: definition.pads,
+                ownerTransform: ownerTransform
+            )
+            renderables.append(RenderableItem(id: component.id, primitives: bodyPrimitives, haloPath: bodyHalo))
+
+            let textEntries = componentTextEntries(component, target: .footprint, context: context)
+            renderables.append(contentsOf: textEntries)
+
+            return renderables
+        }
+    }
+
+    private func renderable(for primitive: AnyCanvasPrimitive, context: RenderContext) -> RenderableItem {
+        let primitives = primitive.makeDrawingPrimitives(in: context)
+        return RenderableItem(id: primitive.id, primitives: primitives, haloPath: primitive.haloPath())
+    }
+
+    private func renderable(for pin: Pin, context: RenderContext) -> RenderableItem {
+        let localPrimitives = pin.makeDrawingPrimitives()
+        var transform = CGAffineTransform(translationX: pin.position.x, y: pin.position.y)
+            .rotated(by: pin.rotation)
+        let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
+        let layered = worldPrimitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
+        let haloPath = pin.makeHaloPath().flatMap { path -> CGPath? in
+            var haloTransform = CGAffineTransform(translationX: pin.position.x, y: pin.position.y)
+                .rotated(by: pin.rotation)
+            return path.copy(using: &haloTransform)
+        }
+        return RenderableItem(id: pin.id, primitives: layered, haloPath: haloPath)
+    }
+
+    private func renderable(for pad: Pad, context: RenderContext) -> RenderableItem {
+        let localPath = pad.calculateCompositePath()
+        let color = NSColor.systemRed.cgColor
+        let primitive = DrawingPrimitive.fill(path: localPath, color: color)
+        var transform = CGAffineTransform(translationX: pad.position.x, y: pad.position.y)
+            .rotated(by: pad.rotation)
+        let worldPrimitive = primitive.applying(transform: &transform)
+        let layered = [LayeredDrawingPrimitive(worldPrimitive, layerId: nil)]
+
+        let haloPath = pad.calculateShapePath().copy(using: &transform)
+        return RenderableItem(id: pad.id, primitives: layered, haloPath: haloPath)
+    }
+
+    private func renderable(
+        for text: CircuitText.Definition,
+        context: RenderContext
+    ) -> RenderableItem? {
+        guard text.isVisible else { return nil }
+        let displayText = displayText(for: text, context: context)
+        guard !displayText.isEmpty else { return nil }
+
+        let path = CanvasTextGeometry.worldPath(
+            for: displayText,
+            font: text.font.nsFont,
+            anchor: text.anchor,
+            relativePosition: text.relativePosition,
+            anchorPosition: text.anchorPosition,
+            textRotation: text.cardinalRotation.radians,
+            ownerTransform: .identity,
+            ownerRotation: 0
+        )
+        guard !path.isEmpty else { return nil }
+
+        var primitives: [DrawingPrimitive] = []
+        primitives.append(.fill(path: path, color: context.environment.canvasTheme.textColor))
+
+        let layered = primitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
+        return RenderableItem(id: text.id, primitives: layered, haloPath: path)
+    }
+
+    private func componentTextEntries(
+        _ component: ComponentInstance,
+        target: TextTarget,
+        context: RenderContext
+    ) -> [RenderableItem] {
+        let ownerTransform: CGAffineTransform
+        let ownerRotation: CGFloat
+        let resolvedItems: [CircuitText.Resolved]
+
+        switch target {
+        case .symbol:
+            ownerTransform = CGAffineTransform(
+                translationX: component.symbolInstance.position.x,
+                y: component.symbolInstance.position.y
+            ).rotated(by: component.symbolInstance.rotation)
+            ownerRotation = component.symbolInstance.rotation
+            resolvedItems = component.symbolInstance.resolvedItems
+        case .footprint:
+            guard let footprint = component.footprintInstance,
+                  case .placed = footprint.placement
+            else { return [] }
+            ownerTransform = CGAffineTransform(
+                translationX: footprint.position.x,
+                y: footprint.position.y
+            ).rotated(by: footprint.rotation)
+            ownerRotation = footprint.rotation
+            resolvedItems = footprint.resolvedItems
         }
 
-        return primitivesByLayer
+        var renderables: [RenderableItem] = []
+        for resolvedText in resolvedItems where resolvedText.isVisible {
+            let displayText = displayText(
+                for: resolvedText,
+                component: component,
+                target: target,
+                context: context
+            )
+            guard !displayText.isEmpty else { continue }
+
+            let path = CanvasTextGeometry.worldPath(
+                for: displayText,
+                font: resolvedText.font.nsFont,
+                anchor: resolvedText.anchor,
+                relativePosition: resolvedText.relativePosition,
+                anchorPosition: resolvedText.anchorPosition,
+                textRotation: resolvedText.cardinalRotation.radians,
+                ownerTransform: ownerTransform,
+                ownerRotation: ownerRotation
+            )
+            guard !path.isEmpty else { continue }
+
+            var primitives: [DrawingPrimitive] = []
+            primitives.append(.fill(path: path, color: context.environment.canvasTheme.textColor))
+
+            let anchorPoint = CanvasTextGeometry.worldAnchorPosition(
+                anchorPosition: resolvedText.anchorPosition,
+                ownerTransform: ownerTransform
+            )
+            let s: CGFloat = 4 / context.magnification
+            let guidePath = CGMutablePath()
+            guidePath.move(to: CGPoint(x: anchorPoint.x - s, y: anchorPoint.y))
+            guidePath.addLine(to: CGPoint(x: anchorPoint.x + s, y: anchorPoint.y))
+            guidePath.move(to: CGPoint(x: anchorPoint.x, y: anchorPoint.y - s))
+            guidePath.addLine(to: CGPoint(x: anchorPoint.x, y: anchorPoint.y + s))
+
+            primitives.append(
+                .stroke(
+                    path: guidePath,
+                    color: NSColor.systemOrange.cgColor,
+                    lineWidth: 1 / context.magnification
+                )
+            )
+
+            let layered = primitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
+            renderables.append(RenderableItem(id: resolvedText.id, primitives: layered, haloPath: path))
+        }
+
+        return renderables
+    }
+
+    private func componentBodyHalo(
+        primitives: [AnyCanvasPrimitive],
+        pins: [Pin] = [],
+        pads: [Pad] = [],
+        ownerTransform: CGAffineTransform
+    ) -> CGPath? {
+        let composite = CGMutablePath()
+
+        for primitive in primitives {
+            guard let halo = primitive.makeHaloPath() else { continue }
+            let primTransform = CGAffineTransform(
+                translationX: primitive.position.x, y: primitive.position.y
+            )
+            .rotated(by: primitive.rotation)
+            .concatenating(ownerTransform)
+            composite.addPath(halo, transform: primTransform)
+        }
+
+        for pin in pins {
+            guard let halo = pin.makeHaloPath() else { continue }
+            let pinTransform = CGAffineTransform(
+                translationX: pin.position.x, y: pin.position.y
+            )
+            .rotated(by: pin.rotation)
+            .concatenating(ownerTransform)
+            composite.addPath(halo, transform: pinTransform)
+        }
+
+        for pad in pads {
+            let halo = pad.calculateShapePath()
+            let padTransform = CGAffineTransform(
+                translationX: pad.position.x, y: pad.position.y
+            )
+            .rotated(by: pad.rotation)
+            .concatenating(ownerTransform)
+            composite.addPath(halo, transform: padTransform)
+        }
+
+        return composite.isEmpty ? nil : composite
+    }
+
+    private func resolveFootprintPrimitives(
+        for instance: FootprintInstance,
+        definition: FootprintDefinition,
+        context: RenderContext
+    ) -> [AnyCanvasPrimitive] {
+        guard case .placed(let side) = instance.placement else {
+            return definition.primitives
+        }
+
+        return definition.primitives.map { primitive in
+            var copy = primitive
+            guard let genericLayerID = copy.layerId,
+                let genericKind = LayerKind.allCases.first(where: { $0.stableId == genericLayerID })
+            else {
+                return copy
+            }
+
+            if let specificLayer = context.layers.first(where: { canvasLayer in
+                guard let layerType = canvasLayer.kind as? LayerType else { return false }
+                let kindMatches = layerType.kind == genericKind
+                let sideMatches =
+                    (side == .front && layerType.side == .front)
+                    || (side == .back && layerType.side == .back)
+                return kindMatches && sideMatches
+            }) {
+                copy.layerId = specificLayer.id
+            }
+
+            return copy
+        }
+    }
+
+    private func resolveColor(for primitive: AnyCanvasPrimitive, in context: RenderContext)
+        -> CGColor
+    {
+        if let overrideColor = primitive.color?.cgColor {
+            return overrideColor
+        }
+        if let layerId = primitive.layerId,
+            let layer = context.layers.first(where: { $0.id == layerId })
+        {
+            return layer.color
+        }
+        return NSColor.systemBlue.cgColor
+    }
+
+    private func displayText(
+        for text: CircuitText.Resolved,
+        component: ComponentInstance,
+        target: TextTarget,
+        context: RenderContext
+    ) -> String {
+        if let resolver = context.environment.componentTextResolver {
+            return resolver(text, component, target)
+        }
+        return fallbackDisplayText(for: text.content)
+    }
+
+    private func displayText(for text: CircuitText.Definition, context: RenderContext) -> String {
+        if let resolver = context.environment.definitionTextResolver {
+            return resolver(text)
+        }
+        return fallbackDisplayText(for: text.content)
+    }
+
+    private func fallbackDisplayText(for content: CircuitTextContent) -> String {
+        switch content {
+        case .static(let value):
+            return value
+        case .componentName:
+            return "Name"
+        case .componentReferenceDesignator:
+            return "REF?"
+        case .componentProperty(_, _):
+            return ""
+        }
     }
 
     private func gatherHaloPrimitives(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
@@ -177,8 +551,7 @@ final class ElementsRenderLayer: RenderLayer {
                 lineJoin: .round
             )
 
-            let fallbackTargets = layerTargets(for: item, context: context)
-            let layerTargets = layerTargets(for: item, fallback: fallbackTargets)
+            let layerTargets = layerTargets(for: item.makeDrawingPrimitives(in: context))
 
             for layerId in layerTargets {
                 primitivesByLayer[layerId, default: []].append(haloPrimitive)
@@ -222,24 +595,7 @@ final class ElementsRenderLayer: RenderLayer {
         let newLayer = CALayer(); newLayer.zPosition = -1; hostLayer.addSublayer(newLayer); self.defaultLayer = newLayer; return newLayer
     }
 
-    private func layerTargets(
-        for item: Any,
-        fallback: [UUID?]
-    ) -> [UUID?] {
-        if let multiLayerable = item as? MultiLayerable, !multiLayerable.layerIds.isEmpty {
-            return multiLayerable.layerIds.map { Optional($0) }
-        }
-        if let layerable = item as? Layerable {
-            return [layerable.layerId]
-        }
-        return fallback.isEmpty ? [nil] : fallback
-    }
-
-    private func layerTargets(
-        for item: any Drawable,
-        context: RenderContext
-    ) -> [UUID?] {
-        let primitives = item.makeDrawingPrimitives(in: context)
+    private func layerTargets(for primitives: [LayeredDrawingPrimitive]) -> [UUID?] {
         let targets = Array(Set(primitives.map { $0.layerId }))
         return targets.isEmpty ? [nil] : targets
     }

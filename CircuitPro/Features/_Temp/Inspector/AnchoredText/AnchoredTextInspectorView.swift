@@ -9,7 +9,7 @@ import SwiftUI
 
 struct GraphTextInspectorView: View {
 
-    @Binding var text: CanvasText
+    @Binding var text: CircuitText.Definition
 
     @State private var selectedTab: InspectorTab = .attributes
 
@@ -17,10 +17,10 @@ struct GraphTextInspectorView: View {
 
     private var anchorPositionBinding: Binding<CGPoint> {
         Binding(
-            get: { text.resolvedText.anchorPosition },
+            get: { text.anchorPosition },
             set: { newValue in
                 var updated = text
-                updated.resolvedText.anchorPosition = newValue
+                updated.anchorPosition = newValue
                 text = updated
             }
         )
@@ -28,10 +28,10 @@ struct GraphTextInspectorView: View {
 
     private var positionBinding: Binding<CGPoint> {
         Binding(
-            get: { text.resolvedText.relativePosition },
+            get: { text.relativePosition },
             set: { newValue in
                 var updated = text
-                updated.resolvedText.relativePosition = newValue
+                updated.relativePosition = newValue
                 text = updated
             }
         )
@@ -39,10 +39,10 @@ struct GraphTextInspectorView: View {
 
     private var anchorBinding: Binding<TextAnchor> {
         Binding(
-            get: { text.resolvedText.anchor },
+            get: { text.anchor },
             set: { newValue in
                 var updated = text
-                updated.resolvedText.anchor = newValue
+                updated.anchor = newValue
                 text = updated
             }
         )

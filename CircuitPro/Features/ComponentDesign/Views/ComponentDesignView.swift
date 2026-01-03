@@ -226,35 +226,29 @@ struct ComponentDesignView: View {
     private func createTextDefinitions(from editor: CanvasEditorManager, anchor: CGPoint)
         -> [CircuitText.Definition]
     {
-        let textItems = editor.items.compactMap { $0 as? CanvasText }
+        let textItems = editor.items.compactMap { $0 as? CircuitText.Definition }
 
-        return textItems.map { component in
-            let model = component.resolvedText
+        return textItems.map { definition in
             let centeredPosition = CGPoint(
-                x: model.relativePosition.x - anchor.x,
-                y: model.relativePosition.y - anchor.y
+                x: definition.relativePosition.x - anchor.x,
+                y: definition.relativePosition.y - anchor.y
             )
             let centeredAnchorPosition = CGPoint(
-                x: model.anchorPosition.x - anchor.x,
-                y: model.anchorPosition.y - anchor.y
+                x: definition.anchorPosition.x - anchor.x,
+                y: definition.anchorPosition.y - anchor.y
             )
 
-            var finalContent = model.content
-            if case .static = finalContent {
-                finalContent = .static(text: component.displayText)
-            }
-
             return CircuitText.Definition(
-                id: model.id,
-                content: finalContent,
+                id: definition.id,
+                content: definition.content,
                 relativePosition: centeredPosition,
                 anchorPosition: centeredAnchorPosition,
-                font: model.font,
-                color: model.color,
-                anchor: model.anchor,
-                alignment: model.alignment,
-                cardinalRotation: model.cardinalRotation,
-                isVisible: model.isVisible
+                font: definition.font,
+                color: definition.color,
+                anchor: definition.anchor,
+                alignment: definition.alignment,
+                cardinalRotation: definition.cardinalRotation,
+                isVisible: definition.isVisible
             )
         }
     }

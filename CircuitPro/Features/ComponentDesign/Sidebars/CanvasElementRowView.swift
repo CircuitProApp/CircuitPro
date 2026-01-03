@@ -23,13 +23,13 @@ struct CanvasElementRowView: View {
                 primitive.displayName,
                 systemImage: primitive.symbol)
         case .pin(let pin):
-            Label("Pin \(pin.pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
+            Label("Pin \(pin.number)", systemImage: CircuitProSymbols.Symbol.pin)
         case .pad(let pad):
-            Label("Pad \(pad.pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
+            Label("Pad \(pad.number)", systemImage: CircuitProSymbols.Footprint.pad)
         case .text(let text):
-            switch text.resolvedText.content {
-            case .static:
-                Label("\"\(text.displayText)\"", systemImage: "text.bubble.fill")
+            switch text.content {
+            case .static(let value):
+                Label("\"\(value)\"", systemImage: "text.bubble.fill")
             case .componentName:
                 Label("Component Name", systemImage: "c.square.fill")
             case .componentReferenceDesignator:

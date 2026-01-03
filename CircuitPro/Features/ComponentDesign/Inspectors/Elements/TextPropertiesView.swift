@@ -16,7 +16,7 @@ struct TextPropertiesView: View {
     private var editor
 
     let textID: UUID
-    @Binding var text: CanvasText
+    @Binding var text: CircuitText.Definition
 
     private var componentData: (name: String, prefix: String, properties: [Property.Definition]) {
         (
@@ -29,10 +29,10 @@ struct TextPropertiesView: View {
 
     private var positionBinding: Binding<CGPoint> {
         Binding(
-            get: { text.resolvedText.relativePosition },
+            get: { text.relativePosition },
             set: { newValue in
                 var updated = text
-                updated.resolvedText.relativePosition = newValue
+                updated.relativePosition = newValue
                 text = updated
             }
         )
@@ -40,10 +40,10 @@ struct TextPropertiesView: View {
 
     private var anchorBinding: Binding<TextAnchor> {
         Binding(
-            get: { text.resolvedText.anchor },
+            get: { text.anchor },
             set: { newValue in
                 var updated = text
-                updated.resolvedText.anchor = newValue
+                updated.anchor = newValue
                 text = updated
             }
         )
@@ -79,7 +79,7 @@ struct TextPropertiesView: View {
     @ViewBuilder
     private var contentSection: some View {
         // Get the content enum directly from the node's data model.
-        let content = text.resolvedText.content
+        let content = text.content
 
         InspectorSection("Content") {
             // The description row remains, but uses the updated helper.
@@ -96,13 +96,14 @@ struct TextPropertiesView: View {
                         "Static Text",
                         text: Binding(
                             get: {
-                                text.displayText
+                                if case .static(let value) = text.content {
+                                    return value
+                                }
+                                return ""
                             },
                             set: { newText in
                                 var updated = text
-                                updated.displayText = newText
-                                // Persist the change to the *model* for static text.
-                                updated.resolvedText.content = .static(text: newText)
+                                updated.content = .static(text: newText)
                                 text = updated
                             }
                         )

@@ -33,8 +33,16 @@ final class DragInteraction: CanvasInteraction {
     /// State for dragging text elements (with anchor support)
     private struct TextDragState {
         let origin: CGPoint
-        let originalTexts: [UUID: CanvasText]
+        let definitionTexts: [UUID: CircuitText.Definition]
+        let componentTexts: [UUID: ComponentTextSelection]
         let isAnchorDrag: Bool
+    }
+
+    private struct ComponentTextSelection {
+        let owner: ComponentInstance
+        let target: TextTarget
+        let original: CircuitText.Resolved
+        let ownerTransform: CGAffineTransform
     }
 
     // MARK: - Properties
@@ -115,16 +123,12 @@ final class DragInteraction: CanvasInteraction {
         let selectedIDs = Set(selectedNodeIDs.map { $0.rawValue })
         guard !selectedIDs.isEmpty else { return false }
 
-        let selectedItems: [ItemDragState.Item]
-        if let itemsBinding = context.environment.items {
-            selectedItems = makeDraggableItems(
-                selectedIDs: selectedIDs,
-                items: itemsBinding.wrappedValue,
-                itemsBinding: itemsBinding
-            )
-        } else {
-            selectedItems = makeDraggableItems(in: context.graph, selectedNodeIDs: selectedNodeIDs)
-        }
+        guard let itemsBinding = context.environment.items else { return false }
+        let selectedItems = makeDraggableItems(
+            selectedIDs: selectedIDs,
+            items: itemsBinding.wrappedValue,
+            itemsBinding: itemsBinding
+        )
 
         guard !selectedItems.isEmpty else { return false }
 
@@ -226,66 +230,37 @@ final class DragInteraction: CanvasInteraction {
     private func tryStartTextDrag(
         at point: CGPoint, event: NSEvent, context: RenderContext
     ) -> Bool {
-        let graph = context.graph
         guard let graphHit = ItemHitTester().hitTest(point: point, context: context) else {
             return false
         }
 
-        if let itemsBinding = context.environment.items {
-            let items = itemsBinding.wrappedValue
+        guard let itemsBinding = context.environment.items else { return false }
+        let items = itemsBinding.wrappedValue
 
-            guard case .node(let nodeID) = graphHit,
-                itemText(for: nodeID.rawValue, in: items) != nil
-            else {
-                return false
-            }
+        guard case .node(let nodeID) = graphHit else { return false }
+        let resolvedHit = context.selectionTarget(for: graphHit)
+        guard context.graph.selection.contains(resolvedHit) else { return false }
 
-            let resolvedHit = context.selectionTarget(for: graphHit)
-            guard graph.selection.contains(resolvedHit) else { return false }
+        let selectionIDs = Set(context.graph.selection.compactMap { $0.nodeID?.rawValue })
+        let selections = collectTextSelections(
+            selectedIDs: selectionIDs,
+            items: items,
+            context: context
+        )
 
-            // Collect selected text components
-            var originalTexts: [UUID: CanvasText] = [:]
-            for elementID in graph.selection {
-                guard case .node(let id) = elementID else { continue }
-                if let text = itemText(for: id.rawValue, in: items) {
-                    originalTexts[id.rawValue] = text
-                }
-            }
+        guard selections.definitionTexts[nodeID.rawValue] != nil
+                || selections.componentTexts[nodeID.rawValue] != nil
+        else { return false }
 
-            guard !originalTexts.isEmpty else { return false }
-
-            let isAnchorDrag = event.modifierFlags.contains(.control)
-            self.textState = TextDragState(
-                origin: point,
-                originalTexts: originalTexts,
-                isAnchorDrag: isAnchorDrag
-            )
-            return true
-        }
-
-        guard case .node(let nodeID) = graphHit,
-            graph.component(CanvasText.self, for: nodeID) != nil
-        else {
+        guard !(selections.definitionTexts.isEmpty && selections.componentTexts.isEmpty) else {
             return false
         }
-
-        let resolvedHit = context.selectionTarget(for: graphHit)
-        guard graph.selection.contains(resolvedHit) else { return false }
-
-        var originalTexts: [UUID: CanvasText] = [:]
-        for elementID in graph.selection {
-            guard case .node(let id) = elementID else { continue }
-            if let text = graph.component(CanvasText.self, for: id) {
-                originalTexts[id.rawValue] = text
-            }
-        }
-
-        guard !originalTexts.isEmpty else { return false }
 
         let isAnchorDrag = event.modifierFlags.contains(.control)
         self.textState = TextDragState(
             origin: point,
-            originalTexts: originalTexts,
+            definitionTexts: selections.definitionTexts,
+            componentTexts: selections.componentTexts,
             isAnchorDrag: isAnchorDrag
         )
         return true
@@ -327,64 +302,6 @@ final class DragInteraction: CanvasInteraction {
         return draggableItems
     }
 
-    private func makeDraggableItems(
-        in graph: CanvasGraph,
-        selectedNodeIDs: Set<NodeID>
-    ) -> [ItemDragState.Item] {
-        var items: [ItemDragState.Item] = []
-
-        for id in selectedNodeIDs {
-            guard graph.selection.contains(.node(id)) else { continue }
-
-            if let item = makeItem(from: graph.component(ComponentInstance.self, for: id), id: id, graph: graph) {
-                items.append(item)
-                continue
-            }
-            if let item = makeItem(from: graph.component(CanvasFootprint.self, for: id), id: id, graph: graph) {
-                items.append(item)
-                continue
-            }
-            if let item = makeItem(from: graph.component(CanvasText.self, for: id), id: id, graph: graph) {
-                items.append(item)
-                continue
-            }
-            if let item = makeItem(from: graph.component(CanvasPrimitiveElement.self, for: id), id: id, graph: graph) {
-                items.append(item)
-                continue
-            }
-            if let item = makeItem(from: graph.component(CanvasPin.self, for: id), id: id, graph: graph) {
-                items.append(item)
-                continue
-            }
-            if let item = makeItem(from: graph.component(AnyCanvasPrimitive.self, for: id), id: id, graph: graph) {
-                items.append(item)
-            }
-        }
-
-        return items
-    }
-
-    private func makeItem<T: Transformable & HitTestable>(
-        from component: T?,
-        id: NodeID,
-        graph: CanvasGraph
-    ) -> ItemDragState.Item? {
-        guard let component else { return nil }
-
-        return ItemDragState.Item(
-            id: id.rawValue,
-            originalPosition: component.position,
-            hitTest: { point, tolerance in
-                component.hitTest(point: point, tolerance: tolerance)
-            },
-            updatePosition: { newPosition in
-                var updated = component
-                updated.position = newPosition
-                graph.setComponent(updated, for: id)
-            }
-        )
-    }
-
     private func handleTextDrag(to point: CGPoint, state: TextDragState, context: RenderContext) {
         let rawDelta = CGVector(dx: point.x - state.origin.x, dy: point.y - state.origin.y)
         if !didMove {
@@ -398,43 +315,51 @@ final class DragInteraction: CanvasInteraction {
         if let itemsBinding = context.environment.items {
             var items = itemsBinding.wrappedValue
 
-            for (id, original) in state.originalTexts {
+            for (id, original) in state.definitionTexts {
                 var updated = original
-                updated.worldPosition = original.worldPosition + deltaPoint
-                let inverseOwner = original.ownerTransform.inverted()
-                updated.resolvedText.relativePosition = updated.worldPosition.applying(inverseOwner)
+                let worldPosition = CanvasTextGeometry.worldPosition(
+                    relativePosition: original.relativePosition,
+                    ownerTransform: .identity
+                ) + deltaPoint
+                updated.relativePosition = worldPosition
 
                 if state.isAnchorDrag {
-                    updated.worldAnchorPosition = original.worldAnchorPosition + deltaPoint
-                    updated.resolvedText.anchorPosition = updated.worldAnchorPosition.applying(
-                        inverseOwner)
+                    let anchorPosition = CanvasTextGeometry.worldAnchorPosition(
+                        anchorPosition: original.anchorPosition,
+                        ownerTransform: .identity
+                    ) + deltaPoint
+                    updated.anchorPosition = anchorPosition
                 }
 
                 for index in items.indices where items[index].id == id {
-                    if items[index] is CanvasText {
+                    if items[index] is CircuitText.Definition {
                         items[index] = updated
                     }
                     break
                 }
             }
 
-            itemsBinding.wrappedValue = items
-        } else {
-            let graph = context.graph
-            for (id, original) in state.originalTexts {
+            for (_, selection) in state.componentTexts {
+                let inverseOwner = selection.ownerTransform.inverted()
+                let original = selection.original
+                let worldPosition = CanvasTextGeometry.worldPosition(
+                    relativePosition: original.relativePosition,
+                    ownerTransform: selection.ownerTransform
+                ) + deltaPoint
                 var updated = original
-                updated.worldPosition = original.worldPosition + deltaPoint
-                let inverseOwner = original.ownerTransform.inverted()
-                updated.resolvedText.relativePosition = updated.worldPosition.applying(inverseOwner)
+                updated.relativePosition = worldPosition.applying(inverseOwner)
 
                 if state.isAnchorDrag {
-                    updated.worldAnchorPosition = original.worldAnchorPosition + deltaPoint
-                    updated.resolvedText.anchorPosition = updated.worldAnchorPosition.applying(
-                        inverseOwner)
+                    let anchorWorld = CanvasTextGeometry.worldAnchorPosition(
+                        anchorPosition: original.anchorPosition,
+                        ownerTransform: selection.ownerTransform
+                    ) + deltaPoint
+                    updated.anchorPosition = anchorWorld.applying(inverseOwner)
                 }
-
-                graph.setComponent(updated, for: NodeID(id))
+                selection.owner.apply(updated, for: selection.target)
             }
+
+            itemsBinding.wrappedValue = items
         }
     }
 
@@ -444,51 +369,63 @@ final class DragInteraction: CanvasInteraction {
         itemsBinding: Binding<[any CanvasItem]>
     ) {
         var items = itemsBinding.wrappedValue
-        var ownerID: UUID?
-        var ownerPosition: CGPoint?
-        var ownerRotation: CGFloat?
         for index in items.indices where items[index].id == id {
             if var transformable = items[index] as? (any CanvasItem & Transformable) {
                 transformable.position = newPosition
                 items[index] = transformable
-                if let component = transformable as? ComponentInstance {
-                    ownerID = component.id
-                    ownerPosition = component.position
-                    ownerRotation = component.rotation
-                } else if let footprint = transformable as? CanvasFootprint {
-                    ownerID = footprint.ownerID
-                    ownerPosition = footprint.position
-                    ownerRotation = footprint.rotation
-                }
             }
             break
-        }
-        if let ownerID, let ownerPosition, let ownerRotation {
-            for index in items.indices {
-                if var pin = items[index] as? CanvasPin, pin.ownerID == ownerID {
-                    pin.ownerPosition = ownerPosition
-                    pin.ownerRotation = ownerRotation
-                    items[index] = pin
-                } else if var pad = items[index] as? CanvasPad, pad.ownerID == ownerID {
-                    pad.ownerPosition = ownerPosition
-                    pad.ownerRotation = ownerRotation
-                    items[index] = pad
-                } else if var text = items[index] as? CanvasText, text.ownerID == ownerID {
-                    text.ownerPosition = ownerPosition
-                    text.ownerRotation = ownerRotation
-                    items[index] = text
-                }
-            }
         }
         itemsBinding.wrappedValue = items
     }
 
-    private func itemText(for id: UUID, in items: [any CanvasItem]) -> CanvasText? {
-        for item in items where item.id == id {
-            if let text = item as? CanvasText {
-                return text
+    private func collectTextSelections(
+        selectedIDs: Set<UUID>,
+        items: [any CanvasItem],
+        context: RenderContext
+    ) -> (definitionTexts: [UUID: CircuitText.Definition], componentTexts: [UUID: ComponentTextSelection]) {
+        var definitionTexts: [UUID: CircuitText.Definition] = [:]
+        var componentTexts: [UUID: ComponentTextSelection] = [:]
+
+        for item in items {
+            if let text = item as? CircuitText.Definition, selectedIDs.contains(text.id) {
+                definitionTexts[text.id] = text
+                continue
+            }
+
+            guard let component = item as? ComponentInstance else { continue }
+            let target = context.environment.textTarget
+            guard let ownerInfo = componentTextOwner(component, target: target) else { continue }
+
+            for resolved in ownerInfo.resolvedItems where selectedIDs.contains(resolved.id) {
+                let selection = ComponentTextSelection(
+                    owner: component,
+                    target: target,
+                    original: resolved,
+                    ownerTransform: ownerInfo.transform
+                )
+                componentTexts[resolved.id] = selection
             }
         }
-        return nil
+
+        return (definitionTexts, componentTexts)
+    }
+
+    private func componentTextOwner(
+        _ component: ComponentInstance,
+        target: TextTarget
+    ) -> (resolvedItems: [CircuitText.Resolved], transform: CGAffineTransform)? {
+        switch target {
+        case .symbol:
+            let instance = component.symbolInstance
+            let transform = CGAffineTransform(translationX: instance.position.x, y: instance.position.y)
+                .rotated(by: instance.rotation)
+            return (instance.resolvedItems, transform)
+        case .footprint:
+            guard let instance = component.footprintInstance else { return nil }
+            let transform = CGAffineTransform(translationX: instance.position.x, y: instance.position.y)
+                .rotated(by: instance.rotation)
+            return (instance.resolvedItems, transform)
+        }
     }
 }
