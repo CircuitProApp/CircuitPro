@@ -143,7 +143,9 @@ struct CanvasView: NSViewRepresentable {
                 }
             }
             if let token = graphObserverToken {
-                detachGraphObserver = { graph.removeObserver(token) }
+                detachGraphObserver = { [weak self] in
+                    self?.graph.removeObserver(token)
+                }
             }
         }
 
