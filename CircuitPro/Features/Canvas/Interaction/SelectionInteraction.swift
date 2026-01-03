@@ -12,7 +12,7 @@ struct SelectionInteraction: CanvasInteraction {
 
         let modifierFlags = event.modifierFlags
 
-        if let itemHit = ItemHitTester().hitTest(point: point, context: context) {
+        if let itemHit = CanvasHitTester().hitTest(point: point, context: context) {
             let currentSelectionIDs = context.selectedItemIDs
             var newSelectionIDs = currentSelectionIDs
 

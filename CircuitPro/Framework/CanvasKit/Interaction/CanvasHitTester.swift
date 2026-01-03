@@ -1,5 +1,5 @@
 //
-//  ItemHitTester.swift
+//  CanvasHitTester.swift
 //  CircuitPro
 //
 //  Created by Codex on 12/31/25.
@@ -8,7 +8,7 @@
 import CoreGraphics
 import AppKit
 
-struct ItemHitTester {
+struct CanvasHitTester {
     private struct HitCandidate {
         let id: UUID
         let priority: Int
@@ -66,6 +66,19 @@ struct ItemHitTester {
                 }
                 continue
             }
+
+            if let hitTestable = item as? HitTestable {
+                if hitTestable.hitTest(point: point, tolerance: tolerance) {
+                    let area = (item as? Bounded).map { $0.boundingBox.width * $0.boundingBox.height } ?? 0
+                    considerHit(
+                        id: item.id,
+                        priority: hitTestable.hitTestPriority,
+                        area: area,
+                        best: &best
+                    )
+                }
+                continue
+            }
         }
 
         return best?.id
@@ -114,6 +127,13 @@ struct ItemHitTester {
                 let bounds = textBounds(text: text, displayText: displayText(for: text, context: context))
                 if rect.intersects(bounds) {
                     hits.insert(text.id)
+                }
+                continue
+            }
+
+            if let bounded = item as? Bounded {
+                if rect.intersects(bounded.boundingBox) {
+                    hits.insert(item.id)
                 }
                 continue
             }

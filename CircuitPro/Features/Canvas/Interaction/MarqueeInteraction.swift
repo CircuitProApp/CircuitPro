@@ -23,7 +23,7 @@ final class MarqueeInteraction: CanvasInteraction {
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         guard controller.selectedTool is CursorTool else { return false }
 
-        if ItemHitTester().hitTest(point: point, context: context) != nil {
+        if CanvasHitTester().hitTest(point: point, context: context) != nil {
             return false
         }
 
@@ -50,7 +50,7 @@ final class MarqueeInteraction: CanvasInteraction {
             $0.marqueeRect = marqueeRect
         }
 
-        let hitTester = ItemHitTester()
+        let hitTester = CanvasHitTester()
         let rawHits = hitTester.hitTestAll(in: marqueeRect, context: context)
         controller.setInteractionHighlight(itemIDs: Set(rawHits))
     }

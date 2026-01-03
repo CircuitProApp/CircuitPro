@@ -98,7 +98,7 @@ final class WireTool: CanvasTool {
     }
 
     private func shouldFinish(at location: CGPoint, context: RenderContext) -> Bool {
-        guard let itemHit = ItemHitTester().hitTest(point: location, context: context) else {
+        guard let itemHit = CanvasHitTester().hitTest(point: location, context: context) else {
             return false
         }
 

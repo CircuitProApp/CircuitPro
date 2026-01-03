@@ -111,7 +111,7 @@ final class DragInteraction: CanvasInteraction {
 
         guard !selectedItems.isEmpty else { return false }
 
-        guard let hit = ItemHitTester().hitTest(point: point, context: context) else { return false }
+        guard let hit = CanvasHitTester().hitTest(point: point, context: context) else { return false }
         guard selectedIDs.contains(hit) else { return false }
 
         // Start connection engine drag if applicable
@@ -158,7 +158,7 @@ final class DragInteraction: CanvasInteraction {
     private func tryStartTextDrag(
         at point: CGPoint, event: NSEvent, context: RenderContext
     ) -> Bool {
-        guard let graphHit = ItemHitTester().hitTest(point: point, context: context) else {
+        guard let graphHit = CanvasHitTester().hitTest(point: point, context: context) else {
             return false
         }
 
