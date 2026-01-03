@@ -21,14 +21,7 @@ final class PinTool: CanvasTool {
         let pin = Pin(
             name: "", number: number, position: location, cardinalRotation: rotation,
             type: .unknown, lengthType: .regular)
-        return .command(
-            CanvasToolCommand { interactionContext, _ in
-                if let itemsBinding = interactionContext.renderContext.environment.items {
-                    var items = itemsBinding.wrappedValue
-                    items.append(pin)
-                    itemsBinding.wrappedValue = items
-                }
-            })
+        return .newItem(pin)
     }
 
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {

@@ -79,24 +79,19 @@ struct KeyCommandInteraction: CanvasInteraction {
         switch result {
         case .noResult:
             return false
-        case .command(let command):
-            command.execute(
-                context: ToolInteractionContext(clickCount: 0, renderContext: context),
-                controller: controller)
-            return true
-        case .newPrimitive(let primitive):
+        case .newItem(let item):
             if let itemsBinding = context.environment.items {
                 var items = itemsBinding.wrappedValue
-                items.append(primitive)
+                items.append(item)
                 itemsBinding.wrappedValue = items
                 return true
             } else {
                 let graph = context.graph
-                let nodeID = NodeID(primitive.id)
+                let nodeID = NodeID(item.id)
                 if !graph.nodes.contains(nodeID) {
                     graph.addNode(nodeID)
                 }
-                graph.setComponent(primitive, for: nodeID)
+                graph.setComponent(item, for: nodeID)
                 return true
             }
         }

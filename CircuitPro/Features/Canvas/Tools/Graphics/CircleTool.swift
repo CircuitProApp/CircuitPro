@@ -37,7 +37,7 @@ final class CircleTool: CanvasTool {
 
             // 2. Reset the tool's state and return the new primitive.
             self.center = nil
-            return .newPrimitive(.circle(circlePrimitive))
+            return .newItem(.circle(circlePrimitive))
 
         } else {
             // First tap: Record the center point and wait for the second tap.

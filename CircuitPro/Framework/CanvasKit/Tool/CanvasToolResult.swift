@@ -9,6 +9,5 @@ import Foundation
 
 enum CanvasToolResult {
     case noResult
-    case newPrimitive(AnyCanvasPrimitive)
-    case command(CanvasToolCommand)
+    case newItem(any CanvasItem)
 }

@@ -66,13 +66,10 @@ final class WireTool: CanvasTool {
                 let newDirection = isStraightLine ? direction.toggled() : direction
                 self.state = .drawing(startPoint: location, direction: newDirection)
             }
-
-            return .command(
-                CanvasToolCommand { [wireEngine] _, _ in
-                    Task { @MainActor in
-                        wireEngine.connect(from: fromPoint, to: toPoint, preferring: strategy)
-                    }
-                })
+            Task { @MainActor in
+                wireEngine.connect(from: fromPoint, to: toPoint, preferring: strategy)
+            }
+            return .noResult
         }
     }
 

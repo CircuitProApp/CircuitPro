@@ -31,7 +31,7 @@ final class LineTool: CanvasTool {
 
             // 2. Reset tool state and return the new primitive.
             self.start = nil
-            return .newPrimitive(.line(line))
+            return .newItem(.line(line))
 
         } else {
             // First tap: Record the start point.

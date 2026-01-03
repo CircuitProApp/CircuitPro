@@ -25,23 +25,19 @@ struct ToolInteraction: CanvasInteraction {
             // If the tool handled the tap but didn't create a new node (e.g., the
             // first click of a line tool), we should still consume the mouse event.
             return true
-        case .command(let command):
-            command.execute(context: interactionContext, controller: controller)
-            return true
-
-        case .newPrimitive(let primitive):
+        case .newItem(let item):
             if let itemsBinding = context.environment.items {
                 var items = itemsBinding.wrappedValue
-                items.append(primitive)
+                items.append(item)
                 itemsBinding.wrappedValue = items
                 return true
             } else {
                 let graph = context.graph
-                let nodeID = NodeID(primitive.id)
+                let nodeID = NodeID(item.id)
                 if !graph.nodes.contains(nodeID) {
                     graph.addNode(nodeID)
                 }
-                graph.setComponent(primitive, for: nodeID)
+                graph.setComponent(item, for: nodeID)
                 return true
             }
         }

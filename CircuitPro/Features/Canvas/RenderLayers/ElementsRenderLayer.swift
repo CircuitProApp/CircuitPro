@@ -64,32 +64,7 @@ final class ElementsRenderLayer: RenderLayer {
             }
         }
 
-        let graphHalos = gatherHaloPrimitives(from: graph, context: context)
-        for (layerId, primitives) in graphHalos {
-            haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
-        }
-        for provider in context.environment.graphHaloProviders {
-            let provided = provider.haloPrimitives(
-                from: graph,
-                context: context,
-                highlightedIDs: context.highlightedElementIDs
-            )
-        for (layerId, primitives) in provided {
-            haloPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
-        }
-        }
-
-        let graphAdapter = GraphRenderAdapter()
-        let graphPrimitivesByLayer = graphAdapter.primitivesByLayer(from: graph, context: context)
-        for (layerId, primitives) in graphPrimitivesByLayer {
-            bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
-        }
-        for provider in context.environment.graphRenderProviders {
-            let provided = provider.primitivesByLayer(from: graph, context: context)
-            for (layerId, primitives) in provided {
-                bodyPrimitivesByLayer[layerId, default: []].append(contentsOf: primitives)
-            }
-        }
+        // Graph-backed halos are disabled for now.
 
         // --- 5. RENDER EVERYTHING ---
 
@@ -528,33 +503,6 @@ final class ElementsRenderLayer: RenderLayer {
         case .componentProperty(_, _):
             return ""
         }
-    }
-
-    private func gatherHaloPrimitives(from graph: CanvasGraph, context: RenderContext) -> [UUID?: [DrawingPrimitive]] {
-        var primitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
-        let haloIDs = context.highlightedElementIDs
-
-        for (id, item) in graph.allComponentsConforming((any Drawable).self) {
-            guard haloIDs.contains(id) else { continue }
-            guard let haloPath = item.haloPath() else { continue }
-
-            let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
-            let haloPrimitive = DrawingPrimitive.stroke(
-                path: haloPath,
-                color: haloColor,
-                lineWidth: 5.0,
-                lineCap: .round,
-                lineJoin: .round
-            )
-
-            let layerTargets = layerTargets(for: item.makeDrawingPrimitives(in: context))
-
-            for layerId in layerTargets {
-                primitivesByLayer[layerId, default: []].append(haloPrimitive)
-            }
-        }
-
-        return primitivesByLayer
     }
 
     /// Renders a list of already-transformed primitives onto a target CALayer.

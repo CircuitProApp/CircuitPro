@@ -35,7 +35,7 @@ final class RectangleTool: CanvasTool {
             )
 
             self.start = nil
-            return .newPrimitive(.rectangle(primitive))
+            return .newItem(.rectangle(primitive))
 
         } else {
             self.start = location

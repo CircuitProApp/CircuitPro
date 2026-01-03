@@ -41,13 +41,7 @@ final class PadTool: CanvasTool {
             drillDiameter: drillDiameter
         )
 
-        return .command(CanvasToolCommand { interactionContext, _ in
-            if let itemsBinding = interactionContext.renderContext.environment.items {
-                var items = itemsBinding.wrappedValue
-                items.append(pad)
-                itemsBinding.wrappedValue = items
-            }
-        })
+        return .newItem(pad)
     }
 
     override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
