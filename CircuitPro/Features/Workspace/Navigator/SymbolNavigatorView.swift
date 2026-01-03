@@ -41,7 +41,7 @@ struct SymbolNavigatorView: View {
                 List(
                     componentInstances,
                     id: \.id,
-                    selection: $editorSession.selectedNodeIDs
+                    selection: $editorSession.selectedItemIDs
                 ) { instance in
                     HStack {
                         Text(instance.definition?.name ?? "Missing Definition")
@@ -57,12 +57,12 @@ struct SymbolNavigatorView: View {
                     .frame(height: 14)
                     .listRowSeparator(.hidden)
                     .contextMenu {
-                        let multi = editorSession.selectedNodeIDs.contains(instance.id) && editorSession.selectedNodeIDs.count > 1
+                        let multi = editorSession.selectedItemIDs.contains(instance.id) && editorSession.selectedItemIDs.count > 1
                         Button(role: .destructive) {
-                            performDelete(on: instance, selected: &editorSession.selectedNodeIDs)
+                            performDelete(on: instance, selected: &editorSession.selectedItemIDs)
                         } label: {
                             Text(multi
-                                 ? "Delete Selected (\(editorSession.selectedNodeIDs.count))"
+                                 ? "Delete Selected (\(editorSession.selectedItemIDs.count))"
                                  : "Delete")
                         }
                     }

@@ -14,7 +14,7 @@ final class LayoutEditorController: EditorController {
 
     var items: [any CanvasItem] = []
 
-    let graph = CanvasGraph()
+    let graph = ConnectionGraph()
     private var activeDesignID: UUID?
     private var isSyncingTracesFromModel = false
     private var isApplyingTraceChangesToModel = false

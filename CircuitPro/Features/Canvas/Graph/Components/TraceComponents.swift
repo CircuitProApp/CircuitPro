@@ -14,8 +14,8 @@ struct TraceVertexComponent {
 
 struct TraceEdgeComponent: Drawable, HitTestable, Bounded, Layerable {
     let id: UUID
-    var start: NodeID
-    var end: NodeID
+    var start: ConnectionNodeID
+    var end: ConnectionNodeID
     var startPoint: CGPoint
     var endPoint: CGPoint
     var width: CGFloat

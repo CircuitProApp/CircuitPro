@@ -21,7 +21,7 @@ final class EditorSession {
     var schematicSelection: Set<UUID> = []
     var layoutSelection: Set<UUID> = []
 
-    var selectedNodeIDs: Set<UUID> {
+    var selectedItemIDs: Set<UUID> {
         get {
             switch selectedEditor {
             case .schematic:

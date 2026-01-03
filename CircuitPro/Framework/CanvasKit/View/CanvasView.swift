@@ -15,8 +15,6 @@ struct CanvasView: NSViewRepresentable {
     private var itemsBinding: Binding<[any CanvasItem]>?
     private var selectedIDsBinding: Binding<Set<UUID>>?
     private var connectionEngine: (any ConnectionEngine)?
-    private let initialGraph: CanvasGraph?
-    private let initialStore: CanvasStore?
 
     // MARK: - Callbacks & Configuration
     let environment: CanvasEnvironmentValues
@@ -52,42 +50,6 @@ struct CanvasView: NSViewRepresentable {
         self.itemsBinding = items
         self.selectedIDsBinding = selectedIDs
         self.connectionEngine = connections
-        self.initialGraph = nil
-        self.initialStore = nil
-        self.environment = environment
-        self.renderLayers = renderLayers
-        self.interactions = interactions
-        self.inputProcessors = inputProcessors
-        self.snapProvider = snapProvider
-        self.registeredDraggedTypes = registeredDraggedTypes
-        self.onPasteboardDropped = onPasteboardDropped
-    }
-
-    init(
-        viewport: Binding<CanvasViewport>,
-        store: CanvasStore,
-        tool: Binding<CanvasTool?> = .constant(nil),
-        graph: CanvasGraph,
-        layers: Binding<[CanvasLayer]> = .constant([]),
-        activeLayerId: Binding<UUID?> = .constant(nil),
-        connections: (any ConnectionEngine)? = nil,
-        environment: CanvasEnvironmentValues = .init(),
-        renderLayers: [any RenderLayer],
-        interactions: [any CanvasInteraction],
-        inputProcessors: [any InputProcessor] = [],
-        snapProvider: any SnapProvider = NoOpSnapProvider(),
-        registeredDraggedTypes: [NSPasteboard.PasteboardType] = [],
-        onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil
-    ) {
-        self._viewport = viewport
-        self._tool = tool
-        self._layers = layers
-        self._activeLayerId = activeLayerId
-        self.itemsBinding = nil
-        self.selectedIDsBinding = nil
-        self.connectionEngine = connections
-        self.initialGraph = graph
-        self.initialStore = store
         self.environment = environment
         self.renderLayers = renderLayers
         self.interactions = interactions
@@ -102,10 +64,6 @@ struct CanvasView: NSViewRepresentable {
     @MainActor
     final class Coordinator: NSObject {
         let canvasController: CanvasController
-        let store: CanvasStore?
-        private(set) var graph: CanvasGraph
-        private var graphObserverToken: UUID?
-        private var detachGraphObserver: (() -> Void)?
         fileprivate var updateSelectedIDs: ((Set<UUID>) -> Void)?
 
         private var viewportBinding: Binding<CanvasViewport>
@@ -118,42 +76,11 @@ struct CanvasView: NSViewRepresentable {
             renderLayers: [any RenderLayer],
             interactions: [any CanvasInteraction],
             inputProcessors: [any InputProcessor],
-            snapProvider: any SnapProvider,
-            graph: CanvasGraph,
-            store: CanvasStore?
+            snapProvider: any SnapProvider
         ) {
             self.viewportBinding = viewport
             self.canvasController = CanvasController(renderLayers: renderLayers, interactions: interactions, inputProcessors: inputProcessors, snapProvider: snapProvider)
-            self.graph = graph
-            self.store = store
             super.init()
-            attachGraphObserver()
-        }
-
-        private func attachGraphObserver() {
-            graphObserverToken = graph.addObserver { [weak self] _ in
-                if let store = self?.store {
-                    store.invalidate()
-                } else {
-                    self?.canvasController.view?.performLayerUpdate()
-                    if let selection = self?.graph.selection {
-                        let selectedIDs = Set(selection.compactMap { $0.nodeID?.rawValue })
-                        self?.updateSelectedIDs?(selectedIDs)
-                    }
-                }
-            }
-            if let token = graphObserverToken {
-                detachGraphObserver = { [weak self] in
-                    self?.graph.removeObserver(token)
-                }
-            }
-        }
-
-        func updateGraphIfNeeded(_ graph: CanvasGraph) {
-            if self.graph === graph { return }
-            detachGraphObserver?()
-            self.graph = graph
-            attachGraphObserver()
         }
 
         func observeScrollView(_ scrollView: NSScrollView) {
@@ -189,30 +116,17 @@ struct CanvasView: NSViewRepresentable {
             if let observer = boundsChangeObserver {
                 NotificationCenter.default.removeObserver(observer)
             }
-            detachGraphObserver?()
         }
     }
 
     @MainActor
     func makeCoordinator() -> Coordinator {
-        let graph: CanvasGraph
-        if let graphBacked = connectionEngine as? GraphBackedConnectionEngine {
-            graph = graphBacked.graph
-        } else if let initialGraph = initialGraph {
-            graph = initialGraph
-        } else {
-            graph = CanvasGraph()
-        }
-
-        let store = initialStore
         let coordinator = Coordinator(
             viewport: $viewport,
             renderLayers: self.renderLayers,
             interactions: self.interactions,
             inputProcessors: self.inputProcessors,
-            snapProvider: self.snapProvider,
-            graph: graph,
-            store: store
+            snapProvider: self.snapProvider
         )
         coordinator.canvasController.onPasteboardDropped = self.onPasteboardDropped
         coordinator.canvasController.onCanvasChange = self.onCanvasChange
@@ -245,49 +159,25 @@ struct CanvasView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
         controller.onCanvasChange = self.onCanvasChange
-        let graph = context.coordinator.graph
-        if let store = context.coordinator.store {
-            _ = store.revision
-        }
-        if let graphBacked = connectionEngine as? GraphBackedConnectionEngine {
-            if graphBacked.graph !== graph {
-                context.coordinator.updateGraphIfNeeded(graphBacked.graph)
-            }
-        }
 
         let items = itemsBinding?.wrappedValue ?? []
-        // TODO: Re-enable connection point sync after stabilizing engine updates.
-        // if let consumer = connectionEngine as? ConnectionPointConsumer {
-        //     var points: [any ConnectionPoint] = []
-        //     points.reserveCapacity(items.count)
-        //     for item in items {
-        //         if let provider = item as? ConnectionPointProvider {
-        //             points.append(contentsOf: provider.connectionPoints)
-        //         }
-        //     }
-        //     consumer.updateConnectionPoints(points)
-        // }
-
-        if let selectedIDsBinding = selectedIDsBinding {
-            context.coordinator.updateSelectedIDs = { newSelection in
-                if selectedIDsBinding.wrappedValue != newSelection {
-                    selectedIDsBinding.wrappedValue = newSelection
-                }
-            }
-            let selectedIDs = selectedIDsBinding.wrappedValue
-            let desiredSelection = Set(selectedIDs.map { GraphElementID.node(NodeID($0)) })
-            if graph.selection != desiredSelection {
-                graph.selection = desiredSelection
-            }
-            if let store = context.coordinator.store, store.selection != selectedIDs {
-                store.selection = selectedIDs
-            }
-        }
 
         var environment = self.environment
             .withConnectionEngine(connectionEngine)
         if let itemsBinding {
             environment = environment.withItems(itemsBinding)
+        }
+
+        let selectedIDs = selectedIDsBinding?.wrappedValue ?? []
+        if let selectedIDsBinding {
+            context.coordinator.updateSelectedIDs = { newSelection in
+                if selectedIDsBinding.wrappedValue != newSelection {
+                    selectedIDsBinding.wrappedValue = newSelection
+                }
+            }
+            controller.onSelectionChange = context.coordinator.updateSelectedIDs
+        } else {
+            controller.onSelectionChange = nil
         }
 
         controller.sync(
@@ -296,19 +186,9 @@ struct CanvasView: NSViewRepresentable {
             environment: environment,
             layers: self.layers,
             activeLayerId: self.activeLayerId,
-            graph: graph,
+            selectedItemIDs: selectedIDs,
             items: items
         )
-
-        if let selectedIDsBinding = selectedIDsBinding {
-            let graphSelectionIDs = Set(graph.selection.compactMap { $0.nodeID?.rawValue })
-            if selectedIDsBinding.wrappedValue != graphSelectionIDs {
-                selectedIDsBinding.wrappedValue = graphSelectionIDs
-            }
-            if let store = context.coordinator.store, store.selection != graphSelectionIDs {
-                store.selection = graphSelectionIDs
-            }
-        }
 
         if let hostView = scrollView.documentView, hostView.frame.size != self.viewport.size {
             hostView.frame.size = self.viewport.size

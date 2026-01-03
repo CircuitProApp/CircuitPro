@@ -9,7 +9,7 @@ import Foundation
 
 @MainActor
 final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
-    var graph: CanvasGraph
+    var graph: ConnectionGraph
     let engine: GraphEngine
     private let geometry: GeometryPolicy
     private let edgePolicy: TraceEdgePolicy
@@ -18,7 +18,7 @@ final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
 
     var onChange: (() -> Void)?
 
-    init(graph: CanvasGraph) {
+    init(graph: ConnectionGraph) {
         self.graph = graph
         self.geometry = OctilinearGeometry(step: 1)
         let policy = TraceEdgePolicy()
@@ -121,15 +121,15 @@ final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
     @MainActor
     private func syncGraphComponentsOnMain(delta: GraphDelta, final: GraphState) {
         for id in delta.deletedEdges {
-            graph.removeEdge(EdgeID(id))
+            graph.removeEdge(ConnectionEdgeID(id))
         }
         for id in delta.deletedVertices {
-            graph.removeNode(NodeID(id))
+            graph.removeNode(ConnectionNodeID(id))
         }
 
         for id in delta.createdVertices {
             guard let v = final.vertices[id] else { continue }
-            let nodeID = NodeID(id)
+            let nodeID = ConnectionNodeID(id)
             if !graph.nodes.contains(nodeID) {
                 graph.addNode(nodeID)
             }
@@ -138,7 +138,7 @@ final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
 
         for id in delta.createdEdges {
             guard let e = final.edges[id] else { continue }
-            let edgeID = EdgeID(id)
+            let edgeID = ConnectionEdgeID(id)
             if !graph.edges.contains(edgeID) {
                 graph.addEdge(edgeID)
             }
@@ -148,8 +148,8 @@ final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
             else { continue }
             let component = TraceEdgeComponent(
                 id: id,
-                start: NodeID(e.start),
-                end: NodeID(e.end),
+                start: ConnectionNodeID(e.start),
+                end: ConnectionNodeID(e.end),
                 startPoint: start.point,
                 endPoint: end.point,
                 width: metadata?.width ?? 1.0,
@@ -159,7 +159,7 @@ final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
         }
 
         for (id, (_, to)) in delta.movedVertices {
-            let nodeID = NodeID(id)
+            let nodeID = ConnectionNodeID(id)
             if var component = graph.component(TraceVertexComponent.self, for: nodeID) {
                 component.point = to
                 graph.setComponent(component, for: nodeID)
@@ -174,29 +174,29 @@ final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
             else { continue }
             let desired = TraceEdgeComponent(
                 id: edgeID,
-                start: NodeID(edge.start),
-                end: NodeID(edge.end),
+                start: ConnectionNodeID(edge.start),
+                end: ConnectionNodeID(edge.end),
                 startPoint: start.point,
                 endPoint: end.point,
                 width: metadata?.width ?? 1.0,
                 layerId: metadata?.layerId
             )
 
-            let graphEdgeID = EdgeID(edgeID)
-            if let existing = graph.component(TraceEdgeComponent.self, for: graphEdgeID) {
+            let graphConnectionEdgeID = ConnectionEdgeID(edgeID)
+            if let existing = graph.component(TraceEdgeComponent.self, for: graphConnectionEdgeID) {
                 if existing.start != desired.start ||
                     existing.end != desired.end ||
                     existing.startPoint != desired.startPoint ||
                     existing.endPoint != desired.endPoint ||
                     existing.width != desired.width ||
                     existing.layerId != desired.layerId {
-                    graph.setComponent(desired, for: graphEdgeID)
+                    graph.setComponent(desired, for: graphConnectionEdgeID)
                 }
             } else {
-                if !graph.edges.contains(graphEdgeID) {
-                    graph.addEdge(graphEdgeID)
+                if !graph.edges.contains(graphConnectionEdgeID) {
+                    graph.addEdge(graphConnectionEdgeID)
                 }
-                graph.setComponent(desired, for: graphEdgeID)
+                graph.setComponent(desired, for: graphConnectionEdgeID)
             }
         }
     }

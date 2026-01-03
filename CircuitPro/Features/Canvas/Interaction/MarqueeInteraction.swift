@@ -12,7 +12,7 @@ final class MarqueeInteraction: CanvasInteraction {
         /// - Parameters:
         ///   - origin: The starting point of the drag in canvas coordinates.
         ///   - isAdditive: Whether the user is holding Shift to add to the selection.
-        case dragging(origin: CGPoint, isAdditive: Bool, initialGraphSelection: Set<GraphElementID>)
+        case dragging(origin: CGPoint, isAdditive: Bool, initialSelection: Set<UUID>)
     }
 
     private var state: State = .ready
@@ -23,7 +23,6 @@ final class MarqueeInteraction: CanvasInteraction {
     func mouseDown(with event: NSEvent, at point: CGPoint, context: RenderContext, controller: CanvasController) -> Bool {
         guard controller.selectedTool is CursorTool else { return false }
 
-        let graph = context.graph
         if ItemHitTester().hitTest(point: point, context: context) != nil {
             return false
         }
@@ -32,12 +31,12 @@ final class MarqueeInteraction: CanvasInteraction {
         let isAdditive = event.modifierFlags.contains(.shift)
 
         // Store the selection state at the beginning of the drag.
-        let initialGraphSelection = graph.selection
+        let initialSelection = context.selectedItemIDs
 
         self.state = .dragging(
             origin: point,
             isAdditive: isAdditive,
-            initialGraphSelection: initialGraphSelection
+            initialSelection: initialSelection
         )
         return true
     }
@@ -53,24 +52,22 @@ final class MarqueeInteraction: CanvasInteraction {
 
         let hitTester = ItemHitTester()
         let rawHits = hitTester.hitTestAll(in: marqueeRect, context: context)
-        let resolved = Set(rawHits.map { context.selectionTarget(for: $0) })
-        controller.setInteractionHighlight(elementIDs: resolved)
+        controller.setInteractionHighlight(itemIDs: Set(rawHits))
     }
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
-        guard case .dragging(_, let isAdditive, let initialGraphSelection) = state else { return }
+        guard case .dragging(_, let isAdditive, let initialSelection) = state else { return }
 
-        let graph = context.graph
-        let highlightedIDs = controller.interactionHighlightedElementIDs
-        let finalGraphSelection = isAdditive
-            ? initialGraphSelection.union(highlightedIDs)
+        let highlightedIDs = controller.highlightedItemIDs
+        let finalSelection = isAdditive
+            ? initialSelection.union(highlightedIDs)
             : Set(highlightedIDs)
-        if graph.selection != finalGraphSelection {
-            graph.selection = finalGraphSelection
+        if finalSelection != context.selectedItemIDs {
+            controller.updateSelection(finalSelection)
         }
         self.state = .ready
         controller.updateEnvironment { $0.marqueeRect = nil }
-        controller.setInteractionHighlight(elementIDs: [])
+        controller.setInteractionHighlight(itemIDs: [])
         return
     }
 }

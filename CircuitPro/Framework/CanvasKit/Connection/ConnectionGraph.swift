@@ -1,5 +1,5 @@
 //
-//  CanvasGraph.swift
+//  ConnectionGraph.swift
 //  CircuitPro
 //
 //  Created by Codex on 9/20/25.
@@ -9,18 +9,18 @@ import Foundation
 import Observation
 
 @Observable
-final class CanvasGraph {
-    private(set) var nodes: Set<NodeID> = []
-    private(set) var edges: Set<EdgeID> = []
-    var selection: Set<GraphElementID> = [] {
+final class ConnectionGraph {
+    private(set) var nodes: Set<ConnectionNodeID> = []
+    private(set) var edges: Set<ConnectionEdgeID> = []
+    var selection: Set<ConnectionElementID> = [] {
         didSet { emit(.selectionChanged(selection)) }
     }
 
-    var onDelta: ((UnifiedGraphDelta) -> Void)?
-    private var observers: [UUID: (UnifiedGraphDelta) -> Void] = [:]
+    var onDelta: ((ConnectionGraphDelta) -> Void)?
+    private var observers: [UUID: (ConnectionGraphDelta) -> Void] = [:]
 
     @discardableResult
-    func addObserver(_ handler: @escaping (UnifiedGraphDelta) -> Void) -> UUID {
+    func addObserver(_ handler: @escaping (ConnectionGraphDelta) -> Void) -> UUID {
         let token = UUID()
         observers[token] = handler
         return token
@@ -30,24 +30,24 @@ final class CanvasGraph {
         observers.removeValue(forKey: token)
     }
 
-    private func emit(_ delta: UnifiedGraphDelta) {
+    private func emit(_ delta: ConnectionGraphDelta) {
         onDelta?(delta)
         for handler in observers.values {
             handler(delta)
         }
     }
 
-    private var nodeComponentStorage: [ObjectIdentifier: [NodeID: Any]] = [:]
-    private var edgeComponentStorage: [ObjectIdentifier: [EdgeID: Any]] = [:]
+    private var nodeComponentStorage: [ObjectIdentifier: [ConnectionNodeID: Any]] = [:]
+    private var edgeComponentStorage: [ObjectIdentifier: [ConnectionEdgeID: Any]] = [:]
 
     @discardableResult
-    func addNode(_ id: NodeID = NodeID()) -> NodeID {
+    func addNode(_ id: ConnectionNodeID = ConnectionNodeID()) -> ConnectionNodeID {
         nodes.insert(id)
         emit(.nodeAdded(id))
         return id
     }
 
-    func removeNode(_ id: NodeID) {
+    func removeNode(_ id: ConnectionNodeID) {
         guard nodes.remove(id) != nil else { return }
         for key in nodeComponentStorage.keys {
             nodeComponentStorage[key]?.removeValue(forKey: id)
@@ -57,13 +57,13 @@ final class CanvasGraph {
     }
 
     @discardableResult
-    func addEdge(_ id: EdgeID = EdgeID()) -> EdgeID {
+    func addEdge(_ id: ConnectionEdgeID = ConnectionEdgeID()) -> ConnectionEdgeID {
         edges.insert(id)
         emit(.edgeAdded(id))
         return id
     }
 
-    func removeEdge(_ id: EdgeID) {
+    func removeEdge(_ id: ConnectionEdgeID) {
         guard edges.remove(id) != nil else { return }
         for key in edgeComponentStorage.keys {
             edgeComponentStorage[key]?.removeValue(forKey: id)
@@ -80,7 +80,7 @@ final class CanvasGraph {
         selection.removeAll()
     }
 
-    func setComponent<T>(_ component: T, for id: NodeID) {
+    func setComponent<T>(_ component: T, for id: ConnectionNodeID) {
         let key = ObjectIdentifier(T.self)
         if nodeComponentStorage[key] == nil {
             nodeComponentStorage[key] = [:]
@@ -89,7 +89,7 @@ final class CanvasGraph {
         emit(.nodeComponentSet(id, key))
     }
 
-    func setComponent<T>(_ component: T, for id: EdgeID) {
+    func setComponent<T>(_ component: T, for id: ConnectionEdgeID) {
         let key = ObjectIdentifier(T.self)
         if edgeComponentStorage[key] == nil {
             edgeComponentStorage[key] = [:]
@@ -98,41 +98,41 @@ final class CanvasGraph {
         emit(.edgeComponentSet(id, key))
     }
 
-    func removeComponent<T>(_ type: T.Type, for id: NodeID) {
+    func removeComponent<T>(_ type: T.Type, for id: ConnectionNodeID) {
         let key = ObjectIdentifier(T.self)
         nodeComponentStorage[key]?.removeValue(forKey: id)
         emit(.nodeComponentRemoved(id, key))
     }
 
-    func removeComponent<T>(_ type: T.Type, for id: EdgeID) {
+    func removeComponent<T>(_ type: T.Type, for id: ConnectionEdgeID) {
         let key = ObjectIdentifier(T.self)
         edgeComponentStorage[key]?.removeValue(forKey: id)
         emit(.edgeComponentRemoved(id, key))
     }
 
-    func component<T>(_ type: T.Type, for id: NodeID) -> T? {
+    func component<T>(_ type: T.Type, for id: ConnectionNodeID) -> T? {
         let key = ObjectIdentifier(T.self)
         return nodeComponentStorage[key]?[id] as? T
     }
 
-    func component<T>(_ type: T.Type, for id: EdgeID) -> T? {
+    func component<T>(_ type: T.Type, for id: ConnectionEdgeID) -> T? {
         let key = ObjectIdentifier(T.self)
         return edgeComponentStorage[key]?[id] as? T
     }
 
-    func nodeIDs<T>(with componentType: T.Type) -> [NodeID] {
+    func nodeIDs<T>(with componentType: T.Type) -> [ConnectionNodeID] {
         let key = ObjectIdentifier(T.self)
         guard let keys = nodeComponentStorage[key]?.keys else { return [] }
         return Array(keys)
     }
 
-    func edgeIDs<T>(with componentType: T.Type) -> [EdgeID] {
+    func edgeIDs<T>(with componentType: T.Type) -> [ConnectionEdgeID] {
         let key = ObjectIdentifier(T.self)
         guard let keys = edgeComponentStorage[key]?.keys else { return [] }
         return Array(keys)
     }
 
-    func components<T>(_ type: T.Type) -> [(NodeID, T)] {
+    func components<T>(_ type: T.Type) -> [(ConnectionNodeID, T)] {
         let key = ObjectIdentifier(T.self)
         guard let items = nodeComponentStorage[key] else { return [] }
         return items.compactMap { id, value in
@@ -141,7 +141,7 @@ final class CanvasGraph {
         }
     }
 
-    func edgeComponents<T>(_ type: T.Type) -> [(EdgeID, T)] {
+    func edgeComponents<T>(_ type: T.Type) -> [(ConnectionEdgeID, T)] {
         let key = ObjectIdentifier(T.self)
         guard let items = edgeComponentStorage[key] else { return [] }
         return items.compactMap { id, value in
@@ -150,8 +150,8 @@ final class CanvasGraph {
         }
     }
 
-    func componentsConforming<T>(_ type: T.Type) -> [(NodeID, T)] {
-        var results: [(NodeID, T)] = []
+    func componentsConforming<T>(_ type: T.Type) -> [(ConnectionNodeID, T)] {
+        var results: [(ConnectionNodeID, T)] = []
         for items in nodeComponentStorage.values {
             for (id, value) in items {
                 if let typed = value as? T {
@@ -162,8 +162,8 @@ final class CanvasGraph {
         return results
     }
 
-    func allComponentsConforming<T>(_ type: T.Type) -> [(GraphElementID, T)] {
-        var results: [(GraphElementID, T)] = []
+    func allComponentsConforming<T>(_ type: T.Type) -> [(ConnectionElementID, T)] {
+        var results: [(ConnectionElementID, T)] = []
         for items in nodeComponentStorage.values {
             for (id, value) in items {
                 if let typed = value as? T {
@@ -181,7 +181,7 @@ final class CanvasGraph {
         return results
     }
 
-    func hasAnyComponent(for id: NodeID) -> Bool {
+    func hasAnyComponent(for id: ConnectionNodeID) -> Bool {
         for storage in nodeComponentStorage.values {
             if storage[id] != nil {
                 return true
@@ -190,7 +190,7 @@ final class CanvasGraph {
         return false
     }
 
-    func hasAnyComponent(for id: EdgeID) -> Bool {
+    func hasAnyComponent(for id: ConnectionEdgeID) -> Bool {
         for storage in edgeComponentStorage.values {
             if storage[id] != nil {
                 return true
@@ -199,7 +199,7 @@ final class CanvasGraph {
         return false
     }
 
-    func hasAnyComponent(for id: GraphElementID) -> Bool {
+    func hasAnyComponent(for id: ConnectionElementID) -> Bool {
         switch id {
         case .node(let nodeID):
             return hasAnyComponent(for: nodeID)

@@ -38,8 +38,8 @@ struct WireVertexComponent: Hashable, Drawable {
 
 struct WireEdgeComponent: Hashable, Drawable, HitTestable, Bounded, Layerable {
     let id: UUID
-    var start: NodeID
-    var end: NodeID
+    var start: ConnectionNodeID
+    var end: ConnectionNodeID
     var startPoint: CGPoint
     var endPoint: CGPoint
     var clusterID: UUID?

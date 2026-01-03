@@ -21,7 +21,7 @@ final class SchematicEditorController: EditorController {
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
         self.document = projectManager.document
-        self.wireEngine = WireEngine(graph: CanvasGraph())
+        self.wireEngine = WireEngine(graph: ConnectionGraph())
 
         // When wires change in the engine, persist to document.
         self.wireEngine.onWiresChanged = { [weak self] wires in

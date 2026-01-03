@@ -1,5 +1,5 @@
 //
-//  EdgeID.swift
+//  ConnectionEdgeID.swift
 //  CircuitPro
 //
 //  Created by Codex on 12/30/25.
@@ -8,7 +8,7 @@
 import Foundation
 
 /// Stable identifier for edges in the unified graph.
-struct EdgeID: Hashable, Codable {
+struct ConnectionEdgeID: Hashable, Codable {
     let rawValue: UUID
 
     init(_ rawValue: UUID = UUID()) {
@@ -17,9 +17,9 @@ struct EdgeID: Hashable, Codable {
 }
 
 /// Identifies either a node or an edge in the unified graph.
-enum GraphElementID: Hashable, Codable {
-    case node(NodeID)
-    case edge(EdgeID)
+enum ConnectionElementID: Hashable, Codable {
+    case node(ConnectionNodeID)
+    case edge(ConnectionEdgeID)
 
     var rawValue: UUID {
         switch self {
@@ -28,12 +28,12 @@ enum GraphElementID: Hashable, Codable {
         }
     }
 
-    var nodeID: NodeID? {
+    var nodeID: ConnectionNodeID? {
         if case .node(let id) = self { return id }
         return nil
     }
 
-    var edgeID: EdgeID? {
+    var edgeID: ConnectionEdgeID? {
         if case .edge(let id) = self { return id }
         return nil
     }

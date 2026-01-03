@@ -85,15 +85,8 @@ struct KeyCommandInteraction: CanvasInteraction {
                 items.append(item)
                 itemsBinding.wrappedValue = items
                 return true
-            } else {
-                let graph = context.graph
-                let nodeID = NodeID(item.id)
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
-                }
-                graph.setComponent(item, for: nodeID)
-                return true
             }
+            return false
         }
     }
 
@@ -109,49 +102,8 @@ struct KeyCommandInteraction: CanvasInteraction {
         }
 
         // If no tool handled it, perform the standard "delete selection" action.
-        let graph = context.graph
-        guard !graph.selection.isEmpty else { return false }
-        let selectedNodeIDs = graph.selection.compactMap { $0.nodeID }
-        let selectedEdgeIDs = graph.selection.compactMap { $0.edgeID }
-        let selectedIDs = Set(selectedNodeIDs.map(\.rawValue) + selectedEdgeIDs.map(\.rawValue))
-        let selectedItemIDs = Set(selectedNodeIDs.map(\.rawValue))
-        let hasWireSelection = graph.selection.contains { id in
-            switch id {
-            case .node(let nodeID):
-                return graph.component(WireVertexComponent.self, for: nodeID) != nil
-            case .edge(let edgeID):
-                return graph.component(WireEdgeComponent.self, for: edgeID) != nil
-            }
-        }
-
-        if hasWireSelection,
-            let wireEngine = context.environment.connectionEngine as? WireEngine
-        {
-            Task { @MainActor in
-                wireEngine.delete(items: selectedIDs)
-            }
-            graph.selection = []
-            return true
-        }
-
-        let hasTraceSelection = graph.selection.contains { id in
-            switch id {
-            case .node(let nodeID):
-                return graph.component(TraceVertexComponent.self, for: nodeID) != nil
-            case .edge(let edgeID):
-                return graph.component(TraceEdgeComponent.self, for: edgeID) != nil
-            }
-        }
-
-        if hasTraceSelection,
-            let traceEngine = context.environment.connectionEngine as? TraceEngine
-        {
-            Task { @MainActor in
-                traceEngine.delete(items: selectedIDs)
-            }
-            graph.selection = []
-            return true
-        }
+        let selectedItemIDs = context.selectedItemIDs
+        guard !selectedItemIDs.isEmpty else { return false }
 
         if let itemsBinding = context.environment.items {
             let items = itemsBinding.wrappedValue
@@ -165,7 +117,7 @@ struct KeyCommandInteraction: CanvasInteraction {
             )
             if !componentInstanceIDs.isEmpty, let deleteComponentInstances {
                 if deleteComponentInstances(componentInstanceIDs) {
-                    graph.selection = []
+                    controller.updateSelection([])
                     return true
                 }
             }
@@ -173,16 +125,12 @@ struct KeyCommandInteraction: CanvasInteraction {
             let remaining = items.filter { !selectedItemIDs.contains($0.id) }
             if remaining.count != items.count {
                 itemsBinding.wrappedValue = remaining
-                graph.selection = []
+                controller.updateSelection([])
                 return true
             }
         }
 
-        for element in graph.selection {
-            guard case .node(let nodeID) = element else { continue }
-            graph.removeNode(nodeID)
-        }
-        graph.selection = []
+        controller.updateSelection([])
         return true
     }
 
@@ -196,13 +144,13 @@ struct KeyCommandInteraction: CanvasInteraction {
             return true
         }
 
-        let graph = context.graph
-        guard !graph.selection.isEmpty else { return false }
+        let selectedItemIDs = context.selectedItemIDs
+        guard !selectedItemIDs.isEmpty else { return false }
         if let itemsBinding = context.environment.items {
             var items = itemsBinding.wrappedValue
             var didRotate = false
             for index in items.indices {
-                guard graph.selection.contains(.node(NodeID(items[index].id))) else { continue }
+                guard selectedItemIDs.contains(items[index].id) else { continue }
                 if var primitive = items[index] as? AnyCanvasPrimitive {
                     primitive.rotation += .pi / 2
                     items[index] = primitive
@@ -214,16 +162,6 @@ struct KeyCommandInteraction: CanvasInteraction {
                 return true
             }
         }
-
-        for element in graph.selection {
-            guard case .node(let nodeID) = element,
-                var primitive = graph.component(AnyCanvasPrimitive.self, for: nodeID)
-            else {
-                continue
-            }
-            primitive.rotation += .pi / 2
-            graph.setComponent(primitive, for: nodeID)
-        }
-        return true
+        return false
     }
 }

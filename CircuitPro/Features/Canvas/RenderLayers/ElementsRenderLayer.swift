@@ -2,7 +2,7 @@
 
 import AppKit
 
-/// Renders all graph-backed elements and their selection halos, organizing them into a hierarchy
+/// Renders all canvas items and their selection halos, organizing them into a hierarchy
 /// of CALayers that mirrors the `CanvasLayer` data model from the context.
 final class ElementsRenderLayer: RenderLayer {
 
@@ -36,7 +36,6 @@ final class ElementsRenderLayer: RenderLayer {
         var bodyPrimitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
         var haloPrimitivesByLayer: [UUID?: [DrawingPrimitive]] = [:]
 
-        let graph = context.graph
         let renderables = gatherItemRenderables(from: context.items, context: context)
 
         for renderable in renderables {
@@ -45,9 +44,7 @@ final class ElementsRenderLayer: RenderLayer {
             }
 
             guard let haloPath = renderable.haloPath else { continue }
-            guard context.highlightedElementIDs.contains(.node(NodeID(renderable.id))) else {
-                continue
-            }
+            guard context.highlightedItemIDs.contains(renderable.id) else { continue }
 
             let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
             let haloPrimitive = DrawingPrimitive.stroke(

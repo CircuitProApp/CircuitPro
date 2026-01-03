@@ -54,7 +54,7 @@ struct FootprintNavigatorView: View {
                     .foregroundColor(.secondary)
                 Spacer()
             } else {
-                List(selection: $editorSession.selectedNodeIDs) { // Apply selection to the entire List
+                List(selection: $editorSession.selectedItemIDs) { // Apply selection to the entire List
                     Section("Unplaced") {
                         if unplacedComponents.isEmpty {
                             Text("All components placed.")
@@ -68,12 +68,12 @@ struct FootprintNavigatorView: View {
                                     .draggable(TransferablePlacement(componentInstanceID: component.id))
                                     // Add context menu for deletion
                                     .contextMenu {
-                                        let multi = editorSession.selectedNodeIDs.contains(component.id) && editorSession.selectedNodeIDs.count > 1
+                                        let multi = editorSession.selectedItemIDs.contains(component.id) && editorSession.selectedItemIDs.count > 1
                                         Button(role: .destructive) {
-                                            performDelete(on: component, selected: &editorSession.selectedNodeIDs)
+                                            performDelete(on: component, selected: &editorSession.selectedItemIDs)
                                         } label: {
                                             Text(multi
-                                                 ? "Delete Selected (\(editorSession.selectedNodeIDs.count))"
+                                                 ? "Delete Selected (\(editorSession.selectedItemIDs.count))"
                                                  : "Delete")
                                         }
                                     }
@@ -92,12 +92,12 @@ struct FootprintNavigatorView: View {
                                     .listRowSeparator(.hidden) // Added row separator style
                                     // Add context menu for deletion
                                     .contextMenu {
-                                        let multi = editorSession.selectedNodeIDs.contains(component.id) && editorSession.selectedNodeIDs.count > 1
+                                        let multi = editorSession.selectedItemIDs.contains(component.id) && editorSession.selectedItemIDs.count > 1
                                         Button(role: .destructive) {
-                                            performDelete(on: component, selected: &editorSession.selectedNodeIDs)
+                                            performDelete(on: component, selected: &editorSession.selectedItemIDs)
                                         } label: {
                                             Text(multi
-                                                 ? "Delete Selected (\(editorSession.selectedNodeIDs.count))"
+                                                 ? "Delete Selected (\(editorSession.selectedItemIDs.count))"
                                                  : "Delete")
                                         }
                                     }
@@ -116,12 +116,12 @@ struct FootprintNavigatorView: View {
                                     .listRowSeparator(.hidden) // Added row separator style
                                     // Add context menu for deletion
                                     .contextMenu {
-                                        let multi = editorSession.selectedNodeIDs.contains(component.id) && editorSession.selectedNodeIDs.count > 1
+                                        let multi = editorSession.selectedItemIDs.contains(component.id) && editorSession.selectedItemIDs.count > 1
                                         Button(role: .destructive) {
-                                            performDelete(on: component, selected: &editorSession.selectedNodeIDs)
+                                            performDelete(on: component, selected: &editorSession.selectedItemIDs)
                                         } label: {
                                             Text(multi
-                                                 ? "Delete Selected (\(editorSession.selectedNodeIDs.count))"
+                                                 ? "Delete Selected (\(editorSession.selectedItemIDs.count))"
                                                  : "Delete")
                                         }
                                     }

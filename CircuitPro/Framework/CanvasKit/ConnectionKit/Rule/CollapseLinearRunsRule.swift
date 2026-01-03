@@ -181,10 +181,10 @@ struct CollapseLinearRunsRule: GraphRule {
             let edgesToDelete = Set(edgesOnRun.map { $0.edge })
             for e in edgesToDelete { state.removeEdge(e.id) }
 
-            let runEdgeIDs = Set(edgesOnRun.map { $0.edge.id })
+            let runConnectionEdgeIDs = Set(edgesOnRun.map { $0.edge.id })
             for v in run where !keep.contains(v.id) {
                 // Do not delete the vertex if it still has other edges (e.g., another layer)
-                let remaining = (state.adjacency[v.id] ?? []).subtracting(runEdgeIDs)
+                let remaining = (state.adjacency[v.id] ?? []).subtracting(runConnectionEdgeIDs)
                 if remaining.isEmpty {
                     state.removeVertex(v.id)
                 }

@@ -14,7 +14,8 @@ struct RenderContext {
     let magnification: CGFloat
     let mouseLocation: CGPoint?
     let selectedTool: CanvasTool?
-    let highlightedElementIDs: Set<GraphElementID>
+    let highlightedItemIDs: Set<UUID>
+    let selectedItemIDs: Set<UUID>
     let hostViewBounds: CGRect
     let visibleRect: CGRect
 
@@ -24,7 +25,6 @@ struct RenderContext {
     let activeLayerId: UUID?
 
     let snapProvider: any SnapProvider
-    let graph: CanvasGraph
     let items: [any CanvasItem]
 
     // MARK: - Extensible Application-Specific Data
@@ -42,17 +42,17 @@ struct RenderContext {
         }
     }
 
-    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedElementIDs: Set<GraphElementID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, graph: CanvasGraph, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
+    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
         self.magnification = magnification
         self.mouseLocation = mouseLocation
         self.selectedTool = selectedTool
-        self.highlightedElementIDs = highlightedElementIDs
+        self.highlightedItemIDs = highlightedItemIDs
+        self.selectedItemIDs = selectedItemIDs
         self.hostViewBounds = hostViewBounds
         self.visibleRect = visibleRect
         self.layers = layers
         self.activeLayerId = activeLayerId
         self.snapProvider = snapProvider
-        self.graph = graph
         self.items = items
         self.environment = environment
         self.inputProcessors = inputProcessors

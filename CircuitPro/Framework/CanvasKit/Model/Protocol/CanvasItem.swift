@@ -9,7 +9,3 @@ import Foundation
 
 /// A lightweight, ID-stable item used by render layers and interactions.
 protocol CanvasItem: Identifiable where ID == UUID {}
-
-extension CanvasItem {
-    var selectionID: GraphElementID { .node(NodeID(id)) }
-}

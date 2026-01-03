@@ -31,15 +31,8 @@ struct ToolInteraction: CanvasInteraction {
                 items.append(item)
                 itemsBinding.wrappedValue = items
                 return true
-            } else {
-                let graph = context.graph
-                let nodeID = NodeID(item.id)
-                if !graph.nodes.contains(nodeID) {
-                    graph.addNode(nodeID)
-                }
-                graph.setComponent(item, for: nodeID)
-                return true
             }
+            return false
         }
     }
 }

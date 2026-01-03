@@ -1,6 +1,6 @@
 import AppKit
 
-/// Renders the editing handles for a single selected graph primitive.
+/// Renders the editing handles for a single selected canvas primitive.
 class HandlesRenderLayer: RenderLayer {
 
     private let shapeLayer = CAShapeLayer()
@@ -25,19 +25,10 @@ class HandlesRenderLayer: RenderLayer {
     }
 
     private func findEditable(in context: RenderContext) -> (handles: [CanvasHandle], transform: CGAffineTransform)? {
-        let graph = context.graph
-        let selectionIDs = graph.selection
-        guard selectionIDs.count == 1, let selectedElement = selectionIDs.first else { return nil }
-        guard case .node(let selectedID) = selectedElement else { return nil }
+        let selectionIDs = context.selectedItemIDs
+        guard selectionIDs.count == 1, let selectedID = selectionIDs.first else { return nil }
 
-        let primitive: AnyCanvasPrimitive?
-        if let item = context.items.first(where: { $0.id == selectedID.rawValue }),
-            let itemPrimitive = item as? AnyCanvasPrimitive
-        {
-            primitive = itemPrimitive
-        } else {
-            primitive = graph.component(AnyCanvasPrimitive.self, for: selectedID)
-        }
+        let primitive = context.items.first(where: { $0.id == selectedID }) as? AnyCanvasPrimitive
         guard let primitive else { return nil }
 
         let transform = CGAffineTransform(translationX: primitive.position.x, y: primitive.position.y)

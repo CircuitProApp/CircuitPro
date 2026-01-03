@@ -34,9 +34,8 @@ final class WireTool: CanvasTool {
     {
         switch self.state {
         case .idle:
-            let graphHit = GraphHitTester().hitTest(point: location, context: context.renderContext)
             let initialDirection = determineInitialDirection(
-                graphHit: graphHit, context: context.renderContext)
+                graphHit: nil, context: context.renderContext)
             self.state = .drawing(startPoint: location, direction: initialDirection)
             return .noResult
 
@@ -99,23 +98,14 @@ final class WireTool: CanvasTool {
     }
 
     private func shouldFinish(at location: CGPoint, context: RenderContext) -> Bool {
-        let graph = context.graph
-        guard let graphHit = GraphHitTester().hitTest(point: location, context: context) else {
+        guard let itemHit = ItemHitTester().hitTest(point: location, context: context) else {
             return false
         }
 
-        switch graphHit {
-        case .node(let nodeID):
-            if let item = context.items.first(where: { $0.id == nodeID.rawValue }),
-                item is Pin
-            {
-                return true
-            }
-            if graph.component(Pin.self, for: nodeID) != nil {
-                return true
-            }
-        case .edge(let edgeID):
-            return graph.component(WireEdgeComponent.self, for: edgeID) != nil
+        if let item = context.items.first(where: { $0.id == itemHit }),
+            item is Pin
+        {
+            return true
         }
         return false
     }
@@ -130,24 +120,10 @@ final class WireTool: CanvasTool {
     }
 
     // MARK: - Private Helpers
-    private func determineInitialDirection(graphHit: GraphElementID?, context: RenderContext)
+    private func determineInitialDirection(graphHit: UUID?, context: RenderContext)
         -> DrawingDirection
     {
-        if let graphHit, let orientation = wireOrientation(for: graphHit, in: context) {
-            return orientation == .horizontal ? .vertical : .horizontal
-        }
-
         return .horizontal
-    }
-
-    private func wireOrientation(for id: GraphElementID, in context: RenderContext) -> EdgeOrientation? {
-        let graph = context.graph
-        guard case .edge(let edgeID) = id,
-            let edge = graph.component(WireEdgeComponent.self, for: edgeID)
-        else { return nil }
-        let dx = abs(edge.startPoint.x - edge.endPoint.x)
-        let dy = abs(edge.startPoint.y - edge.endPoint.y)
-        return dx < 1e-6 ? .vertical : .horizontal
     }
 
 }

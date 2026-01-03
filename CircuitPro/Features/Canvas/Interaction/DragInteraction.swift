@@ -23,12 +23,6 @@ final class DragInteraction: CanvasInteraction {
         let connectionEngine: (any ConnectionEngine)?
     }
 
-    /// State for dragging connection elements only (wires/traces)
-    private struct ConnectionDragState {
-        let origin: CGPoint
-        let connectionEngine: any ConnectionEngine
-    }
-
     /// State for dragging text elements (with anchor support)
     private struct TextDragState {
         let origin: CGPoint
@@ -47,7 +41,6 @@ final class DragInteraction: CanvasInteraction {
     // MARK: - Properties
 
     private var itemState: ItemDragState?
-    private var connectionState: ConnectionDragState?
     private var textState: TextDragState?
     private var didMove: Bool = false
     private let dragThreshold: CGFloat = 4.0
@@ -67,10 +60,6 @@ final class DragInteraction: CanvasInteraction {
             return true
         }
 
-        if tryStartConnectionDrag(at: point, context: context) {
-            return true
-        }
-
         if tryStartTextDrag(at: point, event: event, context: context) {
             return true
         }
@@ -86,11 +75,6 @@ final class DragInteraction: CanvasInteraction {
             return
         }
 
-        if let state = connectionState {
-            handleConnectionDrag(to: point, state: state, context: context)
-            return
-        }
-
         if let state = textState {
             handleTextDrag(to: point, state: state, context: context)
             return
@@ -101,7 +85,6 @@ final class DragInteraction: CanvasInteraction {
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         itemState?.connectionEngine?.endDrag()
-        connectionState?.connectionEngine.endDrag()
         resetState()
     }
 
@@ -109,7 +92,6 @@ final class DragInteraction: CanvasInteraction {
 
     private func resetState() {
         itemState = nil
-        connectionState = nil
         textState = nil
         didMove = false
     }
@@ -117,9 +99,7 @@ final class DragInteraction: CanvasInteraction {
     // MARK: - Private: Item Drag (Transformable Protocol)
 
     private func tryStartItemDrag(at point: CGPoint, context: RenderContext) -> Bool {
-        let selection = context.graph.selection
-        let selectedNodeIDs = Set(selection.compactMap { $0.nodeID })
-        let selectedIDs = Set(selectedNodeIDs.map { $0.rawValue })
+        let selectedIDs = context.selectedItemIDs
         guard !selectedIDs.isEmpty else { return false }
 
         guard let itemsBinding = context.environment.items else { return false }
@@ -132,8 +112,7 @@ final class DragInteraction: CanvasInteraction {
         guard !selectedItems.isEmpty else { return false }
 
         guard let hit = ItemHitTester().hitTest(point: point, context: context) else { return false }
-        let resolvedHit = context.selectionTarget(for: hit)
-        guard context.graph.selection.contains(resolvedHit) else { return false }
+        guard selectedIDs.contains(hit) else { return false }
 
         // Start connection engine drag if applicable
         var activeConnectionEngine: (any ConnectionEngine)?
@@ -174,50 +153,6 @@ final class DragInteraction: CanvasInteraction {
         state.connectionEngine?.updateDrag(by: deltaPoint)
     }
 
-    // MARK: - Private: Connection Drag (Wires/Traces Only)
-
-    private func tryStartConnectionDrag(at point: CGPoint, context: RenderContext) -> Bool {
-        guard let connectionEngine = context.environment.connectionEngine else { return false }
-
-        let graph = context.graph
-        guard let graphHit = GraphHitTester().hitTest(point: point, context: context) else {
-            return false
-        }
-
-        let resolvedHit = context.selectionTarget(for: graphHit)
-        guard graph.selection.contains(resolvedHit) else { return false }
-
-        let isWire: Bool
-        switch graphHit {
-        case .edge(let edgeID):
-            isWire = graph.component(WireEdgeComponent.self, for: edgeID) != nil
-        case .node:
-            isWire = false
-        }
-        guard isWire else { return false }
-
-        let selectedEdgeIDs = Set(graph.selection.compactMap { $0.edgeID?.rawValue })
-        guard connectionEngine.beginDrag(selectedIDs: selectedEdgeIDs) else { return false }
-
-        self.connectionState = ConnectionDragState(
-            origin: point, connectionEngine: connectionEngine)
-        return true
-    }
-
-    private func handleConnectionDrag(
-        to point: CGPoint, state: ConnectionDragState, context: RenderContext
-    ) {
-        let rawDelta = CGVector(dx: point.x - state.origin.x, dy: point.y - state.origin.y)
-        if !didMove {
-            if hypot(rawDelta.dx, rawDelta.dy) < dragThreshold / context.magnification { return }
-            didMove = true
-        }
-
-        let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
-        let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
-        state.connectionEngine.updateDrag(by: deltaPoint)
-    }
-
     // MARK: - Private: Text Drag (Standalone Text with Anchor Support)
 
     private func tryStartTextDrag(
@@ -230,19 +165,15 @@ final class DragInteraction: CanvasInteraction {
         guard let itemsBinding = context.environment.items else { return false }
         let items = itemsBinding.wrappedValue
 
-        guard case .node(let nodeID) = graphHit else { return false }
-        let resolvedHit = context.selectionTarget(for: graphHit)
-        guard context.graph.selection.contains(resolvedHit) else { return false }
+        guard context.selectedItemIDs.contains(graphHit) else { return false }
 
-        let selectionIDs = Set(context.graph.selection.compactMap { $0.nodeID?.rawValue })
         let selections = collectTextSelections(
-            selectedIDs: selectionIDs,
+            selectedIDs: context.selectedItemIDs,
             items: items,
             context: context
         )
-
-        guard selections.definitionTexts[nodeID.rawValue] != nil
-                || selections.componentTexts[nodeID.rawValue] != nil
+        guard selections.definitionTexts[graphHit] != nil
+                || selections.componentTexts[graphHit] != nil
         else { return false }
 
         guard !(selections.definitionTexts.isEmpty && selections.componentTexts.isEmpty) else {

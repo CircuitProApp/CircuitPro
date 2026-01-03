@@ -21,7 +21,7 @@ private final class DragHandler {
     // Frozen at begin()
     private var originalVertexPositions: [UUID: CGPoint] = [:]
     private var selectedEdges: [GraphEdge] = []
-    private var selectedEdgeIDs: Set<UUID> = []
+    private var selectedConnectionEdgeIDs: Set<UUID> = []
     private var verticesToMove: Set<UUID> = []
 
     // Accumulated during update()
@@ -50,7 +50,7 @@ private final class DragHandler {
         }
 
         selectedEdges = s.edges.values.filter { selectedIDs.contains($0.id) }
-        selectedEdgeIDs = Set(selectedEdges.map { $0.id })
+        selectedConnectionEdgeIDs = Set(selectedEdges.map { $0.id })
 
         let movableEdgeVertexIDs =
             selectedEdges
@@ -72,7 +72,7 @@ private final class DragHandler {
             guard case .pin = lookup(vertexID) else { continue }
 
             let isOffAxis = (s.adjacency[vertexID] ?? []).contains { edgeID in
-                guard selectedEdgeIDs.contains(edgeID) else { return false }
+                guard selectedConnectionEdgeIDs.contains(edgeID) else { return false }
                 guard let e = s.edges[edgeID] else { return false }
                 let otherEndID = (e.start == vertexID) ? e.end : e.start
                 if verticesToMove.contains(otherEndID) { return false }
@@ -117,7 +117,7 @@ private final class DragHandler {
                 let movingNeighbor = findNeighbor(
                     of: vertexID, in: s,
                     where: { nID, e in
-                        return newPositions[nID] != nil && self.selectedEdgeIDs.contains(e.id)
+                        return newPositions[nID] != nil && self.selectedConnectionEdgeIDs.contains(e.id)
                     }),
                 let origV = originalVertexPositions[vertexID],
                 let origM = originalVertexPositions[movingNeighbor.id],
@@ -227,7 +227,7 @@ private final class DragHandler {
 @MainActor
 final class WireEngine: GraphBackedConnectionEngine {
     // MARK: - Engine and State
-    var graph: CanvasGraph
+    var graph: ConnectionGraph
     let engine: GraphEngine
     private let geometry: GeometryPolicy
     private let ownershipBox = OwnershipLookupBox()
@@ -248,7 +248,7 @@ final class WireEngine: GraphBackedConnectionEngine {
     var onWiresChanged: (([Wire]) -> Void)?
 
     // MARK: - Init
-    init(graph: CanvasGraph) {
+    init(graph: ConnectionGraph) {
         self.graph = graph
         self.geometry = ManhattanGeometry(step: 1)
         let policy = WireVertexPolicy(box: ownershipBox)
@@ -656,16 +656,16 @@ final class WireEngine: GraphBackedConnectionEngine {
     @MainActor
     private func syncGraphComponentsOnMain(delta: GraphDelta, final: GraphState) {
         for id in delta.deletedEdges {
-            graph.removeEdge(EdgeID(id))
+            graph.removeEdge(ConnectionEdgeID(id))
         }
         for id in delta.deletedVertices {
-            graph.removeNode(NodeID(id))
+            graph.removeNode(ConnectionNodeID(id))
         }
 
         let degrees = final.adjacency.mapValues { $0.count }
 
         for (id, vertex) in final.vertices {
-            let nodeID = NodeID(id)
+            let nodeID = ConnectionNodeID(id)
             if !graph.nodes.contains(nodeID) {
                 graph.addNode(nodeID)
             }
@@ -686,7 +686,7 @@ final class WireEngine: GraphBackedConnectionEngine {
         }
 
         for (id, edge) in final.edges {
-            let edgeID = EdgeID(id)
+            let edgeID = ConnectionEdgeID(id)
             guard let start = final.vertices[edge.start],
                 let end = final.vertices[edge.end]
             else { continue }
@@ -696,8 +696,8 @@ final class WireEngine: GraphBackedConnectionEngine {
             let clusterID = start.clusterID ?? end.clusterID
             let component = WireEdgeComponent(
                 id: id,
-                start: NodeID(edge.start),
-                end: NodeID(edge.end),
+                start: ConnectionNodeID(edge.start),
+                end: ConnectionNodeID(edge.end),
                 startPoint: start.point,
                 endPoint: end.point,
                 clusterID: clusterID
@@ -732,9 +732,9 @@ final class WireEngine: GraphBackedConnectionEngine {
 
     private func setOwnership(_ own: VertexOwnership, for id: UUID) {
         ownership[id] = own
-        if var component = graph.component(WireVertexComponent.self, for: NodeID(id)) {
+        if var component = graph.component(WireVertexComponent.self, for: ConnectionNodeID(id)) {
             component.ownership = own
-            graph.setComponent(component, for: NodeID(id))
+            graph.setComponent(component, for: ConnectionNodeID(id))
         }
     }
 
@@ -759,7 +759,7 @@ final class WireEngine: GraphBackedConnectionEngine {
         return (vset, eset)
     }
 
-    private func restoreSelection(_ selection: Set<GraphElementID>) {
+    private func restoreSelection(_ selection: Set<ConnectionElementID>) {
         let restored = selection.filter { graph.hasAnyComponent(for: $0) }
         if graph.selection != restored {
             graph.selection = restored

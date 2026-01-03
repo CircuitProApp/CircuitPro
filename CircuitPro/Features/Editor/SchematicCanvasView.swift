@@ -22,7 +22,7 @@ struct SchematicCanvasView: View {
             tool: $editorSession.schematicController.selectedTool.unwrapping(
                 withDefault: CursorTool()),
             items: $editorSession.schematicController.items,
-            selectedIDs: $editorSession.selectedNodeIDs,
+            selectedIDs: $editorSession.selectedItemIDs,
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),

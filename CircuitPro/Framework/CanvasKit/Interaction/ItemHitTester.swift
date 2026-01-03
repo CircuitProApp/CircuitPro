@@ -9,9 +9,15 @@ import CoreGraphics
 import AppKit
 
 struct ItemHitTester {
-    func hitTest(point: CGPoint, context: RenderContext) -> GraphElementID? {
+    private struct HitCandidate {
+        let id: UUID
+        let priority: Int
+        let area: CGFloat
+    }
+
+    func hitTest(point: CGPoint, context: RenderContext) -> UUID? {
         let tolerance = 5.0 / context.magnification
-        var best: GraphHitCandidate?
+        var best: HitCandidate?
 
         for item in context.items {
             if let component = item as? ComponentInstance {
@@ -28,7 +34,7 @@ struct ItemHitTester {
             if let primitive = item as? AnyCanvasPrimitive {
                 if primitive.hitTest(point: point, tolerance: tolerance) {
                     considerHit(
-                        id: .node(NodeID(primitive.id)),
+                        id: primitive.id,
                         priority: 1,
                         area: primitive.boundingBox.width * primitive.boundingBox.height,
                         best: &best
@@ -40,7 +46,7 @@ struct ItemHitTester {
             if let pin = item as? Pin {
                 if hitTest(pin: pin, at: point, tolerance: tolerance) {
                     let area = pinBounds(pin: pin).width * pinBounds(pin: pin).height
-                    considerHit(id: .node(NodeID(pin.id)), priority: 10, area: area, best: &best)
+                    considerHit(id: pin.id, priority: 10, area: area, best: &best)
                 }
                 continue
             }
@@ -48,7 +54,7 @@ struct ItemHitTester {
             if let pad = item as? Pad {
                 if hitTest(pad: pad, at: point, tolerance: tolerance) {
                     let bounds = padBounds(pad: pad)
-                    considerHit(id: .node(NodeID(pad.id)), priority: 10, area: bounds.width * bounds.height, best: &best)
+                    considerHit(id: pad.id, priority: 10, area: bounds.width * bounds.height, best: &best)
                 }
                 continue
             }
@@ -56,7 +62,7 @@ struct ItemHitTester {
             if let text = item as? CircuitText.Definition {
                 if hitTest(text: text, displayText: displayText(for: text, context: context), at: point, tolerance: tolerance) {
                     let bounds = textBounds(text: text, displayText: displayText(for: text, context: context))
-                    considerHit(id: .node(NodeID(text.id)), priority: 8, area: bounds.width * bounds.height, best: &best)
+                    considerHit(id: text.id, priority: 8, area: bounds.width * bounds.height, best: &best)
                 }
                 continue
             }
@@ -65,19 +71,19 @@ struct ItemHitTester {
         return best?.id
     }
 
-    func hitTestAll(in rect: CGRect, context: RenderContext) -> [GraphElementID] {
-        var hits = Set<GraphElementID>()
+    func hitTestAll(in rect: CGRect, context: RenderContext) -> [UUID] {
+        var hits = Set<UUID>()
 
         for item in context.items {
             if let component = item as? ComponentInstance {
                 let bodyBounds = componentBodyBounds(component, context: context)
                 if rect.intersects(bodyBounds) {
-                    hits.insert(.node(NodeID(component.id)))
+                    hits.insert(component.id)
                 }
                 for text in componentTexts(component, context: context) {
                     let bounds = textBounds(text: text.text, displayText: text.displayText, ownerTransform: text.ownerTransform, ownerRotation: text.ownerRotation)
                     if rect.intersects(bounds) {
-                        hits.insert(.node(NodeID(text.text.id)))
+                        hits.insert(text.text.id)
                     }
                 }
                 continue
@@ -85,21 +91,21 @@ struct ItemHitTester {
 
             if let primitive = item as? AnyCanvasPrimitive {
                 if rect.intersects(primitive.boundingBox) {
-                    hits.insert(.node(NodeID(primitive.id)))
+                    hits.insert(primitive.id)
                 }
                 continue
             }
 
             if let pin = item as? Pin {
                 if rect.intersects(pinBounds(pin: pin)) {
-                    hits.insert(.node(NodeID(pin.id)))
+                    hits.insert(pin.id)
                 }
                 continue
             }
 
             if let pad = item as? Pad {
                 if rect.intersects(padBounds(pad: pad)) {
-                    hits.insert(.node(NodeID(pad.id)))
+                    hits.insert(pad.id)
                 }
                 continue
             }
@@ -107,7 +113,7 @@ struct ItemHitTester {
             if let text = item as? CircuitText.Definition {
                 let bounds = textBounds(text: text, displayText: displayText(for: text, context: context))
                 if rect.intersects(bounds) {
-                    hits.insert(.node(NodeID(text.id)))
+                    hits.insert(text.id)
                 }
                 continue
             }
@@ -117,15 +123,15 @@ struct ItemHitTester {
     }
 
     private func considerHit(
-        id: GraphElementID,
+        id: UUID,
         priority: Int,
         area: CGFloat,
-        best: inout GraphHitCandidate?
+        best: inout HitCandidate?
     ) {
-        considerHit(candidate: GraphHitCandidate(id: id, priority: priority, area: area), best: &best)
+        considerHit(candidate: HitCandidate(id: id, priority: priority, area: area), best: &best)
     }
 
-    private func considerHit(candidate: GraphHitCandidate, best: inout GraphHitCandidate?) {
+    private func considerHit(candidate: HitCandidate, best: inout HitCandidate?) {
         guard let current = best else {
             best = candidate
             return
@@ -141,7 +147,7 @@ struct ItemHitTester {
         at point: CGPoint,
         tolerance: CGFloat,
         context: RenderContext,
-        best: inout GraphHitCandidate?
+        best: inout HitCandidate?
     ) {
         if let textHit = componentTextHit(component, at: point, tolerance: tolerance, context: context) {
             considerHit(candidate: textHit, best: &best)
@@ -150,7 +156,7 @@ struct ItemHitTester {
         if componentBodyHit(component, at: point, tolerance: tolerance, context: context) {
             let bounds = componentBodyBounds(component, context: context)
             considerHit(
-                id: .node(NodeID(component.id)),
+                id: component.id,
                 priority: 5,
                 area: bounds.width * bounds.height,
                 best: &best
@@ -273,7 +279,7 @@ struct ItemHitTester {
         at point: CGPoint,
         tolerance: CGFloat,
         context: RenderContext
-    ) -> GraphHitCandidate? {
+    ) -> HitCandidate? {
         for text in componentTexts(component, context: context) {
             if hitTest(
                 text: text.text,
@@ -289,8 +295,8 @@ struct ItemHitTester {
                     ownerTransform: text.ownerTransform,
                     ownerRotation: text.ownerRotation
                 )
-                return GraphHitCandidate(
-                    id: .node(NodeID(text.text.id)),
+                return HitCandidate(
+                    id: text.text.id,
                     priority: 10,
                     area: bounds.width * bounds.height
                 )

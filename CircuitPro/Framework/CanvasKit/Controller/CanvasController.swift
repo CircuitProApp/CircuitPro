@@ -11,7 +11,10 @@ final class CanvasController {
 
     // MARK: - Core Data Model
 
-    var interactionHighlightedElementIDs: Set<GraphElementID> = []
+    private var interactionHighlightedItemIDs: Set<UUID> = []
+    var highlightedItemIDs: Set<UUID> { interactionHighlightedItemIDs }
+    private var selectedItemIDs: Set<UUID> = []
+    var onSelectionChange: ((Set<UUID>) -> Void)?
 
     // MARK: - View Reference
 
@@ -37,7 +40,6 @@ final class CanvasController {
     var environment: CanvasEnvironmentValues = .init()
     var layers: [CanvasLayer]?
     var activeLayerId: UUID?
-    var graph: CanvasGraph = CanvasGraph()
     var items: [any CanvasItem] = []
 
     // MARK: - Pluggable Pipelines
@@ -75,7 +77,7 @@ final class CanvasController {
         environment: CanvasEnvironmentValues,
         layers: [CanvasLayer]?,
         activeLayerId: UUID?,
-        graph: CanvasGraph,
+        selectedItemIDs: Set<UUID>,
         items: [any CanvasItem]
     ) {
         // --- Other State ---
@@ -84,26 +86,25 @@ final class CanvasController {
         self.environment.merge(environment)
         self.layers = layers
         self.activeLayerId = activeLayerId
-        self.graph = graph
+        updateSelection(selectedItemIDs, notify: false)
         self.items = items
     }
 
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
     func currentContext(for hostViewBounds: CGRect, visibleRect: CGRect) -> RenderContext {
-        var allHighlightedIDs = interactionHighlightedElementIDs
-        allHighlightedIDs.formUnion(graph.selection)
-
+        var allHighlightedIDs = interactionHighlightedItemIDs
+        allHighlightedIDs.formUnion(selectedItemIDs)
         return RenderContext(
             magnification: self.magnification,
             mouseLocation: self.mouseLocation,
             selectedTool: self.selectedTool,
-            highlightedElementIDs: allHighlightedIDs,
+            highlightedItemIDs: allHighlightedIDs,
+            selectedItemIDs: selectedItemIDs,
             hostViewBounds: hostViewBounds,
             visibleRect: visibleRect,
             layers: self.layers ?? [],
             activeLayerId: self.activeLayerId,
             snapProvider: snapProvider,
-            graph: graph,
             items: items,
             environment: self.environment,
             inputProcessors: self.inputProcessors
@@ -123,10 +124,19 @@ final class CanvasController {
 
     // MARK: - Interaction API
 
-    func setInteractionHighlight(elementIDs: Set<GraphElementID>) {
-        guard self.interactionHighlightedElementIDs != elementIDs else { return }
-        self.interactionHighlightedElementIDs = elementIDs
+    func setInteractionHighlight(itemIDs: Set<UUID>) {
+        guard interactionHighlightedItemIDs != itemIDs else { return }
+        interactionHighlightedItemIDs = itemIDs
         view?.performLayerUpdate() // Redraw for transient highlights.
+    }
+
+    func updateSelection(_ ids: Set<UUID>, notify: Bool = true) {
+        guard selectedItemIDs != ids else { return }
+        selectedItemIDs = ids
+        view?.performLayerUpdate()
+        if notify {
+            onSelectionChange?(ids)
+        }
     }
 
     func updateEnvironment(_ block: (inout CanvasEnvironmentValues) -> Void) {

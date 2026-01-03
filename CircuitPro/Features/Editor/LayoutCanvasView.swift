@@ -15,7 +15,7 @@ struct LayoutCanvasView: View {
             tool: $editorSession.layoutController.selectedTool.unwrapping(
                 withDefault: CursorTool()),
             items: $editorSession.layoutController.items,
-            selectedIDs: $editorSession.selectedNodeIDs,
+            selectedIDs: $editorSession.selectedItemIDs,
             layers: $editorSession.layoutController.canvasLayers,
             activeLayerId: $editorSession.layoutController.activeLayerId,
             connections: editorSession.layoutController.traceEngine,

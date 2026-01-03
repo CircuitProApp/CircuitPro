@@ -15,8 +15,8 @@ struct InspectorView: View {
     @State private var selectedTab: InspectorTab = .attributes
 
     private var singleSelectedID: UUID? {
-        guard editorSession.selectedNodeIDs.count == 1 else { return nil }
-        return editorSession.selectedNodeIDs.first
+        guard editorSession.selectedItemIDs.count == 1 else { return nil }
+        return editorSession.selectedItemIDs.first
     }
 
     private var selectedSchematicID: UUID? {
@@ -106,7 +106,7 @@ struct InspectorView: View {
         VStack {
             Spacer()
             Text(
-                editorSession.selectedNodeIDs.isEmpty ? "No Selection" : "Multiple Items Selected"
+                editorSession.selectedItemIDs.isEmpty ? "No Selection" : "Multiple Items Selected"
             )
             .foregroundColor(.secondary)
             Spacer()
