@@ -15,7 +15,6 @@ final class DragInteraction: CanvasInteraction {
         struct Item {
             let id: UUID
             let originalPosition: CGPoint
-            let hitTest: (CGPoint, CGFloat) -> Bool
             let updatePosition: (CGPoint) -> Void
         }
 
@@ -132,15 +131,9 @@ final class DragInteraction: CanvasInteraction {
 
         guard !selectedItems.isEmpty else { return false }
 
-        // Check if we hit one of the selected items
-        var hitSelected = false
-        for item in selectedItems {
-            if item.hitTest(point, 5.0) {
-                hitSelected = true
-                break
-            }
-        }
-        guard hitSelected else { return false }
+        guard let hit = ItemHitTester().hitTest(point: point, context: context) else { return false }
+        let resolvedHit = context.selectionTarget(for: hit)
+        guard context.graph.selection.contains(resolvedHit) else { return false }
 
         // Start connection engine drag if applicable
         var activeConnectionEngine: (any ConnectionEngine)?
@@ -274,15 +267,10 @@ final class DragInteraction: CanvasInteraction {
         var draggableItems: [ItemDragState.Item] = []
 
         for item in items where selectedIDs.contains(item.id) {
-            guard let transformable = item as? (any CanvasItem & Transformable),
-                let hitTestable = item as? (any CanvasItem & HitTestable)
-            else { continue }
+            guard let transformable = item as? (any CanvasItem & Transformable) else { continue }
 
             let itemID = item.id
             let originalPosition = transformable.position
-            let hitTest: (CGPoint, CGFloat) -> Bool = { point, tolerance in
-                hitTestable.hitTest(point: point, tolerance: tolerance)
-            }
             let updatePosition: (CGPoint) -> Void = { newPosition in
                 self.updateTransformableItem(
                     id: itemID,
@@ -294,7 +282,6 @@ final class DragInteraction: CanvasInteraction {
             draggableItems.append(ItemDragState.Item(
                 id: itemID,
                 originalPosition: originalPosition,
-                hitTest: hitTest,
                 updatePosition: updatePosition
             ))
         }

@@ -190,7 +190,6 @@ final class ElementsRenderLayer: RenderLayer {
                 var transform = CGAffineTransform(
                     translationX: pin.position.x, y: pin.position.y
                 )
-                .rotated(by: pin.rotation)
                 .concatenating(ownerTransform)
                 let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
                 for worldPrimitive in worldPrimitives {
@@ -284,12 +283,10 @@ final class ElementsRenderLayer: RenderLayer {
     private func renderable(for pin: Pin, context: RenderContext) -> RenderableItem {
         let localPrimitives = pin.makeDrawingPrimitives()
         var transform = CGAffineTransform(translationX: pin.position.x, y: pin.position.y)
-            .rotated(by: pin.rotation)
         let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
         let layered = worldPrimitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
         let haloPath = pin.makeHaloPath().flatMap { path -> CGPath? in
             var haloTransform = CGAffineTransform(translationX: pin.position.x, y: pin.position.y)
-                .rotated(by: pin.rotation)
             return path.copy(using: &haloTransform)
         }
         return RenderableItem(id: pin.id, primitives: layered, haloPath: haloPath)
@@ -438,7 +435,6 @@ final class ElementsRenderLayer: RenderLayer {
             let pinTransform = CGAffineTransform(
                 translationX: pin.position.x, y: pin.position.y
             )
-            .rotated(by: pin.rotation)
             .concatenating(ownerTransform)
             composite.addPath(halo, transform: pinTransform)
         }

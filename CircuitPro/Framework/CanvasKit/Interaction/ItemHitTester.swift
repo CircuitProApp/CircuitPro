@@ -381,7 +381,6 @@ struct ItemHitTester {
     private func hitTest(pin: Pin, at point: CGPoint, tolerance: CGFloat) -> Bool {
         let localPoint = point.applying(
             CGAffineTransform(translationX: pin.position.x, y: pin.position.y)
-                .rotated(by: pin.rotation)
                 .inverted()
         )
         guard let bodyPath = pin.makeHaloPath() else { return false }
@@ -398,7 +397,6 @@ struct ItemHitTester {
         let local = pin.makeHaloPath()?.boundingBoxOfPath ?? .null
         guard !local.isNull else { return .null }
         let transform = CGAffineTransform(translationX: pin.position.x, y: pin.position.y)
-            .rotated(by: pin.rotation)
         return local.applying(transform)
     }
 
