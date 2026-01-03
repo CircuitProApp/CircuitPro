@@ -17,6 +17,184 @@
   },
   "groups" : [
     {
+      "blend-mode-specializations" : [
+        {
+          "value" : "plus-darker"
+        },
+        {
+          "appearance" : "dark",
+          "value" : "normal"
+        }
+      ],
+      "blur-material-specializations" : [
+        {
+          "value" : 1
+        },
+        {
+          "appearance" : "dark",
+          "value" : 0.75
+        }
+      ],
+      "hidden" : true,
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.38403,0.64839,1.04685,1.00000",
+                  "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+                ]
+              }
+            }
+          ],
+          "image-name" : "Beta Badge Text.svg",
+          "name" : "Beta Badge Text",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 0.4,
+            "translation-in-points" : [
+              100.15990000000022,
+              66.39100454836137
+            ]
+          }
+        }
+      ],
+      "opacity-specializations" : [
+        {
+          "value" : 0.5
+        },
+        {
+          "appearance" : "dark",
+          "value" : 1
+        }
+      ],
+      "shadow-specializations" : [
+        {
+          "value" : {
+            "kind" : "neutral",
+            "opacity" : 1
+          }
+        },
+        {
+          "appearance" : "dark",
+          "value" : {
+            "kind" : "none",
+            "opacity" : 0
+          }
+        }
+      ],
+      "specular-specializations" : [
+        {
+          "value" : false
+        },
+        {
+          "appearance" : "dark",
+          "value" : false
+        }
+      ],
+      "translucency-specializations" : [
+        {
+          "value" : {
+            "enabled" : false,
+            "value" : 0
+          }
+        },
+        {
+          "appearance" : "dark",
+          "value" : {
+            "enabled" : false,
+            "value" : 0.04
+          }
+        }
+      ]
+    },
+    {
+      "blur-material-specializations" : [
+        {
+          "value" : 0.1
+        },
+        {
+          "appearance" : "dark",
+          "value" : 1
+        }
+      ],
+      "hidden" : true,
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.90000,0.90000,0.90000,1.00000",
+                  "srgb:1.00000,1.00000,1.00000,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.5000000000000002,
+                    "y" : 1
+                  },
+                  "stop" : {
+                    "x" : 0.5000000000000002,
+                    "y" : 0
+                  }
+                }
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.90000,0.90000,0.90000,1.00000"
+              }
+            }
+          ],
+          "image-name" : "Beta Badge BG.svg",
+          "name" : "Beta Badge BG",
+          "position" : {
+            "scale" : 0.4,
+            "translation-in-points" : [
+              94.1263142610054,
+              66.39083694836143
+            ]
+          }
+        }
+      ],
+      "opacity-specializations" : [
+        {
+          "value" : 0.87
+        },
+        {
+          "appearance" : "dark",
+          "value" : 1
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency-specializations" : [
+        {
+          "value" : {
+            "enabled" : true,
+            "value" : 0.5
+          }
+        },
+        {
+          "appearance" : "dark",
+          "value" : {
+            "enabled" : true,
+            "value" : 0.5
+          }
+        }
+      ]
+    },
+    {
       "blend-mode" : "overlay",
       "blur-material-specializations" : [
         {
@@ -104,6 +282,18 @@
       "layers" : [
         {
           "hidden" : false,
+          "image-name" : "Document.png",
+          "name" : "IC",
+          "position" : {
+            "scale" : 0.4,
+            "translation-in-points" : [
+              0,
+              -10
+            ]
+          }
+        },
+        {
+          "hidden" : true,
           "image-name" : "ICNew.png",
           "name" : "IC",
           "position" : {

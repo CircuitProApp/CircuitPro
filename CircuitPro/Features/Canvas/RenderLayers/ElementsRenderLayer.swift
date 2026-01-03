@@ -300,6 +300,16 @@ final class ElementsRenderLayer: RenderLayer {
         var primitives: [DrawingPrimitive] = []
         primitives.append(.fill(path: path, color: context.environment.canvasTheme.textColor))
 
+        let anchorPoint = CanvasTextGeometry.worldAnchorPosition(
+            anchorPosition: text.anchorPosition,
+            ownerTransform: .identity
+        )
+        primitives.append(contentsOf: anchorGuidePrimitives(
+            anchorPoint: anchorPoint,
+            textBounds: path.boundingBoxOfPath,
+            context: context
+        ))
+
         let layered = primitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
         return RenderableItem(id: text.id, primitives: layered, haloPath: path)
     }
@@ -362,20 +372,11 @@ final class ElementsRenderLayer: RenderLayer {
                 anchorPosition: resolvedText.anchorPosition,
                 ownerTransform: ownerTransform
             )
-            let s: CGFloat = 4 / context.magnification
-            let guidePath = CGMutablePath()
-            guidePath.move(to: CGPoint(x: anchorPoint.x - s, y: anchorPoint.y))
-            guidePath.addLine(to: CGPoint(x: anchorPoint.x + s, y: anchorPoint.y))
-            guidePath.move(to: CGPoint(x: anchorPoint.x, y: anchorPoint.y - s))
-            guidePath.addLine(to: CGPoint(x: anchorPoint.x, y: anchorPoint.y + s))
-
-            primitives.append(
-                .stroke(
-                    path: guidePath,
-                    color: NSColor.systemOrange.cgColor,
-                    lineWidth: 1 / context.magnification
-                )
-            )
+            primitives.append(contentsOf: anchorGuidePrimitives(
+                anchorPoint: anchorPoint,
+                textBounds: path.boundingBoxOfPath,
+                context: context
+            ))
 
             let layered = primitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
             let textID = CanvasTextID.makeID(
@@ -473,6 +474,76 @@ final class ElementsRenderLayer: RenderLayer {
             return layer.color
         }
         return NSColor.systemBlue.cgColor
+    }
+
+    private func anchorGuidePrimitives(
+        anchorPoint: CGPoint,
+        textBounds: CGRect,
+        context: RenderContext
+    ) -> [DrawingPrimitive] {
+        guard !textBounds.isNull else { return [] }
+
+        var guides: [DrawingPrimitive] = []
+
+        if let connector = anchorConnectorPath(anchorPoint: anchorPoint, textBounds: textBounds) {
+            let dashLength = 4 / context.magnification
+            let gapLength = 2 / context.magnification
+            guides.append(
+                .stroke(
+                    path: connector,
+                    color: NSColor.systemOrange.cgColor,
+                    lineWidth: 1 / context.magnification,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    lineDash: [NSNumber(value: dashLength), NSNumber(value: gapLength)]
+                )
+            )
+        }
+
+        let s: CGFloat = 4 / context.magnification
+        let cross = CGMutablePath()
+        cross.move(to: CGPoint(x: anchorPoint.x - s, y: anchorPoint.y))
+        cross.addLine(to: CGPoint(x: anchorPoint.x + s, y: anchorPoint.y))
+        cross.move(to: CGPoint(x: anchorPoint.x, y: anchorPoint.y - s))
+        cross.addLine(to: CGPoint(x: anchorPoint.x, y: anchorPoint.y + s))
+
+        guides.append(
+            .stroke(
+                path: cross,
+                color: NSColor.systemOrange.cgColor,
+                lineWidth: 1 / context.magnification
+            )
+        )
+
+        return guides
+    }
+
+    private func anchorConnectorPath(anchorPoint: CGPoint, textBounds: CGRect) -> CGPath? {
+        guard !textBounds.isEmpty else { return nil }
+        let center = CGPoint(x: textBounds.midX, y: textBounds.midY)
+        let halfWidth = textBounds.width / 2
+        let halfHeight = textBounds.height / 2
+        guard halfWidth > 0, halfHeight > 0 else { return nil }
+
+        let dx = anchorPoint.x - center.x
+        let dy = anchorPoint.y - center.y
+        let absDx = abs(dx)
+        let absDy = abs(dy)
+        guard absDx > 0 || absDy > 0 else { return nil }
+
+        let edgePoint: CGPoint
+        if absDx / halfWidth >= absDy / halfHeight {
+            let scale = halfWidth / max(absDx, .ulpOfOne)
+            edgePoint = CGPoint(x: center.x + dx * scale, y: center.y + dy * scale)
+        } else {
+            let scale = halfHeight / max(absDy, .ulpOfOne)
+            edgePoint = CGPoint(x: center.x + dx * scale, y: center.y + dy * scale)
+        }
+
+        let path = CGMutablePath()
+        path.move(to: anchorPoint)
+        path.addLine(to: edgePoint)
+        return path
     }
 
     private func displayText(
