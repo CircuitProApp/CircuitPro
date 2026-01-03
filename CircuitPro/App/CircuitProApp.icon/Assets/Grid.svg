@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024px" height="1024px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Grid</title>
+    <g id="Template---App-Icons" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Grid" stroke="color(display-p3 0.000 0.000 0.000)" stroke-width="10">
+            <line x1="767.5" y1="1024" x2="767.5" y2="0" id="Vertical"></line>
+            <line x1="255.5" y1="1024" x2="255.5" y2="0" id="Vertical"></line>
+            <line x1="511.5" y1="0" x2="511.5" y2="1024" id="Vertical"></line>
+            <line x1="1024" y1="255.5" x2="0" y2="255.5" id="Horizontal"></line>
+            <line x1="1024" y1="767.5" x2="0" y2="767.5" id="Horizontal"></line>
+            <line x1="1024" y1="511.5" x2="0" y2="511.5" id="Horizontal"></line>
+        </g>
+    </g>
+</svg>
