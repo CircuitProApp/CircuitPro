@@ -46,7 +46,7 @@ struct CanvasToolbarView: View {
                     .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3))
             }
         }
-          
+
     }
 
     private var toolbarContent: some View {

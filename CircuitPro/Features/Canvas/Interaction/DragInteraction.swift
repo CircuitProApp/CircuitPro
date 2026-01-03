@@ -315,14 +315,20 @@ final class DragInteraction: CanvasInteraction {
             let target = context.environment.textTarget
             guard let ownerInfo = componentTextOwner(component, target: target) else { continue }
 
-            for resolved in ownerInfo.resolvedItems where selectedIDs.contains(resolved.id) {
+            for resolved in ownerInfo.resolvedItems {
+                let textID = CanvasTextID.makeID(
+                    for: resolved.source,
+                    ownerID: component.id,
+                    fallback: resolved.id
+                )
+                guard selectedIDs.contains(textID) else { continue }
                 let selection = ComponentTextSelection(
                     owner: component,
                     target: target,
                     original: resolved,
                     ownerTransform: ownerInfo.transform
                 )
-                componentTexts[resolved.id] = selection
+                componentTexts[textID] = selection
             }
         }
 

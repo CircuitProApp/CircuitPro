@@ -23,7 +23,9 @@ struct SchematicCanvasView: View {
                 withDefault: CursorTool()),
             items: $editorSession.schematicController.items,
             selectedIDs: $editorSession.selectedItemIDs,
-            environment: canvasManager.environment,
+            environment: canvasManager.environment.withComponentTextResolver { text, component, target in
+                editorSession.projectManager.generateString(for: text, component: component)
+            },
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),

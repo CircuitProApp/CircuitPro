@@ -1,5 +1,5 @@
 //
-//  GraphTextID.swift
+//  CanvasTextID.swift
 //  CircuitPro
 //
 //  Created by Codex on 9/22/25.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum GraphTextID {
+enum CanvasTextID {
     static func makeID(for source: CircuitText.Source, ownerID: UUID, fallback: UUID) -> UUID {
         switch source {
         case .definition(let definition):

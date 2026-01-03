@@ -96,7 +96,7 @@ struct CanvasHitTester {
                 for text in componentTexts(component, context: context) {
                     let bounds = textBounds(text: text.text, displayText: text.displayText, ownerTransform: text.ownerTransform, ownerRotation: text.ownerRotation)
                     if rect.intersects(bounds) {
-                        hits.insert(text.text.id)
+                        hits.insert(text.id)
                     }
                 }
                 continue
@@ -316,7 +316,7 @@ struct CanvasHitTester {
                     ownerRotation: text.ownerRotation
                 )
                 return HitCandidate(
-                    id: text.text.id,
+                    id: text.id,
                     priority: 10,
                     area: bounds.width * bounds.height
                 )
@@ -326,6 +326,7 @@ struct CanvasHitTester {
     }
 
     private struct ComponentTextEntry {
+        let id: UUID
         let text: CircuitText.Resolved
         let displayText: String
         let ownerTransform: CGAffineTransform
@@ -363,7 +364,13 @@ struct CanvasHitTester {
 
         return resolvedItems.map { resolvedText in
             let display = displayText(for: resolvedText, component: component, target: target, context: context)
+            let textID = CanvasTextID.makeID(
+                for: resolvedText.source,
+                ownerID: component.id,
+                fallback: resolvedText.id
+            )
             return ComponentTextEntry(
+                id: textID,
                 text: resolvedText,
                 displayText: display,
                 ownerTransform: ownerTransform,

@@ -19,7 +19,9 @@ struct LayoutCanvasView: View {
             layers: $editorSession.layoutController.canvasLayers,
             activeLayerId: $editorSession.layoutController.activeLayerId,
             connections: editorSession.layoutController.traceEngine,
-            environment: canvasManager.environment,
+            environment: canvasManager.environment.withComponentTextResolver { text, component, target in
+                projectManager.generateString(for: text, component: component)
+            },
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),

@@ -378,7 +378,12 @@ final class ElementsRenderLayer: RenderLayer {
             )
 
             let layered = primitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
-            renderables.append(RenderableItem(id: resolvedText.id, primitives: layered, haloPath: path))
+            let textID = CanvasTextID.makeID(
+                for: resolvedText.source,
+                ownerID: component.id,
+                fallback: resolvedText.id
+            )
+            renderables.append(RenderableItem(id: textID, primitives: layered, haloPath: path))
         }
 
         return renderables
