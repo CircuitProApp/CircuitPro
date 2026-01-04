@@ -4,7 +4,7 @@ import SwiftUI
 
 @MainActor
 @Observable
-final class SchematicEditorController: EditorController {
+final class SchematicEditorController {
 
     var selectedTool: CanvasTool = CursorTool()
 

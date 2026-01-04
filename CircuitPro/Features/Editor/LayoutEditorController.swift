@@ -8,9 +8,7 @@ import SwiftUI
 /// of footprints and traces. It also manages layout-specific UI state like the active layer.
 @MainActor
 @Observable
-final class LayoutEditorController: EditorController {
-
-    // MARK: - EditorController Conformance
+final class LayoutEditorController {
 
     var items: [any CanvasItem] = []
 

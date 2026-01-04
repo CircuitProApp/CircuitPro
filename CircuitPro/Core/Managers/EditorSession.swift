@@ -40,13 +40,6 @@ final class EditorSession {
         }
     }
 
-    var activeEditorController: EditorController {
-        switch selectedEditor {
-        case .schematic: return schematicController
-        case .layout: return layoutController
-        }
-    }
-
     var changeSource: ChangeSource {
         selectedEditor.changeSource
     }
