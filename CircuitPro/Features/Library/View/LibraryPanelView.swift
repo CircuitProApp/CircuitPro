@@ -46,17 +46,6 @@ struct LibraryPanelView: View {
             }
         }
         .frame(minWidth: 682, minHeight: 373)
-        .modify({ view in
-            if #available(macOS 26, *) {
-                view
-            } else {
-                view
-                    .background {
-                        HUDWindowBackgroundMaterial()
-                    }
-                    .clipShape(.rect(cornerRadius: 10))
-            }
-        })
         .environment(libraryManager)
     }
 }

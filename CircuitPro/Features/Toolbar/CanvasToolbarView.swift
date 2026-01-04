@@ -34,15 +34,7 @@ struct CanvasToolbarView: View {
             .scrollIndicators(.never)
         }
         .buttonStyle(.plain)
-        .modify { view in
-            if #available(macOS 26.0, *) {
-                view.glassEffect(in: .capsule)
-            } else {
-                view
-                    .background(.ultraThinMaterial)
-                    .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3))
-            }
-        }
+        .glassEffect(in: .capsule)
 
     }
 

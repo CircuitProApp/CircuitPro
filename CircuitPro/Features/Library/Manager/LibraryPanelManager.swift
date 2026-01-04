@@ -68,8 +68,7 @@ final class LibraryPanelManager {
 
         let hostingController = NSHostingController(rootView: rootView)
 
-        // Content container: NSGlassEffectView on macOS 26, otherwise a visual/material fallback.
-        if #available(macOS 26.0, *) {
+
             let glass = NSGlassEffectView()
             glass.cornerRadius = 20
             glass.tintColor = nil
@@ -83,10 +82,6 @@ final class LibraryPanelManager {
             // Put SwiftUI inside the glass container.
             glass.contentView = hostingController.view
             panel.contentView = glass
-        } else {
-            // Keep your existing fallback behavior (material + clipping in SwiftUI)
-            panel.contentViewController = hostingController
-        }
 
         // Close when it loses key, like a palette.
         self.resignKeyObserver = NotificationCenter.default.addObserver(

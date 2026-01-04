@@ -67,18 +67,7 @@ struct ComponentDesignView: View {
                         } label: {
                             Text("Create Component")
                         }
-                        .modify { view in
-                            if #available(macOS 26.0, *) {
-                                view.buttonStyle(.glassProminent)
-                            } else {
-                                view
-                                    .buttonStyle(.plain)
-                                    .directionalPadding(vertical: 5, horizontal: 7.5)
-                                    .foregroundStyle(.white)
-                                    .background(Color.blue)
-                                    .clipShape(.rect(cornerRadius: 5))
-                            }
-                        }
+                        .buttonStyle(.glassProminent)
                     }
                 }
                 .onChange(of: componentDesignManager.componentProperties) {

@@ -27,27 +27,11 @@ struct CanvasStatusView: View {
                 }
             }
             .padding(10)
-            .modify { view in
-                if #available(macOS 26.0, *) {
-                    view.glassEffect(in: .capsule)
-                } else {
-                    view
-                        .background(.ultraThinMaterial)
-                        .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3))
-                }
-            }
+            .glassEffect(in: .capsule)
             Spacer()
             MouseLocationView()
                 .padding(10)
-                .modify { view in
-                    if #available(macOS 26.0, *) {
-                        view.glassEffect(in: .capsule)
-                    } else {
-                        view
-                            .background(.ultraThinMaterial)
-                            .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3))
-                    }
-                }
+                .glassEffect(in: .capsule)
          
             Spacer()
             HStack {
@@ -59,15 +43,7 @@ struct CanvasStatusView: View {
                 ZoomControlView()
             }
             .padding(10)
-            .modify { view in
-                if #available(macOS 26.0, *) {
-                    view.glassEffect(in: .capsule)
-                } else {
-                    view
-                        .background(.ultraThinMaterial)
-                        .clipAndStroke(with: .rect(cornerRadius: 10), strokeColor: .gray.opacity(0.3))
-                }
-            }
+            .glassEffect(in: .capsule)
         }
 
     }
