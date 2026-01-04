@@ -13,7 +13,7 @@ struct MouseLocationView: View {
     private var canvasManager
 
     var body: some View {
-        HStack {
+        HStack(spacing: 10) {
             Text(String(format: "x: %.0f", canvasManager.mouseLocationInMM.x))
             Text(String(format: "y: %.0f", canvasManager.mouseLocationInMM.y))
         }
