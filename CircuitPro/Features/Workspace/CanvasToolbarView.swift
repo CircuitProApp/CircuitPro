@@ -1,29 +1,26 @@
 import SwiftUI
 
-/// A generic toolbar driven by an array of `CanvasTool` instances.
+/// A generic toolbar driven by a tool list builder.
 struct CanvasToolbarView: View {
 
     // MARK: - Properties
 
-    let tools: [CanvasTool]
-    @Binding var selectedTool: CanvasTool? // Use the base class and make it optional
+    private struct Entry {
+        let item: CanvasToolbarItem
+        let toolIndex: Int?
+    }
 
-    // Closures for conditionally adding dividers. They now accept the base class.
-    let dividerBefore: ((CanvasTool) -> Bool)?
-    let dividerAfter: ((CanvasTool) -> Bool)?
+    private let entries: [Entry]
+    @Binding var selectedTool: CanvasTool? // Use the base class and make it optional
 
     // MARK: - Init
 
     init(
-        tools: [CanvasTool],
-        selectedTool: Binding<CanvasTool?>, // The binding is now to an optional base class
-        dividerBefore: ((CanvasTool) -> Bool)? = nil,
-        dividerAfter: ((CanvasTool) -> Bool)? = nil
+        selectedTool: Binding<CanvasTool?>,
+        @CanvasToolbarBuilder tools: () -> [CanvasToolbarItem]
     ) {
-        self.tools = tools
         self._selectedTool = selectedTool
-        self.dividerBefore = dividerBefore
-        self.dividerAfter = dividerAfter
+        self.entries = CanvasToolbarView.makeEntries(from: tools())
     }
 
     // MARK: - Body
@@ -51,14 +48,8 @@ struct CanvasToolbarView: View {
 
     private var toolbarContent: some View {
         VStack(spacing: 8) {
-            ForEach(tools, id: \.self) { tool in
-                if let dividerBefore, dividerBefore(tool) {
-                    Divider().frame(width: 22)
-                }
-                toolbarButton(for: tool)
-                if let dividerAfter, dividerAfter(tool) {
-                    Divider().frame(width: 22)
-                }
+            ForEach(entries.indices, id: \.self) { index in
+                toolbarEntry(entries[index])
             }
         }
         .padding(8)
@@ -67,8 +58,17 @@ struct CanvasToolbarView: View {
 
     // MARK: - Subviews
 
-    private func toolbarButton(for tool: CanvasTool) -> some View {
-        let index = tools.firstIndex(of: tool) ?? 0
+    @ViewBuilder
+    private func toolbarEntry(_ entry: Entry) -> some View {
+        switch entry.item {
+        case .divider:
+            Divider().frame(width: 22)
+        case .tool(let tool):
+            toolbarButton(for: tool, toolIndex: entry.toolIndex ?? 0)
+        }
+    }
+
+    private func toolbarButton(for tool: CanvasTool, toolIndex: Int) -> some View {
         // Safely check if the current tool is the selected one.
         let isSelected = (tool.id == selectedTool?.id)
 
@@ -86,13 +86,26 @@ struct CanvasToolbarView: View {
             .frame(width: 22, height: 22)
             .foregroundStyle(isSelected ? .blue : .secondary)
         }
-        .if(index < 9) { view in
+        .if(toolIndex < 9) { view in
             view.keyboardShortcut(
-                KeyEquivalent(Character(String(index + 1))),
+                KeyEquivalent(Character(String(toolIndex + 1))),
                 modifiers: []
             )
         }
         // The tool's `label` property is used directly.
-        .help("\(tool.label) Tool\nShortcut: \(index + 1)")
+        .help("\(tool.label) Tool\nShortcut: \(toolIndex + 1)")
+    }
+
+    private static func makeEntries(from items: [CanvasToolbarItem]) -> [Entry] {
+        var nextIndex = 0
+        return items.map { item in
+            switch item {
+            case .tool:
+                defer { nextIndex += 1 }
+                return Entry(item: item, toolIndex: nextIndex)
+            case .divider:
+                return Entry(item: item, toolIndex: nil)
+            }
+        }
     }
 }

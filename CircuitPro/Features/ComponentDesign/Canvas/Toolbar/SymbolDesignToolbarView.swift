@@ -13,10 +13,15 @@ struct SymbolDesignToolbarView: View {
 
     var body: some View {
         CanvasToolbarView(
-            tools: CanvasToolRegistry.symbolDesignTools,
-            selectedTool: $symbolEditor.selectedTool.unwrapping(withDefault: CursorTool()),
-            dividerBefore: { $0 is PinTool },
-            dividerAfter: { $0 is CursorTool }
-        )
+            selectedTool: $symbolEditor.selectedTool.unwrapping(withDefault: CursorTool())
+        ) {
+            CursorTool()
+            CanvasToolbarDivider()
+            LineTool()
+            RectangleTool()
+            CircleTool()
+            CanvasToolbarDivider()
+            PinTool()
+        }
     }
 }

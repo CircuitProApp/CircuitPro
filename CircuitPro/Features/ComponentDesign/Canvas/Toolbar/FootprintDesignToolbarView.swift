@@ -14,10 +14,15 @@ struct FootprintDesignToolbarView: View {
 
     var body: some View {
         CanvasToolbarView(
-            tools: CanvasToolRegistry.footprintDesignTools,
-            selectedTool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
-            dividerBefore: { $0 is PadTool },
-            dividerAfter: { $0 is CursorTool }
-        )
+            selectedTool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool())
+        ) {
+            CursorTool()
+            CanvasToolbarDivider()
+            LineTool()
+            RectangleTool()
+            CircleTool()
+            CanvasToolbarDivider()
+            PadTool()
+        }
     }
 }

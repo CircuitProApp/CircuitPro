@@ -13,9 +13,15 @@ struct LayoutToolbarView: View {
 
     var body: some View {
         CanvasToolbarView(
-            tools: CanvasToolRegistry.layoutTools(traceEngine: traceEngine),
-            selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool()),
-            dividerAfter: { $0 is CursorTool || $0 is TraceTool }
-        )
+            selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool())
+        ) {
+            CursorTool()
+            CanvasToolbarDivider()
+            TraceTool(traceEngine: traceEngine)
+            CanvasToolbarDivider()
+            LineTool()
+            RectangleTool()
+            CircleTool()
+        }
     }
 }

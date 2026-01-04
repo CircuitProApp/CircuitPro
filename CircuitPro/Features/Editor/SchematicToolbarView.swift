@@ -12,9 +12,9 @@ struct SchematicToolbarView: View {
 
     var body: some View {
         CanvasToolbarView(
-            tools: CanvasToolRegistry.schematicTools,
-            selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool()),
-            dividerAfter: { $0 is CursorTool }
-        )
+            selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool())
+        ) {
+            CursorTool()
+        }
     }
 }
