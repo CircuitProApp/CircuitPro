@@ -18,7 +18,6 @@ struct LayoutCanvasView: View {
             selectedIDs: $editorSession.selectedItemIDs,
             layers: $editorSession.layoutController.canvasLayers,
             activeLayerId: $editorSession.layoutController.activeLayerId,
-            connections: editorSession.layoutController.traceEngine,
             environment: canvasManager.environment.withComponentTextResolver { text, component, target in
                 projectManager.generateString(for: text, component: component)
             },
@@ -50,8 +49,7 @@ struct LayoutCanvasView: View {
         }
         .overlay(alignment: .leading) {
             LayoutToolbarView(
-                selectedSchematicTool: $editorSession.layoutController.selectedTool,
-                traceEngine: editorSession.layoutController.traceEngine
+                selectedSchematicTool: $editorSession.layoutController.selectedTool
             )
                 .padding(16)
         }

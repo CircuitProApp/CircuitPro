@@ -20,10 +20,11 @@ final class LayoutEditorController {
         }
     }
 
-    let graph = ConnectionGraph()
-    private var activeDesignID: UUID?
-    private var isSyncingTracesFromModel = false
-    private var isApplyingTraceChangesToModel = false
+    // TEMP: Connections are disabled for now.
+    // let graph = ConnectionGraph()
+    // private var activeDesignID: UUID?
+    // private var isSyncingTracesFromModel = false
+    // private var isApplyingTraceChangesToModel = false
 
     // MARK: - Layout-Specific State
 
@@ -34,7 +35,7 @@ final class LayoutEditorController {
     var canvasLayers: [CanvasLayer] = []
 
     /// The engine for managing layout traces in the unified graph.
-    let traceEngine: TraceEngine
+    // let traceEngine: TraceEngine
 
     var selectedTool: CanvasTool = CursorTool()
 
@@ -47,18 +48,8 @@ final class LayoutEditorController {
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
         self.document = projectManager.document
-        self.traceEngine = TraceEngine(graph: graph)
-        self.traceEngine.onChange = { [weak self] in
-            Task { @MainActor in
-                guard let self else { return }
-                self.handleTraceEngineChange()
-            }
-        }
-
         refreshCanvasLayers(for: projectManager.selectedDesign)
-        syncTracesFromModel()
         startTrackingDesignChanges()
-        startTrackingTraceChanges()
     }
 
     private func startTrackingDesignChanges() {
@@ -68,26 +59,8 @@ final class LayoutEditorController {
         } onChange: {
             Task { @MainActor in
                 let design = self.projectManager.selectedDesign
-                self.resetGraphIfNeeded(for: design)
                 self.refreshCanvasLayers(for: design)
-                self.syncTracesFromModel()
                 self.startTrackingDesignChanges()
-            }
-        }
-    }
-
-    private func startTrackingTraceChanges() {
-        withObservationTracking {
-            _ = projectManager.selectedDesign.traces
-        } onChange: {
-            Task { @MainActor in
-                if self.isApplyingTraceChangesToModel {
-                    self.isApplyingTraceChangesToModel = false
-                    self.startTrackingTraceChanges()
-                    return
-                }
-                self.syncTracesFromModel()
-                self.startTrackingTraceChanges()
             }
         }
     }
@@ -148,6 +121,7 @@ final class LayoutEditorController {
         }
     }
 
+    /*
     private func resetGraphIfNeeded(for design: CircuitDesign) {
         guard activeDesignID != design.id else { return }
         activeDesignID = design.id
@@ -181,4 +155,5 @@ final class LayoutEditorController {
         traceEngine.build(from: normalized)
         isSyncingTracesFromModel = false
     }
+    */
 }
