@@ -16,7 +16,7 @@ final class LayoutEditorController {
             projectManager.selectedDesign.componentInstances = newValue.compactMap {
                 $0 as? ComponentInstance
             }
-            document.scheduleAutosave()
+            projectManager.document.scheduleAutosave()
         }
     }
 
@@ -42,27 +42,11 @@ final class LayoutEditorController {
     // MARK: - Dependencies
 
     private let projectManager: ProjectManager
-    @ObservationIgnored private let document: CircuitProjectFileDocument
 
 
     init(projectManager: ProjectManager) {
         self.projectManager = projectManager
-        self.document = projectManager.document
         refreshCanvasLayers(for: projectManager.selectedDesign)
-        startTrackingDesignChanges()
-    }
-
-    private func startTrackingDesignChanges() {
-        withObservationTracking {
-            _ = projectManager.selectedDesign
-            _ = projectManager.selectedDesign.layers
-        } onChange: {
-            Task { @MainActor in
-                let design = self.projectManager.selectedDesign
-                self.refreshCanvasLayers(for: design)
-                self.startTrackingDesignChanges()
-            }
-        }
     }
 
     private func resolveFootprintPrimitives(
