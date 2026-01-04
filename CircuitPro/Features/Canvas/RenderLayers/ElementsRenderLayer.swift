@@ -345,12 +345,7 @@ final class ElementsRenderLayer: RenderLayer {
 
         var renderables: [RenderableItem] = []
         for resolvedText in resolvedItems where resolvedText.isVisible {
-            let displayText = displayText(
-                for: resolvedText,
-                component: component,
-                target: target,
-                context: context
-            )
+            let displayText = component.displayString(for: resolvedText, target: target)
             guard !displayText.isEmpty else { continue }
 
             let path = CanvasTextGeometry.worldPath(
@@ -546,18 +541,6 @@ final class ElementsRenderLayer: RenderLayer {
         path.move(to: anchorPoint)
         path.addLine(to: edgePoint)
         return path
-    }
-
-    private func displayText(
-        for text: CircuitText.Resolved,
-        component: ComponentInstance,
-        target: TextTarget,
-        context: RenderContext
-    ) -> String {
-        if let resolver = context.environment.componentTextResolver {
-            return resolver(text, component, target)
-        }
-        return fallbackDisplayText(for: text.content)
     }
 
     private func displayText(for text: CircuitText.Definition, context: RenderContext) -> String {

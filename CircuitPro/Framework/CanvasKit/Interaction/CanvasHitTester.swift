@@ -363,7 +363,7 @@ struct CanvasHitTester {
         }
 
         return resolvedItems.map { resolvedText in
-            let display = displayText(for: resolvedText, component: component, target: target, context: context)
+            let display = component.displayString(for: resolvedText, target: target)
             let textID = CanvasTextID.makeID(
                 for: resolvedText.source,
                 ownerID: component.id,
@@ -377,18 +377,6 @@ struct CanvasHitTester {
                 ownerRotation: ownerRotation
             )
         }
-    }
-
-    private func displayText(
-        for text: CircuitText.Resolved,
-        component: ComponentInstance,
-        target: TextTarget,
-        context: RenderContext
-    ) -> String {
-        if let resolver = context.environment.componentTextResolver {
-            return resolver(text, component, target)
-        }
-        return displayText(for: text.content)
     }
 
     private func displayText(for text: CircuitText.Definition, context: RenderContext) -> String {

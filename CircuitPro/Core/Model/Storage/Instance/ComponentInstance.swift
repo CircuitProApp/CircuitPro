@@ -15,10 +15,10 @@ final class ComponentInstance: Identifiable, Codable {
 
     var id: UUID
     var definitionUUID: UUID
-    
+
     @DefinitionSource(for: Property.self, at: \ComponentDefinition.propertyDefinitions)
     var definition: ComponentDefinition? = nil
-    
+
     var propertyOverrides: [Property.Override]
     var propertyInstances: [Property.Instance]
 
@@ -74,7 +74,7 @@ extension ComponentInstance {
     var displayedProperties: [Property.Resolved] {
         // Gracefully handle the case where the definition is missing.
         guard let definition = self.definition else { return [] }
-        
+
         return Property.Resolver.resolve(
             definitions: definition.propertyDefinitions,
             overrides: self.propertyOverrides,
@@ -149,4 +149,29 @@ extension ComponentInstance {
     func apply(_ editedText: CircuitText.Resolved) { apply(editedText, for: .symbol) }
     func add(_ newInstance: CircuitText.Instance)   { add(newInstance, for: .symbol) }
     func remove(_ textToRemove: CircuitText.Resolved) { remove(textToRemove, for: .symbol) }
+}
+
+extension ComponentInstance {
+    func displayString(for text: CircuitText.Resolved, target: TextTarget) -> String {
+        displayString(for: text.content)
+    }
+
+    func displayString(for content: CircuitTextContent) -> String {
+        switch content {
+        case .static(let text):
+            return text
+        case .componentName:
+            return definition?.name ?? "???"
+        case .componentReferenceDesignator:
+            let prefix = definition?.referenceDesignatorPrefix ?? "REF?"
+            return prefix + String(referenceDesignatorIndex)
+        case .componentProperty(let definitionID, let options):
+            guard let prop = displayedProperties.first(where: { $0.id == definitionID }) else { return "" }
+            var parts: [String] = []
+            if options.showKey { parts.append(prop.key.label) }
+            if options.showValue { parts.append(prop.value.description) }
+            if options.showUnit, !prop.unit.description.isEmpty { parts.append(prop.unit.description) }
+            return parts.joined(separator: " ")
+        }
+    }
 }

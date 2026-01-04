@@ -19,10 +19,7 @@ struct LayoutCanvasView: View {
             layers: $editorSession.layoutController.canvasLayers,
             activeLayerId: $editorSession.layoutController.activeLayerId,
             environment: canvasManager.environment
-                .withTextTarget(.footprint)
-                .withComponentTextResolver { text, component, target in
-                    projectManager.generateString(for: text, component: component)
-                },
+                .withTextTarget(.footprint),
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),

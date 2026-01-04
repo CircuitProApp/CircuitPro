@@ -42,7 +42,6 @@ struct Snapping {
     // var snapToObjects: Bool = false
 }
 
-typealias ComponentTextResolver = (_ text: CircuitText.Resolved, _ component: ComponentInstance, _ target: TextTarget) -> String
 typealias DefinitionTextResolver = (_ text: CircuitText.Definition) -> String
 
 private struct ConfigurationKey: CanvasEnvironmentKey {
@@ -59,10 +58,6 @@ private struct MarqueeRectKey: CanvasEnvironmentKey {
 
 private struct TextTargetKey: CanvasEnvironmentKey {
     static let defaultValue: TextTarget = .symbol
-}
-
-private struct ComponentTextResolverKey: CanvasEnvironmentKey {
-    static let defaultValue: ComponentTextResolver? = nil
 }
 
 private struct DefinitionTextResolverKey: CanvasEnvironmentKey {
@@ -99,11 +94,6 @@ extension CanvasEnvironmentValues {
         set { self[TextTargetKey.self] = newValue }
     }
 
-    var componentTextResolver: ComponentTextResolver? {
-        get { self[ComponentTextResolverKey.self] }
-        set { self[ComponentTextResolverKey.self] = newValue }
-    }
-
     var definitionTextResolver: DefinitionTextResolver? {
         get { self[DefinitionTextResolverKey.self] }
         set { self[DefinitionTextResolverKey.self] = newValue }
@@ -123,12 +113,6 @@ extension CanvasEnvironmentValues {
     func withTextTarget(_ target: TextTarget) -> CanvasEnvironmentValues {
         var copy = self
         copy.textTarget = target
-        return copy
-    }
-
-    func withComponentTextResolver(_ resolver: ComponentTextResolver?) -> CanvasEnvironmentValues {
-        var copy = self
-        copy.componentTextResolver = resolver
         return copy
     }
 
