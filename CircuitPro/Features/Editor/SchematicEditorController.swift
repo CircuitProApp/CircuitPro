@@ -26,8 +26,6 @@ final class SchematicEditorController {
 
     }
 
-    }
-
     // MARK: - Public Actions
 
     /// Handles dropping a new component onto the canvas from a library.

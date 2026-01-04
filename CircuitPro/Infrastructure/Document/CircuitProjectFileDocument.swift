@@ -108,6 +108,7 @@ private extension CircuitProjectFileDocument {
         static let designsDir = "Designs"
         static let components = "components.json"
         static let wires = "wires.json"
+        static let traces = "traces.json"
     }
 
     static func buildPackage(from project: CircuitProject) throws -> FileWrapper {
@@ -136,6 +137,10 @@ private extension CircuitProjectFileDocument {
             // Wires
             let wiresData = try enc.encode(design.wires)
             designDir.addRegularFile(withContents: wiresData, preferredFilename: Layout.wires)
+
+            // Traces
+            let tracesData = try enc.encode(design.traces)
+            designDir.addRegularFile(withContents: tracesData, preferredFilename: Layout.traces)
 
             designsDir.addFileWrapper(designDir)
         }
@@ -167,6 +172,11 @@ private extension CircuitProjectFileDocument {
             if let wires = designDir.fileWrappers?[Layout.wires]?.regularFileContents,
                let wiresArr = try? JSONDecoder().decode([Wire].self, from: wires) {
                 project.designs[index].wires = wiresArr
+            }
+
+            if let traces = designDir.fileWrappers?[Layout.traces]?.regularFileContents,
+               let tracesArr = try? JSONDecoder().decode([TraceSegment].self, from: traces) {
+                project.designs[index].traces = tracesArr
             }
         }
 
