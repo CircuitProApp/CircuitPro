@@ -43,7 +43,6 @@ struct CircuitProApp: App {
                     .preferredColorScheme(preferredScheme)
             }
         }
-        .defaultSize(width: 1340, height: 800)
         .restorationBehavior(.disabled)
         .defaultLaunchBehavior(.suppressed)
 
