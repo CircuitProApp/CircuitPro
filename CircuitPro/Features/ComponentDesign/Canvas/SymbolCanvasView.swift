@@ -15,15 +15,12 @@ struct SymbolCanvasView: View {
     @BindableEnvironment(CanvasEditorManager.self)
     private var symbolEditor
 
-    @State private var isCollapsed: Bool = true
-
     @State private var tool: CanvasTool? = CursorTool()
 
     var body: some View {
 
         let defaultTool = CursorTool()
 
-        SplitPaneView(isCollapsed: $isCollapsed) {
             CanvasView(
                 viewport: $canvasManager.viewport,
                 tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
@@ -58,13 +55,12 @@ struct SymbolCanvasView: View {
                 canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
             }
             .overlay(alignment: .leading) {
-                SymbolDesignToolbarView()
-                    .padding(10)
+                VStack {
+                    SymbolDesignToolbarView()
+                        .padding(10)
+                    CanvasStatusView(configuration: .fixedGrid)
+                }
             }
-        } handle: {
-            CanvasStatusBarView(isCollapsed: $isCollapsed, configuration: .fixedGrid)
-        } secondary: {
-            Text("WIP")
-        }
+
     }
 }

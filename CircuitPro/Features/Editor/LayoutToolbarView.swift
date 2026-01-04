@@ -8,11 +8,11 @@
 import SwiftUI
 
 struct LayoutToolbarView: View {
-    @Binding var selectedSchematicTool: CanvasTool
+    @Binding var selectedLayoutTool: CanvasTool
 
     var body: some View {
         CanvasToolbarView(
-            selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool())
+            selectedTool: $selectedLayoutTool.unwrapping(withDefault: CursorTool())
         ) {
             CursorTool()
             CanvasToolbarDivider()

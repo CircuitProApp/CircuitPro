@@ -43,23 +43,14 @@ struct EditorView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SplitPaneView(isCollapsed: $showUtilityArea) {
-                switch selectedEditor {
-                case .schematic:
-                    SchematicCanvasView(canvasManager: selectedCanvasManager)
-                        .id("schematic-canvas")
-                case .layout:
-                    LayoutCanvasView(canvasManager: selectedCanvasManager)
-                        .id("layout-canvas")
-                }
-
-            } handle: {
-                CanvasStatusBarView(
-                    isCollapsed: $showUtilityArea,
-                    configuration: selectedEditor == .schematic ? .fixedGrid : .default)
-            } secondary: {
-                UtilityAreaView()
+        Group {
+            switch selectedEditor {
+            case .schematic:
+                SchematicCanvasView(canvasManager: selectedCanvasManager)
+                    .id("schematic-canvas")
+            case .layout:
+                LayoutCanvasView(canvasManager: selectedCanvasManager)
+                    .id("layout-canvas")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

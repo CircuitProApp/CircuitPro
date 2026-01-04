@@ -15,54 +15,49 @@ struct FootprintCanvasView: View {
     @BindableEnvironment(CanvasEditorManager.self)
     private var footprintEditor
 
-    @State private var isCollapsed: Bool = true
-
     var body: some View {
-        SplitPaneView(isCollapsed: $isCollapsed) {
-            CanvasView(
-                viewport: $canvasManager.viewport,
-                tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
-                items: $footprintEditor.items,
-                selectedIDs: $footprintEditor.selectedElementIDs,
-                layers: $footprintEditor.layers,
-                activeLayerId: $footprintEditor.activeLayerId,
-                environment: canvasManager.environment,
-                renderLayers: [
-                    GridRenderLayer(),
-                    AxesRenderLayer(),
-                    SheetRenderLayer(),
-                    ElementsRenderLayer(),
-                    PreviewRenderLayer(),
-                    HandlesRenderLayer(),
-                    MarqueeRenderLayer(),
-                    CrosshairsRenderLayer(),
-                ],
-                interactions: [
-                    HoverHighlightInteraction(),
-                    KeyCommandInteraction(),
-                    HandleInteraction(),
-                    ToolInteraction(),
-                    SelectionInteraction(),
-                    DragInteraction(),
-                    MarqueeInteraction(),
-                ],
-                inputProcessors: [
-                    GridSnapProcessor()
-                ],
-                snapProvider: CircuitProSnapProvider()
-            )
-            .onCanvasChange { context in
-                canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
-            }
-            .overlay(alignment: .leading) {
-                // The toolbar will also pick up the footprintEditor from the environment.
+
+        CanvasView(
+            viewport: $canvasManager.viewport,
+            tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
+            items: $footprintEditor.items,
+            selectedIDs: $footprintEditor.selectedElementIDs,
+            layers: $footprintEditor.layers,
+            activeLayerId: $footprintEditor.activeLayerId,
+            environment: canvasManager.environment,
+            renderLayers: [
+                GridRenderLayer(),
+                AxesRenderLayer(),
+                SheetRenderLayer(),
+                ElementsRenderLayer(),
+                PreviewRenderLayer(),
+                HandlesRenderLayer(),
+                MarqueeRenderLayer(),
+                CrosshairsRenderLayer(),
+            ],
+            interactions: [
+                HoverHighlightInteraction(),
+                KeyCommandInteraction(),
+                HandleInteraction(),
+                ToolInteraction(),
+                SelectionInteraction(),
+                DragInteraction(),
+                MarqueeInteraction(),
+            ],
+            inputProcessors: [
+                GridSnapProcessor()
+            ],
+            snapProvider: CircuitProSnapProvider()
+        )
+        .onCanvasChange { context in
+            canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
+        }
+        .overlay {
+            CanvasOverlayView {
                 FootprintDesignToolbarView()
-                    .padding(10)
+            } status: {
+                CanvasStatusView(configuration: .default)
             }
-        } handle: {
-            CanvasStatusBarView(isCollapsed: $isCollapsed, configuration: .default)
-        } secondary: {
-            Text("WIP")
         }
     }
 }

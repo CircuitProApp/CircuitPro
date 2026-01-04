@@ -84,6 +84,7 @@ struct CanvasToolbarView: View {
             }
             .font(.system(size: 16))
             .frame(width: 22, height: 22)
+            .contentShape(.rect)
             .foregroundStyle(isSelected ? .blue : .secondary)
         }
         .if(toolIndex < 9) { view in

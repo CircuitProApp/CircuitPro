@@ -1,5 +1,5 @@
 //
-//  StatusBarDividerStyle.swift
+//  CanvasStatusDividerStyle.swift
 //  CircuitPro
 //
 //  Created by Giorgi Tchelidze on 8/15/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct StatusBarDividerStyle: ViewModifier {
+struct CanvasStatusDividerStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .foregroundStyle(.quinary)
@@ -16,7 +16,7 @@ struct StatusBarDividerStyle: ViewModifier {
 }
 
 extension View {
-    func statusBardividerStyle() -> some View {
-        modifier(StatusBarDividerStyle())
+    func canvasStatusDividerStyle() -> some View {
+        modifier(CanvasStatusDividerStyle())
     }
 }

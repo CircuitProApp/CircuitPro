@@ -50,11 +50,14 @@ struct SchematicCanvasView: View {
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
-        .overlay(alignment: .leading) {
-            SchematicToolbarView(
-                selectedSchematicTool: $editorSession.schematicController.selectedTool
-            )
-            .padding(16)
+        .overlay {
+            CanvasOverlayView {
+                SchematicToolbarView(
+                    selectedSchematicTool: $editorSession.schematicController.selectedTool
+                )
+            } status: {
+                CanvasStatusView()
+            }
         }
     }
 

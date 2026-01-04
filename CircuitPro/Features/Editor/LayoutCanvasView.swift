@@ -50,10 +50,13 @@ struct LayoutCanvasView: View {
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
         .overlay(alignment: .leading) {
-            LayoutToolbarView(
-                selectedSchematicTool: $editorSession.layoutController.selectedTool
-            )
-                .padding(16)
+            CanvasOverlayView {
+                LayoutToolbarView(
+                    selectedLayoutTool: $editorSession.layoutController.selectedTool
+                )
+            } status: {
+                CanvasStatusView(configuration: .default)
+            }
         }
     }
 
