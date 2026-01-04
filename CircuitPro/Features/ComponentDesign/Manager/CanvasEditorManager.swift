@@ -23,7 +23,7 @@ final class CanvasEditorManager {
 
     // MARK: - Layer State
 
-    var layers: [CanvasLayer] = []
+    var layers: [any CanvasLayer] = []
     var activeLayerId: UUID?
 
     // MARK: - Computed Properties
@@ -213,20 +213,13 @@ final class CanvasEditorManager {
 
     func setupForFootprintEditing() {
         self.layers = LayerKind.footprintLayers.map { kind in
-            CanvasLayer(
-                id: kind.stableId,
-                name: kind.label,
-                isVisible: true,
-                color: NSColor(kind.defaultColor).cgColor,
-                zIndex: kind.zIndex,
-                kind: kind
-            )
+            PCBLayer(kind: kind)
         }
         self.layers.append(self.unlayeredSection)
         self.activeLayerId = self.layers.first?.id
     }
 
-    private let unlayeredSection: CanvasLayer = .init(
+    private let unlayeredSection: PCBLayer = .init(
         id: .init(),
         name: "Unlayered",
         isVisible: true,

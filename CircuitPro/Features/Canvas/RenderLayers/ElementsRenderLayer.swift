@@ -448,11 +448,13 @@ final class ElementsRenderLayer: RenderLayer {
             }
 
             if let specificLayer = context.layers.first(where: { canvasLayer in
-                guard let layerType = canvasLayer.kind as? LayerType else { return false }
-                let kindMatches = layerType.kind == genericKind
+                guard let pcbLayer = canvasLayer as? PCBLayer,
+                      let layerKind = pcbLayer.layerKind
+                else { return false }
+                let kindMatches = layerKind == genericKind
                 let sideMatches =
-                    (side == .front && layerType.side == .front)
-                    || (side == .back && layerType.side == .back)
+                    (side == .front && pcbLayer.layerSide == .front)
+                    || (side == .back && pcbLayer.layerSide == .back)
                 return kindMatches && sideMatches
             }) {
                 copy.layerId = specificLayer.id

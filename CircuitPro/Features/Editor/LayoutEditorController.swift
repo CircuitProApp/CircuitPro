@@ -32,7 +32,7 @@ final class LayoutEditorController {
     var activeLayerId: UUID? = nil
 
     /// The list of layers relevant to the current design's layout, sorted for rendering.
-    var canvasLayers: [CanvasLayer] = []
+    var canvasLayers: [any CanvasLayer] = []
 
     /// The engine for managing layout traces in the unified graph.
     // let traceEngine: TraceEngine
@@ -65,11 +65,13 @@ final class LayoutEditorController {
             }
 
             if let specificLayer = canvasLayers.first(where: { canvasLayer in
-                guard let layerType = canvasLayer.kind as? LayerType else { return false }
-                let kindMatches = layerType.kind == genericKind
+                guard let pcbLayer = canvasLayer as? PCBLayer,
+                      let layerKind = pcbLayer.layerKind
+                else { return false }
+                let kindMatches = layerKind == genericKind
                 let sideMatches =
-                    (side == .front && layerType.side == .front)
-                    || (side == .back && layerType.side == .back)
+                    (side == .front && pcbLayer.layerSide == .front)
+                    || (side == .back && pcbLayer.layerSide == .back)
                 return kindMatches && sideMatches
             }) {
                 copy.layerId = specificLayer.id
@@ -82,26 +84,19 @@ final class LayoutEditorController {
     // MARK: - Private Helpers
     private func refreshCanvasLayers(for design: CircuitDesign) {
         let unsortedCanvasLayers = design.layers.map { layerType in
-            CanvasLayer(
-                id: layerType.id,
-                name: layerType.name,
-                isVisible: true,
-                color: NSColor(layerType.defaultColor).cgColor,
-                zIndex: layerType.kind.zIndex,
-                kind: layerType
-            )
+            PCBLayer(layerType: layerType)
         }
 
         self.canvasLayers = unsortedCanvasLayers.sorted { (layerA, layerB) -> Bool in
             if layerA.zIndex != layerB.zIndex {
                 return layerA.zIndex < layerB.zIndex
             }
-            guard let typeA = layerA.kind as? LayerType, let sideA = typeA.side,
-                let typeB = layerB.kind as? LayerType, let sideB = typeB.side
-            else {
-                return false
+            let sideA = (layerA as? PCBLayer)?.layerSide
+            let sideB = (layerB as? PCBLayer)?.layerSide
+            if let sideA, let sideB, sideA != sideB {
+                return sideA.drawingOrder < sideB.drawingOrder
             }
-            return sideA.drawingOrder < sideB.drawingOrder
+            return layerA.name.localizedCaseInsensitiveCompare(layerB.name) == .orderedAscending
         }
     }
 

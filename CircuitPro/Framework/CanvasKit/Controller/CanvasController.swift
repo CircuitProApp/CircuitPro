@@ -38,7 +38,7 @@ final class CanvasController {
 
     var selectedTool: CanvasTool?
     var environment: CanvasEnvironmentValues = .init()
-    var layers: [CanvasLayer]?
+    var layers: [any CanvasLayer]?
     var activeLayerId: UUID?
     var items: [any CanvasItem] = []
 
@@ -75,7 +75,7 @@ final class CanvasController {
         tool: CanvasTool?,
         magnification: CGFloat,
         environment: CanvasEnvironmentValues,
-        layers: [CanvasLayer]?,
+        layers: [any CanvasLayer]?,
         activeLayerId: UUID?,
         selectedItemIDs: Set<UUID>,
         items: [any CanvasItem]

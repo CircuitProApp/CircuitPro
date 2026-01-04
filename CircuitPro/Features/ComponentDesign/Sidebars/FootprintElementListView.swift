@@ -15,7 +15,7 @@ struct FootprintElementListView: View {
         let children: [OutlineItem]?
 
         enum Content {
-            case layer(CanvasLayer)
+            case layer(any CanvasLayer)
             case element(CanvasEditorManager.ElementItem)
         }
     }
@@ -30,7 +30,7 @@ struct FootprintElementListView: View {
     /// Tracks node IDs to detect when new elements are added.
     @State private var previousItemIDs: Set<UUID> = []
 
-    private var sortedLayers: [CanvasLayer] {
+    private var sortedLayers: [any CanvasLayer] {
         editor.layers.sorted { lhs, rhs in
             if lhs.zIndex == rhs.zIndex {
                 // Stable tie-breaker to avoid jitter
@@ -78,7 +78,7 @@ struct FootprintElementListView: View {
 
     /// Creates the DisclosureGroup for a layer and its children.
     @ViewBuilder
-    private func disclosureGroupRow(for layer: CanvasLayer, children: [OutlineItem]) -> some View {
+    private func disclosureGroupRow(for layer: any CanvasLayer, children: [OutlineItem]) -> some View {
         // Binding to control the expansion state of a single layer.
         let isExpandedBinding = Binding<Bool>(
             get: { self.expandedLayers.contains(layer.id) },
@@ -106,7 +106,7 @@ struct FootprintElementListView: View {
 
     /// Creates the visual representation for a layer row in the list.
     @ViewBuilder
-    private func layerRow(for layer: CanvasLayer) -> some View {
+    private func layerRow(for layer: any CanvasLayer) -> some View {
         HStack {
             Image(systemName: "circle.fill")
                 .foregroundStyle(Color(cgColor: layer.color))

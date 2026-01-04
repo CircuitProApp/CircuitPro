@@ -8,7 +8,7 @@ struct CanvasView: NSViewRepresentable {
     @Binding var viewport: CanvasViewport
     @Binding var tool: CanvasTool?
 
-    @Binding var layers: [CanvasLayer]
+    @Binding var layers: [any CanvasLayer]
 
     @Binding var activeLayerId: UUID?
 
@@ -32,7 +32,7 @@ struct CanvasView: NSViewRepresentable {
         tool: Binding<CanvasTool?> = .constant(nil),
         items: Binding<[any CanvasItem]>,
         selectedIDs: Binding<Set<UUID>>,
-        layers: Binding<[CanvasLayer]> = .constant([]),
+        layers: Binding<[any CanvasLayer]> = .constant([] as [any CanvasLayer]),
         activeLayerId: Binding<UUID?> = .constant(nil),
         connections: (any ConnectionEngine)? = nil,
         environment: CanvasEnvironmentValues = .init(),
