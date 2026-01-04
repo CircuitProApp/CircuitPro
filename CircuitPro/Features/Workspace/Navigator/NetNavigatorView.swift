@@ -8,7 +8,8 @@ struct NetNavigatorView: View {
     private var editorSession
 
     var body: some View {
-
+        // TEMP: Connections are disabled for now; keep the old net list logic for when we re-enable it.
+        /*
         let graph = editorSession.schematicController.wireEngine
 
         let sortedNets = graph.nets().sorted {
@@ -32,5 +33,14 @@ struct NetNavigatorView: View {
             .scrollContentBackground(.hidden)
             .environment(\.defaultMinListRowHeight, 14)
         }
+        */
+        VStack(spacing: 8) {
+            Text("Nets Disabled")
+                .font(.callout)
+            Text("Connection system is temporarily removed.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
