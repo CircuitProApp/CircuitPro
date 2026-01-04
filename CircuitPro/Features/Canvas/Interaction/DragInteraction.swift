@@ -56,11 +56,11 @@ final class DragInteraction: CanvasInteraction {
         guard controller.selectedTool is CursorTool else { return false }
 
         // Try each drag type in priority order
-        if tryStartItemDrag(at: point, context: context) {
+        if tryStartItemDrag(at: point, context: context, controller: controller) {
             return true
         }
 
-        if tryStartTextDrag(at: point, event: event, context: context) {
+        if tryStartTextDrag(at: point, event: event, context: context, controller: controller) {
             return true
         }
 
@@ -98,9 +98,17 @@ final class DragInteraction: CanvasInteraction {
 
     // MARK: - Private: Item Drag (Transformable Protocol)
 
-    private func tryStartItemDrag(at point: CGPoint, context: RenderContext) -> Bool {
-        let selectedIDs = context.selectedItemIDs
-        guard !selectedIDs.isEmpty else { return false }
+    private func tryStartItemDrag(
+        at point: CGPoint,
+        context: RenderContext,
+        controller: CanvasController
+    ) -> Bool {
+        guard let hit = CanvasHitTester().hitTest(point: point, context: context) else { return false }
+        var selectedIDs = context.selectedItemIDs
+        if !selectedIDs.contains(hit) {
+            controller.updateSelection([hit])
+            selectedIDs = [hit]
+        }
 
         guard let itemsBinding = context.environment.items else { return false }
         let selectedItems = makeDraggableItems(
@@ -110,9 +118,6 @@ final class DragInteraction: CanvasInteraction {
         )
 
         guard !selectedItems.isEmpty else { return false }
-
-        guard let hit = CanvasHitTester().hitTest(point: point, context: context) else { return false }
-        guard selectedIDs.contains(hit) else { return false }
 
         // Start connection engine drag if applicable
         var activeConnectionEngine: (any ConnectionEngine)?
@@ -156,7 +161,10 @@ final class DragInteraction: CanvasInteraction {
     // MARK: - Private: Text Drag (Standalone Text with Anchor Support)
 
     private func tryStartTextDrag(
-        at point: CGPoint, event: NSEvent, context: RenderContext
+        at point: CGPoint,
+        event: NSEvent,
+        context: RenderContext,
+        controller: CanvasController
     ) -> Bool {
         guard let graphHit = CanvasHitTester().hitTest(point: point, context: context) else {
             return false
@@ -165,10 +173,14 @@ final class DragInteraction: CanvasInteraction {
         guard let itemsBinding = context.environment.items else { return false }
         let items = itemsBinding.wrappedValue
 
-        guard context.selectedItemIDs.contains(graphHit) else { return false }
+        var selectedIDs = context.selectedItemIDs
+        if !selectedIDs.contains(graphHit) {
+            controller.updateSelection([graphHit])
+            selectedIDs = [graphHit]
+        }
 
         let selections = collectTextSelections(
-            selectedIDs: context.selectedItemIDs,
+            selectedIDs: selectedIDs,
             items: items,
             context: context
         )

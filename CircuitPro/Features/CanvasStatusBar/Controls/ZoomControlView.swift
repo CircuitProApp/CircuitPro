@@ -63,7 +63,6 @@ struct ZoomControlView: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .frame(width: 13, height: 13)
-                .border(.red)
                 .fontWeight(.light)
                 .contentShape(Rectangle())
         }
