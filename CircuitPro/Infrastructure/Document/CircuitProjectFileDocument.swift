@@ -106,8 +106,6 @@ private extension CircuitProjectFileDocument {
     enum Layout {
         static let header = "project.json"
         static let designsDir = "Designs"
-        static let schematic = "schematic.sch"
-        static let layout = "layout.pcb"
         static let components = "components.json"
         static let wires = "wires.json"
     }
@@ -130,10 +128,6 @@ private extension CircuitProjectFileDocument {
         for design in project.designs {
             let designDir = FileWrapper(directoryWithFileWrappers: [:])
             designDir.preferredFilename = design.directoryName
-
-            // Placeholders for raw files
-            designDir.addRegularFile(withContents: Data(), preferredFilename: Layout.schematic)
-            designDir.addRegularFile(withContents: Data(), preferredFilename: Layout.layout)
 
             // Components
             let compsData = try enc.encode(design.componentInstances)
