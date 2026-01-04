@@ -9,6 +9,12 @@ import CoreGraphics
 import AppKit
 
 struct CanvasHitTester {
+    private let baseTolerance: CGFloat
+
+    init(baseTolerance: CGFloat = 7.5) {
+        self.baseTolerance = baseTolerance
+    }
+
     private struct HitCandidate {
         let id: UUID
         let priority: Int
@@ -16,7 +22,7 @@ struct CanvasHitTester {
     }
 
     func hitTest(point: CGPoint, context: RenderContext) -> UUID? {
-        let tolerance = 5.0 / context.magnification
+        let tolerance = baseTolerance / context.magnification
         var best: HitCandidate?
 
         for item in context.items {
