@@ -10,7 +10,15 @@ import SwiftUI
 @Observable
 final class LayoutEditorController {
 
-    var items: [any CanvasItem] = []
+    var items: [any CanvasItem] {
+        get { projectManager.selectedDesign.componentInstances }
+        set {
+            projectManager.selectedDesign.componentInstances = newValue.compactMap {
+                $0 as? ComponentInstance
+            }
+            document.scheduleAutosave()
+        }
+    }
 
     let graph = ConnectionGraph()
     private var activeDesignID: UUID?
@@ -32,7 +40,7 @@ final class LayoutEditorController {
 
     // MARK: - Dependencies
 
-    @ObservationIgnored private let projectManager: ProjectManager
+    private let projectManager: ProjectManager
     @ObservationIgnored private let document: CircuitProjectFileDocument
 
 
@@ -47,73 +55,23 @@ final class LayoutEditorController {
             }
         }
 
-        // Start the automatic observation loops upon initialization.
-        startTrackingStructureChanges()
-        startTrackingTextChanges()
-        startTrackingTransformChanges()
+        refreshCanvasLayers(for: projectManager.selectedDesign)
+        syncTracesFromModel()
+        startTrackingDesignChanges()
         startTrackingTraceChanges()
-
-        Task {
-            await self.rebuildItems()
-        }
     }
 
-    private func startTrackingStructureChanges() {
+    private func startTrackingDesignChanges() {
         withObservationTracking {
-            // Rebuild layout nodes if the design or its components change.
             _ = projectManager.selectedDesign
-            _ = projectManager.componentInstances
             _ = projectManager.selectedDesign.layers
-            for comp in projectManager.componentInstances {
-                if let footprint = comp.footprintInstance {
-                    _ = footprint.placement
-                    _ = footprint.definitionUUID
-                }
-            }
-        } onChange: {
-            Task { @MainActor in
-                await self.rebuildItems()
-                self.startTrackingStructureChanges()
-            }
-        }
-    }
-
-    private func startTrackingTextChanges() {
-        withObservationTracking {
-            _ = projectManager.syncManager.pendingChanges
-            // Track nested data that affects footprint text rendering.
-            for comp in projectManager.componentInstances {
-                _ = comp.propertyOverrides
-                _ = comp.propertyInstances
-                _ = comp.referenceDesignatorIndex
-                if let fp = comp.footprintInstance {
-                    _ = fp.textOverrides
-                    _ = fp.textInstances
-                    _ = fp.resolvedItems
-                }
-            }
         } onChange: {
             Task { @MainActor in
                 let design = self.projectManager.selectedDesign
-                self.items = self.buildItems(from: design)
-                self.startTrackingTextChanges()
-            }
-        }
-    }
-
-    private func startTrackingTransformChanges() {
-        withObservationTracking {
-            for comp in projectManager.componentInstances {
-                if let fp = comp.footprintInstance {
-                    _ = fp.position
-                    _ = fp.cardinalRotation
-                }
-            }
-        } onChange: {
-            Task { @MainActor in
-                let design = self.projectManager.selectedDesign
-                self.items = self.buildItems(from: design)
-                self.startTrackingTransformChanges()
+                self.resetGraphIfNeeded(for: design)
+                self.refreshCanvasLayers(for: design)
+                self.syncTracesFromModel()
+                self.startTrackingDesignChanges()
             }
         }
     }
@@ -131,49 +89,6 @@ final class LayoutEditorController {
                 self.syncTracesFromModel()
                 self.startTrackingTraceChanges()
             }
-        }
-    }
-
-    // MARK: - Item Building
-
-    /// The primary method to rebuild the item list. It's called automatically by the tracking system.
-    private func rebuildItems() async {
-        let design = projectManager.selectedDesign
-        resetGraphIfNeeded(for: design)
-
-        // 1. Rebuild and sort the canvas layers for this design.
-        let unsortedCanvasLayers = design.layers.map { layerType in
-            CanvasLayer(
-                id: layerType.id,
-                name: layerType.name,
-                isVisible: true,
-                color: NSColor(layerType.defaultColor).cgColor,
-                zIndex: layerType.kind.zIndex,
-                kind: layerType
-            )
-        }
-
-        self.canvasLayers = unsortedCanvasLayers.sorted { (layerA, layerB) -> Bool in
-            if layerA.zIndex != layerB.zIndex {
-                return layerA.zIndex < layerB.zIndex
-            }
-            guard let typeA = layerA.kind as? LayerType, let sideA = typeA.side,
-                let typeB = layerB.kind as? LayerType, let sideB = typeB.side
-            else {
-                return false
-            }
-            return sideA.drawingOrder < sideB.drawingOrder
-        }
-
-        syncTracesFromModel()
-        items = buildItems(from: design)
-    }
-
-    private func buildItems(from design: CircuitDesign) -> [any CanvasItem] {
-        design.componentInstances.filter { inst in
-            guard let footprint = inst.footprintInstance else { return false }
-            if case .placed = footprint.placement { return true }
-            return false
         }
     }
 
@@ -208,6 +123,31 @@ final class LayoutEditorController {
     }
 
     // MARK: - Private Helpers
+    private func refreshCanvasLayers(for design: CircuitDesign) {
+        let unsortedCanvasLayers = design.layers.map { layerType in
+            CanvasLayer(
+                id: layerType.id,
+                name: layerType.name,
+                isVisible: true,
+                color: NSColor(layerType.defaultColor).cgColor,
+                zIndex: layerType.kind.zIndex,
+                kind: layerType
+            )
+        }
+
+        self.canvasLayers = unsortedCanvasLayers.sorted { (layerA, layerB) -> Bool in
+            if layerA.zIndex != layerB.zIndex {
+                return layerA.zIndex < layerB.zIndex
+            }
+            guard let typeA = layerA.kind as? LayerType, let sideA = typeA.side,
+                let typeB = layerB.kind as? LayerType, let sideB = typeB.side
+            else {
+                return false
+            }
+            return sideA.drawingOrder < sideB.drawingOrder
+        }
+    }
+
     private func resetGraphIfNeeded(for design: CircuitDesign) {
         guard activeDesignID != design.id else { return }
         activeDesignID = design.id
