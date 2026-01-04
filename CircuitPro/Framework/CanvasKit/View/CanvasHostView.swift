@@ -72,6 +72,7 @@ final class CanvasHostView: NSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         window?.makeFirstResponder(self)
+        window?.acceptsMouseMovedEvents = true
         updateTrackingAreas()
     }
 
@@ -124,6 +125,7 @@ final class CanvasHostView: NSView {
 
         if wasHandled {
             window?.makeFirstResponder(self)
+            updateTrackingAreas()
         }
 
         return wasHandled

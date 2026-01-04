@@ -34,7 +34,7 @@ final class SchematicEditorController {
         from transferable: TransferableComponent,
         at location: CGPoint,
         packManager: SwiftDataPackManager
-    ) -> Bool {
+    ) -> UUID? {
         var fetchDescriptor = FetchDescriptor<ComponentDefinition>(
             predicate: #Predicate { $0.uuid == transferable.componentUUID })
         fetchDescriptor.relationshipKeyPathsForPrefetching = [\.symbol]
@@ -43,7 +43,7 @@ final class SchematicEditorController {
         guard let componentDefinition = (try? fullLibraryContext.fetch(fetchDescriptor))?.first,
             let symbolDefinition = componentDefinition.symbol
         else {
-            return false
+            return nil
         }
 
         // 1. THE FIX for SymbolInstance
@@ -68,7 +68,7 @@ final class SchematicEditorController {
 
         // The @Observable chain will automatically handle the rest.
         projectManager.document.scheduleAutosave()
-        return true
+        return newComponentInstance.id
     }
 
 }

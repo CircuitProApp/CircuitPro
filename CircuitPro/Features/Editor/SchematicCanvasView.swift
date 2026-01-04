@@ -68,10 +68,15 @@ struct SchematicCanvasView: View {
             return false
         }
 
-        return editorSession.schematicController.handleComponentDrop(
+        if let newID = editorSession.schematicController.handleComponentDrop(
             from: transferable,
             at: location,
             packManager: packManager
-        )
+        ) {
+            editorSession.selectedItemIDs = [newID]
+            return true
+        }
+
+        return false
     }
 }

@@ -70,6 +70,8 @@ struct LayoutCanvasView: View {
             on: .front
         )
 
+        editorSession.selectedItemIDs = [transferable.componentInstanceID]
+
         return true
     }
 }
