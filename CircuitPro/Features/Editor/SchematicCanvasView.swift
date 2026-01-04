@@ -36,11 +36,7 @@ struct SchematicCanvasView: View {
             ],
             interactions: [
                 HoverHighlightInteraction(),
-                KeyCommandInteraction(
-                    deleteComponentInstances: { ids in
-                        editorSession.schematicController.deleteComponentInstances(ids: ids)
-                    }
-                ),
+                KeyCommandInteraction(),
                 ToolInteraction(),
                 SelectionInteraction(),
                 DragInteraction(),
