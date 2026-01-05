@@ -52,6 +52,7 @@ struct FootprintCanvasView: View {
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
+        .ignoresSafeArea()
         .overlay {
             CanvasOverlayView {
                 FootprintDesignToolbarView()

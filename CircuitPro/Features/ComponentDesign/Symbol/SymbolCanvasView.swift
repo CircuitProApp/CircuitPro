@@ -54,10 +54,11 @@ struct SymbolCanvasView: View {
             .onCanvasChange { context in
                 canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
             }
+            .ignoresSafeArea()
             .overlay(alignment: .leading) {
-                VStack {
+                CanvasOverlayView {
                     SymbolDesignToolbarView()
-                        .padding(10)
+                } status: {
                     CanvasStatusView(configuration: .fixedGrid)
                 }
             }
