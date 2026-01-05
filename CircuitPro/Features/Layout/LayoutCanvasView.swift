@@ -46,7 +46,8 @@ struct LayoutCanvasView: View {
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
-        .overlay(alignment: .leading) {
+        .ignoresSafeArea()
+        .overlay {
             CanvasOverlayView {
                 LayoutToolbarView(
                     selectedLayoutTool: $editorSession.layoutController.selectedTool

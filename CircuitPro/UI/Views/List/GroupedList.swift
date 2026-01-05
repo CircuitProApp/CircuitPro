@@ -70,11 +70,6 @@ public struct GroupedList<Content: View, ID: Hashable>: View {
                             section.header
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(configuration.headerPadding)
-                                .background {
-                                    if configuration.headerStyle == .hud {
-                                        HUDWindowBackgroundMaterial()
-                                    }
-                                }
                             Divider()
                         }
                         .background {

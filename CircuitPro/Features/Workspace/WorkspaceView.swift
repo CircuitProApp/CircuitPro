@@ -77,7 +77,7 @@ struct WorkspaceView: View {
                 .navigationSplitViewColumnWidth(min: 240, ideal: 240, max: 320)
         } detail: {
             EditorView()
-          //      .backgroundExtensionEffectIfAvailable()
+                
                 .frame(minWidth: 320)
               
                 .sheet(isPresented: $isShowingTimeline) {

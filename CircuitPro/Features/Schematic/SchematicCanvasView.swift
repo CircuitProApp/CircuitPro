@@ -48,6 +48,7 @@ struct SchematicCanvasView: View {
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
+        .ignoresSafeArea()
         .overlay {
             CanvasOverlayView {
                 SchematicToolbarView(
@@ -57,6 +58,7 @@ struct SchematicCanvasView: View {
                 CanvasStatusView()
             }
         }
+
     }
 
     /// Handles dropping a new component onto the canvas from a library.

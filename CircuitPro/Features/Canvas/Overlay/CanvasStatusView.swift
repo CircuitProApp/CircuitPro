@@ -32,7 +32,7 @@ struct CanvasStatusView: View {
             MouseLocationView()
                 .padding(10)
                 .glassEffect(in: .capsule)
-         
+
             Spacer()
             HStack {
                 if configuration == .default {

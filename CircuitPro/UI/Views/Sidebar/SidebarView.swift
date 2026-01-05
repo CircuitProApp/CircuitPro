@@ -8,31 +8,29 @@
 import SwiftUI
 
 struct SidebarView<T: SidebarTab, Content: View>: View {
-    
+
     @Binding var selectedTab: T
     var availableTabs: [T]
-    
+
     @ViewBuilder var content: Content
-    
+
     var body: some View {
         VStack(spacing: 0) {
-            if #available(macOS 26.0, *) {
-                if availableTabs.count > 1 {
-                    Picker("Inspector Tab", selection: $selectedTab) {
-                        ForEach(availableTabs) { tab in
-                            Image(systemName: tab.icon)
+
+                    if availableTabs.count > 1 {
+                        Picker("Inspector Tab", selection: $selectedTab) {
+                            ForEach(availableTabs) { tab in
+                                Image(systemName: tab.icon)
+                            }
                         }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .controlSize(.large)
+                        .buttonSizing(.flexible)
+                        .padding(.horizontal, 8)
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .controlSize(.large)
-                    .buttonSizing(.flexible)
-                    .padding(.horizontal, 8)
-                }
-            } else {
-                SidebarTabView(selectedTab: $selectedTab, availableTabs: availableTabs)
-            }
-      
+
+
             content
         }
     }
