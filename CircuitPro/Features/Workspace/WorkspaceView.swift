@@ -24,7 +24,6 @@ struct WorkspaceView: View {
     @State private var isShowingLibrary: Bool = false
     @State private var isShowingTimeline: Bool = false
     @State private var showDiscardChangesAlert: Bool = false
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     // Count UNIQUE fields being edited, not total history records
     private var pendingFieldEditsCount: Int {
@@ -73,13 +72,14 @@ struct WorkspaceView: View {
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        NavigationSplitView {
             NavigatorView()
                 .navigationSplitViewColumnWidth(min: 240, ideal: 240, max: 320)
         } detail: {
             EditorView()
           //      .backgroundExtensionEffectIfAvailable()
                 .frame(minWidth: 320)
+              
                 .sheet(isPresented: $isShowingTimeline) {
                     TimelineView()
                 }
@@ -111,10 +111,10 @@ struct WorkspaceView: View {
                     }
                 }
         }
-        .frame(minWidth: 820, minHeight: 600)
+        .frame(minHeight: 400)
         .inspector(isPresented: $showInspector) {
             InspectorView()
-            .inspectorColumnWidth(min: 260, ideal: 300, max: 500)
+//                .inspectorColumnWidth(ideal: 300)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
