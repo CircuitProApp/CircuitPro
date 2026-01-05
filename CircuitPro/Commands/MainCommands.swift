@@ -1,6 +1,6 @@
 //
 //  MainCommands.swift
-//  CodeEdit
+//  Circuit Pro
 //
 //  Created by Giorgi Tchelidze on 8/12/2025.
 //
