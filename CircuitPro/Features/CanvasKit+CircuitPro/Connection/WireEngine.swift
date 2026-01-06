@@ -235,7 +235,6 @@ final class WireEngine: GraphBackedConnectionEngine {
     private var ownership: [UUID: VertexOwnership] = [:]
     private var lastPosition: [UUID: CGPoint] = [:]
     private var dragHandler: DragHandler?
-    private var connectionPoints: [UUID: CGPoint] = [:]
     private var suppressWireNotifications = false
 
     // Read-only convenience accessors to current state
@@ -283,7 +282,7 @@ final class WireEngine: GraphBackedConnectionEngine {
 
     // MARK: - Persistence
 
-    func build(from wires: [Wire]) {
+    func build(from wires: [Wire], connectionPoints: [UUID: CGPoint]) {
         let previousSelection = graph.selection
         guard !wires.isEmpty else {
             ownership.removeAll()
@@ -298,11 +297,10 @@ final class WireEngine: GraphBackedConnectionEngine {
         var newVertices: [GraphVertex.ID: GraphVertex] = [:]
         var newEdges: [GraphEdge.ID: GraphEdge] = [:]
         var newAdjacency: [GraphVertex.ID: Set<GraphEdge.ID>] = [:]
-        var attachmentMap: [AttachmentPoint: GraphVertex.ID] = [:]
         var newOwnership: [UUID: VertexOwnership] = [:]
 
-        func addVertex(at point: CGPoint, own: VertexOwnership) -> GraphVertex {
-            let v = GraphVertex(id: UUID(), point: point, clusterID: nil)
+        func addVertex(id: UUID, at point: CGPoint, own: VertexOwnership) -> GraphVertex {
+            let v = GraphVertex(id: id, point: point, clusterID: nil)
             newVertices[v.id] = v
             newAdjacency[v.id] = []
             newOwnership[v.id] = own
@@ -316,24 +314,19 @@ final class WireEngine: GraphBackedConnectionEngine {
             newAdjacency[b, default: []].insert(e.id)
         }
 
-        func getVertexID(for point: AttachmentPoint, groupID: UUID) -> GraphVertex.ID {
-            if let existingID = attachmentMap[point] { return existingID }
-            let v: GraphVertex
-            switch point {
-            case .free(let pt):
-                v = addVertex(at: pt, own: .free)
-            case .pin(let owner, let pin):
-                v = addVertex(at: .zero, own: .pin(ownerID: owner, pinID: pin))
-            }
-            newVertices[v.id]?.clusterID = groupID
-            attachmentMap[point] = v.id
-            return v.id
-        }
-
         for wire in wires {
             for seg in wire.segments {
-                let a = getVertexID(for: seg.start, groupID: wire.id)
-                let b = getVertexID(for: seg.end, groupID: wire.id)
+                guard let startPoint = connectionPoints[seg.startID],
+                      let endPoint = connectionPoints[seg.endID]
+                else { continue }
+
+                let a = newVertices[seg.startID]?.id
+                    ?? addVertex(id: seg.startID, at: startPoint, own: .free).id
+                let b = newVertices[seg.endID]?.id
+                    ?? addVertex(id: seg.endID, at: endPoint, own: .free).id
+
+                newVertices[a]?.clusterID = wire.id
+                newVertices[b]?.clusterID = wire.id
                 if a != b { addEdge(from: a, to: b) }
             }
         }
@@ -357,13 +350,8 @@ final class WireEngine: GraphBackedConnectionEngine {
             let groupID = s.vertices[vID]?.clusterID ?? vID
 
             let segments: [WireSegment] = compE.compactMap { eid in
-                guard let e = s.edges[eid],
-                    let a = s.vertices[e.start],
-                    let b = s.vertices[e.end],
-                    let ap = attachmentPoint(for: a),
-                    let bp = attachmentPoint(for: b)
-                else { return nil }
-                return WireSegment(start: ap, end: bp)
+                guard let e = s.edges[eid] else { return nil }
+                return WireSegment(startID: e.start, endID: e.end)
             }
             if !segments.isEmpty {
                 wires.append(Wire(id: groupID, segments: segments))
@@ -601,13 +589,6 @@ final class WireEngine: GraphBackedConnectionEngine {
 
     // MARK: - Private Helpers
 
-    private func attachmentPoint(for v: GraphVertex) -> AttachmentPoint? {
-        switch ownership[v.id] ?? .free {
-        case .free, .detachedPin: return .free(point: v.point)
-        case .pin(let ownerID, let pinID): return .pin(componentInstanceID: ownerID, pinID: pinID)
-        }
-    }
-
     private func handleEngineDelta(_ delta: GraphDelta, final: GraphState) {
         let tol = geometry.epsilon
 
@@ -763,88 +744,6 @@ final class WireEngine: GraphBackedConnectionEngine {
         let restored = selection.filter { graph.hasAnyComponent(for: $0) }
         if graph.selection != restored {
             graph.selection = restored
-        }
-    }
-}
-
-extension WireEngine: ConnectionPointConsumer {
-    private struct MoveVerticesTransaction: GraphTransaction {
-        let moves: [UUID: CGPoint]
-        var snapToGrid: Bool = true
-
-        mutating func apply(to state: inout GraphState, context: TransactionContext) -> Set<UUID> {
-            var touched: Set<UUID> = []
-            for (id, point) in moves {
-                guard var v = state.vertices[id] else { continue }
-                let target = snapToGrid ? context.geometry.snap(point) : point
-                let dx = v.point.x - target.x
-                let dy = v.point.y - target.y
-                if (dx * dx + dy * dy).squareRoot() <= context.tolerance { continue }
-                v.point = target
-                state.vertices[id] = v
-                touched.insert(id)
-            }
-            return touched
-        }
-    }
-
-    func updateConnectionPoints(_ points: [any ConnectionPoint]) {
-        var next: [UUID: CGPoint] = [:]
-        next.reserveCapacity(points.count)
-        var pendingMoves: [UUID: CGPoint] = [:]
-        var pendingInserts: [(ownerID: UUID, pointID: UUID, position: CGPoint)] = []
-
-        for point in points {
-            let newPosition = point.position
-            next[point.id] = newPosition
-            if let existing = connectionPoints[point.id] {
-                let dx = existing.x - newPosition.x
-                let dy = existing.y - newPosition.y
-                if hypot(dx, dy) <= geometry.epsilon {
-                    continue
-                }
-            }
-            guard let ownerID = point.ownerID else { continue }
-            if let existingID = findVertex(ownedBy: ownerID, pinID: point.id) {
-                pendingMoves[existingID] = newPosition
-            } else {
-                pendingInserts.append((ownerID: ownerID, pointID: point.id, position: newPosition))
-            }
-        }
-
-        let hasChanges = !pendingMoves.isEmpty || !pendingInserts.isEmpty
-        if hasChanges {
-            suppressWireNotifications = true
-            if !pendingMoves.isEmpty {
-                if engine.currentState.edges.isEmpty {
-                    var nextState = engine.currentState
-                    for (id, position) in pendingMoves {
-                        guard var v = nextState.vertices[id] else { continue }
-                        let target = geometry.snap(position)
-                        let dx = v.point.x - target.x
-                        let dy = v.point.y - target.y
-                        if hypot(dx, dy) <= geometry.epsilon { continue }
-                        v.point = target
-                        nextState.vertices[id] = v
-                    }
-                    engine.replaceState(nextState)
-                } else {
-                    var tx = MoveVerticesTransaction(moves: pendingMoves)
-                    _ = engine.execute(transaction: &tx)
-                }
-            }
-            for update in pendingInserts {
-                _ = getOrCreatePinVertex(
-                    at: update.position,
-                    ownerID: update.ownerID,
-                    pinID: update.pointID
-                )
-            }
-            suppressWireNotifications = false
-        }
-        connectionPoints = next
-        if hasChanges {
-            onWiresChanged?(toWires())
         }
     }
 }

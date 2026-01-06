@@ -20,7 +20,7 @@ final class CircuitProjectFileDocument: ReferenceFileDocument {
 
     private var autosaveWorkItem: DispatchWorkItem?
     private var autosavePending = false
-    var autosaveDelay: TimeInterval = 2 // tune as needed
+    var autosaveDelay: TimeInterval = 2
 
     func scheduleAutosave() {
         if autosaveWorkItem != nil {

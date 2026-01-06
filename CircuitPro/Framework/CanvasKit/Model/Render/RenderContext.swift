@@ -58,3 +58,26 @@ struct RenderContext {
         self.inputProcessors = inputProcessors
     }
 }
+
+extension RenderContext {
+    var connectionAnchors: [any ConnectionAnchor] {
+        items.compactMap { $0 as? any ConnectionAnchor }
+    }
+
+    var connectionPoints: [any ConnectionPoint] {
+        items.compactMap { $0 as? any ConnectionPoint }
+    }
+
+    var connectionEdges: [any ConnectionEdge] {
+        items.compactMap { $0 as? any ConnectionEdge }
+    }
+
+    var connectionAnchorPositionsByID: [UUID: CGPoint] {
+        var positions: [UUID: CGPoint] = [:]
+        positions.reserveCapacity(connectionAnchors.count)
+        for anchor in connectionAnchors {
+            positions[anchor.id] = anchor.position
+        }
+        return positions
+    }
+}
