@@ -60,6 +60,10 @@ struct RenderContext {
 }
 
 extension RenderContext {
+    var connectionEngine: (any ConnectionEngine)? {
+        environment.connectionEngine
+    }
+
     var connectionAnchors: [any ConnectionAnchor] {
         items.compactMap { $0 as? any ConnectionAnchor }
     }

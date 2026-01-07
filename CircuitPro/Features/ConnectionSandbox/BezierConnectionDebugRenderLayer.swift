@@ -2,11 +2,6 @@ import AppKit
 
 final class BezierConnectionDebugRenderLayer: RenderLayer {
     private let contentLayer = CALayer()
-    private let engine: BezierAdjacencyEngine
-
-    init(engine: BezierAdjacencyEngine) {
-        self.engine = engine
-    }
 
     func install(on hostLayer: CALayer) {
         hostLayer.addSublayer(contentLayer)
@@ -15,6 +10,8 @@ final class BezierConnectionDebugRenderLayer: RenderLayer {
     func update(using context: RenderContext) {
         contentLayer.frame = context.hostViewBounds
         contentLayer.sublayers?.forEach { $0.removeFromSuperlayer() }
+
+        guard let engine = context.connectionEngine else { return }
 
         let input = ConnectionInput.adjacency(
             anchors: context.connectionAnchors,

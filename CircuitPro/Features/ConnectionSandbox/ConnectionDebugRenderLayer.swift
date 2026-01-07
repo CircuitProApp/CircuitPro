@@ -2,11 +2,6 @@ import AppKit
 
 final class ConnectionDebugRenderLayer: RenderLayer {
     private let contentLayer = CALayer()
-    private let engine: ManhattanWireEngine
-
-    init(engine: ManhattanWireEngine) {
-        self.engine = engine
-    }
 
     func install(on hostLayer: CALayer) {
         hostLayer.addSublayer(contentLayer)
@@ -15,6 +10,8 @@ final class ConnectionDebugRenderLayer: RenderLayer {
     func update(using context: RenderContext) {
         contentLayer.frame = context.hostViewBounds
         contentLayer.sublayers?.forEach { $0.removeFromSuperlayer() }
+
+        guard let engine = context.connectionEngine else { return }
 
         let input = ConnectionInput.edges(
             anchors: context.connectionAnchors,

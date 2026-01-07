@@ -53,11 +53,12 @@ struct ConnectionSandboxView: View {
             tool: .constant(nil),
             items: $items,
             selectedIDs: .constant([]),
+            connectionEngine: engine,
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
                 ElementsRenderLayer(),
-                BezierConnectionDebugRenderLayer(engine: engine),
+                BezierConnectionDebugRenderLayer(),
                 CrosshairsRenderLayer(),
             ],
             interactions: [
