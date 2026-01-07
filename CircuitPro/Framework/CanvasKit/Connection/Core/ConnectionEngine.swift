@@ -16,4 +16,18 @@ protocol ConnectionEngine {
         from input: ConnectionInput,
         context: ConnectionRoutingContext
     ) -> [UUID: any ConnectionRoute]
+
+    func normalize(
+        _ input: ConnectionInput,
+        context: ConnectionNormalizationContext
+    ) -> ConnectionDelta
+}
+
+extension ConnectionEngine {
+    func normalize(
+        _ input: ConnectionInput,
+        context: ConnectionNormalizationContext
+    ) -> ConnectionDelta {
+        ConnectionDelta()
+    }
 }

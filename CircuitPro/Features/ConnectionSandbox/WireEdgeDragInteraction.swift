@@ -29,10 +29,22 @@ final class WireEdgeDragInteraction: CanvasInteraction {
                   let end = anchorsByID[edge.endID]
             else { continue }
 
-            let corner = CGPoint(x: end.x, y: start.y)
-
-            if hitTest(point: point, start: start, end: corner, tolerance: tolerance)
-                || hitTest(point: point, start: corner, end: end, tolerance: tolerance) {
+            let isAxisAligned = abs(start.x - end.x) <= tolerance || abs(start.y - end.y) <= tolerance
+            if isAxisAligned {
+                let corner = CGPoint(x: end.x, y: start.y)
+                if hitTest(point: point, start: start, end: corner, tolerance: tolerance)
+                    || hitTest(point: point, start: corner, end: end, tolerance: tolerance) {
+                    dragState = DragState(
+                        edgeID: edge.id,
+                        startID: edge.startID,
+                        endID: edge.endID,
+                        origin: point,
+                        startPosition: start,
+                        endPosition: end
+                    )
+                    return true
+                }
+            } else if hitTest(point: point, start: start, end: end, tolerance: tolerance) {
                 dragState = DragState(
                     edgeID: edge.id,
                     startID: edge.startID,
@@ -73,6 +85,81 @@ final class WireEdgeDragInteraction: CanvasInteraction {
     }
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
+        guard dragState != nil,
+              let itemsBinding = context.environment.items,
+              let engine = context.connectionEngine
+        else {
+            dragState = nil
+            return
+        }
+
+        var items = itemsBinding.wrappedValue
+        let anchors = items.compactMap { $0 as? any ConnectionAnchor }
+        let edges = items.compactMap { $0 as? any ConnectionEdge }
+
+        let input = ConnectionInput.edges(anchors: anchors, edges: edges)
+        let normalizationContext = ConnectionNormalizationContext(
+            magnification: context.magnification,
+            snapPoint: { point in
+                context.snapProvider.snap(point: point, context: context)
+            }
+        )
+        let delta = engine.normalize(input, context: normalizationContext)
+
+        if !delta.isEmpty {
+            if !delta.removedEdgeIDs.isEmpty || !delta.removedAnchorIDs.isEmpty {
+                items.removeAll { item in
+                    delta.removedEdgeIDs.contains(item.id)
+                        || delta.removedAnchorIDs.contains(item.id)
+                }
+            }
+
+            if !delta.updatedAnchors.isEmpty
+                || !delta.addedAnchors.isEmpty
+                || !delta.updatedEdges.isEmpty
+                || !delta.addedEdges.isEmpty {
+                var indexByID: [UUID: Int] = [:]
+                indexByID.reserveCapacity(items.count)
+                for (index, item) in items.enumerated() {
+                    indexByID[item.id] = index
+                }
+
+                func upsert(_ item: any CanvasItem) {
+                    if let index = indexByID[item.id] {
+                        items[index] = item
+                    } else {
+                        items.append(item)
+                        indexByID[item.id] = items.count - 1
+                    }
+                }
+
+                for anchor in delta.updatedAnchors {
+                    upsert(anchor)
+                }
+                for anchor in delta.addedAnchors {
+                    upsert(anchor)
+                }
+                for edge in delta.updatedEdges {
+                    upsert(edge)
+                }
+                for edge in delta.addedEdges {
+                    upsert(edge)
+                }
+            }
+
+            itemsBinding.wrappedValue = items
+        }
+
+#if DEBUG
+        if delta.isEmpty {
+            print("Connection normalize: no changes")
+        } else {
+            print("Connection normalize:",
+                  "anchors +\(delta.addedAnchors.count) ~\(delta.updatedAnchors.count) -\(delta.removedAnchorIDs.count),",
+                  "edges +\(delta.addedEdges.count) ~\(delta.updatedEdges.count) -\(delta.removedEdgeIDs.count)")
+        }
+#endif
+
         dragState = nil
     }
 
