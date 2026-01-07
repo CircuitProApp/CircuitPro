@@ -53,6 +53,12 @@ struct CircuitProApp: App {
                 .preferredColorScheme(preferredScheme)
         }
 
+        Window("Connection Sandbox", id: "ConnectionSandboxWindow") {
+            ConnectionSandboxView()
+                .frame(minWidth: 800, minHeight: 600)
+                .preferredColorScheme(preferredScheme)
+        }
+
         Window("Settings", id: "SettingsWindow") {
             SettingsView()
                 .frame(minWidth: 700, minHeight: 500)

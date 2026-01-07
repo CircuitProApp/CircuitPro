@@ -8,7 +8,7 @@
 import Foundation
 
 @MainActor
-final class TraceEngine: TraceMetadataStore, GraphBackedConnectionEngine {
+final class TraceEngine: TraceMetadataStore {
     var graph: ConnectionGraph
     let engine: GraphEngine
     private let geometry: GeometryPolicy

@@ -5,7 +5,7 @@ import SwiftUI
 ///
 /// Priority order:
 /// 1. Transformable items (symbols, footprints via protocol)
-/// 2. Connection elements (wires via ConnectionEngine)
+/// 2. Connection elements (wires)
 /// 3. Special items (standalone text with anchor drag support)
 final class DragInteraction: CanvasInteraction {
     // MARK: - State Types
@@ -20,7 +20,6 @@ final class DragInteraction: CanvasInteraction {
 
         let origin: CGPoint
         let items: [Item]
-        let connectionEngine: (any ConnectionEngine)?
     }
 
     /// State for dragging text elements (with anchor support)
@@ -84,7 +83,6 @@ final class DragInteraction: CanvasInteraction {
     // MARK: - Mouse Up
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
-        itemState?.connectionEngine?.endDrag()
         resetState()
     }
 
@@ -119,18 +117,9 @@ final class DragInteraction: CanvasInteraction {
 
         guard !selectedItems.isEmpty else { return false }
 
-        // Start connection engine drag if applicable
-        var activeConnectionEngine: (any ConnectionEngine)?
-        if let connectionEngine = context.environment.connectionEngine {
-            if connectionEngine.beginDrag(selectedIDs: selectedIDs) {
-                activeConnectionEngine = connectionEngine
-            }
-        }
-
         self.itemState = ItemDragState(
             origin: point,
-            items: selectedItems,
-            connectionEngine: activeConnectionEngine
+            items: selectedItems
         )
         return true
     }
@@ -154,8 +143,6 @@ final class DragInteraction: CanvasInteraction {
             item.updatePosition(newPosition)
         }
 
-        // Update connection engine
-        state.connectionEngine?.updateDrag(by: deltaPoint)
     }
 
     // MARK: - Private: Text Drag (Standalone Text with Anchor Support)

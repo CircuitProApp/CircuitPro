@@ -12,18 +12,8 @@ import Foundation
 ///
 /// CanvasKit calls into the engine to convert anchors/edges into drawable routes.
 protocol ConnectionEngine {
-
-    /// Builds a route for a specific edge based on anchor positions.
-    func route(
-        edge: any ConnectionEdge,
-        anchorsByID: [UUID: CGPoint],
+    func routes(
+        from input: ConnectionInput,
         context: ConnectionRoutingContext
-    ) -> ConnectionRoute
-
-    /// Builds a route between two points (useful for previews or adjacency-based graphs).
-    func route(
-        from start: CGPoint,
-        to end: CGPoint,
-        context: ConnectionRoutingContext
-    ) -> ConnectionRoute
+    ) -> [UUID: any ConnectionRoute]
 }

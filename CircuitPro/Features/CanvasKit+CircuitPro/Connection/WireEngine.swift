@@ -225,7 +225,7 @@ private final class DragHandler {
 }
 
 @MainActor
-final class WireEngine: GraphBackedConnectionEngine {
+final class WireEngine {
     // MARK: - Engine and State
     var graph: ConnectionGraph
     let engine: GraphEngine
