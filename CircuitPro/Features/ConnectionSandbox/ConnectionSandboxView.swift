@@ -4,17 +4,48 @@ struct ConnectionSandboxView: View {
     @State private var canvasManager = CanvasManager()
 
     @State private var items: [any CanvasItem] = {
-        let a = WireVertex(position: CGPoint(x: 120, y: 120))
-        let b = WireVertex(position: CGPoint(x: 420, y: 300))
-        let c = WireVertex(position: CGPoint(x: 220, y: 40))
-        let d = WireVertex(position: CGPoint(x: 520, y: 140))
-        let seg1 = WireSegment(startID: a.id, endID: b.id)
-        let seg2 = WireSegment(startID: a.id, endID: c.id)
-        let seg3 = WireSegment(startID: b.id, endID: d.id)
-        return [a, b, c, d, seg1, seg2, seg3]
+        let nodeA = AnyCanvasPrimitive.rectangle(CanvasRectangle(
+            id: UUID(),
+            shape: RectanglePrimitive(size: CGSize(width: 160, height: 80), cornerRadius: 10),
+            position: CGPoint(x: 200, y: 200),
+            rotation: 0,
+            strokeWidth: 2,
+            filled: true,
+            color: SDColor(color: .gray),
+            layerId: nil
+        ))
+        let nodeB = AnyCanvasPrimitive.rectangle(CanvasRectangle(
+            id: UUID(),
+            shape: RectanglePrimitive(size: CGSize(width: 180, height: 90), cornerRadius: 10),
+            position: CGPoint(x: 520, y: 320),
+            rotation: 0,
+            strokeWidth: 2,
+            filled: true,
+            color: SDColor(color: .gray),
+            layerId: nil
+        ))
+        let nodeC = AnyCanvasPrimitive.rectangle(CanvasRectangle(
+            id: UUID(),
+            shape: RectanglePrimitive(size: CGSize(width: 180, height: 90), cornerRadius: 10),
+            position: CGPoint(x: 520, y: 120),
+            rotation: 0,
+            strokeWidth: 2,
+            filled: true,
+            color: SDColor(color: .gray),
+            layerId: nil
+        ))
+
+        var socketA = Socket(position: CGPoint(x: 280, y: 200), ownerID: nodeA.id)
+        var socketB = Socket(position: CGPoint(x: 430, y: 320), ownerID: nodeB.id)
+        var socketC = Socket(position: CGPoint(x: 430, y: 120), ownerID: nodeC.id)
+        socketA.connectedIDs = [socketB.id, socketC.id]
+        socketB.connectedIDs = [socketA.id]
+        socketC.connectedIDs = [socketA.id]
+
+        return [nodeA, nodeB, nodeC, socketA, socketB, socketC]
     }()
 
-    private let engine = ManhattanWireEngine()
+    private let engine = BezierAdjacencyEngine()
 
     var body: some View {
         CanvasView(
@@ -25,10 +56,13 @@ struct ConnectionSandboxView: View {
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),
-                ConnectionDebugRenderLayer(engine: engine),
+                ElementsRenderLayer(),
+                BezierConnectionDebugRenderLayer(engine: engine),
                 CrosshairsRenderLayer(),
             ],
-            interactions: [],
+            interactions: [
+                NodeDragInteraction(),
+            ],
             inputProcessors: [],
             snapProvider: NoOpSnapProvider()
         )
