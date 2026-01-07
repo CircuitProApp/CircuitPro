@@ -8,27 +8,22 @@
 import CoreGraphics
 import Foundation
 
-/// A domain-agnostic protocol for connection/linking systems on the canvas.
+/// A domain-agnostic routing policy for connections on the canvas.
 ///
-/// CanvasKit uses this to support dragging connected items while maintaining
-/// their relationships. Domain-specific implementations (e.g., WireEngine for
-/// circuits, FlowConnectionEngine for flowcharts) conform to this protocol.
-protocol ConnectionEngine: AnyObject {
+/// CanvasKit calls into the engine to convert anchors/edges into drawable routes.
+protocol ConnectionEngine {
 
-    /// Begins a drag operation for the selected items.
-    /// - Parameter selectedIDs: IDs of the items being dragged.
-    /// - Returns: true if the engine will handle connection updates during drag.
-    func beginDrag(selectedIDs: Set<UUID>) -> Bool
+    /// Builds a route for a specific edge based on anchor positions.
+    func route(
+        edge: any ConnectionEdge,
+        anchorsByID: [UUID: CGPoint],
+        context: ConnectionRoutingContext
+    ) -> ConnectionRoute
 
-    /// Updates the ongoing drag operation.
-    /// - Parameter delta: The movement delta from the drag origin.
-    func updateDrag(by delta: CGPoint)
-
-    /// Ends the current drag operation.
-    func endDrag()
-}
-
-/// Connection engines that project their state into a ConnectionGraph.
-protocol GraphBackedConnectionEngine: ConnectionEngine {
-    var graph: ConnectionGraph { get set }
+    /// Builds a route between two points (useful for previews or adjacency-based graphs).
+    func route(
+        from start: CGPoint,
+        to end: CGPoint,
+        context: ConnectionRoutingContext
+    ) -> ConnectionRoute
 }
