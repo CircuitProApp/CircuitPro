@@ -5,7 +5,7 @@ final class NodeDragInteraction: CanvasInteraction {
         let nodeID: UUID
         let origin: CGPoint
         let originalPosition: CGPoint
-        let socketOrigins: [UUID: CGPoint]
+        let socketOffsets: [UUID: CGPoint]
     }
 
     private var dragState: DragState?
@@ -25,18 +25,12 @@ final class NodeDragInteraction: CanvasInteraction {
 
         let items = itemsBinding.wrappedValue
         for item in items where item.id == hit {
-            if let primitive = item as? AnyCanvasPrimitive {
-                var socketOrigins: [UUID: CGPoint] = [:]
-                for other in items {
-                    if let socket = other as? Socket, socket.ownerID == primitive.id {
-                        socketOrigins[socket.id] = socket.position
-                    }
-                }
+            if let node = item as? SandboxNode {
                 dragState = DragState(
-                    nodeID: primitive.id,
+                    nodeID: node.id,
                     origin: point,
-                    originalPosition: primitive.position,
-                    socketOrigins: socketOrigins
+                    originalPosition: node.position,
+                    socketOffsets: node.socketOffsets
                 )
                 return true
             }
@@ -59,16 +53,17 @@ final class NodeDragInteraction: CanvasInteraction {
 
         var items = itemsBinding.wrappedValue
         for index in items.indices {
-            if items[index].id == state.nodeID, var primitive = items[index] as? AnyCanvasPrimitive {
-                primitive.position = newPosition
-                items[index] = primitive
+            if items[index].id == state.nodeID, var node = items[index] as? SandboxNode {
+                node.position = newPosition
+                items[index] = node
                 continue
             }
             if var socket = items[index] as? Socket,
-               let original = state.socketOrigins[socket.id] {
+               socket.ownerID == state.nodeID,
+               let offset = state.socketOffsets[socket.id] {
                 socket.position = CGPoint(
-                    x: original.x + snapped.dx,
-                    y: original.y + snapped.dy
+                    x: newPosition.x + offset.x,
+                    y: newPosition.y + offset.y
                 )
                 items[index] = socket
             }

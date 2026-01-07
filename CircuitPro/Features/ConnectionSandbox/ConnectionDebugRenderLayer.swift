@@ -22,22 +22,11 @@ final class ConnectionDebugRenderLayer: RenderLayer {
         }
         let routes = engine.routes(from: input, context: routingContext)
 
-        for (_, route) in routes {
+        let mergedSegments = mergeSegments(from: routes.values, magnification: context.magnification)
+        for segment in mergedSegments {
             guard let manhattan = route as? ManhattanRoute else { continue }
             guard let first = manhattan.points.first else { continue }
-
-            let path = CGMutablePath()
-            path.move(to: first)
-            for point in manhattan.points.dropFirst() {
-                path.addLine(to: point)
-            }
-
-            let shape = CAShapeLayer()
-            shape.path = path
-            shape.strokeColor = NSColor.systemRed.cgColor
-            shape.lineWidth = 2
-            shape.fillColor = nil
-            contentLayer.addSublayer(shape)
+            // placeholder
         }
 
         for anchor in context.connectionAnchors {
@@ -47,5 +36,13 @@ final class ConnectionDebugRenderLayer: RenderLayer {
             dot.fillColor = NSColor.systemBlue.cgColor
             contentLayer.addSublayer(dot)
         }
+    }
+
+    private func color(for id: UUID) -> NSColor {
+        let hex = id.uuidString.replacingOccurrences(of: "-", with: "")
+        let prefix = hex.prefix(6)
+        let value = Int(prefix, radix: 16) ?? 0
+        let hue = CGFloat(value % 360) / 360.0
+        return NSColor(calibratedHue: hue, saturation: 0.7, brightness: 0.9, alpha: 0.6)
     }
 }
