@@ -17,34 +17,37 @@ struct CanvasStatusView: View {
     }
 
     var body: some View {
-        HStack {
-            HStack {
-                CrosshairsStyleControlView()
-                if configuration == .default {
-                    Divider()
-                        .canvasStatusDividerStyle()
-                    SnappingControlView()
+        Grid {
+            GridRow {
+                HStack {
+                    CrosshairsStyleControlView()
+                    if configuration == .default {
+                        Divider()
+                            .canvasStatusDividerStyle()
+                        SnappingControlView()
+                    }
                 }
-            }
-            .padding(10)
-            .glassEffect(in: .capsule)
-            Spacer()
-            MouseLocationView()
                 .padding(10)
                 .glassEffect(in: .capsule)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer()
-            HStack {
-                if configuration == .default {
-                    GridSpacingControlView()
-                    Divider()
-                        .canvasStatusDividerStyle()
+                MouseLocationView()
+                    .padding(10)
+                    .glassEffect(in: .capsule)
+
+                HStack {
+                    if configuration == .default {
+                        GridSpacingControlView()
+                        Divider()
+                            .canvasStatusDividerStyle()
+                    }
+                    ZoomControlView()
                 }
-                ZoomControlView()
+                .padding(10)
+                .glassEffect(in: .capsule)
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            .padding(10)
-            .glassEffect(in: .capsule)
         }
-
+        .frame(maxWidth: .infinity)
     }
 }
