@@ -9,57 +9,54 @@ struct ManhattanWireEngine: ConnectionEngine {
     var preferHorizontalFirst: Bool = true
 
     func routes(
-        from input: ConnectionInput,
+        points: [any ConnectionPoint],
+        links: [any ConnectionLink],
         context: ConnectionRoutingContext
     ) -> [UUID: any ConnectionRoute] {
-        let (anchorsByID, relations) = resolve(input: input)
-
+        let pointsByID = Dictionary(uniqueKeysWithValues: points.map { ($0.id, $0.position) })
         var output: [UUID: any ConnectionRoute] = [:]
-        output.reserveCapacity(relations.count)
+        output.reserveCapacity(links.count)
 
-        for rel in relations {
-            guard let a = anchorsByID[rel.a],
-                  let b = anchorsByID[rel.b]
+        for link in links {
+            guard let a = pointsByID[link.startID],
+                  let b = pointsByID[link.endID]
             else { continue }
 
             let start = context.snapPoint(a)
             let end = context.snapPoint(b)
-            output[rel.id] = ManhattanRoute(points: [start, end])
+            output[link.id] = ManhattanRoute(points: [start, end])
         }
 
         return output
     }
 
     func normalize(
-        _ input: ConnectionInput,
+        points: [any ConnectionPoint],
+        links: [any ConnectionLink],
         context: ConnectionNormalizationContext
     ) -> ConnectionDelta {
-        guard case .edges(let anchors, let edges) = input else {
-            return ConnectionDelta()
-        }
-
-        var anchorsByID = Dictionary(
-            uniqueKeysWithValues: anchors.map { ($0.id, context.snapPoint($0.position)) }
+        var pointsByID = Dictionary(
+            uniqueKeysWithValues: points.map { ($0.id, context.snapPoint($0.position)) }
         )
-        let edgesByID = Dictionary(uniqueKeysWithValues: edges.map { ($0.id, $0) })
-        let originalIDs = Set(edgesByID.keys)
+        let linksByID = Dictionary(uniqueKeysWithValues: links.map { ($0.id, $0) })
+        let originalIDs = Set(linksByID.keys)
         let epsilon = max(0.5 / max(context.magnification, 0.0001), 0.0001)
 
         var anchorIndex: [PositionKey: UUID] = [:]
-        anchorIndex.reserveCapacity(anchors.count)
-        for (id, position) in anchorsByID {
+        anchorIndex.reserveCapacity(points.count)
+        for (id, position) in pointsByID {
             anchorIndex[PositionKey(position: position, epsilon: epsilon)] = id
         }
 
-        var addedAnchors: [any CanvasItem & ConnectionAnchor] = []
-        var splitEdges: [WireSegment] = []
-        splitEdges.reserveCapacity(edges.count * 2)
+        var addedPoints: [any CanvasItem & ConnectionPoint] = []
+        var splitLinks: [WireSegment] = []
+        splitLinks.reserveCapacity(links.count * 2)
 
-        for edge in edges {
-            guard let start = anchorsByID[edge.startID],
-                  let end = anchorsByID[edge.endID]
+        for link in links {
+            guard let start = pointsByID[link.startID],
+                  let end = pointsByID[link.endID]
             else {
-                splitEdges.append(WireSegment(id: edge.id, startID: edge.startID, endID: edge.endID))
+                splitLinks.append(WireSegment(id: link.id, startID: link.startID, endID: link.endID))
                 continue
             }
 
@@ -67,7 +64,7 @@ struct ManhattanWireEngine: ConnectionEngine {
             let dy = end.y - start.y
 
             if abs(dx) <= epsilon || abs(dy) <= epsilon {
-                splitEdges.append(WireSegment(id: edge.id, startID: edge.startID, endID: edge.endID))
+                splitLinks.append(WireSegment(id: link.id, startID: link.startID, endID: link.endID))
                 continue
             }
 
@@ -83,27 +80,27 @@ struct ManhattanWireEngine: ConnectionEngine {
                 let vertex = WireVertex(position: corner)
                 cornerID = vertex.id
                 anchorIndex[cornerKey] = cornerID
-                anchorsByID[cornerID] = corner
-                addedAnchors.append(vertex)
+                pointsByID[cornerID] = corner
+                addedPoints.append(vertex)
             }
 
-            splitEdges.append(WireSegment(id: edge.id, startID: edge.startID, endID: cornerID))
-            splitEdges.append(WireSegment(startID: cornerID, endID: edge.endID))
+            splitLinks.append(WireSegment(id: link.id, startID: link.startID, endID: cornerID))
+            splitLinks.append(WireSegment(startID: cornerID, endID: link.endID))
         }
 
-        if splitEdges.isEmpty {
+        if splitLinks.isEmpty {
             return ConnectionDelta()
         }
 
         var segments: [EdgeSegment] = []
-        segments.reserveCapacity(splitEdges.count)
-        var passthroughEdges: [WireSegment] = []
+        segments.reserveCapacity(splitLinks.count)
+        var passthroughLinks: [WireSegment] = []
 
-        for edge in splitEdges {
-            guard let start = anchorsByID[edge.startID],
-                  let end = anchorsByID[edge.endID]
+        for link in splitLinks {
+            guard let start = pointsByID[link.startID],
+                  let end = pointsByID[link.endID]
             else {
-                passthroughEdges.append(edge)
+                passthroughLinks.append(link)
                 continue
             }
 
@@ -113,37 +110,37 @@ struct ManhattanWireEngine: ConnectionEngine {
             if abs(dx) <= epsilon {
                 let minY = min(start.y, end.y)
                 let maxY = max(start.y, end.y)
-                let minID = start.y <= end.y ? edge.startID : edge.endID
-                let maxID = start.y <= end.y ? edge.endID : edge.startID
+                let minID = start.y <= end.y ? link.startID : link.endID
+                let maxID = start.y <= end.y ? link.endID : link.startID
                 segments.append(
                     EdgeSegment(
-                        id: edge.id,
+                        id: link.id,
                         orientation: .vertical,
                         fixed: start.x,
                         min: minY,
                         max: maxY,
-                        minAnchorID: minID,
-                        maxAnchorID: maxID
+                        minPointID: minID,
+                        maxPointID: maxID
                     )
                 )
             } else if abs(dy) <= epsilon {
                 let minX = min(start.x, end.x)
                 let maxX = max(start.x, end.x)
-                let minID = start.x <= end.x ? edge.startID : edge.endID
-                let maxID = start.x <= end.x ? edge.endID : edge.startID
+                let minID = start.x <= end.x ? link.startID : link.endID
+                let maxID = start.x <= end.x ? link.endID : link.startID
                 segments.append(
                     EdgeSegment(
-                        id: edge.id,
+                        id: link.id,
                         orientation: .horizontal,
                         fixed: start.y,
                         min: minX,
                         max: maxX,
-                        minAnchorID: minID,
-                        maxAnchorID: maxID
+                        minPointID: minID,
+                        maxPointID: maxID
                     )
                 )
             } else {
-                passthroughEdges.append(edge)
+                passthroughLinks.append(link)
             }
         }
 
@@ -166,7 +163,7 @@ struct ManhattanWireEngine: ConnectionEngine {
         }
 
         var removedIDs = Set<UUID>()
-        var mergedEdges: [WireSegment] = []
+        var mergedLinks: [WireSegment] = []
 
         for group in grouped.values {
             let sorted = group.sorted { $0.min < $1.min }
@@ -177,11 +174,11 @@ struct ManhattanWireEngine: ConnectionEngine {
                 if segment.min <= current.max + epsilon {
                     if segment.min < current.min {
                         current.min = segment.min
-                        current.minAnchorID = segment.minAnchorID
+                        current.minPointID = segment.minPointID
                     }
                     if segment.max > current.max {
                         current.max = segment.max
-                        current.maxAnchorID = segment.maxAnchorID
+                        current.maxPointID = segment.maxPointID
                     }
                     current.max = max(current.max, segment.max)
                     sourceIDs.append(segment.id)
@@ -189,10 +186,10 @@ struct ManhattanWireEngine: ConnectionEngine {
                     let keepID = selectKeepID(from: sourceIDs, preferred: originalIDs)
                     let normalized = WireSegment(
                         id: keepID,
-                        startID: current.minAnchorID,
-                        endID: current.maxAnchorID
+                        startID: current.minPointID,
+                        endID: current.maxPointID
                     )
-                    mergedEdges.append(normalized)
+                    mergedLinks.append(normalized)
                     for id in sourceIDs where id != keepID {
                         removedIDs.insert(id)
                     }
@@ -205,18 +202,18 @@ struct ManhattanWireEngine: ConnectionEngine {
             let keepID = selectKeepID(from: sourceIDs, preferred: originalIDs)
             let normalized = WireSegment(
                 id: keepID,
-                startID: current.minAnchorID,
-                endID: current.maxAnchorID
+                startID: current.minPointID,
+                endID: current.maxPointID
             )
-            mergedEdges.append(normalized)
+            mergedLinks.append(normalized)
             for id in sourceIDs where id != keepID {
                 removedIDs.insert(id)
             }
         }
 
-        let mergedIDs = Set(mergedEdges.map { $0.id })
-        for edge in passthroughEdges where !mergedIDs.contains(edge.id) {
-            mergedEdges.append(edge)
+        let mergedIDs = Set(mergedLinks.map { $0.id })
+        for link in passthroughLinks where !mergedIDs.contains(link.id) {
+            mergedLinks.append(link)
         }
 
         var removedOriginalIDs = Set<UUID>()
@@ -224,66 +221,32 @@ struct ManhattanWireEngine: ConnectionEngine {
             removedOriginalIDs.insert(id)
         }
 
-        var updatedEdges: [any CanvasItem & ConnectionEdge] = []
-        var addedEdges: [any CanvasItem & ConnectionEdge] = []
+        var updatedLinks: [any CanvasItem & ConnectionLink] = []
+        var addedLinks: [any CanvasItem & ConnectionLink] = []
 
-        for edge in mergedEdges {
-            if let original = edgesByID[edge.id] {
-                if original.startID == edge.startID && original.endID == edge.endID {
+        for link in mergedLinks {
+            if let original = linksByID[link.id] {
+                if original.startID == link.startID && original.endID == link.endID {
                     continue
                 }
-                updatedEdges.append(edge)
+                updatedLinks.append(link)
             } else {
-                addedEdges.append(edge)
+                addedLinks.append(link)
             }
         }
 
-        if addedAnchors.isEmpty && removedOriginalIDs.isEmpty && updatedEdges.isEmpty && addedEdges.isEmpty {
+        if addedPoints.isEmpty && removedOriginalIDs.isEmpty && updatedLinks.isEmpty && addedLinks.isEmpty {
             return ConnectionDelta()
         }
 
         return ConnectionDelta(
-            removedAnchorIDs: [],
-            updatedAnchors: [],
-            addedAnchors: addedAnchors,
-            removedEdgeIDs: removedOriginalIDs,
-            updatedEdges: updatedEdges,
-            addedEdges: addedEdges
+            removedPointIDs: [],
+            updatedPoints: [],
+            addedPoints: addedPoints,
+            removedLinkIDs: removedOriginalIDs,
+            updatedLinks: updatedLinks,
+            addedLinks: addedLinks
         )
-    }
-
-    private struct Relation {
-        let id: UUID
-        let a: UUID
-        let b: UUID
-    }
-
-    private func resolve(
-        input: ConnectionInput
-    ) -> ([UUID: CGPoint], [Relation]) {
-        switch input {
-        case .edges(let anchors, let edges):
-            let anchorsByID = Dictionary(uniqueKeysWithValues: anchors.map { ($0.id, $0.position) })
-            let relations = edges.map { Relation(id: $0.id, a: $0.startID, b: $0.endID) }
-            return (anchorsByID, relations)
-
-        case .adjacency(let anchors, let points):
-            let anchorsByID = Dictionary(uniqueKeysWithValues: anchors.map { ($0.id, $0.position) })
-            var relations: [Relation] = []
-            var seen = Set<String>()
-
-            for point in points {
-                for otherID in point.connectedIDs {
-                    let key = point.id.uuidString < otherID.uuidString
-                        ? "\(point.id.uuidString)|\(otherID.uuidString)"
-                        : "\(otherID.uuidString)|\(point.id.uuidString)"
-                    if seen.contains(key) { continue }
-                    seen.insert(key)
-                    relations.append(Relation(id: UUID(), a: point.id, b: otherID))
-                }
-            }
-            return (anchorsByID, relations)
-        }
     }
 
     private enum Orientation: Hashable {
@@ -297,8 +260,8 @@ struct ManhattanWireEngine: ConnectionEngine {
         let fixed: CGFloat
         var min: CGFloat
         var max: CGFloat
-        var minAnchorID: UUID
-        var maxAnchorID: UUID
+        var minPointID: UUID
+        var maxPointID: UUID
     }
 
     private struct PositionKey: Hashable {

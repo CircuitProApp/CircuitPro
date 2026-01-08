@@ -1,7 +1,7 @@
 import Foundation
 
 // Represents a single segment of a wire.
-struct WireSegment: CanvasItem, ConnectionEdge, Codable, Hashable, Identifiable {
+struct WireSegment: CanvasItem, ConnectionLink, Codable, Hashable, Identifiable {
     var id: UUID = UUID()
     var startID: UUID
     var endID: UUID

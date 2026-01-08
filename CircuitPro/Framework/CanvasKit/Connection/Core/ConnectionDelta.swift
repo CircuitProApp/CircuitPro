@@ -8,19 +8,19 @@
 import Foundation
 
 struct ConnectionDelta {
-    var removedAnchorIDs: Set<UUID> = []
-    var updatedAnchors: [any CanvasItem & ConnectionAnchor] = []
-    var addedAnchors: [any CanvasItem & ConnectionAnchor] = []
-    var removedEdgeIDs: Set<UUID> = []
-    var updatedEdges: [any CanvasItem & ConnectionEdge] = []
-    var addedEdges: [any CanvasItem & ConnectionEdge] = []
+    var removedPointIDs: Set<UUID> = []
+    var updatedPoints: [any CanvasItem & ConnectionPoint] = []
+    var addedPoints: [any CanvasItem & ConnectionPoint] = []
+    var removedLinkIDs: Set<UUID> = []
+    var updatedLinks: [any CanvasItem & ConnectionLink] = []
+    var addedLinks: [any CanvasItem & ConnectionLink] = []
 
     var isEmpty: Bool {
-        removedAnchorIDs.isEmpty
-            && updatedAnchors.isEmpty
-            && addedAnchors.isEmpty
-            && removedEdgeIDs.isEmpty
-            && updatedEdges.isEmpty
-            && addedEdges.isEmpty
+        removedPointIDs.isEmpty
+            && updatedPoints.isEmpty
+            && addedPoints.isEmpty
+            && removedLinkIDs.isEmpty
+            && updatedLinks.isEmpty
+            && addedLinks.isEmpty
     }
 }

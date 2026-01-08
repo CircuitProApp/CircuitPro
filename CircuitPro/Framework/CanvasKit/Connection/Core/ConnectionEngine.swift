@@ -10,22 +10,25 @@ import Foundation
 
 /// A domain-agnostic routing policy for connections on the canvas.
 ///
-/// CanvasKit calls into the engine to convert anchors/edges into drawable routes.
+/// CanvasKit calls into the engine to convert points/links into drawable routes.
 protocol ConnectionEngine {
     func routes(
-        from input: ConnectionInput,
+        points: [any ConnectionPoint],
+        links: [any ConnectionLink],
         context: ConnectionRoutingContext
     ) -> [UUID: any ConnectionRoute]
 
     func normalize(
-        _ input: ConnectionInput,
+        points: [any ConnectionPoint],
+        links: [any ConnectionLink],
         context: ConnectionNormalizationContext
     ) -> ConnectionDelta
 }
 
 extension ConnectionEngine {
     func normalize(
-        _ input: ConnectionInput,
+        points: [any ConnectionPoint],
+        links: [any ConnectionLink],
         context: ConnectionNormalizationContext
     ) -> ConnectionDelta {
         ConnectionDelta()

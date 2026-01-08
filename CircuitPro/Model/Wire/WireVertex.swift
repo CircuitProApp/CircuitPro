@@ -8,8 +8,8 @@
 import CoreGraphics
 import Foundation
 
-/// A lightweight wire anchor that can participate in CanvasKit interactions.
-struct WireVertex: CanvasItem, ConnectionAnchor, Hashable {
+/// A lightweight wire point that can participate in CanvasKit interactions.
+struct WireVertex: CanvasItem, ConnectionPoint, Hashable {
     let id: UUID
     var position: CGPoint
 

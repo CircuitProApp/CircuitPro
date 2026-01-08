@@ -13,14 +13,14 @@ final class ConnectionDebugRenderLayer: RenderLayer {
 
         guard let engine = context.connectionEngine else { return }
 
-        let input = ConnectionInput.edges(
-            anchors: context.connectionAnchors,
-            edges: context.connectionEdges
-        )
         let routingContext = ConnectionRoutingContext { point in
             context.snapProvider.snap(point: point, context: context)
         }
-        let routes = engine.routes(from: input, context: routingContext)
+        let routes = engine.routes(
+            points: context.connectionPoints,
+            links: context.connectionLinks,
+            context: routingContext
+        )
 
         let scale = 1.0 / max(context.magnification, .ulpOfOne)
 
@@ -44,9 +44,9 @@ final class ConnectionDebugRenderLayer: RenderLayer {
             contentLayer.addSublayer(shape)
         }
 
-        for anchor in context.connectionAnchors {
+        for point in context.connectionPoints {
             let dot = CAShapeLayer()
-            let rect = CGRect(x: anchor.position.x - 3, y: anchor.position.y - 3, width: 6, height: 6)
+            let rect = CGRect(x: point.position.x - 3, y: point.position.y - 3, width: 6, height: 6)
             dot.path = CGPath(ellipseIn: rect, transform: nil)
             dot.fillColor = NSColor.systemBlue.cgColor
             contentLayer.addSublayer(dot)

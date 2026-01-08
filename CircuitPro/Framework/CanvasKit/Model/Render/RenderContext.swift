@@ -64,23 +64,19 @@ extension RenderContext {
         environment.connectionEngine
     }
 
-    var connectionAnchors: [any ConnectionAnchor] {
-        items.compactMap { $0 as? any ConnectionAnchor }
-    }
-
     var connectionPoints: [any ConnectionPoint] {
         items.compactMap { $0 as? any ConnectionPoint }
     }
 
-    var connectionEdges: [any ConnectionEdge] {
-        items.compactMap { $0 as? any ConnectionEdge }
+    var connectionLinks: [any ConnectionLink] {
+        items.compactMap { $0 as? any ConnectionLink }
     }
 
-    var connectionAnchorPositionsByID: [UUID: CGPoint] {
+    var connectionPointPositionsByID: [UUID: CGPoint] {
         var positions: [UUID: CGPoint] = [:]
-        positions.reserveCapacity(connectionAnchors.count)
-        for anchor in connectionAnchors {
-            positions[anchor.id] = anchor.position
+        positions.reserveCapacity(connectionPoints.count)
+        for point in connectionPoints {
+            positions[point.id] = point.position
         }
         return positions
     }

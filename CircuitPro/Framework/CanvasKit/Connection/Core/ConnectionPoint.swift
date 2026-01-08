@@ -14,16 +14,7 @@ import Foundation
 /// In flowcharts, this could be an invisible anchor at an edge midpoint.
 /// The protocol is domain-agnostic — CanvasKit uses it to understand
 /// where connections can attach.
-protocol ConnectionAnchor: Identifiable where ID == UUID {
-
+protocol ConnectionPoint: Identifiable where ID == UUID {
     /// The world-space position of this connection point.
     var position: CGPoint { get }
-
-}
-
-/// A connection point that owns adjacency information.
-protocol ConnectionPoint: ConnectionAnchor {
-
-    /// The IDs of other anchors this point is linked to.
-    var connectedIDs: Set<UUID> { get set }
 }

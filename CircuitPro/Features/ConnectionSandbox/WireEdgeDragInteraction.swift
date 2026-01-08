@@ -21,12 +21,12 @@ final class WireEdgeDragInteraction: CanvasInteraction {
     ) -> Bool {
         dragState = nil
 
-        let anchorsByID = context.connectionAnchorPositionsByID
+        let pointsByID = context.connectionPointPositionsByID
         let tolerance = baseTolerance / max(context.magnification, 0.001)
 
-        for edge in context.connectionEdges {
-            guard let start = anchorsByID[edge.startID],
-                  let end = anchorsByID[edge.endID]
+        for link in context.connectionLinks {
+            guard let start = pointsByID[link.startID],
+                  let end = pointsByID[link.endID]
             else { continue }
 
             let isAxisAligned = abs(start.x - end.x) <= tolerance || abs(start.y - end.y) <= tolerance
@@ -35,9 +35,9 @@ final class WireEdgeDragInteraction: CanvasInteraction {
                 if hitTest(point: point, start: start, end: corner, tolerance: tolerance)
                     || hitTest(point: point, start: corner, end: end, tolerance: tolerance) {
                     dragState = DragState(
-                        edgeID: edge.id,
-                        startID: edge.startID,
-                        endID: edge.endID,
+                        edgeID: link.id,
+                        startID: link.startID,
+                        endID: link.endID,
                         origin: point,
                         startPosition: start,
                         endPosition: end
@@ -46,9 +46,9 @@ final class WireEdgeDragInteraction: CanvasInteraction {
                 }
             } else if hitTest(point: point, start: start, end: end, tolerance: tolerance) {
                 dragState = DragState(
-                    edgeID: edge.id,
-                    startID: edge.startID,
-                    endID: edge.endID,
+                    edgeID: link.id,
+                    startID: link.startID,
+                    endID: link.endID,
                     origin: point,
                     startPosition: start,
                     endPosition: end
@@ -94,30 +94,28 @@ final class WireEdgeDragInteraction: CanvasInteraction {
         }
 
         var items = itemsBinding.wrappedValue
-        let anchors = items.compactMap { $0 as? any ConnectionAnchor }
-        let edges = items.compactMap { $0 as? any ConnectionEdge }
-
-        let input = ConnectionInput.edges(anchors: anchors, edges: edges)
+        let points = items.compactMap { $0 as? any ConnectionPoint }
+        let links = items.compactMap { $0 as? any ConnectionLink }
         let normalizationContext = ConnectionNormalizationContext(
             magnification: context.magnification,
             snapPoint: { point in
                 context.snapProvider.snap(point: point, context: context)
             }
         )
-        let delta = engine.normalize(input, context: normalizationContext)
+        let delta = engine.normalize(points: points, links: links, context: normalizationContext)
 
         if !delta.isEmpty {
-            if !delta.removedEdgeIDs.isEmpty || !delta.removedAnchorIDs.isEmpty {
+            if !delta.removedLinkIDs.isEmpty || !delta.removedPointIDs.isEmpty {
                 items.removeAll { item in
-                    delta.removedEdgeIDs.contains(item.id)
-                        || delta.removedAnchorIDs.contains(item.id)
+                    delta.removedLinkIDs.contains(item.id)
+                        || delta.removedPointIDs.contains(item.id)
                 }
             }
 
-            if !delta.updatedAnchors.isEmpty
-                || !delta.addedAnchors.isEmpty
-                || !delta.updatedEdges.isEmpty
-                || !delta.addedEdges.isEmpty {
+            if !delta.updatedPoints.isEmpty
+                || !delta.addedPoints.isEmpty
+                || !delta.updatedLinks.isEmpty
+                || !delta.addedLinks.isEmpty {
                 var indexByID: [UUID: Int] = [:]
                 indexByID.reserveCapacity(items.count)
                 for (index, item) in items.enumerated() {
@@ -133,17 +131,17 @@ final class WireEdgeDragInteraction: CanvasInteraction {
                     }
                 }
 
-                for anchor in delta.updatedAnchors {
-                    upsert(anchor)
+                for point in delta.updatedPoints {
+                    upsert(point)
                 }
-                for anchor in delta.addedAnchors {
-                    upsert(anchor)
+                for point in delta.addedPoints {
+                    upsert(point)
                 }
-                for edge in delta.updatedEdges {
-                    upsert(edge)
+                for link in delta.updatedLinks {
+                    upsert(link)
                 }
-                for edge in delta.addedEdges {
-                    upsert(edge)
+                for link in delta.addedLinks {
+                    upsert(link)
                 }
             }
 
@@ -155,8 +153,8 @@ final class WireEdgeDragInteraction: CanvasInteraction {
             print("Connection normalize: no changes")
         } else {
             print("Connection normalize:",
-                  "anchors +\(delta.addedAnchors.count) ~\(delta.updatedAnchors.count) -\(delta.removedAnchorIDs.count),",
-                  "edges +\(delta.addedEdges.count) ~\(delta.updatedEdges.count) -\(delta.removedEdgeIDs.count)")
+                  "points +\(delta.addedPoints.count) ~\(delta.updatedPoints.count) -\(delta.removedPointIDs.count),",
+                  "links +\(delta.addedLinks.count) ~\(delta.updatedLinks.count) -\(delta.removedLinkIDs.count)")
         }
 #endif
 
