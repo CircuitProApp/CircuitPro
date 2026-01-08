@@ -14,55 +14,28 @@ struct BezierSandboxView: View {
         let nodeAPosition = CGPoint(x: 200, y: 200)
         let nodeBPosition = CGPoint(x: 460, y: 260)
 
-        let socketAOffset = CGPoint(x: -60, y: 0)
-        let socketBOffset = CGPoint(x: 60, y: 0)
-        let socketCOffset = CGPoint(x: -70, y: -20)
-        let socketDOffset = CGPoint(x: -70, y: 20)
+        let socketA = Socket(id: socketAID, offset: CGPoint(x: -60, y: 0))
+        let socketB = Socket(id: socketBID, offset: CGPoint(x: 60, y: 0))
+        let socketC = Socket(id: socketCID, offset: CGPoint(x: -70, y: -20))
+        let socketD = Socket(id: socketDID, offset: CGPoint(x: -70, y: 20))
 
         let nodeA = SandboxNode(
             id: nodeAID,
             position: nodeAPosition,
             size: CGSize(width: 120, height: 80),
-            socketOffsets: [
-                socketAID: socketAOffset,
-                socketBID: socketBOffset,
-            ]
+            sockets: [socketA, socketB]
         )
         let nodeB = SandboxNode(
             id: nodeBID,
             position: nodeBPosition,
             size: CGSize(width: 120, height: 80),
-            socketOffsets: [
-                socketCID: socketCOffset,
-                socketDID: socketDOffset,
-            ]
-        )
-
-        let socketA = Socket(
-            id: socketAID,
-            position: CGPoint(x: nodeAPosition.x + socketAOffset.x, y: nodeAPosition.y + socketAOffset.y),
-            ownerID: nodeAID
-        )
-        let socketB = Socket(
-            id: socketBID,
-            position: CGPoint(x: nodeAPosition.x + socketBOffset.x, y: nodeAPosition.y + socketBOffset.y),
-            ownerID: nodeAID
-        )
-        let socketC = Socket(
-            id: socketCID,
-            position: CGPoint(x: nodeBPosition.x + socketCOffset.x, y: nodeBPosition.y + socketCOffset.y),
-            ownerID: nodeBID
-        )
-        let socketD = Socket(
-            id: socketDID,
-            position: CGPoint(x: nodeBPosition.x + socketDOffset.x, y: nodeBPosition.y + socketDOffset.y),
-            ownerID: nodeBID
+            sockets: [socketC, socketD]
         )
 
         let linkAB = BezierLink(startID: socketBID, endID: socketCID)
         let linkCD = BezierLink(startID: socketAID, endID: socketDID)
 
-        return [nodeA, nodeB, socketA, socketB, socketC, socketD, linkAB, linkCD]
+        return [nodeA, nodeB, linkAB, linkCD]
     }()
 
     private let bezierEngine = BezierAdjacencyEngine()

@@ -7,7 +7,7 @@ struct SandboxNode: CanvasItem, Transformable, Bounded, HitTestable {
     var size: CGSize
     var cornerRadius: CGFloat
     var rotation: CGFloat
-    var socketOffsets: [UUID: CGPoint]
+    var sockets: [Socket]
 
     init(
         id: UUID = UUID(),
@@ -15,14 +15,14 @@ struct SandboxNode: CanvasItem, Transformable, Bounded, HitTestable {
         size: CGSize,
         cornerRadius: CGFloat = 10,
         rotation: CGFloat = 0,
-        socketOffsets: [UUID: CGPoint] = [:]
+        sockets: [Socket] = []
     ) {
         self.id = id
         self.position = position
         self.size = size
         self.cornerRadius = cornerRadius
         self.rotation = rotation
-        self.socketOffsets = socketOffsets
+        self.sockets = sockets
     }
 
     var boundingBox: CGRect {
@@ -32,5 +32,9 @@ struct SandboxNode: CanvasItem, Transformable, Bounded, HitTestable {
             width: size.width,
             height: size.height
         )
+    }
+
+    func socketPosition(for socket: Socket) -> CGPoint {
+        CGPoint(x: position.x + socket.offset.x, y: position.y + socket.offset.y)
     }
 }

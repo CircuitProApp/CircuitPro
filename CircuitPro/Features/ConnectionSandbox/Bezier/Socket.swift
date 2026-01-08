@@ -1,14 +1,12 @@
 import CoreGraphics
 import Foundation
 
-struct Socket: CanvasItem, ConnectionPoint, Hashable {
+struct Socket: Hashable {
     let id: UUID
-    var position: CGPoint
-    var ownerID: UUID?
+    var offset: CGPoint
 
-    init(id: UUID = UUID(), position: CGPoint, ownerID: UUID? = nil) {
+    init(id: UUID = UUID(), offset: CGPoint) {
         self.id = id
-        self.position = position
-        self.ownerID = ownerID
+        self.offset = offset
     }
 }

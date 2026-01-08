@@ -5,7 +5,6 @@ final class NodeDragInteraction: CanvasInteraction {
         let nodeID: UUID
         let origin: CGPoint
         let originalPosition: CGPoint
-        let socketOffsets: [UUID: CGPoint]
     }
 
     private var dragState: DragState?
@@ -29,8 +28,7 @@ final class NodeDragInteraction: CanvasInteraction {
                 dragState = DragState(
                     nodeID: node.id,
                     origin: point,
-                    originalPosition: node.position,
-                    socketOffsets: node.socketOffsets
+                    originalPosition: node.position
                 )
                 return true
             }
@@ -56,16 +54,6 @@ final class NodeDragInteraction: CanvasInteraction {
             if items[index].id == state.nodeID, var node = items[index] as? SandboxNode {
                 node.position = newPosition
                 items[index] = node
-                continue
-            }
-            if var socket = items[index] as? Socket,
-               socket.ownerID == state.nodeID,
-               let offset = state.socketOffsets[socket.id] {
-                socket.position = CGPoint(
-                    x: newPosition.x + offset.x,
-                    y: newPosition.y + offset.y
-                )
-                items[index] = socket
             }
         }
         itemsBinding.wrappedValue = items
