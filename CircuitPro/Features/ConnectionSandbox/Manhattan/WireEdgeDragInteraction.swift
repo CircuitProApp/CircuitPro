@@ -62,7 +62,8 @@ final class WireEdgeDragInteraction: CanvasInteraction {
 
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard let state = dragState,
-              let itemsBinding = context.environment.items
+              let itemsBinding = context.environment.items,
+              let engine = context.connectionEngine
         else { return }
 
         let rawDelta = CGVector(dx: point.x - state.origin.x, dy: point.y - state.origin.y)
@@ -81,19 +82,19 @@ final class WireEdgeDragInteraction: CanvasInteraction {
                 items[index] = vertex
             }
         }
+        applyNormalization(to: &items, context: context, engine: engine)
         itemsBinding.wrappedValue = items
     }
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
-        guard dragState != nil,
-              let itemsBinding = context.environment.items,
-              let engine = context.connectionEngine
-        else {
-            dragState = nil
-            return
-        }
+        dragState = nil
+    }
 
-        var items = itemsBinding.wrappedValue
+    private func applyNormalization(
+        to items: inout [any CanvasItem],
+        context: RenderContext,
+        engine: any ConnectionEngine
+    ) {
         let points = items.compactMap { $0 as? any ConnectionPoint }
         let links = items.compactMap { $0 as? any ConnectionLink }
         let normalizationContext = ConnectionNormalizationContext(
@@ -104,61 +105,49 @@ final class WireEdgeDragInteraction: CanvasInteraction {
         )
         let delta = engine.normalize(points: points, links: links, context: normalizationContext)
 
-        if !delta.isEmpty {
-            if !delta.removedLinkIDs.isEmpty || !delta.removedPointIDs.isEmpty {
-                items.removeAll { item in
-                    delta.removedLinkIDs.contains(item.id)
-                        || delta.removedPointIDs.contains(item.id)
-                }
-            }
-
-            if !delta.updatedPoints.isEmpty
-                || !delta.addedPoints.isEmpty
-                || !delta.updatedLinks.isEmpty
-                || !delta.addedLinks.isEmpty {
-                var indexByID: [UUID: Int] = [:]
-                indexByID.reserveCapacity(items.count)
-                for (index, item) in items.enumerated() {
-                    indexByID[item.id] = index
-                }
-
-                func upsert(_ item: any CanvasItem) {
-                    if let index = indexByID[item.id] {
-                        items[index] = item
-                    } else {
-                        items.append(item)
-                        indexByID[item.id] = items.count - 1
-                    }
-                }
-
-                for point in delta.updatedPoints {
-                    upsert(point)
-                }
-                for point in delta.addedPoints {
-                    upsert(point)
-                }
-                for link in delta.updatedLinks {
-                    upsert(link)
-                }
-                for link in delta.addedLinks {
-                    upsert(link)
-                }
-            }
-
-            itemsBinding.wrappedValue = items
-        }
-
-#if DEBUG
         if delta.isEmpty {
-            print("Connection normalize: no changes")
-        } else {
-            print("Connection normalize:",
-                  "points +\(delta.addedPoints.count) ~\(delta.updatedPoints.count) -\(delta.removedPointIDs.count),",
-                  "links +\(delta.addedLinks.count) ~\(delta.updatedLinks.count) -\(delta.removedLinkIDs.count)")
+            return
         }
-#endif
 
-        dragState = nil
+        if !delta.removedLinkIDs.isEmpty || !delta.removedPointIDs.isEmpty {
+            items.removeAll { item in
+                delta.removedLinkIDs.contains(item.id)
+                    || delta.removedPointIDs.contains(item.id)
+            }
+        }
+
+        if !delta.updatedPoints.isEmpty
+            || !delta.addedPoints.isEmpty
+            || !delta.updatedLinks.isEmpty
+            || !delta.addedLinks.isEmpty {
+            var indexByID: [UUID: Int] = [:]
+            indexByID.reserveCapacity(items.count)
+            for (index, item) in items.enumerated() {
+                indexByID[item.id] = index
+            }
+
+            func upsert(_ item: any CanvasItem) {
+                if let index = indexByID[item.id] {
+                    items[index] = item
+                } else {
+                    items.append(item)
+                    indexByID[item.id] = items.count - 1
+                }
+            }
+
+            for point in delta.updatedPoints {
+                upsert(point)
+            }
+            for point in delta.addedPoints {
+                upsert(point)
+            }
+            for link in delta.updatedLinks {
+                upsert(link)
+            }
+            for link in delta.addedLinks {
+                upsert(link)
+            }
+        }
     }
 
     private func hitTest(

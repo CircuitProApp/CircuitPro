@@ -3,7 +3,7 @@
 This is a lightweight snapshot of the current direction. Not a plan, just context.
 
 ## What We Moved Away From
-- GraphEngine/GraphRuleset/GeometryPolicy pipeline in `CanvasKit/_Temp/Connection`.
+- Legacy GraphEngine/GraphRuleset/GeometryPolicy pipeline (removed).
 - App-specific connection graph storage inside the framework.
 - Runtime L‑shape rendering for edges that were stored as single diagonal segments.
 
@@ -26,7 +26,7 @@ This is a lightweight snapshot of the current direction. Not a plan, just contex
 ## What We Still Need to Do
 - Run normalization on deserialization/import (optional, later).
 - Consider intersection splitting to create explicit junctions.
-- Migrate or retire old WireEngine/TraceEngine before deleting `_Temp/Connection`.
+- Migrate or retire old WireEngine/TraceEngine before deleting the legacy graph stack.
 - Decide where to host additional normalize passes (engine internal vs shared helpers).
 
 ## Notes

@@ -21,12 +21,12 @@ final class WireTool: CanvasTool {
     }
 
     private var state: State = .idle
-    private let wireEngine: WireEngine
-
-    init(wireEngine: WireEngine) {
-        self.wireEngine = wireEngine
-        super.init()
-    }
+//    private let wireEngine: WireEngine
+//
+//    init(wireEngine: WireEngine) {
+//        self.wireEngine = wireEngine
+//        super.init()
+//    }
 
     // MARK: - Primary Actions
     override func handleTap(at location: CGPoint, context: ToolInteractionContext)
@@ -40,34 +40,34 @@ final class WireTool: CanvasTool {
             return .noResult
 
         case .drawing(let startPoint, let direction):
-            // Same-point click
-            if startPoint == location {
-                // Double-click at the same location stops the tool
-                if context.clickCount >= 2 {
-                    self.state = .idle
-                }
-                // Either way, no new segment from a zero-length click
-                return .noResult
-            }
-
-            // Create the request node
-            let strategy: WireEngine.WireConnectionStrategy =
-                (direction == .horizontal) ? .horizontalThenVertical : .verticalThenHorizontal
-            let fromPoint = startPoint
-            let toPoint = location
-
-            // Finish only when hitting a pin or anything in the schematic graph subtree
-            if shouldFinish(at: location, context: context.renderContext) {
-                self.state = .idle
-            } else {
-                // Continue drawing from the new point, toggling direction only for straight lines
-                let isStraightLine = (startPoint.x == location.x || startPoint.y == location.y)
-                let newDirection = isStraightLine ? direction.toggled() : direction
-                self.state = .drawing(startPoint: location, direction: newDirection)
-            }
-            Task { @MainActor in
-                wireEngine.connect(from: fromPoint, to: toPoint, preferring: strategy)
-            }
+//            // Same-point click
+//            if startPoint == location {
+//                // Double-click at the same location stops the tool
+//                if context.clickCount >= 2 {
+//                    self.state = .idle
+//                }
+//                // Either way, no new segment from a zero-length click
+//                return .noResult
+//            }
+//
+//            // Create the request node
+//            let strategy: WireEngine.WireConnectionStrategy =
+//                (direction == .horizontal) ? .horizontalThenVertical : .verticalThenHorizontal
+//            let fromPoint = startPoint
+//            let toPoint = location
+//
+//            // Finish only when hitting a pin or anything in the schematic graph subtree
+//            if shouldFinish(at: location, context: context.renderContext) {
+//                self.state = .idle
+//            } else {
+//                // Continue drawing from the new point, toggling direction only for straight lines
+//                let isStraightLine = (startPoint.x == location.x || startPoint.y == location.y)
+//                let newDirection = isStraightLine ? direction.toggled() : direction
+//                self.state = .drawing(startPoint: location, direction: newDirection)
+//            }
+//            Task { @MainActor in
+//                wireEngine.connect(from: fromPoint, to: toPoint, preferring: strategy)
+//            }
             return .noResult
         }
     }

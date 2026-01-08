@@ -20,12 +20,12 @@ final class TraceTool: CanvasTool {
         case drawing(lastPoint: CGPoint)
     }
     private var state: State = .idle
-    private let traceEngine: TraceEngine
+//    private let traceEngine: TraceEngine
 
-    init(traceEngine: TraceEngine) {
-        self.traceEngine = traceEngine
-        super.init()
-    }
+//    init(traceEngine: TraceEngine) {
+//        self.traceEngine = traceEngine
+//        super.init()
+//    }
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         guard let activeLayerId = context.activeLayerId else {
@@ -42,23 +42,23 @@ final class TraceTool: CanvasTool {
             return .noResult
 
         case .drawing(let lastPoint):
-            if context.clickCount >= 2 && location == lastPoint {
-                self.state = .idle
-                return .noResult
-            }
-
-            let pathPoints = calculateOptimalPath(from: lastPoint, to: location)
-            // Pass the current, potentially user-modified, width to the request node.
-            let newLastPoint = pathPoints.last ?? location
-            self.state = .drawing(lastPoint: newLastPoint)
-
-            Task { @MainActor in
-                traceEngine.addTrace(
-                    path: pathPoints,
-                    width: traceWidth,
-                    layerId: activeLayerId
-                )
-            }
+//            if context.clickCount >= 2 && location == lastPoint {
+//                self.state = .idle
+//                return .noResult
+//            }
+//
+//            let pathPoints = calculateOptimalPath(from: lastPoint, to: location)
+//            // Pass the current, potentially user-modified, width to the request node.
+//            let newLastPoint = pathPoints.last ?? location
+//            self.state = .drawing(lastPoint: newLastPoint)
+//
+//            Task { @MainActor in
+//                traceEngine.addTrace(
+//                    path: pathPoints,
+//                    width: traceWidth,
+//                    layerId: activeLayerId
+//                )
+//            }
             return .noResult
         }
     }
