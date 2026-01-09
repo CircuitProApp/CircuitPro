@@ -104,7 +104,7 @@ struct AppearanceSettingsView: View {
                 )
 
                 CanvasColorPickerView(
-                    title: "Markers",
+                    title: "Drawing Sheet",
                     hex: hexBinding(for: \.markerHex),
                     showReset: isFieldModified(.marker),
                     onReset: { resetSelectedField(.marker) }

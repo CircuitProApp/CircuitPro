@@ -20,7 +20,7 @@ enum InspectorTab: SidebarTab {
         }
     }
     
-    var icon: String {
+    var iconName: String {
         switch self {
         case .attributes:
             return "slider.horizontal.3"

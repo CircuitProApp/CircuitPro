@@ -531,13 +531,14 @@ final class ElementsRenderLayer: RenderLayer {
 
         var guides: [DrawingPrimitive] = []
 
+        let guideColor = anchorGuideColor(for: context)
         if let connector = anchorConnectorPath(anchorPoint: anchorPoint, textBounds: textBounds) {
             let dashLength = 4 / context.magnification
             let gapLength = 2 / context.magnification
             guides.append(
                 .stroke(
                     path: connector,
-                    color: NSColor.systemOrange.cgColor,
+                    color: guideColor,
                     lineWidth: 1 / context.magnification,
                     lineCap: .round,
                     lineJoin: .round,
@@ -556,7 +557,7 @@ final class ElementsRenderLayer: RenderLayer {
         guides.append(
             .stroke(
                 path: cross,
-                color: NSColor.systemOrange.cgColor,
+                color: guideColor,
                 lineWidth: 1 / context.magnification
             )
         )
@@ -590,6 +591,15 @@ final class ElementsRenderLayer: RenderLayer {
         path.move(to: anchorPoint)
         path.addLine(to: edgePoint)
         return path
+    }
+
+    private func anchorGuideColor(for context: RenderContext) -> CGColor {
+        let base = textColor(for: context)
+        guard let nsColor = NSColor(cgColor: base) else {
+            return base
+        }
+        let blended = nsColor.blended(withFraction: 0.6, of: .black) ?? nsColor
+        return blended.withAlphaComponent(0.7).cgColor
     }
 
     private func displayText(for text: CircuitText.Definition, context: RenderContext) -> String {
