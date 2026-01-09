@@ -7,28 +7,6 @@
 
 import SwiftUI
 
-private enum SettingsRoute: String, Hashable, CaseIterable {
-    case appearance
-
-    var label: String {
-        switch self {
-        case .appearance: return "Appearance"
-        }
-    }
-
-    var iconName: String {
-        switch self {
-        case .appearance: return "paintbrush"
-        }
-    }
-
-    var iconColor: Color {
-        switch self {
-        case .appearance: return .blue
-        }
-    }
-}
-
 struct SettingsView: View {
     @State private var selection: SettingsRoute? = .appearance
 
@@ -37,8 +15,7 @@ struct SettingsView: View {
             List(selection: $selection) {
                 ForEach(SettingsRoute.allCases, id: \.self) { route in
                     NavigationLink(value: route) {
-                        SettingsLabel(
-                            title: route.label, icon: route.iconName, color: route.iconColor)
+                        settingsLabel(title: route.label, icon: route.iconName, color: route.iconColor)
                     }
                 }
             }
@@ -56,14 +33,8 @@ struct SettingsView: View {
         }
         .frame(minWidth: 700, minHeight: 500)
     }
-}
-
-private struct SettingsLabel: View {
-    let title: String
-    let icon: String
-    let color: Color
-
-    var body: some View {
+    
+    private func settingsLabel(title: String, icon: String, color: Color) -> some View {
         Label {
             Text(title)
         } icon: {
