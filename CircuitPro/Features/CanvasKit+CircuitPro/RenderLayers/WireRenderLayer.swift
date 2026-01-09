@@ -22,7 +22,7 @@ final class WireRenderLayer: RenderLayer {
             context: routingContext
         )
 
-        let strokeColor = context.environment.canvasTheme.textColor
+        let strokeColor = NSColor.systemBlue.cgColor
         for route in routes.values {
             guard let manhattan = route as? ManhattanRoute else { continue }
             let points = manhattan.points
@@ -37,11 +37,34 @@ final class WireRenderLayer: RenderLayer {
             let shape = CAShapeLayer()
             shape.path = path
             shape.strokeColor = strokeColor
-            shape.lineWidth = 2.0
+            shape.lineWidth = 1.0
             shape.lineCap = .round
             shape.lineJoin = .round
             shape.fillColor = nil
             contentLayer.addSublayer(shape)
+        }
+
+        let positions = context.connectionPointPositionsByID
+        var degreeByID: [UUID: Int] = [:]
+        for link in context.connectionLinks {
+            degreeByID[link.startID, default: 0] += 1
+            degreeByID[link.endID, default: 0] += 1
+        }
+
+        for (id, degree) in degreeByID where degree >= 3 {
+            guard let position = positions[id] else { continue }
+            let dotRadius: CGFloat = 3.0
+            let rect = CGRect(
+                x: position.x - dotRadius,
+                y: position.y - dotRadius,
+                width: dotRadius * 2,
+                height: dotRadius * 2
+            )
+            let dot = CAShapeLayer()
+            dot.path = CGPath(ellipseIn: rect, transform: nil)
+            dot.fillColor = strokeColor
+            dot.strokeColor = nil
+            contentLayer.addSublayer(dot)
         }
     }
 }
