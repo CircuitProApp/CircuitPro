@@ -29,6 +29,26 @@ struct InspectorView: View {
         return singleSelectedID
     }
 
+    private var selectedSchematicTextBinding: Binding<CircuitText.Resolved>? {
+        guard editorSession.selectedEditor == .schematic,
+              let selectedID = selectedSchematicID
+        else { return nil }
+        return componentTextBinding(
+            for: selectedID,
+            target: .symbol
+        )
+    }
+
+    private var selectedLayoutTextBinding: Binding<CircuitText.Resolved>? {
+        guard editorSession.selectedEditor == .layout,
+              let selectedID = selectedLayoutID
+        else { return nil }
+        return componentTextBinding(
+            for: selectedID,
+            target: .footprint
+        )
+    }
+
     /// A computed property that finds the ComponentInstance for a selected schematic symbol.
     private var selectedSymbolComponent: ComponentInstance? {
         guard editorSession.selectedEditor == .schematic,
@@ -75,7 +95,9 @@ struct InspectorView: View {
     /// The view content to display when the Schematic editor is active.
     @ViewBuilder
     private var schematicInspectorView: some View {
-        if let component = selectedSymbolComponent {
+        if let textBinding = selectedSchematicTextBinding {
+            ResolvedTextInspectorView(text: textBinding)
+        } else if let component = selectedSymbolComponent {
             SymbolNodeInspectorHostView(
                 component: component,
                 selectedTab: $selectedTab
@@ -89,7 +111,9 @@ struct InspectorView: View {
     /// The view content to display when the Layout editor is active.
     @ViewBuilder
     private var layoutInspectorView: some View {
-        if let context = selectedFootprintContext {
+        if let textBinding = selectedLayoutTextBinding {
+            ResolvedTextInspectorView(text: textBinding)
+        } else if let context = selectedFootprintContext {
             FootprintNodeInspectorView(
                 component: context.component,
                 footprint: context.footprint
@@ -112,5 +136,52 @@ struct InspectorView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func componentTextBinding(
+        for selectedID: UUID,
+        target: TextTarget
+    ) -> Binding<CircuitText.Resolved>? {
+        for component in projectManager.componentInstances {
+            let resolvedItems: [CircuitText.Resolved]
+            switch target {
+            case .symbol:
+                resolvedItems = component.symbolInstance.resolvedItems
+            case .footprint:
+                resolvedItems = component.footprintInstance?.resolvedItems ?? []
+            }
+
+            for resolved in resolvedItems {
+                let textID = CanvasTextID.makeID(
+                    for: resolved.source,
+                    ownerID: component.id,
+                    fallback: resolved.id
+                )
+                guard textID == selectedID else { continue }
+
+                return Binding(
+                    get: {
+                        let currentItems: [CircuitText.Resolved]
+                        switch target {
+                        case .symbol:
+                            currentItems = component.symbolInstance.resolvedItems
+                        case .footprint:
+                            currentItems = component.footprintInstance?.resolvedItems ?? []
+                        }
+                        return currentItems.first(where: { item in
+                            CanvasTextID.makeID(
+                                for: item.source,
+                                ownerID: component.id,
+                                fallback: item.id
+                            ) == selectedID
+                        }) ?? resolved
+                    },
+                    set: { updated in
+                        component.apply(updated, for: target)
+                    }
+                )
+            }
+        }
+        return nil
     }
 }
