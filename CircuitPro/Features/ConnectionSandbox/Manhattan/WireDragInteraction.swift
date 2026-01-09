@@ -1,6 +1,6 @@
 import AppKit
 
-final class WireEdgeDragInteraction: CanvasInteraction {
+final class WireDragInteraction: CanvasInteraction {
     private struct DragState {
         let edgeID: UUID
         let startID: UUID

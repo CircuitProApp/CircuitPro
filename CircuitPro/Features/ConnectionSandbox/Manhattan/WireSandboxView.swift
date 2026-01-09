@@ -37,7 +37,7 @@ struct WireSandboxView: View {
             ],
             interactions: [
                 ToolInteraction(),
-                WireEdgeDragInteraction(),
+                WireDragInteraction(),
             ],
             inputProcessors: [
                 GridSnapProcessor(),
@@ -47,7 +47,7 @@ struct WireSandboxView: View {
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
-        .overlay(alignment: .topLeading) {
+        .overlay(alignment: .bottomLeading) {
             VStack {
                 Button {
                     if selectedTool?.id == wireTool.id {

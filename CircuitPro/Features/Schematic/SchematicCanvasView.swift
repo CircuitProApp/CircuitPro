@@ -28,6 +28,7 @@ struct SchematicCanvasView: View {
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),
+                WireRenderLayer(),
                 ElementsRenderLayer(),
                 PreviewRenderLayer(),
                 MarqueeRenderLayer(),
@@ -39,6 +40,7 @@ struct SchematicCanvasView: View {
                 ToolInteraction(),
                 SelectionInteraction(),
                 DragInteraction(),
+                WireDragInteraction(),
                 MarqueeInteraction(),
             ],
             inputProcessors: [GridSnapProcessor()],

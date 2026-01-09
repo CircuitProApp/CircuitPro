@@ -11,11 +11,18 @@ final class SchematicEditorController {
     private let projectManager: ProjectManager
     private let document: CircuitProjectFileDocument
     var items: [any CanvasItem] {
-        get { projectManager.selectedDesign.componentInstances }
+        get {
+            let design = projectManager.selectedDesign
+            return design.componentInstances + design.wirePoints + design.wireLinks
+        }
         set {
-            projectManager.selectedDesign.componentInstances = newValue.compactMap {
-                $0 as? ComponentInstance
-            }
+            let components = newValue.compactMap { $0 as? ComponentInstance }
+            let wirePoints = newValue.compactMap { $0 as? WireVertex }
+            let wireLinks = newValue.compactMap { $0 as? WireSegment }
+
+            projectManager.selectedDesign.componentInstances = components
+            projectManager.selectedDesign.wirePoints = wirePoints
+            projectManager.selectedDesign.wireLinks = wireLinks
             document.scheduleAutosave()
         }
     }

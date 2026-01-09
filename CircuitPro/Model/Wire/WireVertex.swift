@@ -9,7 +9,7 @@ import CoreGraphics
 import Foundation
 
 /// A lightweight wire point that can participate in CanvasKit interactions.
-struct WireVertex: CanvasItem, ConnectionPoint, Hashable {
+struct WireVertex: CanvasItem, ConnectionPoint, Hashable, Codable {
     let id: UUID
     var position: CGPoint
 
