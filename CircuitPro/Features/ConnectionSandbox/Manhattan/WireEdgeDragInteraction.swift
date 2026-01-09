@@ -126,7 +126,8 @@ final class WireEdgeDragInteraction: CanvasInteraction {
     }
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
-        guard let itemsBinding = context.environment.items,
+        guard dragState != nil,
+              let itemsBinding = context.environment.items,
               let engine = context.connectionEngine
         else {
             dragState = nil
