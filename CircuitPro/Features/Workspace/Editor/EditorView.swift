@@ -55,15 +55,24 @@ struct EditorView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(selectedCanvasManager)
-        .onAppear { applyCanvasTheme() }
-        .onChange(of: appearance) { applyCanvasTheme() }
-        .onChange(of: stylesData) { applyCanvasTheme() }
-        .onChange(of: selectedLightStyleID) { applyCanvasTheme() }
-        .onChange(of: selectedDarkStyleID) { applyCanvasTheme() }
-        .onChange(of: colorScheme) { applyCanvasTheme() }
+        .onAppear { applyThemes() }
+        .onChange(of: appearance) { applyThemes() }
+        .onChange(of: stylesData) { applyThemes() }
+        .onChange(of: selectedLightStyleID) { applyThemes() }
+        .onChange(of: selectedDarkStyleID) { applyThemes() }
+        .onChange(of: colorScheme) { applyThemes() }
     }
 
-    private func applyCanvasTheme() {
+    private func applyThemes() {
+        let style = selectedStyle()
+        let canvasTheme = CanvasThemeSettings.makeTheme(from: style)
+        let schematicTheme = SchematicThemeSettings.makeTheme(from: style)
+        schematicCanvasManager.applyTheme(canvasTheme)
+        schematicCanvasManager.applySchematicTheme(schematicTheme)
+        layoutCanvasManager.applyTheme(canvasTheme)
+    }
+
+    private func selectedStyle() -> CanvasStyle {
         let styles = CanvasStyleStore.loadStyles(from: stylesData)
         let appAppearance = AppAppearance(rawValue: appearance) ?? .system
         let effectiveScheme: ColorScheme = {
@@ -74,9 +83,6 @@ struct EditorView: View {
             }
         }()
         let selectedID = effectiveScheme == .dark ? selectedDarkStyleID : selectedLightStyleID
-        let style = CanvasStyleStore.selectedStyle(from: styles, selectedID: selectedID)
-        let theme = CanvasThemeSettings.makeTheme(from: style)
-        schematicCanvasManager.applyTheme(theme)
-        layoutCanvasManager.applyTheme(theme)
+        return CanvasStyleStore.selectedStyle(from: styles, selectedID: selectedID)
     }
 }

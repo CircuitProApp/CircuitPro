@@ -22,7 +22,7 @@ final class WireRenderLayer: RenderLayer {
             context: routingContext
         )
 
-        let strokeColor = NSColor.systemBlue.cgColor
+        let strokeColor = context.environment.schematicTheme.wireColor
         for route in routes.values {
             guard let manhattan = route as? ManhattanRoute else { continue }
             let points = manhattan.points

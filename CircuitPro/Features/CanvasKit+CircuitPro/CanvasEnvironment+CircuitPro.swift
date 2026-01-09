@@ -36,6 +36,20 @@ struct CanvasTheme {
     )
 }
 
+struct SchematicTheme {
+    var symbolColor: CGColor
+    var pinColor: CGColor
+    var textColor: CGColor
+    var wireColor: CGColor
+
+    static let `default` = SchematicTheme(
+        symbolColor: NSColor.labelColor.cgColor,
+        pinColor: NSColor.systemBlue.cgColor,
+        textColor: NSColor.labelColor.cgColor,
+        wireColor: NSColor.systemBlue.cgColor
+    )
+}
+
 struct Snapping {
     var isEnabled: Bool = true
     // var snapToGrid: Bool = true
@@ -50,6 +64,10 @@ private struct ConfigurationKey: CanvasEnvironmentKey {
 
 private struct CanvasThemeKey: CanvasEnvironmentKey {
     static let defaultValue = CanvasTheme.default
+}
+
+private struct SchematicThemeKey: CanvasEnvironmentKey {
+    static let defaultValue = SchematicTheme.default
 }
 
 private struct MarqueeRectKey: CanvasEnvironmentKey {
@@ -82,6 +100,11 @@ extension CanvasEnvironmentValues {
     var canvasTheme: CanvasTheme {
         get { self[CanvasThemeKey.self] }
         set { self[CanvasThemeKey.self] = newValue }
+    }
+
+    var schematicTheme: SchematicTheme {
+        get { self[SchematicThemeKey.self] }
+        set { self[SchematicThemeKey.self] = newValue }
     }
 
     var marqueeRect: CGRect? {

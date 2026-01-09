@@ -78,13 +78,13 @@ struct ComponentDesignView: View {
         .onAppear {
             symbolCanvasManager.viewport.size = PaperSize.component.canvasSize()
             footprintCanvasManager.viewport.size = PaperSize.component.canvasSize()
-            applyCanvasTheme()
+            applyThemes()
         }
-        .onChange(of: appearance) { applyCanvasTheme() }
-        .onChange(of: stylesData) { applyCanvasTheme() }
-        .onChange(of: selectedLightStyleID) { applyCanvasTheme() }
-        .onChange(of: selectedDarkStyleID) { applyCanvasTheme() }
-        .onChange(of: colorScheme) { applyCanvasTheme() }
+        .onChange(of: appearance) { applyThemes() }
+        .onChange(of: stylesData) { applyThemes() }
+        .onChange(of: selectedLightStyleID) { applyThemes() }
+        .onChange(of: selectedDarkStyleID) { applyThemes() }
+        .onChange(of: colorScheme) { applyThemes() }
         .alert(
             "Error", isPresented: $showError,
             actions: {
@@ -242,7 +242,7 @@ struct ComponentDesignView: View {
         }
     }
 
-    private func applyCanvasTheme() {
+    private func applyThemes() {
         let styles = CanvasStyleStore.loadStyles(from: stylesData)
         let appAppearance = AppAppearance(rawValue: appearance) ?? .system
         let effectiveScheme: ColorScheme = {
@@ -254,9 +254,11 @@ struct ComponentDesignView: View {
         }()
         let selectedID = effectiveScheme == .dark ? selectedDarkStyleID : selectedLightStyleID
         let style = CanvasStyleStore.selectedStyle(from: styles, selectedID: selectedID)
-        let theme = CanvasThemeSettings.makeTheme(from: style)
-        symbolCanvasManager.applyTheme(theme)
-        footprintCanvasManager.applyTheme(theme)
+        let canvasTheme = CanvasThemeSettings.makeTheme(from: style)
+        let schematicTheme = SchematicThemeSettings.makeTheme(from: style)
+        symbolCanvasManager.applyTheme(canvasTheme)
+        symbolCanvasManager.applySchematicTheme(schematicTheme)
+        footprintCanvasManager.applyTheme(canvasTheme)
     }
 
     private func resetForNewComponent() {

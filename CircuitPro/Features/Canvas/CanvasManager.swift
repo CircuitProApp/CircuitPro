@@ -24,4 +24,8 @@ final class CanvasManager {
     func applyTheme(_ theme: CanvasTheme) {
         environment.canvasTheme = theme
     }
+
+    func applySchematicTheme(_ theme: SchematicTheme) {
+        environment.schematicTheme = theme
+    }
 }

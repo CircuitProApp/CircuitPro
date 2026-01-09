@@ -110,7 +110,7 @@ final class WireTool: CanvasTool {
         return [
             .stroke(
                 path: path,
-                color: NSColor.systemBlue.cgColor,
+                color: context.environment.schematicTheme.wireColor,
                 lineWidth: 1.0,
                 lineDash: [4, 4]
             )

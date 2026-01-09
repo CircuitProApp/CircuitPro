@@ -51,7 +51,7 @@ struct AppearanceSettingsView: View {
                 .pickerStyle(.segmented)
             }
 
-            Section("Canvas") {
+            Section("Theme") {
                 VStack(spacing: 12) {
                     Picker("", selection: $assignMode) {
                         ForEach(AssignMode.allCases) { mode in
@@ -96,7 +96,9 @@ struct AppearanceSettingsView: View {
                     )
                 )
                 .disabled(selectedStyle.isBuiltin)
+            }
 
+            Section("Canvas") {
                 CanvasColorPickerView(
                     title: "Background",
                     hex: hexBinding(for: \.backgroundHex),
@@ -112,13 +114,6 @@ struct AppearanceSettingsView: View {
                 )
 
                 CanvasColorPickerView(
-                    title: "Text",
-                    hex: hexBinding(for: \.textHex),
-                    showReset: isFieldModified(.text),
-                    onReset: { resetSelectedField(.text) }
-                )
-
-                CanvasColorPickerView(
                     title: "Markers",
                     hex: hexBinding(for: \.markerHex),
                     showReset: isFieldModified(.marker),
@@ -131,7 +126,39 @@ struct AppearanceSettingsView: View {
                     showReset: isFieldModified(.crosshair),
                     onReset: { resetSelectedField(.crosshair) }
                 )
+            }
 
+            Section("Schematic") {
+                CanvasColorPickerView(
+                    title: "Symbols",
+                    hex: hexBinding(for: \.schematicSymbolHex),
+                    showReset: isFieldModified(.schematicSymbol),
+                    onReset: { resetSelectedField(.schematicSymbol) }
+                )
+
+                CanvasColorPickerView(
+                    title: "Pins",
+                    hex: hexBinding(for: \.schematicPinHex),
+                    showReset: isFieldModified(.schematicPin),
+                    onReset: { resetSelectedField(.schematicPin) }
+                )
+
+                CanvasColorPickerView(
+                    title: "Text",
+                    hex: hexBinding(for: \.schematicTextHex),
+                    showReset: isFieldModified(.schematicText),
+                    onReset: { resetSelectedField(.schematicText) }
+                )
+
+                CanvasColorPickerView(
+                    title: "Wire",
+                    hex: hexBinding(for: \.schematicWireHex),
+                    showReset: isFieldModified(.schematicWire),
+                    onReset: { resetSelectedField(.schematicWire) }
+                )
+            }
+
+            Section {
                 HStack {
                     Spacer()
                     if selectedStyle.isBuiltin {
@@ -198,6 +225,10 @@ struct AppearanceSettingsView: View {
             textHex: source.textHex,
             markerHex: source.markerHex,
             crosshairHex: source.crosshairHex,
+            schematicSymbolHex: source.schematicSymbolHex,
+            schematicPinHex: source.schematicPinHex,
+            schematicTextHex: source.schematicTextHex,
+            schematicWireHex: source.schematicWireHex,
             isBuiltin: false
         )
         updatedStyles.append(copy)
@@ -244,6 +275,10 @@ struct AppearanceSettingsView: View {
             style.textHex = defaults.textHex
             style.markerHex = defaults.markerHex
             style.crosshairHex = defaults.crosshairHex
+            style.schematicSymbolHex = defaults.schematicSymbolHex
+            style.schematicPinHex = defaults.schematicPinHex
+            style.schematicTextHex = defaults.schematicTextHex
+            style.schematicWireHex = defaults.schematicWireHex
         }
     }
 
@@ -254,9 +289,12 @@ struct AppearanceSettingsView: View {
     private enum StyleField {
         case background
         case grid
-        case text
         case marker
         case crosshair
+        case schematicSymbol
+        case schematicPin
+        case schematicText
+        case schematicWire
     }
 
     private func isFieldModified(_ field: StyleField) -> Bool {
@@ -266,9 +304,12 @@ struct AppearanceSettingsView: View {
         switch field {
         case .background: return selectedStyle.backgroundHex != defaults.backgroundHex
         case .grid: return selectedStyle.gridHex != defaults.gridHex
-        case .text: return selectedStyle.textHex != defaults.textHex
         case .marker: return selectedStyle.markerHex != defaults.markerHex
         case .crosshair: return selectedStyle.crosshairHex != defaults.crosshairHex
+        case .schematicSymbol: return selectedStyle.schematicSymbolHex != defaults.schematicSymbolHex
+        case .schematicPin: return selectedStyle.schematicPinHex != defaults.schematicPinHex
+        case .schematicText: return selectedStyle.schematicTextHex != defaults.schematicTextHex
+        case .schematicWire: return selectedStyle.schematicWireHex != defaults.schematicWireHex
         }
     }
 
@@ -282,12 +323,18 @@ struct AppearanceSettingsView: View {
                 style.backgroundHex = defaults.backgroundHex
             case .grid:
                 style.gridHex = defaults.gridHex
-            case .text:
-                style.textHex = defaults.textHex
             case .marker:
                 style.markerHex = defaults.markerHex
             case .crosshair:
                 style.crosshairHex = defaults.crosshairHex
+            case .schematicSymbol:
+                style.schematicSymbolHex = defaults.schematicSymbolHex
+            case .schematicPin:
+                style.schematicPinHex = defaults.schematicPinHex
+            case .schematicText:
+                style.schematicTextHex = defaults.schematicTextHex
+            case .schematicWire:
+                style.schematicWireHex = defaults.schematicWireHex
             }
         }
     }

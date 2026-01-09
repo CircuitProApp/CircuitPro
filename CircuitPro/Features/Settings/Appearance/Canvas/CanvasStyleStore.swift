@@ -14,6 +14,10 @@ enum CanvasStyleStore {
                 textHex: "#1C1C1E",
                 markerHex: "#2C2C2E",
                 crosshairHex: "#3B82F6",
+                schematicSymbolHex: "#3B82F6",
+                schematicPinHex: "#3B82F6",
+                schematicTextHex: "#1C1C1E",
+                schematicWireHex: "#3B82F6",
                 isBuiltin: true
             ),
             CanvasStyle(
@@ -24,6 +28,10 @@ enum CanvasStyleStore {
                 textHex: "#2D4C3E",
                 markerHex: "#7F6A55",
                 crosshairHex: "#A64B44",
+                schematicSymbolHex: "#A64B44",
+                schematicPinHex: "#A64B44",
+                schematicTextHex: "#2D4C3E",
+                schematicWireHex: "#A64B44",
                 isBuiltin: true
             ),
             CanvasStyle(
@@ -34,6 +42,10 @@ enum CanvasStyleStore {
                 textHex: "#E0E1DD",
                 markerHex: "#98C1D9",
                 crosshairHex: "#E0E1DD",
+                schematicSymbolHex: "#98C1D9",
+                schematicPinHex: "#98C1D9",
+                schematicTextHex: "#E0E1DD",
+                schematicWireHex: "#98C1D9",
                 isBuiltin: true
             ),
             CanvasStyle(
@@ -44,6 +56,10 @@ enum CanvasStyleStore {
                 textHex: "#F2F2F7",
                 markerHex: "#AEAEB2",
                 crosshairHex: "#60A5FA",
+                schematicSymbolHex: "#60A5FA",
+                schematicPinHex: "#60A5FA",
+                schematicTextHex: "#F2F2F7",
+                schematicWireHex: "#60A5FA",
                 isBuiltin: true
             ),
             CanvasStyle(
@@ -54,6 +70,10 @@ enum CanvasStyleStore {
                 textHex: "#FCFAED",
                 markerHex: "#D2B48C",
                 crosshairHex: "#FFFFFF",
+                schematicSymbolHex: "#FFFFFF",
+                schematicPinHex: "#FFFFFF",
+                schematicTextHex: "#FCFAED",
+                schematicWireHex: "#FFFFFF",
                 isBuiltin: true
             ),
         ]

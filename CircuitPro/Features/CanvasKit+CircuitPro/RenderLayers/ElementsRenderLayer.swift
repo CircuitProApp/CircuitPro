@@ -141,7 +141,11 @@ final class ElementsRenderLayer: RenderLayer {
             var bodyPrimitives: [LayeredDrawingPrimitive] = []
 
             for primitive in symbolDef.primitives {
-                let color = resolveColor(for: primitive, in: context)
+                let color = resolveColor(
+                    for: primitive,
+                    in: context,
+                    fallback: context.environment.schematicTheme.symbolColor
+                )
                 let drawPrimitives = primitive.makeDrawingPrimitives(with: color)
                 guard !drawPrimitives.isEmpty else { continue }
 
@@ -157,7 +161,9 @@ final class ElementsRenderLayer: RenderLayer {
             }
 
             for pin in symbolDef.pins {
+                let pinColor = context.environment.schematicTheme.pinColor
                 let localPrimitives = pin.makeDrawingPrimitives()
+                    .map { recolor($0, to: pinColor) }
                 guard !localPrimitives.isEmpty else { continue }
                 var transform = CGAffineTransform(
                     translationX: pin.position.x, y: pin.position.y
@@ -203,7 +209,11 @@ final class ElementsRenderLayer: RenderLayer {
             )
 
             for primitive in primitives {
-                let color = resolveColor(for: primitive, in: context)
+                let color = resolveColor(
+                    for: primitive,
+                    in: context,
+                    fallback: NSColor.systemBlue.cgColor
+                )
                 let drawPrimitives = primitive.makeDrawingPrimitives(with: color)
                 guard !drawPrimitives.isEmpty else { continue }
 
@@ -253,7 +263,9 @@ final class ElementsRenderLayer: RenderLayer {
     }
 
     private func renderable(for pin: Pin, context: RenderContext) -> RenderableItem {
+        let pinColor = pinColor(for: context)
         let localPrimitives = pin.makeDrawingPrimitives()
+            .map { recolor($0, to: pinColor) }
         var transform = CGAffineTransform(translationX: pin.position.x, y: pin.position.y)
         let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
         let layered = worldPrimitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
@@ -298,7 +310,7 @@ final class ElementsRenderLayer: RenderLayer {
         guard !path.isEmpty else { return nil }
 
         var primitives: [DrawingPrimitive] = []
-        primitives.append(.fill(path: path, color: context.environment.canvasTheme.textColor))
+        primitives.append(.fill(path: path, color: textColor(for: context)))
 
         let anchorPoint = CanvasTextGeometry.worldAnchorPosition(
             anchorPosition: text.anchorPosition,
@@ -361,7 +373,7 @@ final class ElementsRenderLayer: RenderLayer {
             guard !path.isEmpty else { continue }
 
             var primitives: [DrawingPrimitive] = []
-            primitives.append(.fill(path: path, color: context.environment.canvasTheme.textColor))
+            primitives.append(.fill(path: path, color: textColor(for: context)))
 
             let anchorPoint = CanvasTextGeometry.worldAnchorPosition(
                 anchorPosition: resolvedText.anchorPosition,
@@ -459,9 +471,11 @@ final class ElementsRenderLayer: RenderLayer {
         }
     }
 
-    private func resolveColor(for primitive: AnyCanvasPrimitive, in context: RenderContext)
-        -> CGColor
-    {
+    private func resolveColor(
+        for primitive: AnyCanvasPrimitive,
+        in context: RenderContext,
+        fallback: CGColor
+    ) -> CGColor {
         if let overrideColor = primitive.color?.cgColor {
             return overrideColor
         }
@@ -470,7 +484,42 @@ final class ElementsRenderLayer: RenderLayer {
         {
             return layer.color
         }
-        return NSColor.systemBlue.cgColor
+        return fallback
+    }
+
+    private func textColor(for context: RenderContext) -> CGColor {
+        switch context.environment.textTarget {
+        case .symbol:
+            return context.environment.schematicTheme.textColor
+        case .footprint:
+            return context.environment.canvasTheme.textColor
+        }
+    }
+
+    private func pinColor(for context: RenderContext) -> CGColor {
+        switch context.environment.textTarget {
+        case .symbol:
+            return context.environment.schematicTheme.pinColor
+        case .footprint:
+            return NSColor.systemBlue.cgColor
+        }
+    }
+
+    private func recolor(_ primitive: DrawingPrimitive, to color: CGColor) -> DrawingPrimitive {
+        switch primitive {
+        case let .fill(path, _, rule):
+            return .fill(path: path, color: color, rule: rule)
+        case let .stroke(path, _, lineWidth, lineCap, lineJoin, miterLimit, lineDash):
+            return .stroke(
+                path: path,
+                color: color,
+                lineWidth: lineWidth,
+                lineCap: lineCap,
+                lineJoin: lineJoin,
+                miterLimit: miterLimit,
+                lineDash: lineDash
+            )
+        }
     }
 
     private func anchorGuidePrimitives(
