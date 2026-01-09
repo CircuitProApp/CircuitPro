@@ -10,6 +10,7 @@ struct WireEngine: ConnectionEngine {
 
     private var normalizationRules: [NormalizationRule] {
         [
+            SplitDiagonalLinksRule(preferHorizontalFirst: preferHorizontalFirst),
             MergeCoincidentRule(),
             SplitEdgesAtPassingVerticesRule(),
             CollapseLinearRunsRule(),
@@ -59,6 +60,7 @@ struct WireEngine: ConnectionEngine {
             pointsByID: pointsByID,
             pointsByObject: pointsByObject,
             links: links.map { WireSegment(id: $0.id, startID: $0.startID, endID: $0.endID) },
+            addedPoints: [],
             removedPointIDs: [],
             removedLinkIDs: [],
             epsilon: epsilon,
@@ -87,17 +89,19 @@ struct WireEngine: ConnectionEngine {
         }
 
         let removedPointIDs = state.removedPointIDs
+        let addedPointsOut = state.addedPoints.filter { !removedPointIDs.contains($0.id) }
         if removedPointIDs.isEmpty
             && removedLinkIDs.isEmpty
             && updatedLinks.isEmpty
-            && addedLinksOut.isEmpty {
+            && addedLinksOut.isEmpty
+            && addedPointsOut.isEmpty {
             return ConnectionDelta()
         }
 
         return ConnectionDelta(
             removedPointIDs: removedPointIDs,
             updatedPoints: [],
-            addedPoints: [],
+            addedPoints: addedPointsOut,
             removedLinkIDs: removedLinkIDs,
             updatedLinks: updatedLinks,
             addedLinks: addedLinksOut

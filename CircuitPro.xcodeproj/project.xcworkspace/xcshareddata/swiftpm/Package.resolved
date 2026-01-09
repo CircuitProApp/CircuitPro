@@ -16,7 +16,7 @@
       "location" : "https://github.com/CodeEditApp/CodeEditWelcomeWindow",
       "state" : {
         "branch" : "main",
-        "revision" : "c42d5b24a807b98b3b5131e531eb0969762492cc"
+        "revision" : "cef2726ed3bd7b5beb585c9b6829f76d463a224c"
       }
     },
     {
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/lukepistrol/SwiftLintPlugin",
       "state" : {
-        "revision" : "3780efccceaa87f17ec39638a9d263d0e742b71c",
-        "version" : "0.59.1"
+        "revision" : "17c132fe0ce3b4324dc23b575636b223483207b3",
+        "version" : "0.63.0"
       }
     }
   ],

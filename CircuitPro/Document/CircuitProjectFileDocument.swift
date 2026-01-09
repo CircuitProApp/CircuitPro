@@ -170,8 +170,8 @@ private extension CircuitProjectFileDocument {
             }
 
             if let wires = designDir.fileWrappers?[Layout.wires]?.regularFileContents,
-               let wiresArr = try? JSONDecoder().decode([Wire].self, from: wires) {
-                project.designs[index].wires = wiresArr
+               let wireData = try? JSONDecoder().decode(Wire.self, from: wires) {
+                project.designs[index].wires = wireData
             }
 
             if let traces = designDir.fileWrappers?[Layout.traces]?.regularFileContents,

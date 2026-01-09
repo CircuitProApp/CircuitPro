@@ -5,6 +5,7 @@ struct NormalizationState {
     var pointsByID: [UUID: CGPoint]
     let pointsByObject: [UUID: any ConnectionPoint]
     var links: [WireSegment]
+    var addedPoints: [WireVertex]
     var removedPointIDs: Set<UUID>
     var removedLinkIDs: Set<UUID>
     let epsilon: CGFloat

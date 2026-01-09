@@ -46,6 +46,13 @@ class CrosshairsRenderLayer: RenderLayer {
             path.move(to: CGPoint(x: point.x, y: point.y - half))
             path.addLine(to: CGPoint(x: point.x, y: point.y + half))
 
+            // TODO: discuss this type of DSL for CanvasKit
+            // CZStack {
+            //     CLine(length: size, dir: .horizontal)
+            //     CLine(length: size, dir: .vertical)
+            // }
+            // .frame(width: size, height: size)
+            // .position(x: point.x, y: point.y)
         case .hidden:
             break
         }

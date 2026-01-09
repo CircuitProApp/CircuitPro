@@ -1,6 +1,7 @@
 import Observation
 import SwiftDataPacks
 import SwiftUI
+import CoreGraphics
 
 @MainActor
 @Observable
@@ -13,7 +14,8 @@ final class SchematicEditorController {
     var items: [any CanvasItem] {
         get {
             let design = projectManager.selectedDesign
-            return design.componentInstances + design.wirePoints + design.wireLinks
+            let pinPoints = symbolPinPoints(for: design.componentInstances)
+            return design.componentInstances + pinPoints + design.wires.points + design.wires.links
         }
         set {
             let components = newValue.compactMap { $0 as? ComponentInstance }
@@ -21,8 +23,7 @@ final class SchematicEditorController {
             let wireLinks = newValue.compactMap { $0 as? WireSegment }
 
             projectManager.selectedDesign.componentInstances = components
-            projectManager.selectedDesign.wirePoints = wirePoints
-            projectManager.selectedDesign.wireLinks = wireLinks
+            projectManager.selectedDesign.wires = Wire(points: wirePoints, links: wireLinks)
             document.scheduleAutosave()
         }
     }
@@ -31,6 +32,23 @@ final class SchematicEditorController {
         self.projectManager = projectManager
         self.document = projectManager.document
 
+    }
+
+    private func symbolPinPoints(for components: [ComponentInstance]) -> [SymbolPinPoint] {
+        var points: [SymbolPinPoint] = []
+        for component in components {
+            let symbol = component.symbolInstance
+            guard let definition = symbol.definition else { continue }
+
+            let rotation = symbol.rotation
+            let transform = CGAffineTransform(rotationAngle: rotation)
+            for pin in definition.pins {
+                let rotated = pin.position.applying(transform)
+                let position = CGPoint(x: symbol.position.x + rotated.x, y: symbol.position.y + rotated.y)
+                points.append(SymbolPinPoint(symbolID: symbol.id, pinID: pin.id, position: position))
+            }
+        }
+        return points
     }
 
     // MARK: - Public Actions

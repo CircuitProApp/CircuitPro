@@ -14,9 +14,7 @@ class CircuitDesign: Codable, Identifiable {
     var id: UUID
     var name: String
     var componentInstances: [ComponentInstance] = []
-    var wires: [Wire] = []
-    var wirePoints: [WireVertex] = []
-    var wireLinks: [WireSegment] = []
+    var wires: Wire = Wire()
     var traces: [TraceSegment] = []
     // --- ADDED: Each design now has its own layer stackup ---
     var layers: [LayerType] = []
@@ -30,17 +28,13 @@ class CircuitDesign: Codable, Identifiable {
         id: UUID = UUID(),
         name: String,
         componentInstances: [ComponentInstance] = [],
-        wires: [Wire] = [],
-        wirePoints: [WireVertex] = [],
-        wireLinks: [WireSegment] = [],
+        wires: Wire = Wire(),
         traces: [TraceSegment] = []
     ) {
         self.id = id
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.componentInstances = componentInstances
         self.wires = wires
-        self.wirePoints = wirePoints
-        self.wireLinks = wireLinks
         self.traces = traces
         // When a new design is created, generate its standard layers.
         self.layers = LayerType.defaultStackup(layerCount: .two)
@@ -52,8 +46,6 @@ class CircuitDesign: Codable, Identifiable {
         case _name = "name"
         case _componentInstances = "componentInstances"
         case _wires = "wires"
-        case _wirePoints = "wirePoints"
-        case _wireLinks = "wireLinks"
         case _traces = "traces"
         case _layers = "layers"
     }
@@ -64,9 +56,7 @@ class CircuitDesign: Codable, Identifiable {
         self.id = try container.decode(UUID.self, forKey: ._id)
         self.name = try container.decode(String.self, forKey: ._name)
         self.componentInstances = try container.decode([ComponentInstance].self, forKey: ._componentInstances)
-        self.wires = try container.decode([Wire].self, forKey: ._wires)
-        self.wirePoints = try container.decodeIfPresent([WireVertex].self, forKey: ._wirePoints) ?? []
-        self.wireLinks = try container.decodeIfPresent([WireSegment].self, forKey: ._wireLinks) ?? []
+        self.wires = (try? container.decode(Wire.self, forKey: ._wires)) ?? Wire()
         self.traces = try container.decodeIfPresent([TraceSegment].self, forKey: ._traces) ?? []
 
         // For backward compatibility: if the 'layers' key doesn't exist in an old project file,
@@ -80,8 +70,6 @@ class CircuitDesign: Codable, Identifiable {
         try container.encode(self.name, forKey: ._name)
         try container.encode(self.componentInstances, forKey: ._componentInstances)
         try container.encode(self.wires, forKey: ._wires)
-        try container.encode(self.wirePoints, forKey: ._wirePoints)
-        try container.encode(self.wireLinks, forKey: ._wireLinks)
         try container.encode(self.traces, forKey: ._traces)
         try container.encode(self.layers, forKey: ._layers)
     }

@@ -3,16 +3,16 @@ import AppKit
 final class WireDragInteraction: CanvasInteraction {
     private struct DragState {
         let edgeID: UUID
-        let startID: UUID
-        let endID: UUID
+        var startID: UUID
+        var endID: UUID
         let origin: CGPoint
-        let startPosition: CGPoint
-        let endPosition: CGPoint
-        let originalPositions: [UUID: CGPoint]
-        let linkAxis: [UUID: Axis]
-        let adjacency: [UUID: [UUID]]
-        let linkEndpoints: [UUID: (UUID, UUID)]
-        let fixedPointIDs: Set<UUID>
+        var startPosition: CGPoint
+        var endPosition: CGPoint
+        var originalPositions: [UUID: CGPoint]
+        var linkAxis: [UUID: Axis]
+        var adjacency: [UUID: [UUID]]
+        var linkEndpoints: [UUID: (UUID, UUID)]
+        var fixedPointIDs: Set<UUID>
     }
 
     private var dragState: DragState?
@@ -82,22 +82,56 @@ final class WireDragInteraction: CanvasInteraction {
     }
 
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
-        guard let state = dragState,
-              let itemsBinding = context.environment.items,
-              let engine = context.connectionEngine
+        guard var state = dragState,
+              let itemsBinding = context.environment.items
         else { return }
 
         let rawDelta = CGVector(dx: point.x - state.origin.x, dy: point.y - state.origin.y)
         let snapped = context.snapProvider.snap(delta: rawDelta, context: context)
-        let newStart = CGPoint(x: state.startPosition.x + snapped.dx, y: state.startPosition.y + snapped.dy)
-        let newEnd = CGPoint(x: state.endPosition.x + snapped.dx, y: state.endPosition.y + snapped.dy)
+        let tolerance = baseTolerance / max(context.magnification, 0.001)
 
         var items = itemsBinding.wrappedValue
+
+        if detachIfNeeded(
+            endpointID: state.startID,
+            otherID: state.endID,
+            axis: state.linkAxis[state.edgeID],
+            snapped: snapped,
+            tolerance: tolerance,
+            state: &state,
+            items: &items,
+            replacingStart: true
+        ) {
+            dragState = state
+        }
+
+        if detachIfNeeded(
+            endpointID: state.endID,
+            otherID: state.startID,
+            axis: state.linkAxis[state.edgeID],
+            snapped: snapped,
+            tolerance: tolerance,
+            state: &state,
+            items: &items,
+            replacingStart: false
+        ) {
+            dragState = state
+        }
+
+        let newStart = CGPoint(x: state.startPosition.x + snapped.dx, y: state.startPosition.y + snapped.dy)
+        let newEnd = CGPoint(x: state.endPosition.x + snapped.dx, y: state.endPosition.y + snapped.dy)
+        let isStartFixed = state.fixedPointIDs.contains(state.startID)
+        let isEndFixed = state.fixedPointIDs.contains(state.endID)
+
         var newPositions = state.originalPositions
-        newPositions[state.startID] = newStart
-        newPositions[state.endID] = newEnd
+        if !isStartFixed {
+            newPositions[state.startID] = newStart
+        }
+        if !isEndFixed {
+            newPositions[state.endID] = newEnd
+        }
         applyOrthogonalConstraints(
-            movedIDs: [state.startID, state.endID],
+            movedIDs: [state.startID, state.endID].filter { !state.fixedPointIDs.contains($0) },
             positions: &newPositions,
             originalPositions: state.originalPositions,
             adjacency: state.adjacency,
@@ -123,6 +157,7 @@ final class WireDragInteraction: CanvasInteraction {
             }
         }
         itemsBinding.wrappedValue = items
+        dragState = state
     }
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
@@ -202,8 +237,16 @@ final class WireDragInteraction: CanvasInteraction {
 
 #if DEBUG
         let pointCount = items.reduce(0) { $0 + ((($1 as? any ConnectionPoint) != nil) ? 1 : 0) }
+        let wirePointCount = items.reduce(0) { $0 + ((($1 as? WireVertex) != nil) ? 1 : 0) }
+        let pinPointCount = items.reduce(0) { $0 + ((($1 as? SymbolPinPoint) != nil) ? 1 : 0) }
         let linkCount = items.reduce(0) { $0 + ((($1 as? any ConnectionLink) != nil) ? 1 : 0) }
-        print("Connection normalize:", "points \(pointCount),", "links \(linkCount)")
+        print(
+            "Connection normalize:",
+            "points \(pointCount),",
+            "wirePoints \(wirePointCount),",
+            "pinPoints \(pinPointCount),",
+            "links \(linkCount)"
+        )
 #endif
     }
 
@@ -239,6 +282,84 @@ final class WireDragInteraction: CanvasInteraction {
         case horizontal
         case vertical
         case diagonal
+    }
+
+    private func detachIfNeeded(
+        endpointID: UUID,
+        otherID: UUID,
+        axis: Axis?,
+        snapped: CGVector,
+        tolerance: CGFloat,
+        state: inout DragState,
+        items: inout [any CanvasItem],
+        replacingStart: Bool
+    ) -> Bool {
+        guard state.fixedPointIDs.contains(endpointID),
+              let axis
+        else { return false }
+
+        let isOffAxis: Bool
+        switch axis {
+        case .horizontal:
+            isOffAxis = abs(snapped.dy) > tolerance
+        case .vertical:
+            isOffAxis = abs(snapped.dx) > tolerance
+        case .diagonal:
+            isOffAxis = true
+        }
+        guard isOffAxis else { return false }
+
+        guard let endpointPosition = state.originalPositions[endpointID] else { return false }
+        let newVertex = WireVertex(position: endpointPosition)
+        items.append(newVertex)
+        state.originalPositions[newVertex.id] = endpointPosition
+
+        if replacingStart {
+            state.startID = newVertex.id
+            state.startPosition = endpointPosition
+        } else {
+            state.endID = newVertex.id
+            state.endPosition = endpointPosition
+        }
+
+        if let index = items.firstIndex(where: { $0.id == state.edgeID }),
+           var segment = items[index] as? WireSegment {
+            if segment.startID == endpointID {
+                segment.startID = newVertex.id
+            } else if segment.endID == endpointID {
+                segment.endID = newVertex.id
+            }
+            items[index] = segment
+        }
+
+        if !hasLink(between: endpointID, and: newVertex.id, items: items) {
+            let link = WireSegment(startID: endpointID, endID: newVertex.id)
+            items.append(link)
+            let newAxis: Axis = (axis == .horizontal) ? .vertical : (axis == .vertical ? .horizontal : .diagonal)
+            state.linkAxis[link.id] = newAxis
+        }
+
+        let links = items.compactMap { $0 as? any ConnectionLink }
+        state.adjacency = linkAdjacency(for: links)
+        state.linkEndpoints = linkEndpointMap(for: links)
+        state.linkAxis[state.edgeID] = axis
+
+        return true
+    }
+
+    private func hasLink(
+        between a: UUID,
+        and b: UUID,
+        items: [any CanvasItem]
+    ) -> Bool {
+        let links = items.compactMap { $0 as? any ConnectionLink }
+        for link in links {
+            if (link.startID == a && link.endID == b)
+                || (link.startID == b && link.endID == a) {
+                return true
+            }
+        }
+        return false
     }
 
     private func linkAxisMap(
