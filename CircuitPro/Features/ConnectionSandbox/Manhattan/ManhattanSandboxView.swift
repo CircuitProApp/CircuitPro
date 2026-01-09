@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ManhattanSandboxView: View {
     @State private var canvasManager = CanvasManager()
+    @State private var selectedTool: CanvasTool?
+    @State private var wireTool = ManhattanWireTool()
 
     @State private var manhattanItems: [any CanvasItem] = {
         let a = WireVertex(position: CGPoint(x: 140, y: 140))
@@ -23,7 +25,7 @@ struct ManhattanSandboxView: View {
     var body: some View {
         CanvasView(
             viewport: $canvasManager.viewport,
-            tool: .constant(nil),
+            tool: $selectedTool,
             items: $manhattanItems,
             selectedIDs: .constant([]),
             connectionEngine: manhattanEngine,
@@ -32,8 +34,10 @@ struct ManhattanSandboxView: View {
                 GridRenderLayer(),
                 ConnectionDebugRenderLayer(),
                 CrosshairsRenderLayer(),
+                PreviewRenderLayer(),
             ],
             interactions: [
+                ToolInteraction(),
                 WireEdgeDragInteraction(),
             ],
             inputProcessors: [
@@ -43,6 +47,29 @@ struct ManhattanSandboxView: View {
         )
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
+        }
+        .overlay(alignment: .topLeading) {
+            VStack {
+                Button {
+                    if selectedTool?.id == wireTool.id {
+                        selectedTool = nil
+                    } else {
+                        selectedTool = wireTool
+                    }
+                } label: {
+                    Image(CircuitProSymbols.Schematic.wire)
+                        .font(.system(size: 16))
+                        .frame(width: 22, height: 22)
+                        .contentShape(.rect)
+                        .foregroundStyle(
+                            selectedTool?.id == wireTool.id ? .blue : .secondary
+                        )
+                }
+            }
+            .padding(8)
+            .buttonStyle(.plain)
+            .glassEffect(in: .capsule)
+            .padding(12)
         }
         .ignoresSafeArea()
     }
