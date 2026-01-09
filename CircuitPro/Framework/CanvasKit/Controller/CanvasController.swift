@@ -12,7 +12,9 @@ final class CanvasController {
     // MARK: - Core Data Model
 
     private var interactionHighlightedItemIDs: Set<UUID> = []
+    private var interactionHighlightedLinkIDs: Set<UUID> = []
     var highlightedItemIDs: Set<UUID> { interactionHighlightedItemIDs }
+    var highlightedLinkIDs: Set<UUID> { interactionHighlightedLinkIDs }
     private var selectedItemIDs: Set<UUID> = []
     var onSelectionChange: ((Set<UUID>) -> Void)?
 
@@ -100,6 +102,7 @@ final class CanvasController {
             selectedTool: self.selectedTool,
             highlightedItemIDs: allHighlightedIDs,
             selectedItemIDs: selectedItemIDs,
+            highlightedLinkIDs: interactionHighlightedLinkIDs,
             hostViewBounds: hostViewBounds,
             visibleRect: visibleRect,
             layers: self.layers ?? [],
@@ -128,6 +131,12 @@ final class CanvasController {
         guard interactionHighlightedItemIDs != itemIDs else { return }
         interactionHighlightedItemIDs = itemIDs
         view?.performLayerUpdate() // Redraw for transient highlights.
+    }
+
+    func setInteractionLinkHighlight(linkIDs: Set<UUID>) {
+        guard interactionHighlightedLinkIDs != linkIDs else { return }
+        interactionHighlightedLinkIDs = linkIDs
+        view?.performLayerUpdate()
     }
 
     func updateSelection(_ ids: Set<UUID>, notify: Bool = true) {

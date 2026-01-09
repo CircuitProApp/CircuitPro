@@ -37,6 +37,7 @@ struct WireSandboxView: View {
             ],
             interactions: [
                 ToolInteraction(),
+                WireHoverHighlightInteraction(),
                 WireDragInteraction(),
             ],
             inputProcessors: [

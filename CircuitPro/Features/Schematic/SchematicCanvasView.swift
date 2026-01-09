@@ -36,6 +36,7 @@ struct SchematicCanvasView: View {
             ],
             interactions: [
                 HoverHighlightInteraction(),
+                WireHoverHighlightInteraction(),
                 KeyCommandInteraction(),
                 ToolInteraction(),
                 SelectionInteraction(),

@@ -16,6 +16,7 @@ struct RenderContext {
     let selectedTool: CanvasTool?
     let highlightedItemIDs: Set<UUID>
     let selectedItemIDs: Set<UUID>
+    let highlightedLinkIDs: Set<UUID>
     let hostViewBounds: CGRect
     let visibleRect: CGRect
 
@@ -42,12 +43,13 @@ struct RenderContext {
         }
     }
 
-    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
+    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
         self.magnification = magnification
         self.mouseLocation = mouseLocation
         self.selectedTool = selectedTool
         self.highlightedItemIDs = highlightedItemIDs
         self.selectedItemIDs = selectedItemIDs
+        self.highlightedLinkIDs = highlightedLinkIDs
         self.hostViewBounds = hostViewBounds
         self.visibleRect = visibleRect
         self.layers = layers

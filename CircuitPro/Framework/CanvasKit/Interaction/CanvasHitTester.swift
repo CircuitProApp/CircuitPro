@@ -24,8 +24,25 @@ struct CanvasHitTester {
     func hitTest(point: CGPoint, context: RenderContext) -> UUID? {
         let tolerance = baseTolerance / context.magnification
         var best: HitCandidate?
+        let linkPointsByID = context.connectionPointPositionsByID
 
         for item in context.items {
+            if let link = item as? any ConnectionLink {
+                guard let start = linkPointsByID[link.startID],
+                      let end = linkPointsByID[link.endID]
+                else { continue }
+                let distance = distance(from: point, toSegmentBetween: start, and: end)
+                if distance <= tolerance {
+                    considerHit(
+                        id: link.id,
+                        priority: 2,
+                        area: max(hypot(end.x - start.x, end.y - start.y), 1),
+                        best: &best
+                    )
+                }
+                continue
+            }
+
             if let component = item as? ComponentInstance {
                 evaluateComponentHits(
                     component,
@@ -92,8 +109,19 @@ struct CanvasHitTester {
 
     func hitTestAll(in rect: CGRect, context: RenderContext) -> [UUID] {
         var hits = Set<UUID>()
+        let linkPointsByID = context.connectionPointPositionsByID
 
         for item in context.items {
+            if let link = item as? any ConnectionLink {
+                guard let start = linkPointsByID[link.startID],
+                      let end = linkPointsByID[link.endID]
+                else { continue }
+                if segmentIntersectsRect(start: start, end: end, rect: rect) {
+                    hits.insert(link.id)
+                }
+                continue
+            }
+
             if let component = item as? ComponentInstance {
                 let bodyBounds = componentBodyBounds(component, context: context)
                 if rect.intersects(bodyBounds) {
@@ -166,6 +194,74 @@ struct CanvasHitTester {
             (candidate.priority == current.priority && candidate.area < current.area) {
             best = candidate
         }
+    }
+
+    private func distance(from target: CGPoint, toSegmentBetween a: CGPoint, and b: CGPoint) -> CGFloat {
+        let dx = b.x - a.x
+        let dy = b.y - a.y
+        let len2 = dx * dx + dy * dy
+        if len2 <= .ulpOfOne {
+            return hypot(target.x - a.x, target.y - a.y)
+        }
+        let t = ((target.x - a.x) * dx + (target.y - a.y) * dy) / len2
+        let clamped = min(max(t, 0), 1)
+        let proj = CGPoint(x: a.x + clamped * dx, y: a.y + clamped * dy)
+        return hypot(target.x - proj.x, target.y - proj.y)
+    }
+
+    private func segmentIntersectsRect(start: CGPoint, end: CGPoint, rect: CGRect) -> Bool {
+        if rect.contains(start) || rect.contains(end) {
+            return true
+        }
+
+        let minX = min(start.x, end.x)
+        let maxX = max(start.x, end.x)
+        let minY = min(start.y, end.y)
+        let maxY = max(start.y, end.y)
+        let segmentBounds = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+        guard rect.intersects(segmentBounds) else { return false }
+
+        let topLeft = CGPoint(x: rect.minX, y: rect.minY)
+        let topRight = CGPoint(x: rect.maxX, y: rect.minY)
+        let bottomRight = CGPoint(x: rect.maxX, y: rect.maxY)
+        let bottomLeft = CGPoint(x: rect.minX, y: rect.maxY)
+
+        return segmentsIntersect(start, end, topLeft, topRight)
+            || segmentsIntersect(start, end, topRight, bottomRight)
+            || segmentsIntersect(start, end, bottomRight, bottomLeft)
+            || segmentsIntersect(start, end, bottomLeft, topLeft)
+    }
+
+    private func segmentsIntersect(_ p1: CGPoint, _ p2: CGPoint, _ q1: CGPoint, _ q2: CGPoint) -> Bool {
+        let o1 = orientation(p1, p2, q1)
+        let o2 = orientation(p1, p2, q2)
+        let o3 = orientation(q1, q2, p1)
+        let o4 = orientation(q1, q2, p2)
+
+        if o1 != o2 && o3 != o4 {
+            return true
+        }
+
+        if o1 == 0 && onSegment(p1, q1, p2) { return true }
+        if o2 == 0 && onSegment(p1, q2, p2) { return true }
+        if o3 == 0 && onSegment(q1, p1, q2) { return true }
+        if o4 == 0 && onSegment(q1, p2, q2) { return true }
+
+        return false
+    }
+
+    private func orientation(_ a: CGPoint, _ b: CGPoint, _ c: CGPoint) -> Int {
+        let value = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y)
+        let epsilon: CGFloat = 0.000001
+        if abs(value) < epsilon { return 0 }
+        return value > 0 ? 1 : 2
+    }
+
+    private func onSegment(_ a: CGPoint, _ b: CGPoint, _ c: CGPoint) -> Bool {
+        b.x <= max(a.x, c.x) + .ulpOfOne &&
+            b.x >= min(a.x, c.x) - .ulpOfOne &&
+            b.y <= max(a.y, c.y) + .ulpOfOne &&
+            b.y >= min(a.y, c.y) - .ulpOfOne
     }
 
     private func evaluateComponentHits(

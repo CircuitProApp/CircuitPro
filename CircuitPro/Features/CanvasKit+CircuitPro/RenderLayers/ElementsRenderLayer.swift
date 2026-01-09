@@ -14,6 +14,8 @@ final class ElementsRenderLayer: RenderLayer {
         let id: UUID
         let primitives: [LayeredDrawingPrimitive]
         let haloPath: CGPath?
+        let haloColor: CGColor?
+        let ownerID: UUID?
     }
 
     func install(on hostLayer: CALayer) {
@@ -44,9 +46,12 @@ final class ElementsRenderLayer: RenderLayer {
             }
 
             guard let haloPath = renderable.haloPath else { continue }
-            guard context.highlightedItemIDs.contains(renderable.id) else { continue }
+            let isHighlighted = context.highlightedItemIDs.contains(renderable.id)
+                || (renderable.ownerID.map { context.highlightedItemIDs.contains($0) } ?? false)
+            guard isHighlighted else { continue }
 
-            let haloColor = NSColor.systemBlue.withAlphaComponent(0.4).cgColor
+            let haloColor = (renderable.haloColor ?? NSColor.systemBlue.cgColor)
+                .copy(alpha: 0.4) ?? NSColor.systemBlue.withAlphaComponent(0.4).cgColor
             let haloPrimitive = DrawingPrimitive.stroke(
                 path: haloPath,
                 color: haloColor,
@@ -181,7 +186,15 @@ final class ElementsRenderLayer: RenderLayer {
                 pins: symbolDef.pins,
                 ownerTransform: ownerTransform
             )
-            renderables.append(RenderableItem(id: component.id, primitives: bodyPrimitives, haloPath: bodyHalo))
+            renderables.append(
+                RenderableItem(
+                    id: component.id,
+                    primitives: bodyPrimitives,
+                    haloPath: bodyHalo,
+                    haloColor: symbolHaloColor(for: context)
+                    , ownerID: nil
+                )
+            )
 
             let textEntries = componentTextEntries(component, target: .symbol, context: context)
             renderables.append(contentsOf: textEntries)
@@ -248,7 +261,15 @@ final class ElementsRenderLayer: RenderLayer {
                 pads: definition.pads,
                 ownerTransform: ownerTransform
             )
-            renderables.append(RenderableItem(id: component.id, primitives: bodyPrimitives, haloPath: bodyHalo))
+            renderables.append(
+                RenderableItem(
+                    id: component.id,
+                    primitives: bodyPrimitives,
+                    haloPath: bodyHalo,
+                    haloColor: symbolHaloColor(for: context)
+                    , ownerID: nil
+                )
+            )
 
             let textEntries = componentTextEntries(component, target: .footprint, context: context)
             renderables.append(contentsOf: textEntries)
@@ -259,13 +280,19 @@ final class ElementsRenderLayer: RenderLayer {
 
     private func renderable(for primitive: AnyCanvasPrimitive, context: RenderContext) -> RenderableItem {
         let primitives = primitive.makeDrawingPrimitives(in: context)
-        return RenderableItem(id: primitive.id, primitives: primitives, haloPath: primitive.haloPath())
+        return RenderableItem(
+            id: primitive.id,
+            primitives: primitives,
+            haloPath: primitive.haloPath(),
+            haloColor: nil,
+            ownerID: nil
+        )
     }
 
     private func renderable(for pin: Pin, context: RenderContext) -> RenderableItem {
-        let pinColor = pinColor(for: context)
+        let pinTint = pinColor(for: context)
         let localPrimitives = pin.makeDrawingPrimitives()
-            .map { recolor($0, to: pinColor) }
+            .map { recolor($0, to: pinTint) }
         var transform = CGAffineTransform(translationX: pin.position.x, y: pin.position.y)
         let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
         let layered = worldPrimitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
@@ -273,7 +300,13 @@ final class ElementsRenderLayer: RenderLayer {
             var haloTransform = CGAffineTransform(translationX: pin.position.x, y: pin.position.y)
             return path.copy(using: &haloTransform)
         }
-        return RenderableItem(id: pin.id, primitives: layered, haloPath: haloPath)
+        return RenderableItem(
+            id: pin.id,
+            primitives: layered,
+            haloPath: haloPath,
+            haloColor: pinTint,
+            ownerID: nil
+        )
     }
 
     private func renderable(for pad: Pad, context: RenderContext) -> RenderableItem {
@@ -286,7 +319,13 @@ final class ElementsRenderLayer: RenderLayer {
         let layered = [LayeredDrawingPrimitive(worldPrimitive, layerId: nil)]
 
         let haloPath = pad.calculateShapePath().copy(using: &transform)
-        return RenderableItem(id: pad.id, primitives: layered, haloPath: haloPath)
+        return RenderableItem(
+            id: pad.id,
+            primitives: layered,
+            haloPath: haloPath,
+            haloColor: nil,
+            ownerID: nil
+        )
     }
 
     private func renderable(
@@ -323,7 +362,13 @@ final class ElementsRenderLayer: RenderLayer {
         ))
 
         let layered = primitives.map { LayeredDrawingPrimitive($0, layerId: nil) }
-        return RenderableItem(id: text.id, primitives: layered, haloPath: path)
+        return RenderableItem(
+            id: text.id,
+            primitives: layered,
+            haloPath: path,
+            haloColor: textColor(for: context),
+            ownerID: nil
+        )
     }
 
     private func componentTextEntries(
@@ -391,7 +436,15 @@ final class ElementsRenderLayer: RenderLayer {
                 ownerID: component.id,
                 fallback: resolvedText.id
             )
-            renderables.append(RenderableItem(id: textID, primitives: layered, haloPath: path))
+            renderables.append(
+                RenderableItem(
+                    id: textID,
+                    primitives: layered,
+                    haloPath: path,
+                    haloColor: textColor(for: context),
+                    ownerID: component.id
+                )
+            )
         }
 
         return renderables
@@ -500,6 +553,15 @@ final class ElementsRenderLayer: RenderLayer {
         switch context.environment.textTarget {
         case .symbol:
             return context.environment.schematicTheme.pinColor
+        case .footprint:
+            return NSColor.systemBlue.cgColor
+        }
+    }
+
+    private func symbolHaloColor(for context: RenderContext) -> CGColor {
+        switch context.environment.textTarget {
+        case .symbol:
+            return context.environment.schematicTheme.symbolColor
         case .footprint:
             return NSColor.systemBlue.cgColor
         }

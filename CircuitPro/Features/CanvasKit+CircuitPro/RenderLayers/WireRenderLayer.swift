@@ -23,6 +23,37 @@ final class WireRenderLayer: RenderLayer {
         )
 
         let strokeColor = context.environment.schematicTheme.wireColor
+        let linkIDs = Set(context.connectionLinks.map { $0.id })
+        let highlightedLinkIDs = linkIDs.intersection(context.highlightedItemIDs)
+
+        let haloWidth: CGFloat = 6.0
+        if let selectColor = NSColor(cgColor: strokeColor)?
+            .withAlphaComponent(0.45)
+            .cgColor,
+            let selectionPath = combinedPath(for: highlightedLinkIDs, routes: routes) {
+            let halo = CAShapeLayer()
+            halo.path = selectionPath
+            halo.strokeColor = selectColor
+            halo.lineWidth = haloWidth
+            halo.lineCap = .round
+            halo.lineJoin = .round
+            halo.fillColor = nil
+            contentLayer.addSublayer(halo)
+        }
+
+        if let hoverColor = NSColor(cgColor: strokeColor)?
+            .withAlphaComponent(0.35)
+            .cgColor,
+            let hoverPath = combinedPath(for: context.highlightedLinkIDs, routes: routes) {
+            let halo = CAShapeLayer()
+            halo.path = hoverPath
+            halo.strokeColor = hoverColor
+            halo.lineWidth = haloWidth
+            halo.lineCap = .round
+            halo.lineJoin = .round
+            halo.fillColor = nil
+            contentLayer.addSublayer(halo)
+        }
         for route in routes.values {
             guard let manhattan = route as? ManhattanRoute else { continue }
             let points = manhattan.points
@@ -66,5 +97,23 @@ final class WireRenderLayer: RenderLayer {
             dot.strokeColor = nil
             contentLayer.addSublayer(dot)
         }
+    }
+
+    private func combinedPath(
+        for linkIDs: Set<UUID>,
+        routes: [UUID: any ConnectionRoute]
+    ) -> CGPath? {
+        guard !linkIDs.isEmpty else { return nil }
+        let path = CGMutablePath()
+        for linkID in linkIDs {
+            guard let route = routes[linkID] as? ManhattanRoute else { continue }
+            let points = route.points
+            guard points.count >= 2 else { continue }
+            path.move(to: points[0])
+            for point in points.dropFirst() {
+                path.addLine(to: point)
+            }
+        }
+        return path.isEmpty ? nil : path
     }
 }

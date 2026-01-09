@@ -88,6 +88,8 @@ final class CanvasInputHandler {
 
     func mouseExited() {
         controller.mouseLocation = nil
+        controller.setInteractionHighlight(itemIDs: [])
+        controller.setInteractionLinkHighlight(linkIDs: [])
         controller.view?.performLayerUpdate()
     }
 
