@@ -1,8 +1,8 @@
 import CoreGraphics
 import Foundation
 
-struct MergeCoincidentRule: ManhattanNormalizationRule {
-    func apply(to state: inout ManhattanNormalizationState) {
+struct MergeCoincidentRule: NormalizationRule {
+    func apply(to state: inout NormalizationState) {
         var buckets: [PositionKey: [UUID]] = [:]
         buckets.reserveCapacity(state.pointsByID.count)
         for (id, point) in state.pointsByID {

@@ -15,6 +15,8 @@ struct SchematicToolbarView: View {
             selectedTool: $selectedSchematicTool.unwrapping(withDefault: CursorTool())
         ) {
             CursorTool()
+            CanvasToolbarDivider()
+            WireTool()
         }
     }
 }

@@ -14,7 +14,7 @@ struct ConnectionSandboxView: View {
         Group {
             switch mode {
             case .manhattan:
-                ManhattanSandboxView()
+                WireSandboxView()
             case .bezier:
                 BezierSandboxView()
             }

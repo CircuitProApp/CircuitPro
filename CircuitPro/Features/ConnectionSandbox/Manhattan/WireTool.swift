@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-final class ManhattanWireTool: CanvasTool {
+final class WireTool: CanvasTool {
     override var symbolName: String { CircuitProSymbols.Schematic.wire }
     override var label: String { "Wire" }
 

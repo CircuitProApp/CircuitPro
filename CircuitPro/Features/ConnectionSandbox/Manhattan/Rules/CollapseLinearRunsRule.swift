@@ -1,8 +1,8 @@
 import CoreGraphics
 import Foundation
 
-struct CollapseLinearRunsRule: ManhattanNormalizationRule {
-    func apply(to state: inout ManhattanNormalizationState) {
+struct CollapseLinearRunsRule: NormalizationRule {
+    func apply(to state: inout NormalizationState) {
         var linksByID = Dictionary(uniqueKeysWithValues: state.links.map { ($0.id, $0) })
         var removedPoints = Set<UUID>()
         var removedLinks = Set<UUID>()
@@ -65,7 +65,7 @@ struct CollapseLinearRunsRule: ManhattanNormalizationRule {
         return adjacency
     }
 
-    private func isProtected(_ pointID: UUID, state: ManhattanNormalizationState) -> Bool {
+    private func isProtected(_ pointID: UUID, state: NormalizationState) -> Bool {
         if let point = state.pointsByObject[pointID] {
             return !(point is WireVertex)
         }
@@ -111,7 +111,7 @@ struct CollapseLinearRunsRule: ManhattanNormalizationRule {
         from startID: UUID,
         startPoint: CGPoint,
         baseDir: CGVector,
-        state: inout ManhattanNormalizationState,
+        state: inout NormalizationState,
         linksByID: inout [UUID: WireSegment],
         adjacency: [UUID: [UUID]],
         removedPoints: inout Set<UUID>,
@@ -247,7 +247,7 @@ struct CollapseLinearRunsRule: ManhattanNormalizationRule {
     }
 
     private func removeOverlappingOrphans(
-        state: inout ManhattanNormalizationState,
+        state: inout NormalizationState,
         linksByID: inout [UUID: WireSegment],
         removedPoints: inout Set<UUID>,
         removedLinks: inout Set<UUID>

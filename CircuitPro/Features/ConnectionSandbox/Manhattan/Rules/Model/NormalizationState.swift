@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-struct ManhattanNormalizationState {
+struct NormalizationState {
     var pointsByID: [UUID: CGPoint]
     let pointsByObject: [UUID: any ConnectionPoint]
     var links: [WireSegment]

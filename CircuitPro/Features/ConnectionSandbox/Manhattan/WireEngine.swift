@@ -5,10 +5,10 @@ struct ManhattanRoute: ConnectionRoute {
     let points: [CGPoint]
 }
 
-struct ManhattanWireEngine: ConnectionEngine {
+struct WireEngine: ConnectionEngine {
     var preferHorizontalFirst: Bool = true
 
-    private var normalizationRules: [ManhattanNormalizationRule] {
+    private var normalizationRules: [NormalizationRule] {
         [
             MergeCoincidentRule(),
             SplitEdgesAtPassingVerticesRule(),
@@ -55,7 +55,7 @@ struct ManhattanWireEngine: ConnectionEngine {
         let originalLinksByID = Dictionary(uniqueKeysWithValues: links.map { ($0.id, $0) })
         let preferredIDs = Set(originalLinksByID.keys)
 
-        var state = ManhattanNormalizationState(
+        var state = NormalizationState(
             pointsByID: pointsByID,
             pointsByObject: pointsByObject,
             links: links.map { WireSegment(id: $0.id, startID: $0.startID, endID: $0.endID) },

@@ -1,8 +1,8 @@
 import CoreGraphics
 import Foundation
 
-struct SplitEdgesAtPassingVerticesRule: ManhattanNormalizationRule {
-    func apply(to state: inout ManhattanNormalizationState) {
+struct SplitEdgesAtPassingVerticesRule: NormalizationRule {
+    func apply(to state: inout NormalizationState) {
         guard !state.links.isEmpty else { return }
 
         struct LinkKey: Hashable {

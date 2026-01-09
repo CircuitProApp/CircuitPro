@@ -1,9 +1,9 @@
 import SwiftUI
 
-struct ManhattanSandboxView: View {
+struct WireSandboxView: View {
     @State private var canvasManager = CanvasManager()
     @State private var selectedTool: CanvasTool?
-    @State private var wireTool = ManhattanWireTool()
+    @State private var wireTool = WireTool()
 
     @State private var manhattanItems: [any CanvasItem] = {
         let a = WireVertex(position: CGPoint(x: 140, y: 140))
@@ -19,7 +19,7 @@ struct ManhattanSandboxView: View {
         return [a, b, c, corner, d, e, seg1, seg2, seg3, seg4]
     }()
 
-    private let manhattanEngine = ManhattanWireEngine()
+    private let manhattanEngine = WireEngine()
 
     var body: some View {
         CanvasView(

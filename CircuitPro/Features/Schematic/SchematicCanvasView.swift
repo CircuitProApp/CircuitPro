@@ -23,6 +23,7 @@ struct SchematicCanvasView: View {
                 withDefault: CursorTool()),
             items: $editorSession.schematicController.items,
             selectedIDs: $editorSession.selectedItemIDs,
+            connectionEngine: WireEngine(),
             environment: canvasManager.environment,
             renderLayers: [
                 GridRenderLayer(),

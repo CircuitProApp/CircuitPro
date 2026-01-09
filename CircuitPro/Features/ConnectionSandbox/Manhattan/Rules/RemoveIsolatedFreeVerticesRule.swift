@@ -1,7 +1,7 @@
 import Foundation
 
-struct RemoveIsolatedFreeVerticesRule: ManhattanNormalizationRule {
-    func apply(to state: inout ManhattanNormalizationState) {
+struct RemoveIsolatedFreeVerticesRule: NormalizationRule {
+    func apply(to state: inout NormalizationState) {
         var adjacencyCount: [UUID: Int] = [:]
         adjacencyCount.reserveCapacity(state.pointsByID.count)
 
