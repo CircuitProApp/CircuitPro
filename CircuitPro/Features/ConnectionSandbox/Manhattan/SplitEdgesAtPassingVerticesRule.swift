@@ -3,13 +3,43 @@ import Foundation
 
 struct SplitEdgesAtPassingVerticesRule: ManhattanNormalizationRule {
     func apply(to state: inout ManhattanNormalizationState) {
-        let originalCount = state.links.count
-        guard originalCount > 0 else { return }
+        guard !state.links.isEmpty else { return }
 
-        var added: [WireSegment] = []
+        struct LinkKey: Hashable {
+            let a: UUID
+            let b: UUID
 
-        for index in 0..<originalCount {
-            let link = state.links[index]
+            init(_ start: UUID, _ end: UUID) {
+                if start.uuidString <= end.uuidString {
+                    a = start
+                    b = end
+                } else {
+                    a = end
+                    b = start
+                }
+            }
+        }
+
+        var newLinks: [WireSegment] = []
+        newLinks.reserveCapacity(state.links.count)
+        var seen = Set<LinkKey>()
+
+        func appendLink(startID: UUID, endID: UUID, id: UUID?) -> Bool {
+            let key = LinkKey(startID, endID)
+            if seen.contains(key) {
+                return false
+            }
+            seen.insert(key)
+            if let id {
+                newLinks.append(WireSegment(id: id, startID: startID, endID: endID))
+            } else {
+                newLinks.append(WireSegment(startID: startID, endID: endID))
+            }
+            return true
+        }
+
+        let originalLinks = state.links
+        for link in originalLinks {
             guard let start = state.pointsByID[link.startID],
                   let end = state.pointsByID[link.endID]
             else { continue }
@@ -22,20 +52,25 @@ struct SplitEdgesAtPassingVerticesRule: ManhattanNormalizationRule {
                 pointsByObject: state.pointsByObject,
                 epsilon: state.epsilon
             )
-            if mids.isEmpty { continue }
+            if mids.isEmpty {
+                if !appendLink(startID: link.startID, endID: link.endID, id: link.id) {
+                    state.removedLinkIDs.insert(link.id)
+                }
+                continue
+            }
 
             let chain = [link.startID] + mids + [link.endID]
             guard chain.count >= 3 else { continue }
 
-            state.links[index] = WireSegment(id: link.id, startID: chain[0], endID: chain[1])
+            if !appendLink(startID: chain[0], endID: chain[1], id: link.id) {
+                state.removedLinkIDs.insert(link.id)
+            }
             for i in 1..<(chain.count - 1) {
-                added.append(WireSegment(startID: chain[i], endID: chain[i + 1]))
+                _ = appendLink(startID: chain[i], endID: chain[i + 1], id: nil)
             }
         }
 
-        if !added.isEmpty {
-            state.links.append(contentsOf: added)
-        }
+        state.links = newLinks
     }
 
     private func splitPoints(

@@ -231,8 +231,10 @@ struct CollapseLinearRunsRule: ManhattanNormalizationRule {
                 let candidateIDs = fallback.map { $0.id }.filter { runEdgeIDs.contains($0) }
                 let keepID = candidateIDs.isEmpty ? UUID() : selectKeepID(from: candidateIDs, preferred: state.preferredIDs)
 
-                linksByID[keepID] = WireSegment(id: keepID, startID: vA, endID: vB)
-                runEdgeIDs.remove(keepID)
+                if !hasLink(between: vA, and: vB, linksByID: linksByID, excluding: runEdgeIDs) {
+                    linksByID[keepID] = WireSegment(id: keepID, startID: vA, endID: vB)
+                    runEdgeIDs.remove(keepID)
+                }
             }
         }
 
@@ -292,6 +294,20 @@ struct CollapseLinearRunsRule: ManhattanNormalizationRule {
         }
 
         return changed
+    }
+
+    private func hasLink(
+        between a: UUID,
+        and b: UUID,
+        linksByID: [UUID: WireSegment],
+        excluding excludedIDs: Set<UUID>
+    ) -> Bool {
+        for (id, link) in linksByID where !excludedIDs.contains(id) {
+            if (link.startID == a && link.endID == b) || (link.startID == b && link.endID == a) {
+                return true
+            }
+        }
+        return false
     }
 
     private func pointIsCoveredByOtherLink(

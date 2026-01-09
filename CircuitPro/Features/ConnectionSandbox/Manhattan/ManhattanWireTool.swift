@@ -52,24 +52,41 @@ final class ManhattanWireTool: CanvasTool {
 
             if let cornerID, corner != state.startPoint && corner != endPoint {
                 if state.startID != cornerID {
-                    items.append(WireSegment(startID: state.startID, endID: cornerID))
+                    appendLinkIfMissing(
+                        startID: state.startID,
+                        endID: cornerID,
+                        items: &items,
+                        tolerance: tolerance,
+                        allowCovered: true
+                    )
                 }
                 if cornerID != endID {
-                    items.append(WireSegment(startID: cornerID, endID: endID))
+                    appendLinkIfMissing(startID: cornerID, endID: endID, items: &items, tolerance: tolerance)
                 }
             } else if state.startID != endID {
-                items.append(WireSegment(startID: state.startID, endID: endID))
-            }
+            appendLinkIfMissing(startID: state.startID, endID: endID, items: &items, tolerance: tolerance)
+        }
 
             applyNormalization(to: &items, context: context.renderContext)
+
+            let resolved = ensurePointExists(
+                id: endID,
+                position: endPoint,
+                items: &items,
+                tolerance: tolerance
+            )
 
             if context.clickCount >= 2 {
                 self.state = nil
             } else {
-                let isStraight = abs(state.startPoint.x - endPoint.x) <= tolerance
-                    || abs(state.startPoint.y - endPoint.y) <= tolerance
+                let isStraight = abs(state.startPoint.x - resolved.position.x) <= tolerance
+                    || abs(state.startPoint.y - resolved.position.y) <= tolerance
                 let nextDirection = isStraight ? state.direction.toggled() : state.direction
-                self.state = DrawingState(startID: endID, startPoint: endPoint, direction: nextDirection)
+                self.state = DrawingState(
+                    startID: resolved.id,
+                    startPoint: resolved.position,
+                    direction: nextDirection
+                )
             }
         } else {
             self.state = DrawingState(startID: endID, startPoint: endPoint, direction: .horizontal)
@@ -117,6 +134,28 @@ final class ManhattanWireTool: CanvasTool {
         let points = items.compactMap { $0 as? any ConnectionPoint }
         if let existing = nearestPoint(to: location, in: points, tolerance: tolerance) {
             return (existing.id, existing.position)
+        }
+
+        let pointsByID = Dictionary(uniqueKeysWithValues: points.map { ($0.id, $0.position) })
+        let links = items.compactMap { $0 as? any ConnectionLink }
+        if let hit = nearestLinkHit(to: location, links: links, pointsByID: pointsByID, tolerance: tolerance) {
+            let snappedHit = snapPoint(on: hit, snapped: snapped, tolerance: tolerance)
+            let startDist = hypot(snappedHit.x - hit.start.x, snappedHit.y - hit.start.y)
+            if startDist <= tolerance {
+                return (hit.startID, hit.start)
+            }
+            let endDist = hypot(snappedHit.x - hit.end.x, snappedHit.y - hit.end.y)
+            if endDist <= tolerance {
+                return (hit.endID, hit.end)
+            }
+            if let existing = nearestPoint(to: snappedHit, in: points, tolerance: tolerance) {
+                return (existing.id, existing.position)
+            }
+
+            let vertex = WireVertex(position: snappedHit)
+            items.append(vertex)
+            splitLink(hit, newPointID: vertex.id, items: &items)
+            return (vertex.id, vertex.position)
         }
 
         let vertex = WireVertex(position: snapped)
@@ -169,6 +208,185 @@ final class ManhattanWireTool: CanvasTool {
         case .vertical:
             return CGPoint(x: start.x, y: end.y)
         }
+    }
+
+    private struct LinkHit {
+        let id: UUID
+        let startID: UUID
+        let endID: UUID
+        let start: CGPoint
+        let end: CGPoint
+        let projection: CGPoint
+        let distance: CGFloat
+    }
+
+    private func nearestLinkHit(
+        to location: CGPoint,
+        links: [any ConnectionLink],
+        pointsByID: [UUID: CGPoint],
+        tolerance: CGFloat
+    ) -> LinkHit? {
+        var best: LinkHit?
+        for link in links {
+            guard let start = pointsByID[link.startID],
+                  let end = pointsByID[link.endID]
+            else { continue }
+
+            let projection = closestPoint(on: start, to: end, target: location)
+            let distance = hypot(location.x - projection.x, location.y - projection.y)
+            if distance > tolerance { continue }
+
+            if let current = best {
+                if distance < current.distance {
+                    best = LinkHit(
+                        id: link.id,
+                        startID: link.startID,
+                        endID: link.endID,
+                        start: start,
+                        end: end,
+                        projection: projection,
+                        distance: distance
+                    )
+                }
+            } else {
+                best = LinkHit(
+                    id: link.id,
+                    startID: link.startID,
+                    endID: link.endID,
+                    start: start,
+                    end: end,
+                    projection: projection,
+                    distance: distance
+                )
+            }
+        }
+        return best
+    }
+
+    private func closestPoint(on start: CGPoint, to end: CGPoint, target: CGPoint) -> CGPoint {
+        let dx = end.x - start.x
+        let dy = end.y - start.y
+        let len2 = dx * dx + dy * dy
+        if len2 <= .ulpOfOne {
+            return start
+        }
+        let t = ((target.x - start.x) * dx + (target.y - start.y) * dy) / len2
+        let clamped = min(max(t, 0), 1)
+        return CGPoint(x: start.x + clamped * dx, y: start.y + clamped * dy)
+    }
+
+    private func snapPoint(on hit: LinkHit, snapped: CGPoint, tolerance: CGFloat) -> CGPoint {
+        let dx = hit.end.x - hit.start.x
+        let dy = hit.end.y - hit.start.y
+        if abs(dx) <= tolerance {
+            let minY = min(hit.start.y, hit.end.y)
+            let maxY = max(hit.start.y, hit.end.y)
+            let y = min(max(snapped.y, minY), maxY)
+            return CGPoint(x: hit.start.x, y: y)
+        }
+        if abs(dy) <= tolerance {
+            let minX = min(hit.start.x, hit.end.x)
+            let maxX = max(hit.start.x, hit.end.x)
+            let x = min(max(snapped.x, minX), maxX)
+            return CGPoint(x: x, y: hit.start.y)
+        }
+        return hit.projection
+    }
+
+    private func splitLink(
+        _ hit: LinkHit,
+        newPointID: UUID,
+        items: inout [any CanvasItem]
+    ) {
+        items.removeAll { $0.id == hit.id }
+        appendLinkIfMissing(
+            startID: hit.startID,
+            endID: newPointID,
+            existingID: hit.id,
+            items: &items,
+            tolerance: 0.5
+        )
+        appendLinkIfMissing(startID: newPointID, endID: hit.endID, items: &items, tolerance: 0.5)
+    }
+
+    private func appendLinkIfMissing(
+        startID: UUID,
+        endID: UUID,
+        existingID: UUID? = nil,
+        items: inout [any CanvasItem],
+        tolerance: CGFloat,
+        allowCovered: Bool = false
+    ) {
+        if hasLink(between: startID, and: endID, items: items) {
+            return
+        }
+        if !allowCovered,
+           segmentCoveredByExistingLink(startID: startID, endID: endID, items: items, tolerance: tolerance) {
+            return
+        }
+        if let existingID {
+            items.append(WireSegment(id: existingID, startID: startID, endID: endID))
+        } else {
+            items.append(WireSegment(startID: startID, endID: endID))
+        }
+    }
+
+    private func hasLink(
+        between a: UUID,
+        and b: UUID,
+        items: [any CanvasItem]
+    ) -> Bool {
+        let links = items.compactMap { $0 as? any ConnectionLink }
+        for link in links {
+            if (link.startID == a && link.endID == b)
+                || (link.startID == b && link.endID == a) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func segmentCoveredByExistingLink(
+        startID: UUID,
+        endID: UUID,
+        items: [any CanvasItem],
+        tolerance: CGFloat
+    ) -> Bool {
+        let points = items.compactMap { $0 as? any ConnectionPoint }
+        let pointsByID = Dictionary(uniqueKeysWithValues: points.map { ($0.id, $0.position) })
+        guard let start = pointsByID[startID], let end = pointsByID[endID] else { return false }
+
+        let links = items.compactMap { $0 as? any ConnectionLink }
+        for link in links {
+            guard let lStart = pointsByID[link.startID],
+                  let lEnd = pointsByID[link.endID]
+            else { continue }
+            if isPoint(start, onSegmentBetween: lStart, p2: lEnd, tol: tolerance),
+               isPoint(end, onSegmentBetween: lStart, p2: lEnd, tol: tolerance) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func ensurePointExists(
+        id: UUID,
+        position: CGPoint,
+        items: inout [any CanvasItem],
+        tolerance: CGFloat
+    ) -> (id: UUID, position: CGPoint) {
+        if let existing = items.first(where: { $0.id == id }) as? any ConnectionPoint {
+            return (existing.id, existing.position)
+        }
+
+        let points = items.compactMap { $0 as? any ConnectionPoint }
+        if let nearby = nearestPoint(to: position, in: points, tolerance: tolerance) {
+            return (nearby.id, nearby.position)
+        }
+
+        let vertex = WireVertex(position: position)
+        items.append(vertex)
+        return (vertex.id, vertex.position)
     }
 
     private func applyNormalization(

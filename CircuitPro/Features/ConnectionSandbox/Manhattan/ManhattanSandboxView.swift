@@ -14,10 +14,9 @@ struct ManhattanSandboxView: View {
         let e = WireVertex(position: CGPoint(x: 460, y: 320))
         let seg1 = WireSegment(startID: a.id, endID: corner.id)
         let seg2 = WireSegment(startID: corner.id, endID: b.id)
-        let seg3 = WireSegment(startID: a.id, endID: corner.id)
-        let seg4 = WireSegment(startID: corner.id, endID: c.id)
-        let seg5 = WireSegment(startID: d.id, endID: e.id)
-        return [a, b, c, corner, d, e, seg1, seg2, seg3, seg4, seg5]
+        let seg3 = WireSegment(startID: corner.id, endID: c.id)
+        let seg4 = WireSegment(startID: d.id, endID: e.id)
+        return [a, b, c, corner, d, e, seg1, seg2, seg3, seg4]
     }()
 
     private let manhattanEngine = ManhattanWireEngine()
