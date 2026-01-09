@@ -9,7 +9,6 @@ import SwiftUI
 
 struct AppearanceSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @AppStorage(AppThemeKeys.appearance) private var appearance = AppAppearance.system.rawValue
     @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore
         .defaultStylesData
     @AppStorage(AppThemeKeys.canvasStyleSelectedLight) private var selectedLightStyleID =
@@ -42,15 +41,6 @@ struct AppearanceSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
-                Picker("App", selection: $appearance) {
-                    ForEach(AppAppearance.allCases) { option in
-                        Text(option.label).tag(option.rawValue)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-
             Section("Theme") {
                 VStack(spacing: 12) {
                     Picker("", selection: $assignMode) {
@@ -187,12 +177,10 @@ struct AppearanceSettingsView: View {
             }
         }
         .onAppear {
-            let appAppearance = AppAppearance(rawValue: appearance) ?? .system
-            switch appAppearance {
-            case .light: assignMode = .light
-            case .dark: assignMode = .dark
-            case .system: assignMode = (colorScheme == .dark) ? .dark : .light
-            }
+            assignMode = (colorScheme == .dark) ? .dark : .light
+        }
+        .onChange(of: colorScheme) { _ in
+            syncAssignMode()
         }
     }
 
@@ -355,6 +343,14 @@ struct AppearanceSettingsView: View {
             selectedLightStyleID = styleID
         case .dark:
             selectedDarkStyleID = styleID
+        }
+    }
+
+    private func syncAssignMode() {
+        let previous = assignMode
+        assignMode = (colorScheme == .dark) ? .dark : .light
+        if assignMode != previous {
+            editStyleID = nil
         }
     }
 }

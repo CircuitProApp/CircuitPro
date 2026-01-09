@@ -18,7 +18,6 @@ struct ComponentDesignView: View {
 
     @UserContext private var userContext
 
-    @AppStorage(AppThemeKeys.appearance) private var appearance = AppAppearance.system.rawValue
     @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore
         .defaultStylesData
     @AppStorage(AppThemeKeys.canvasStyleSelectedLight) private var selectedLightStyleID =
@@ -80,7 +79,6 @@ struct ComponentDesignView: View {
             footprintCanvasManager.viewport.size = PaperSize.component.canvasSize()
             applyThemes()
         }
-        .onChange(of: appearance) { applyThemes() }
         .onChange(of: stylesData) { applyThemes() }
         .onChange(of: selectedLightStyleID) { applyThemes() }
         .onChange(of: selectedDarkStyleID) { applyThemes() }
@@ -244,15 +242,7 @@ struct ComponentDesignView: View {
 
     private func applyThemes() {
         let styles = CanvasStyleStore.loadStyles(from: stylesData)
-        let appAppearance = AppAppearance(rawValue: appearance) ?? .system
-        let effectiveScheme: ColorScheme = {
-            switch appAppearance {
-            case .system: return colorScheme
-            case .light: return .light
-            case .dark: return .dark
-            }
-        }()
-        let selectedID = effectiveScheme == .dark ? selectedDarkStyleID : selectedLightStyleID
+        let selectedID = colorScheme == .dark ? selectedDarkStyleID : selectedLightStyleID
         let style = CanvasStyleStore.selectedStyle(from: styles, selectedID: selectedID)
         let canvasTheme = CanvasThemeSettings.makeTheme(from: style)
         let schematicTheme = SchematicThemeSettings.makeTheme(from: style)

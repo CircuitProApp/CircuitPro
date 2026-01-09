@@ -16,7 +16,6 @@ struct EditorView: View {
     @Environment(\.colorScheme)
     private var colorScheme
 
-    @AppStorage(AppThemeKeys.appearance) private var appearance = AppAppearance.system.rawValue
     @AppStorage(AppThemeKeys.canvasStyleList) private var stylesData = CanvasStyleStore
         .defaultStylesData
     @AppStorage(AppThemeKeys.canvasStyleSelectedLight) private var selectedLightStyleID =
@@ -56,7 +55,6 @@ struct EditorView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(selectedCanvasManager)
         .onAppear { applyThemes() }
-        .onChange(of: appearance) { applyThemes() }
         .onChange(of: stylesData) { applyThemes() }
         .onChange(of: selectedLightStyleID) { applyThemes() }
         .onChange(of: selectedDarkStyleID) { applyThemes() }
@@ -74,15 +72,7 @@ struct EditorView: View {
 
     private func selectedStyle() -> CanvasStyle {
         let styles = CanvasStyleStore.loadStyles(from: stylesData)
-        let appAppearance = AppAppearance(rawValue: appearance) ?? .system
-        let effectiveScheme: ColorScheme = {
-            switch appAppearance {
-            case .system: return colorScheme
-            case .light: return .light
-            case .dark: return .dark
-            }
-        }()
-        let selectedID = effectiveScheme == .dark ? selectedDarkStyleID : selectedLightStyleID
+        let selectedID = colorScheme == .dark ? selectedDarkStyleID : selectedLightStyleID
         return CanvasStyleStore.selectedStyle(from: styles, selectedID: selectedID)
     }
 }
