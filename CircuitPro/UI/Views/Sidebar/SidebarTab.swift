@@ -7,6 +7,4 @@
 
 import Foundation
 
-protocol SidebarTab: Displayable {
-    var icon: String { get }
-}
+protocol SidebarTab: Displayable {}

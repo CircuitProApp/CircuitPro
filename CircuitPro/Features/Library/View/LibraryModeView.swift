@@ -23,7 +23,7 @@ enum LibraryMode: Displayable {
         }
     }
     
-    var icon: String {
+    var iconName: String {
         switch self {
         case .all:
             return "list.bullet"
@@ -54,7 +54,7 @@ struct LibraryModeView: View {
                 Button {
                     selectedMode = mode
                 } label: {
-                    Image(systemName: mode.icon)
+                    Image(systemName: mode.iconName)
                         .font(.title3)
                         .frame(width: 32, height: 32)
                         .contentShape(.rect())

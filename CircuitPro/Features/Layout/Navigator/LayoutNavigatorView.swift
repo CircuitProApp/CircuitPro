@@ -10,7 +10,7 @@ import SwiftUI
 struct LayoutNavigatorView: View {
 
     // --- MODIFIED: Renamed tabs to be more accurate ---
-    enum LayoutNavigatorTab: String, Displayable, CaseIterable {
+    enum LayoutNavigatorTab: String, Displayable {
         case footprints
         case layers
         

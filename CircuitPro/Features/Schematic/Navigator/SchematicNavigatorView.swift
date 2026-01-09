@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SchematicNavigatorView: View {
 
-    enum SchematicNavigatorTab: CaseIterable, Displayable {
+    enum SchematicNavigatorTab: Displayable {
         case symbols
         case nets
         

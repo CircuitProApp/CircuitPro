@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-enum SettingsRoute: String, Hashable, CaseIterable {
+enum SettingsRoute: Displayable {
     case appearance
 
     var label: String {

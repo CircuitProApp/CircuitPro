@@ -20,7 +20,7 @@ struct SidebarView<T: SidebarTab, Content: View>: View {
                     if availableTabs.count > 1 {
                         Picker("Inspector Tab", selection: $selectedTab) {
                             ForEach(availableTabs) { tab in
-                                Image(systemName: tab.icon)
+                                Image(systemName: tab.iconName)
                             }
                         }
                         .pickerStyle(.segmented)

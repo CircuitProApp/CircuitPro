@@ -44,7 +44,7 @@ enum ComponentCategory: Displayable {
     }
     
     // TODO: Assign colors properly
-    var color: Color? {
+    var color: Color {
         switch self {
         case .passive:
                 .red
