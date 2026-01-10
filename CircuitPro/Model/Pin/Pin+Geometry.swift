@@ -18,7 +18,7 @@ extension Pin {
         return CGPoint(x: dir.x * length, y: dir.y * length)
     }
 
-    // MARK: - Drawable Conformance
+    // MARK: - Drawing Helpers
 
     /// Generates the high-level drawing commands for the pin.
     func makeDrawingPrimitives() -> [DrawingPrimitive] {

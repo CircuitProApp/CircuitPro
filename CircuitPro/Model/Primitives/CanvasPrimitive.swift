@@ -7,7 +7,7 @@
 
 import AppKit
 
-protocol CanvasPrimitive: Transformable, Drawable, Bounded, HandleEditable, Identifiable, Codable, Equatable, Hashable, Layerable {
+protocol CanvasPrimitive: Transformable, HandleEditable, Identifiable, Codable, Equatable, Hashable, Layerable {
 
     var id: UUID { get }
     var layerId: UUID? { get set }
@@ -18,7 +18,7 @@ protocol CanvasPrimitive: Transformable, Drawable, Bounded, HandleEditable, Iden
     func makePath() -> CGPath
 }
 
-// MARK: - Drawable Conformance
+// MARK: - Drawing Helpers
 extension CanvasPrimitive {
     func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
         // We crash intentionally to alert the developer that they are using the wrong code path.

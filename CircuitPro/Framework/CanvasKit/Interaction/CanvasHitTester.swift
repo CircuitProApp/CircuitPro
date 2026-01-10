@@ -92,11 +92,10 @@ struct CanvasHitTester {
 
             if let hitTestable = item as? HitTestable {
                 if hitTestable.hitTest(point: point, tolerance: tolerance) {
-                    let area = (item as? Bounded).map { $0.boundingBox.width * $0.boundingBox.height } ?? 0
                     considerHit(
                         id: item.id,
                         priority: hitTestable.hitTestPriority,
-                        area: area,
+                        area: 0,
                         best: &best
                     )
                 }
@@ -165,12 +164,6 @@ struct CanvasHitTester {
                 continue
             }
 
-            if let bounded = item as? Bounded {
-                if rect.intersects(bounded.boundingBox) {
-                    hits.insert(item.id)
-                }
-                continue
-            }
         }
 
         return Array(hits)

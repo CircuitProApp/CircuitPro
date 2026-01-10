@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-struct SandboxNode: CanvasItem, Transformable, Bounded, HitTestable {
+struct SandboxNode: CanvasItem, Transformable, HitTestable {
     let id: UUID
     var position: CGPoint
     var size: CGSize
@@ -32,6 +32,10 @@ struct SandboxNode: CanvasItem, Transformable, Bounded, HitTestable {
             width: size.width,
             height: size.height
         )
+    }
+
+    func hitTest(point: CGPoint, tolerance: CGFloat) -> Bool {
+        boundingBox.insetBy(dx: -tolerance, dy: -tolerance).contains(point)
     }
 
     func socketPosition(for socket: Socket) -> CGPoint {

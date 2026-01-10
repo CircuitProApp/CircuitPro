@@ -14,12 +14,6 @@ protocol HitTestable {
     var hitTestPriority: Int { get }
 }
 
-extension HitTestable where Self: Bounded {
-    func hitTest(point: CGPoint, tolerance: CGFloat) -> Bool {
-        boundingBox.insetBy(dx: -tolerance, dy: -tolerance).contains(point)
-    }
-}
-
 extension HitTestable {
     var hitTestPriority: Int { 0 }
 }

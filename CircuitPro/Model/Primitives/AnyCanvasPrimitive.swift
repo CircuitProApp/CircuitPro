@@ -223,7 +223,7 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
 
 extension AnyCanvasPrimitive: CanvasItem {}
 
-extension AnyCanvasPrimitive: Drawable, HitTestable {
+extension AnyCanvasPrimitive: HitTestable {
     func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
         let color = resolveColor(in: context)
         let primitives = makeDrawingPrimitives(with: color)
@@ -241,13 +241,6 @@ extension AnyCanvasPrimitive: Drawable, HitTestable {
         return targets.flatMap { layerId in
             worldPrimitives.map { LayeredDrawingPrimitive($0, layerId: layerId) }
         }
-    }
-
-    func haloPath() -> CGPath? {
-        guard let local = makeHaloPath() else { return nil }
-        var transform = CGAffineTransform(translationX: position.x, y: position.y)
-            .rotated(by: rotation)
-        return local.copy(using: &transform)
     }
 
     func hitTest(point: CGPoint, tolerance: CGFloat) -> Bool {
