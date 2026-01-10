@@ -46,10 +46,11 @@ final class CanvasController {
 
     // MARK: - Pluggable Pipelines
 
-    let renderLayers: [any RenderLayer]
+    let renderLayers: [any CKRenderLayer]
     let interactions: [any CanvasInteraction]
     let inputProcessors: [any InputProcessor]
     let snapProvider: any SnapProvider
+    let renderer: CKRenderer
 
     // MARK: - Callbacks to Owner
 
@@ -59,15 +60,17 @@ final class CanvasController {
     // MARK: - Init
 
     init(
-        renderLayers: [any RenderLayer],
+        renderLayers: [any CKRenderLayer],
         interactions: [any CanvasInteraction],
         inputProcessors: [any InputProcessor],
-        snapProvider: any SnapProvider
+        snapProvider: any SnapProvider,
+        renderer: CKRenderer = DefaultCKRenderer()
     ) {
         self.renderLayers = renderLayers
         self.interactions = interactions
         self.inputProcessors = inputProcessors
         self.snapProvider = snapProvider
+        self.renderer = renderer
     }
 
     // MARK: - State Syncing API

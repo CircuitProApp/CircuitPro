@@ -30,10 +30,10 @@ struct WireSandboxView: View {
             connectionEngine: manhattanEngine,
             environment: canvasManager.environment,
             renderLayers: [
-                GridRenderLayer(),
-                ConnectionDebugRenderLayer(),
-                CrosshairsRenderLayer(),
-                PreviewRenderLayer(),
+                GridRL(),
+                WireRL(),
+                CrosshairsRL(),
+                PreviewRL(),
             ],
             interactions: [
                 ToolInteraction(),

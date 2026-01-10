@@ -569,9 +569,9 @@ final class ElementsRenderLayer: RenderLayer {
 
     private func recolor(_ primitive: DrawingPrimitive, to color: CGColor) -> DrawingPrimitive {
         switch primitive {
-        case let .fill(path, _, rule):
-            return .fill(path: path, color: color, rule: rule)
-        case let .stroke(path, _, lineWidth, lineCap, lineJoin, miterLimit, lineDash):
+        case let .fill(path, _, rule, clipPath):
+            return .fill(path: path, color: color, rule: rule, clipPath: clipPath)
+        case let .stroke(path, _, lineWidth, lineCap, lineJoin, miterLimit, lineDash, clipPath):
             return .stroke(
                 path: path,
                 color: color,
@@ -579,7 +579,8 @@ final class ElementsRenderLayer: RenderLayer {
                 lineCap: lineCap,
                 lineJoin: lineJoin,
                 miterLimit: miterLimit,
-                lineDash: lineDash
+                lineDash: lineDash,
+                clipPath: clipPath
             )
         }
     }
@@ -726,12 +727,24 @@ final class ElementsRenderLayer: RenderLayer {
     private func createShapeLayer(for primitive: DrawingPrimitive) -> CAShapeLayer {
         let shapeLayer = CAShapeLayer();
         switch primitive {
-        case let .fill(path, color, rule):
+        case let .fill(path, color, rule, clipPath):
             shapeLayer.path = path; shapeLayer.fillColor = color; shapeLayer.fillRule = rule; shapeLayer.strokeColor = nil; shapeLayer.lineWidth = 0
-        case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash):
+            applyClip(clipPath, to: shapeLayer)
+        case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash, clipPath):
             shapeLayer.path = path; shapeLayer.strokeColor = color; shapeLayer.lineWidth = lineWidth; shapeLayer.lineCap = lineCap; shapeLayer.lineJoin = lineJoin; shapeLayer.miterLimit = miterLimit; shapeLayer.lineDashPattern = lineDash; shapeLayer.fillColor = nil
+            applyClip(clipPath, to: shapeLayer)
         }
         return shapeLayer
+    }
+
+    private func applyClip(_ clipPath: CGPath?, to layer: CAShapeLayer) {
+        guard let clipPath else {
+            layer.mask = nil
+            return
+        }
+        let maskLayer = (layer.mask as? CAShapeLayer) ?? CAShapeLayer()
+        maskLayer.path = clipPath
+        layer.mask = maskLayer
     }
 
 }

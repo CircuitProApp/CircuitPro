@@ -56,8 +56,8 @@ class GridRenderLayer: RenderLayer {
         }
 
         // Apply fade via fillColor alpha.
-        let majorAlpha = clamp01(majorBaseAlpha * f)
-        let minorAlpha = clamp01(minorBaseAlpha * f)
+        let majorAlpha = (majorBaseAlpha * f).clamped(to: 0...1)
+        let minorAlpha = (minorBaseAlpha * f).clamped(to: 0...1)
         let baseColor = context.environment.canvasTheme.gridPrimaryColor
         majorGridLayer.fillColor = applyAlpha(majorAlpha, to: baseColor)
         minorGridLayer.fillColor = applyAlpha(minorAlpha, to: baseColor)
@@ -135,11 +135,9 @@ class GridRenderLayer: RenderLayer {
         return t
     }
 
-    private func clamp01(_ v: CGFloat) -> CGFloat { max(0, min(1, v)) }
-
     private func applyAlpha(_ alpha: CGFloat, to color: CGColor) -> CGColor {
         let base = NSColor(cgColor: color) ?? NSColor.gray
-        return base.withAlphaComponent(clamp01(base.alphaComponent * alpha)).cgColor
+        return base.withAlphaComponent((base.alphaComponent * alpha).clamped(to: 0...1)).cgColor
     }
 
     private func previousMultiple(of step: CGFloat, beforeOrEqualTo value: CGFloat, offset: CGFloat) -> CGFloat {

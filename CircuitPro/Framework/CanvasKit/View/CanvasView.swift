@@ -18,7 +18,7 @@ struct CanvasView: NSViewRepresentable {
 
     // MARK: - Callbacks & Configuration
     let environment: CanvasEnvironmentValues
-    let renderLayers: [any RenderLayer]
+    let renderLayers: [any CKRenderLayer]
     let interactions: [any CanvasInteraction]
     let inputProcessors: [any InputProcessor]
     let snapProvider: any SnapProvider
@@ -36,7 +36,7 @@ struct CanvasView: NSViewRepresentable {
         activeLayerId: Binding<UUID?> = .constant(nil),
         connectionEngine: (any ConnectionEngine)? = nil,
         environment: CanvasEnvironmentValues = .init(),
-        renderLayers: [any RenderLayer],
+        renderLayers: [any CKRenderLayer],
         interactions: [any CanvasInteraction],
         inputProcessors: [any InputProcessor] = [],
         snapProvider: any SnapProvider = NoOpSnapProvider(),
@@ -73,13 +73,18 @@ struct CanvasView: NSViewRepresentable {
 
         init(
             viewport: Binding<CanvasViewport>,
-            renderLayers: [any RenderLayer],
+            renderLayers: [any CKRenderLayer],
             interactions: [any CanvasInteraction],
             inputProcessors: [any InputProcessor],
             snapProvider: any SnapProvider
         ) {
             self.viewportBinding = viewport
-            self.canvasController = CanvasController(renderLayers: renderLayers, interactions: interactions, inputProcessors: inputProcessors, snapProvider: snapProvider)
+            self.canvasController = CanvasController(
+                renderLayers: renderLayers,
+                interactions: interactions,
+                inputProcessors: inputProcessors,
+                snapProvider: snapProvider
+            )
             super.init()
         }
 

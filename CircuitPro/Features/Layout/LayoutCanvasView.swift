@@ -21,13 +21,11 @@ struct LayoutCanvasView: View {
             environment: canvasManager.environment
                 .withTextTarget(.footprint),
             renderLayers: [
-                GridRenderLayer(),
-                SheetRenderLayer(),
-                ElementsRenderLayer(),
-                PreviewRenderLayer(),
-                HandlesRenderLayer(),
-                MarqueeRenderLayer(),
-                CrosshairsRenderLayer(),
+                GridRL(),
+                DrawingSheetRL(),
+                PreviewRL(),
+                MarqueeRL(),
+                CrosshairsRL(),
             ],
             interactions: [
                 HoverHighlightInteraction(),

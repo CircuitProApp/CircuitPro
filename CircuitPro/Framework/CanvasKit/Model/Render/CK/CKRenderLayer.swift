@@ -7,6 +7,12 @@ struct CKLayer {
         self.renderer = renderer
     }
 
+    init(@CKBuilder _ content: @escaping () -> CKLayer) {
+        self.renderer = { context in
+            content().primitives(in: context)
+        }
+    }
+
     func primitives(in context: RenderContext) -> [DrawingPrimitive] {
         renderer(context)
     }
@@ -14,19 +20,15 @@ struct CKLayer {
     static let empty = CKLayer { _ in [] }
 }
 
-@propertyWrapper
-struct CKContext {
-    var wrappedValue: RenderContext {
-        guard let context = CKContextStorage.current else {
-            fatalError("CKContext accessed outside of render update.")
+extension CKLayer {
+    func opacity(_ value: CGFloat) -> CKLayer {
+        CKLayer { context in
+            let opacity = value.clamped(to: 0...1)
+            return primitives(in: context).map { $0.applyingOpacity(opacity) }
         }
-        return context
     }
 }
 
-private enum CKContextStorage {
-    static var current: RenderContext?
-}
 
 protocol CKPathProvider {
     func path(in context: RenderContext) -> CGPath
@@ -85,18 +87,18 @@ struct CKBuilder {
 
 @resultBuilder
 struct CKPathBuilder {
-    static func buildBlock(_ components: AnyCKPath...) -> [AnyCKPath] {
-        components
+    static func buildBlock(_ components: [AnyCKPath]...) -> [AnyCKPath] {
+        components.flatMap { $0 }
     }
 
-    static func buildExpression(_ expression: AnyCKPath) -> AnyCKPath {
-        expression
+    static func buildExpression(_ expression: AnyCKPath) -> [AnyCKPath] {
+        [expression]
     }
 
-    static func buildExpression(_ expression: CKPathProvider) -> AnyCKPath {
-        AnyCKPath { context in
+    static func buildExpression(_ expression: CKPathProvider) -> [AnyCKPath] {
+        [AnyCKPath { context in
             expression.path(in: context)
-        }
+        }]
     }
 
     static func buildOptional(_ component: [AnyCKPath]?) -> [AnyCKPath] {
@@ -122,7 +124,7 @@ protocol CKRenderLayer {
 
 extension CKRenderLayer {
     func asRenderLayer() -> any RenderLayer {
-        CKRenderLayerAdapter(layer: self)
+        CKRenderLayerAdapter(layer: self, zIndex: 0)
     }
 }
 
@@ -130,17 +132,23 @@ final class CKRenderLayerAdapter: RenderLayer {
     private let layer: any CKRenderLayer
     private let rootLayer = CALayer()
     private var shapeLayerPool: [CAShapeLayer] = []
+    private let zIndex: Int
 
-    init(layer: any CKRenderLayer) {
+    init(layer: any CKRenderLayer, zIndex: Int) {
         self.layer = layer
+        self.zIndex = zIndex
     }
 
     func install(on hostLayer: CALayer) {
         rootLayer.contentsScale = hostLayer.contentsScale
+        rootLayer.zPosition = CGFloat(zIndex)
         hostLayer.addSublayer(rootLayer)
     }
 
     func update(using context: RenderContext) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+
         rootLayer.frame = context.canvasBounds
 
         CKContextStorage.current = context
@@ -148,6 +156,7 @@ final class CKRenderLayerAdapter: RenderLayer {
         CKContextStorage.current = nil
         guard !drawingPrimitives.isEmpty else {
             hideAllLayers()
+            CATransaction.commit()
             return
         }
 
@@ -163,6 +172,8 @@ final class CKRenderLayerAdapter: RenderLayer {
                 shapeLayerPool[i].isHidden = true
             }
         }
+
+        CATransaction.commit()
     }
 
     private func hideAllLayers() {
@@ -185,15 +196,18 @@ final class CKRenderLayerAdapter: RenderLayer {
     }
 
     private func configure(layer: CAShapeLayer, for primitive: DrawingPrimitive) {
+        layer.frame = rootLayer.bounds
+        layer.contentsScale = rootLayer.contentsScale
         switch primitive {
-        case let .fill(path, color, rule):
+        case let .fill(path, color, rule, clipPath):
             layer.path = path
             layer.fillColor = color
             layer.fillRule = rule
             layer.strokeColor = nil
             layer.lineWidth = 0
             layer.lineDashPattern = nil
-        case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash):
+            applyClip(clipPath, to: layer)
+        case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash, clipPath):
             layer.path = path
             layer.fillColor = nil
             layer.strokeColor = color
@@ -202,7 +216,20 @@ final class CKRenderLayerAdapter: RenderLayer {
             layer.lineJoin = lineJoin
             layer.miterLimit = miterLimit
             layer.lineDashPattern = lineDash
+            applyClip(clipPath, to: layer)
         }
+    }
+
+    private func applyClip(_ clipPath: CGPath?, to layer: CAShapeLayer) {
+        guard let clipPath else {
+            layer.mask = nil
+            return
+        }
+        let maskLayer = (layer.mask as? CAShapeLayer) ?? CAShapeLayer()
+        maskLayer.frame = layer.bounds
+        maskLayer.contentsScale = layer.contentsScale
+        maskLayer.path = clipPath
+        layer.mask = maskLayer
     }
 }
 
@@ -216,7 +243,14 @@ struct CKStyle {
     var lineJoin: CAShapeLayerLineJoin = .round
     var miterLimit: CGFloat = 10
     var lineDash: [NSNumber]?
+    var clipPath: CGPath?
+    var halos: [CKHalo] = []
     var rotation: CGFloat = 0
+}
+
+struct CKHalo {
+    var color: CGColor
+    var width: CGFloat
 }
 
 protocol CKStyled {
@@ -283,6 +317,20 @@ extension CKStyled {
         return copy
     }
 
+    func halo(_ color: CGColor, width: CGFloat) -> Self {
+        var copy = self
+        copy.style.halos.append(CKHalo(color: color, width: width))
+        return copy
+    }
+
+    func clip(to rect: CGRect) -> Self {
+        self
+    }
+
+    func clip(_ path: CGPath) -> Self {
+        self
+    }
+
     func rotation(_ angle: CGFloat) -> Self {
         var copy = self
         copy.style.rotation = angle
@@ -344,8 +392,24 @@ struct CKGroup: CKStyledPath {
 private func ckPrimitives(for path: CGPath, style: CKStyle) -> [DrawingPrimitive] {
     guard !path.isEmpty else { return [] }
     var primitives: [DrawingPrimitive] = []
+    if !style.halos.isEmpty {
+        for halo in style.halos where halo.width > 0 {
+            primitives.append(
+                .stroke(
+                    path: path,
+                    color: halo.color,
+                    lineWidth: halo.width,
+                    lineCap: style.lineCap,
+                    lineJoin: style.lineJoin,
+                    miterLimit: style.miterLimit,
+                    lineDash: style.lineDash,
+                    clipPath: style.clipPath
+                )
+            )
+        }
+    }
     if let fillColor = style.fillColor {
-        primitives.append(.fill(path: path, color: fillColor))
+        primitives.append(.fill(path: path, color: fillColor, clipPath: style.clipPath))
     }
     if let strokeColor = style.strokeColor {
         primitives.append(
@@ -356,9 +420,35 @@ private func ckPrimitives(for path: CGPath, style: CKStyle) -> [DrawingPrimitive
                 lineCap: style.lineCap,
                 lineJoin: style.lineJoin,
                 miterLimit: style.miterLimit,
-                lineDash: style.lineDash
+                lineDash: style.lineDash,
+                clipPath: style.clipPath
             )
         )
     }
     return primitives
+}
+
+private extension DrawingPrimitive {
+    func applyingOpacity(_ opacity: CGFloat) -> DrawingPrimitive {
+        switch self {
+        case let .fill(path, color, rule, clipPath):
+            return .fill(
+                path: path,
+                color: color.applyingOpacity(opacity),
+                rule: rule,
+                clipPath: clipPath
+            )
+        case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash, clipPath):
+            return .stroke(
+                path: path,
+                color: color.applyingOpacity(opacity),
+                lineWidth: lineWidth,
+                lineCap: lineCap,
+                lineJoin: lineJoin,
+                miterLimit: miterLimit,
+                lineDash: lineDash,
+                clipPath: clipPath
+            )
+        }
+    }
 }

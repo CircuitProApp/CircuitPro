@@ -26,15 +26,14 @@ struct SchematicCanvasView: View {
             connectionEngine: WireEngine(),
             environment: canvasManager.environment,
             renderLayers: [
-                GridRenderLayer(),
-                SheetRenderLayer(),
+                GridRL(),
+                DrawingSheetRL(),
 
-                WireRenderLayer(),
-                ElementsRenderLayer(),
-                PreviewRenderLayer(),
-                MarqueeRL().asRenderLayer(),
-//                CrosshairsRenderLayer(),
-                CrosshairsRL().asRenderLayer(),
+                WireRL(),
+                SymbolRL(),
+                PreviewRL(),
+                MarqueeRL(),
+                CrosshairsRL(),
             ],
             interactions: [
                 HoverHighlightInteraction(),

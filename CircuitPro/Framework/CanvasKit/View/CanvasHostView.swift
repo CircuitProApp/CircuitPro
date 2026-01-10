@@ -27,9 +27,7 @@ final class CanvasHostView: NSView {
 
         self.registerForDraggedTypes(registeredDraggedTypes)
 
-        for renderLayer in controller.renderLayers {
-            renderLayer.install(on: self.layer!)
-        }
+        controller.renderer.install(on: self.layer!)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -60,9 +58,7 @@ final class CanvasHostView: NSView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
 
-        for renderLayer in controller.renderLayers {
-            renderLayer.update(using: context)
-        }
+        controller.renderer.render(layers: controller.renderLayers, context: context)
 
         CATransaction.commit()
     }

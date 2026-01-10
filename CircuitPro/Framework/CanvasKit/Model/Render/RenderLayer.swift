@@ -22,7 +22,6 @@ protocol RenderLayer: AnyObject, Hashable {
 // MARK: - Default Implementations & Conformance
 
 extension RenderLayer {
-
     static func == (lhs: Self, rhs: Self) -> Bool {
         return true
     }
