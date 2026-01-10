@@ -1,17 +1,12 @@
 import AppKit
 
-final class ConnectionDebugRenderLayer: RenderLayer {
-    private let contentLayer = CALayer()
+struct ConnectionDebugRL: CKRenderLayer {
+    @CKContext var context
 
-    func install(on hostLayer: CALayer) {
-        hostLayer.addSublayer(contentLayer)
-    }
-
-    func update(using context: RenderContext) {
-        contentLayer.frame = context.canvasBounds
-        contentLayer.sublayers?.forEach { $0.removeFromSuperlayer() }
-
-        guard let engine = context.connectionEngine else { return }
+    var body: CKLayer {
+        guard let engine = context.connectionEngine else {
+            return .empty
+        }
 
         let routingContext = ConnectionRoutingContext { point in
             context.snapProvider.snap(point: point, context: context)
@@ -22,24 +17,16 @@ final class ConnectionDebugRenderLayer: RenderLayer {
             context: routingContext
         )
 
+        let path = CGMutablePath()
         for (id, route) in routes {
             guard let manhattan = route as? ManhattanRoute else { continue }
             let points = manhattan.points
             guard points.count >= 2 else { continue }
 
-            let path = CGMutablePath()
             path.move(to: points[0])
             for point in points.dropFirst() {
                 path.addLine(to: point)
             }
-
-            let shape = CAShapeLayer()
-            shape.path = path
-            shape.strokeColor = color(for: id).cgColor
-            shape.lineWidth = 3.0
-            shape.lineCap = .round
-            shape.fillColor = nil
-            contentLayer.addSublayer(shape)
 
             if let link = context.connectionLinks.first(where: { $0.id == id }),
                let start = context.connectionPointPositionsByID[link.startID],
@@ -54,21 +41,24 @@ final class ConnectionDebugRenderLayer: RenderLayer {
             }
         }
 
-        for point in context.connectionPoints {
-            let dot = CAShapeLayer()
-            let rect = CGRect(x: point.position.x - 3, y: point.position.y - 3, width: 6, height: 6)
-            dot.path = CGPath(ellipseIn: rect, transform: nil)
-            dot.fillColor = NSColor.systemBlue.cgColor
-            contentLayer.addSublayer(dot)
+        return CKLayer {
+            CKPath(path: path)
+                .stroke(color, width: 3.0)
+            pointDots()
         }
     }
 
-    private func color(for id: UUID) -> NSColor {
-        let hex = id.uuidString.replacingOccurrences(of: "-", with: "")
-        let prefix = hex.prefix(6)
-        let value = Int(prefix, radix: 16) ?? 0
-        let hue = CGFloat(value % 360) / 360.0
-        return NSColor(calibratedHue: hue, saturation: 0.7, brightness: 0.9, alpha: 0.6)
+    private var color: CGColor {
+        NSColor.systemBlue.cgColor
+    }
+
+    private func pointDots() -> CKLayer {
+        let path = CGMutablePath()
+        for point in context.connectionPoints {
+            let rect = CGRect(x: point.position.x - 3, y: point.position.y - 3, width: 6, height: 6)
+            path.addEllipse(in: rect)
+        }
+        return CKPath(path: path).fill(NSColor.systemBlue.cgColor).layer
     }
 
     private func addLinkLabel(
@@ -91,10 +81,9 @@ final class ConnectionDebugRenderLayer: RenderLayer {
         let finalPath = CGMutablePath()
         finalPath.addPath(textPath, transform: transform)
 
-        let textLayer = CAShapeLayer()
-        textLayer.path = finalPath
-        textLayer.fillColor = NSColor.systemYellow.cgColor
-        textLayer.strokeColor = nil
-        contentLayer.addSublayer(textLayer)
+        _ = CKLayer {
+            CKPath(path: finalPath)
+                .fill(NSColor.systemYellow.cgColor)
+        }
     }
 }

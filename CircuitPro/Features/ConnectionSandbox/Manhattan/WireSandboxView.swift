@@ -32,6 +32,7 @@ struct WireSandboxView: View {
             renderLayers: [
                 GridRL(),
                 WireRL(),
+                ConnectionDebugRL(),
                 CrosshairsRL(),
                 PreviewRL(),
             ],

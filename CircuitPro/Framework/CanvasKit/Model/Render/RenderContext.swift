@@ -7,7 +7,7 @@
 
 import AppKit
 
-/// A snapshot of the canvas state, passed to each RenderLayer during a drawing pass.
+/// A snapshot of the canvas state, passed to each CK render layer during a drawing pass.
 /// This struct bundles all the information a layer might need to render itself.
 struct RenderContext {
     // MARK: - Core Framework Data

@@ -30,6 +30,7 @@ struct FootprintCanvasView: View {
                 AxesRL(),
                 DrawingSheetRL(),
                 PreviewRL(),
+                HandlesRL(),
                 MarqueeRL(),
                 CrosshairsRL(),
             ],

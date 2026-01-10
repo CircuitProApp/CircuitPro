@@ -50,6 +50,8 @@ struct BezierSandboxView: View {
             environment: canvasManager.environment,
             renderLayers: [
                 GridRL(),
+                NodeDebugRL(),
+                BezierConnectionDebugRL(),
                 CrosshairsRL(),
             ],
             interactions: [

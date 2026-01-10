@@ -24,6 +24,7 @@ struct LayoutCanvasView: View {
                 GridRL(),
                 DrawingSheetRL(),
                 PreviewRL(),
+                HandlesRL(),
                 MarqueeRL(),
                 CrosshairsRL(),
             ],
