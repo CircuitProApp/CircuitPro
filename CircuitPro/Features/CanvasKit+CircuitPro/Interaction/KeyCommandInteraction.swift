@@ -14,14 +14,6 @@ import SwiftUI
 /// (like deleting selected elements) if the tool doesn't handle the command.
 struct KeyCommandInteraction: CanvasInteraction {
 
-    private let deleteComponentInstances: ((Set<UUID>) -> Bool)?
-
-    init(
-        deleteComponentInstances: ((Set<UUID>) -> Bool)? = nil
-    ) {
-        self.deleteComponentInstances = deleteComponentInstances
-    }
-
     func keyDown(with event: NSEvent, context: RenderContext, controller: CanvasController) -> Bool
     {
         // Use key codes for non-character keys like Escape, Return, and Delete.
@@ -115,13 +107,6 @@ struct KeyCommandInteraction: CanvasInteraction {
                     return nil
                 }
             )
-            if !componentInstanceIDs.isEmpty, let deleteComponentInstances {
-                if deleteComponentInstances(componentInstanceIDs) {
-                    controller.updateSelection([])
-                    return true
-                }
-            }
-
             let remaining = items.filter { !selectedItemIDs.contains($0.id) }
             if remaining.count != items.count {
                 itemsBinding.wrappedValue = remaining
