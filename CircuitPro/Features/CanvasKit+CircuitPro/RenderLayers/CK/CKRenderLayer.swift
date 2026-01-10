@@ -214,6 +214,8 @@ struct CKStyle {
     var strokeWidth: CGFloat = 1.0
     var lineCap: CAShapeLayerLineCap = .round
     var lineJoin: CAShapeLayerLineJoin = .round
+    var miterLimit: CGFloat = 10
+    var lineDash: [NSNumber]?
     var rotation: CGFloat = 0
 }
 
@@ -254,6 +256,30 @@ extension CKStyled {
         var copy = self
         copy.style.strokeColor = color
         copy.style.strokeWidth = width
+        return copy
+    }
+
+    func lineCap(_ lineCap: CAShapeLayerLineCap) -> Self {
+        var copy = self
+        copy.style.lineCap = lineCap
+        return copy
+    }
+
+    func lineJoin(_ lineJoin: CAShapeLayerLineJoin) -> Self {
+        var copy = self
+        copy.style.lineJoin = lineJoin
+        return copy
+    }
+
+    func miterLimit(_ limit: CGFloat) -> Self {
+        var copy = self
+        copy.style.miterLimit = limit
+        return copy
+    }
+
+    func lineDash(_ pattern: [CGFloat]) -> Self {
+        var copy = self
+        copy.style.lineDash = pattern.map { NSNumber(value: Double($0)) }
         return copy
     }
 
@@ -328,7 +354,9 @@ private func ckPrimitives(for path: CGPath, style: CKStyle) -> [DrawingPrimitive
                 color: strokeColor,
                 lineWidth: style.strokeWidth,
                 lineCap: style.lineCap,
-                lineJoin: style.lineJoin
+                lineJoin: style.lineJoin,
+                miterLimit: style.miterLimit,
+                lineDash: style.lineDash
             )
         )
     }

@@ -28,13 +28,13 @@ struct SchematicCanvasView: View {
             renderLayers: [
                 GridRenderLayer(),
                 SheetRenderLayer(),
-           
+
                 WireRenderLayer(),
                 ElementsRenderLayer(),
                 PreviewRenderLayer(),
-                MarqueeRenderLayer(),
+                MarqueeRL().asRenderLayer(),
 //                CrosshairsRenderLayer(),
-                TestRenderLayer().asRenderLayer(),
+                CrosshairsRL().asRenderLayer(),
             ],
             interactions: [
                 HoverHighlightInteraction(),

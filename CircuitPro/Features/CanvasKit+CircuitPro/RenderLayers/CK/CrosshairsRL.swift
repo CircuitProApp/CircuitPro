@@ -1,6 +1,6 @@
 import AppKit
 
-struct TestRenderLayer: CKRenderLayer {
+struct CrosshairsRL: CKRenderLayer {
 
     @CKContext var context
 
