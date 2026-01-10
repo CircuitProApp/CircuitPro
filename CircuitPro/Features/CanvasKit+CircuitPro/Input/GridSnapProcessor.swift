@@ -11,11 +11,11 @@ import CoreGraphics
 struct GridSnapProcessor: InputProcessor {
     func process(point: CGPoint, context: RenderContext) -> CGPoint {
         // All your familiar snapping logic now lives here.
-        guard context.environment.configuration.snapping.isEnabled else {
+        guard context.environment.snapping.isEnabled else {
             return point
         }
 
-        let gridSize = context.environment.configuration.grid.spacing.canvasPoints
+        let gridSize = context.environment.grid.spacing.canvasPoints
         guard gridSize > 0 else {
             return point
         }

@@ -25,7 +25,7 @@ class AxesRenderLayer: RenderLayer {
 
     /// Redraws the axes in the center of the current visible rectangle on each frame.
     func update(using context: RenderContext) {
-        let bounds = context.hostViewBounds
+        let bounds = context.canvasBounds
         let scale = 1.0 / max(context.magnification, .ulpOfOne)
         let centerModelPoint = CGPoint(x: bounds.midX, y: bounds.midY)
 

@@ -8,7 +8,7 @@ final class NodeDebugRenderLayer: RenderLayer {
     }
 
     func update(using context: RenderContext) {
-        contentLayer.frame = context.hostViewBounds
+        contentLayer.frame = context.canvasBounds
         contentLayer.sublayers?.forEach { $0.removeFromSuperlayer() }
 
         for item in context.items {

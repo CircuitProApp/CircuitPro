@@ -8,7 +8,7 @@ final class BezierConnectionDebugRenderLayer: RenderLayer {
     }
 
     func update(using context: RenderContext) {
-        contentLayer.frame = context.hostViewBounds
+        contentLayer.frame = context.canvasBounds
         contentLayer.sublayers?.forEach { $0.removeFromSuperlayer() }
 
         guard let engine = context.connectionEngine else { return }

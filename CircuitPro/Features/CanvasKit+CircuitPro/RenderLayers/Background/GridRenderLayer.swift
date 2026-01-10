@@ -29,7 +29,7 @@ class GridRenderLayer: RenderLayer {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
 
-        let hostBounds = context.hostViewBounds
+        let hostBounds = context.canvasBounds
         let visible = context.visibleRect
 
         // Align frames to host bounds for local coordinates and natural clipping.
@@ -63,7 +63,7 @@ class GridRenderLayer: RenderLayer {
         minorGridLayer.fillColor = applyAlpha(minorAlpha, to: baseColor)
 
         // Build geometry only when visible.
-        let unitSpacing = context.environment.configuration.grid.spacing.canvasPoints
+        let unitSpacing = context.environment.grid.spacing.canvasPoints
         let spacing = adjustedSpacing(unitSpacing: unitSpacing, magnification: context.magnification)
         if spacing <= 0 {
             majorGridLayer.path = nil

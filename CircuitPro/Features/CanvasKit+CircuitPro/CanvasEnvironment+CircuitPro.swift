@@ -8,12 +8,6 @@
 import AppKit
 import CoreGraphics
 
-struct CanvasConfiguration {
-    var grid = CanvasGrid()
-    var snapping = Snapping()
-    var crosshairsStyle = CrosshairsStyle.centeredCross
-}
-
 struct CanvasGrid {
     var spacing: GridSpacing = .mm1
     var majorLineInterval: Int = 10
@@ -58,8 +52,16 @@ struct Snapping {
 
 typealias DefinitionTextResolver = (_ text: CircuitText.Definition) -> String
 
-private struct ConfigurationKey: CanvasEnvironmentKey {
-    static let defaultValue = CanvasConfiguration()
+private struct GridKey: CanvasEnvironmentKey {
+    static let defaultValue = CanvasGrid()
+}
+
+private struct SnappingKey: CanvasEnvironmentKey {
+    static let defaultValue = Snapping()
+}
+
+private struct CrosshairsStyleKey: CanvasEnvironmentKey {
+    static let defaultValue = CrosshairsStyle.centeredCross
 }
 
 private struct CanvasThemeKey: CanvasEnvironmentKey {
@@ -92,9 +94,19 @@ private struct InteractionModeKey: CanvasEnvironmentKey {
 }
 
 extension CanvasEnvironmentValues {
-    var configuration: CanvasConfiguration {
-        get { self[ConfigurationKey.self] }
-        set { self[ConfigurationKey.self] = newValue }
+    var grid: CanvasGrid {
+        get { self[GridKey.self] }
+        set { self[GridKey.self] = newValue }
+    }
+
+    var snapping: Snapping {
+        get { self[SnappingKey.self] }
+        set { self[SnappingKey.self] = newValue }
+    }
+
+    var crosshairsStyle: CrosshairsStyle {
+        get { self[CrosshairsStyleKey.self] }
+        set { self[CrosshairsStyleKey.self] = newValue }
     }
 
     var canvasTheme: CanvasTheme {

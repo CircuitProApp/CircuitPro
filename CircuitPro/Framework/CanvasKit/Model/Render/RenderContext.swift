@@ -17,7 +17,7 @@ struct RenderContext {
     let highlightedItemIDs: Set<UUID>
     let selectedItemIDs: Set<UUID>
     let highlightedLinkIDs: Set<UUID>
-    let hostViewBounds: CGRect
+    let canvasBounds: CGRect
     let visibleRect: CGRect
 
     let layers: [any CanvasLayer]
@@ -50,7 +50,7 @@ struct RenderContext {
         self.highlightedItemIDs = highlightedItemIDs
         self.selectedItemIDs = selectedItemIDs
         self.highlightedLinkIDs = highlightedLinkIDs
-        self.hostViewBounds = hostViewBounds
+        self.canvasBounds = hostViewBounds
         self.visibleRect = visibleRect
         self.layers = layers
         self.activeLayerId = activeLayerId

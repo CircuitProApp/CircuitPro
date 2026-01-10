@@ -13,11 +13,11 @@ struct SnappingControlView: View {
 
     var body: some View {
         Button {
-            canvasManager.environment.configuration.snapping.isEnabled.toggle()
+            canvasManager.environment.snapping.isEnabled.toggle()
         } label: {
             Image(systemName: CircuitProSymbols.Canvas.snapping)
                 .frame(width: 13, height: 13)
-                .foregroundStyle(canvasManager.environment.configuration.snapping.isEnabled ? .blue : .secondary)
+                .foregroundStyle(canvasManager.environment.snapping.isEnabled ? .blue : .secondary)
         }
         .buttonStyle(.plain)
     }

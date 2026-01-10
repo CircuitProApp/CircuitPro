@@ -16,14 +16,14 @@ struct GridSpacingControlView: View {
         Menu {
             ForEach(GridSpacing.allCases, id: \.self) { spacing in
                 Button {
-                    canvasManager.environment.configuration.grid.spacing = spacing
+                    canvasManager.environment.grid.spacing = spacing
                 } label: {
                     Text(spacing.label)
                 }
             }
         } label: {
             HStack(spacing: 2.5) {
-                Text(canvasManager.environment.configuration.grid.spacing.label)
+                Text(canvasManager.environment.grid.spacing.label)
                     .font(.system(size: 12))
                 Image(systemName: CircuitProSymbols.Generic.chevronDown)
                     .resizable()

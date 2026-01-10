@@ -11,11 +11,11 @@ class CrosshairsRenderLayer: RenderLayer {
     }
 
     func update(using context: RenderContext) {
-        let config = context.environment.configuration
+        let crosshairsStyle = context.environment.crosshairsStyle
 
         // Use the new `processedMouseLocation` property from the context.
         // It will be nil if the raw location is nil, so this guard is sufficient.
-        guard config.crosshairsStyle != .hidden, let point = context.processedMouseLocation else {
+        guard crosshairsStyle != .hidden, let point = context.processedMouseLocation else {
             shapeLayer.isHidden = true
             shapeLayer.path = nil
             return
@@ -27,11 +27,11 @@ class CrosshairsRenderLayer: RenderLayer {
         shapeLayer.strokeColor = context.environment.canvasTheme.crosshairColor
 
         let path = CGMutablePath()
-        let bounds = context.hostViewBounds
+        let bounds = context.canvasBounds
         let scale = 1.0 / max(context.magnification, .ulpOfOne)
 
         // The rest of your drawing logic uses the final `point` and remains unchanged.
-        switch config.crosshairsStyle {
+        switch crosshairsStyle {
         case .fullScreenLines:
             path.move(to: CGPoint(x: point.x, y: bounds.minY))
             path.addLine(to: CGPoint(x: point.x, y: bounds.maxY))

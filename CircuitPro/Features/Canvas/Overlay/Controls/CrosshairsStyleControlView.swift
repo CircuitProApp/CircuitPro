@@ -16,7 +16,7 @@ struct CrosshairsStyleControlView: View {
         Menu {
             ForEach(CrosshairsStyle.allCases) { style in
                 Button {
-                    canvasManager.environment.configuration.crosshairsStyle = style
+                    canvasManager.environment.crosshairsStyle = style
                 } label: {
                     Text(style.label)
                 }
@@ -24,7 +24,7 @@ struct CrosshairsStyleControlView: View {
         } label: {
             Image(systemName: CircuitProSymbols.Canvas.crosshairs)
                 .frame(width: 13, height: 13)
-                .foregroundStyle(canvasManager.environment.configuration.crosshairsStyle != .hidden ? .blue : .secondary)
+                .foregroundStyle(canvasManager.environment.crosshairsStyle != .hidden ? .blue : .secondary)
         }
         .buttonStyle(.plain)
     }

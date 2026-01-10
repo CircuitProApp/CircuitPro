@@ -37,7 +37,7 @@ final class SheetRenderLayer: RenderLayer {
         let vSpacing = 10 * unitsPerMM
 
         let metrics = DrawingMetrics(
-            viewBounds: context.hostViewBounds,
+            viewBounds: context.canvasBounds,
             inset: inset,
             horizontalTickSpacing: hSpacing,
             verticalTickSpacing: vSpacing,
