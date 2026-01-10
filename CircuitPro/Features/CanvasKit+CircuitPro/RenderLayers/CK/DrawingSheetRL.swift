@@ -152,7 +152,7 @@ private struct CKRulerDrawer {
             for (i, y) in yRange.enumerated() {
                 let cellMidY = y + tickSpacing / 2
                 let text = labelForIndex(i, isNumber: false)
-                let textPath = TextUtilities.path(for: text, font: font)
+                let textPath = CKText.path(for: text, font: font)
                 let textBounds = textPath.boundingBoxOfPath
 
                 let position = CGPoint(x: xLabel - textBounds.width / 2, y: cellMidY - textBounds.height / 2)
@@ -167,7 +167,7 @@ private struct CKRulerDrawer {
             for (i, x) in xRange.enumerated() {
                 let cellMidX = x - tickSpacing / 2
                 let text = labelForIndex(i, isNumber: true)
-                let textPath = TextUtilities.path(for: text, font: font)
+                let textPath = CKText.path(for: text, font: font)
                 let textBounds = textPath.boundingBoxOfPath
 
                 let position = CGPoint(x: cellMidX - textBounds.width / 2, y: yLabel - textBounds.height / 2)
@@ -229,7 +229,7 @@ private struct CKTitleBlockDrawer {
             )
             .insetBy(dx: cellPad, dy: 0)
 
-            let keyPath = TextUtilities.path(for: key.uppercased(), font: keyFont)
+            let keyPath = CKText.path(for: key.uppercased(), font: keyFont)
             let keyPosition = CGPoint(x: cellRect.minX, y: cellRect.midY + 2)
             let keyTransform = CGAffineTransform(
                 translationX: keyPosition.x - keyPath.boundingBoxOfPath.minX,
@@ -237,7 +237,7 @@ private struct CKTitleBlockDrawer {
             )
             textPath.addPath(keyPath, transform: keyTransform)
 
-            let valuePath = TextUtilities.path(for: value, font: valueFont)
+            let valuePath = CKText.path(for: value, font: valueFont)
             let valueBounds = valuePath.boundingBoxOfPath
             let valuePosition = CGPoint(
                 x: cellRect.maxX - valueBounds.width,

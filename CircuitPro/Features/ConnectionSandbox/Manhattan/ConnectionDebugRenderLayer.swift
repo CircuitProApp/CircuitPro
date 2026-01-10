@@ -81,7 +81,7 @@ final class ConnectionDebugRenderLayer: RenderLayer {
         let mid = CGPoint(x: (start.x + end.x) * 0.5, y: (start.y + end.y) * 0.5)
         let text = "\(id.uuidString.prefix(4)) \(startID.uuidString.prefix(4))→\(endID.uuidString.prefix(4))"
         let font = NSFont.monospacedSystemFont(ofSize: 9, weight: .regular)
-        let textPath = TextUtilities.path(for: text, font: font)
+        let textPath = CKText.path(for: text, font: font)
         let bounds = textPath.boundingBoxOfPath
         let position = CGPoint(x: mid.x - bounds.width / 2, y: mid.y - bounds.height / 2)
         let transform = CGAffineTransform(

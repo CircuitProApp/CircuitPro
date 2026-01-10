@@ -30,7 +30,7 @@ extension Pin {
          legPath.move(to: localLegStart)
          legPath.addLine(to: .zero)
          primitives.append(.stroke(path: legPath, color: pinColor.cgColor, lineWidth: 1.0))
-         
+
          let endpointRect = CGRect(x: -endpointRadius, y: -endpointRadius, width: endpointRadius * 2, height: endpointRadius * 2)
          primitives.append(.stroke(path: CGPath(ellipseIn: endpointRect, transform: nil), color: pinColor.cgColor, lineWidth: 1.0))
 
@@ -51,7 +51,7 @@ extension Pin {
      func makeHaloPath() -> CGPath? {
          return calculateCompositePath()
      }
-     
+
      // MARK: - Composite Path & Layout
 
      private func calculateCompositePath() -> CGPath {
@@ -62,7 +62,7 @@ extension Pin {
          legPath.move(to: localLegStart)
          legPath.addLine(to: .zero)
          outline.addPath(legPath)
-         
+
          let endpointRect = CGRect(x: -endpointRadius, y: -endpointRadius, width: endpointRadius * 2, height: endpointRadius * 2)
          outline.addPath(CGPath(ellipseIn: endpointRect, transform: nil))
 
@@ -73,7 +73,7 @@ extension Pin {
          if showLabel && !name.isEmpty {
              outline.addPath(labelLayout())
          }
-         
+
          return outline
      }
 
@@ -82,10 +82,10 @@ extension Pin {
      func labelLayout() -> CGPath {
          let font = NSFont.systemFont(ofSize: 10)
          let pad: CGFloat = 4
-         
-         let textPath = TextUtilities.path(for: name, font: font)
+
+         let textPath = CKText.path(for: name, font: font)
          let bounds = textPath.boundingBoxOfPath
-         
+
          let (targetPoint, anchorPoint): (CGPoint, CGPoint)
 
          switch cardinalRotation {
@@ -105,7 +105,7 @@ extension Pin {
              targetPoint = CGPoint(x: localLegStart.x + pad, y: localLegStart.y)
              anchorPoint = CGPoint(x: bounds.minX, y: bounds.midY)
          }
-         
+
          var transform = CGAffineTransform(translationX: targetPoint.x - anchorPoint.x, y: targetPoint.y - anchorPoint.y)
          return textPath.copy(using: &transform) ?? textPath
      }
@@ -113,10 +113,10 @@ extension Pin {
      func numberLayout() -> CGPath {
          let font = NSFont.systemFont(ofSize: 9, weight: .medium)
          let pad: CGFloat = 5
-         
-         let textPath = TextUtilities.path(for: "\(number)", font: font)
+
+         let textPath = CKText.path(for: "\(number)", font: font)
          let bounds = textPath.boundingBoxOfPath
-         
+
          let mid = CGPoint(x: localLegStart.x / 2, y: localLegStart.y / 2)
          let targetPoint: CGPoint
 
@@ -126,7 +126,7 @@ extension Pin {
          default:
              targetPoint = CGPoint(x: mid.x, y: mid.y + pad)
          }
-         
+
          let anchorPoint = CGPoint(x: bounds.midX, y: bounds.midY)
          var transform = CGAffineTransform(translationX: targetPoint.x - anchorPoint.x, y: targetPoint.y - anchorPoint.y)
          return textPath.copy(using: &transform) ?? textPath

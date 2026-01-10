@@ -10,7 +10,7 @@ import CoreGraphics
 
 struct CanvasTextGeometry {
     static func localPath(for text: String, font: NSFont, anchor: TextAnchor) -> CGPath {
-        let untransformedPath = TextUtilities.path(for: text, font: font)
+        let untransformedPath = CKText.path(for: text, font: font)
         guard !untransformedPath.isEmpty else { return untransformedPath }
 
         let targetPoint = anchor.point(in: untransformedPath.boundingBoxOfPath)
