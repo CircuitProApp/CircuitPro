@@ -6,8 +6,7 @@ struct PreviewRL: CKView {
     var body: some CKView {
         if let tool = context.selectedTool,
            let mouseLocation = context.processedMouseLocation {
-            let primitives = tool.preview(mouse: mouseLocation, context: context)
-            CKGroup(primitives: primitives)
+            tool.preview(mouse: mouseLocation, context: context)
         } else {
             CKEmpty()
         }

@@ -40,8 +40,8 @@ final class LineTool: CanvasTool {
         }
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
-        guard let startPoint = start else { return [] }
+    override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
+        guard let startPoint = start else { return CKGroup() }
 
         // Create the rubber-band path for the preview.
         let path = CGMutablePath()
@@ -51,13 +51,11 @@ final class LineTool: CanvasTool {
         let previewColor = context.layers.first { $0.id == context.activeLayerId }?.color ?? NSColor.systemBlue.withAlphaComponent(0.8).cgColor
 
 
-        // Return a single stroke primitive with the same styling.
-        return [.stroke(
-            path: path,
-            color: previewColor,
-            lineWidth: 1.0,
-            lineDash: [4, 4]
-        )]
+        return CKGroup {
+            CKPath(path: path)
+                .stroke(previewColor, width: 1.0)
+                .lineDash([4, 4])
+        }
     }
 
     override func handleEscape() -> Bool {

@@ -13,9 +13,9 @@ import SwiftUI
 /// and provides a natural way for stateful tools (like a multi-point line tool) to manage
 /// their own state without needing `mutating` methods.
 class CanvasTool: Hashable {
-    
+
     // MARK: - Identity and Conformance
-    
+
     /// The tool's identity, derived from its specific type. This ensures that
     /// all instances of `CursorTool` are equal, but different from `LineTool`.
     public var id: ObjectIdentifier {
@@ -29,16 +29,16 @@ class CanvasTool: Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+
     // MARK: - UI Representation (for Toolbars)
-    
+
     /// The SF Symbol name to represent this tool in the UI. Subclasses should override this.
     var symbolName: String { "questionmark.circle" }
-    
+
     /// The user-facing name for this tool. Subclasses should override this.
     var label: String { "Unnamed Tool" }
-    
-    
+
+
     // MARK: - Primary Actions (Override in Subclasses)
 
     /// Called when the user taps on the canvas. Subclasses override this to provide their main behavior.
@@ -47,11 +47,11 @@ class CanvasTool: Hashable {
         return .noResult
     }
 
-    /// Provides drawing parameters for a temporary preview (e.g., rubber-banding a line).
-    func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
-        return []
+    /// Provides a temporary preview view (e.g., rubber-banding a line).
+    func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
+        return CKGroup()
     }
-    
+
     // MARK: - Keyboard Actions (Override in Subclasses)
 
     /// Called when the Escape key is pressed. Resets the tool's internal state.

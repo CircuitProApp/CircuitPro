@@ -63,26 +63,24 @@ final class TraceTool: CanvasTool {
         }
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
-        guard case .drawing(let lastPoint) = state else { return [] }
+    override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
+        guard case .drawing(let lastPoint) = state else { return CKGroup() }
 
         let color = context.layers.first(where: { $0.id == context.activeLayerId })?.color ?? NSColor.systemBlue.cgColor
 
         let pathPoints = calculateOptimalPath(from: lastPoint, to: mouse)
 
         let path = CGMutablePath()
-        guard let firstPoint = pathPoints.first else { return [] }
+        guard let firstPoint = pathPoints.first else { return CKGroup() }
         path.move(to: firstPoint)
         for i in 1..<pathPoints.count {
             path.addLine(to: pathPoints[i])
         }
 
-        // The preview should always reflect the current width setting.
-        return [.stroke(
-            path: path,
-            color: color,
-            lineWidth: self.currentTraceWidthInPoints
-        )]
+        return CKGroup {
+            CKPath(path: path)
+                .stroke(color, width: self.currentTraceWidthInPoints)
+        }
     }
 
     private func calculateOptimalPath(from start: CGPoint, to end: CGPoint) -> [CGPoint] {

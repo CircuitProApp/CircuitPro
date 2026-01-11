@@ -110,9 +110,9 @@ extension Pin {
          return textPath.copy(using: &transform) ?? textPath
      }
 
-     func numberLayout() -> CGPath {
-         let font = NSFont.systemFont(ofSize: 9, weight: .medium)
-         let pad: CGFloat = 5
+    func numberLayout() -> CGPath {
+        let font = NSFont.systemFont(ofSize: 9, weight: .medium)
+        let pad: CGFloat = 5
 
          let textPath = CKText.path(for: "\(number)", font: font)
          let bounds = textPath.boundingBoxOfPath
@@ -128,7 +128,40 @@ extension Pin {
          }
 
          let anchorPoint = CGPoint(x: bounds.midX, y: bounds.midY)
-         var transform = CGAffineTransform(translationX: targetPoint.x - anchorPoint.x, y: targetPoint.y - anchorPoint.y)
-         return textPath.copy(using: &transform) ?? textPath
-     }
+        var transform = CGAffineTransform(translationX: targetPoint.x - anchorPoint.x, y: targetPoint.y - anchorPoint.y)
+        return textPath.copy(using: &transform) ?? textPath
+    }
+
+    func previewView(at position: CGPoint, color: CGColor) -> CKGroup {
+        let legPath = CGMutablePath()
+        legPath.move(to: localLegStart)
+        legPath.addLine(to: .zero)
+
+        let endpointRect = CGRect(
+            x: -endpointRadius,
+            y: -endpointRadius,
+            width: endpointRadius * 2,
+            height: endpointRadius * 2
+        )
+        let endpointPath = CGPath(ellipseIn: endpointRect, transform: nil)
+
+        var children: [AnyCKView] = [
+            AnyCKView(CKPath(path: legPath).position(position).stroke(color, width: 1.0)),
+            AnyCKView(CKPath(path: endpointPath).position(position).stroke(color, width: 1.0))
+        ]
+
+        if showNumber {
+            children.append(
+                AnyCKView(CKPath(path: numberLayout()).position(position).fill(color))
+            )
+        }
+
+        if showLabel && !name.isEmpty {
+            children.append(
+                AnyCKView(CKPath(path: labelLayout()).position(position).fill(color))
+            )
+        }
+
+        return CKGroup(children)
+    }
 }

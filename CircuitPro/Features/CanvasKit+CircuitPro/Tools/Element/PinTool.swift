@@ -24,27 +24,15 @@ final class PinTool: CanvasTool {
         return .newItem(pin)
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
+    override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
         // 1. Create a temporary pin model to represent the preview.
         // Its position can be .zero since we are describing it in a local space.
         let number = nextPinNumber(in: context)
         let previewPin = Pin(
             name: "", number: number, position: .zero, cardinalRotation: rotation, type: .unknown,
             lengthType: .regular)
-
-        // 2. Get the model's drawing commands in its local coordinate space.
-        let localPrimitives = previewPin.makeDrawingPrimitives()
-
-        // 3. Create a transform to move the local shape to the mouse cursor's world position.
-        var worldTransform = CGAffineTransform(translationX: mouse.x, y: mouse.y)
-
-        // 4. Map over the local primitives, applying the transform to each one to get world-space primitives.
-        // This reuses the `applying(transform:)` helper, which correctly handles paths and text.
-        let worldPrimitives = localPrimitives.map { primitive in
-            primitive.applying(transform: &worldTransform)
-        }
-
-        return worldPrimitives
+        let pinColor = context.environment.schematicTheme.pinColor
+        return previewPin.previewView(at: mouse, color: pinColor)
     }
 
     private func nextPinNumber(in context: RenderContext) -> Int {

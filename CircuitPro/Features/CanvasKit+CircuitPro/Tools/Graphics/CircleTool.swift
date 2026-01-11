@@ -46,8 +46,8 @@ final class CircleTool: CanvasTool {
         }
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
-        guard let centerPoint = center else { return [] }
+    override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
+        guard let centerPoint = center else { return CKGroup() }
 
         // Create the preview path for the rubber-band effect.
         let radius = hypot(mouse.x - centerPoint.x, mouse.y - centerPoint.y)
@@ -56,13 +56,11 @@ final class CircleTool: CanvasTool {
 
         let previewColor = context.layers.first { $0.id == context.activeLayerId }?.color ?? NSColor.systemBlue.withAlphaComponent(0.8).cgColor
 
-        // Return a single stroke primitive with the same visual styling.
-        return [.stroke(
-            path: path,
-            color: previewColor,
-            lineWidth: 1.0,
-            lineDash: [4, 4]
-        )]
+        return CKGroup {
+            CKPath(path: path)
+                .stroke(previewColor, width: 1.0)
+                .lineDash([4, 4])
+        }
     }
 
     override func handleEscape() -> Bool {

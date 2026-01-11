@@ -96,7 +96,7 @@ final class WireTool: CanvasTool {
         return .noResult
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
+     func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard let state else { return [] }
 
         let snapped = context.snapProvider.snap(point: mouse, context: context)

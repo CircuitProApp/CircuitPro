@@ -44,7 +44,7 @@ final class PadTool: CanvasTool {
         return .newItem(pad)
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
+    override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
         // 1. Create a temporary Pad model to generate its local-space geometry.
         // Its position is .zero because we only care about its shape relative to its own center.
         let number = nextPadNumber(in: context)
@@ -58,19 +58,16 @@ final class PadTool: CanvasTool {
 
         // 2. Get the pad's composite path in its local coordinate space.
         let localPath = previewPad.calculateCompositePath()
-        guard !localPath.isEmpty else { return [] }
-
-        // 3. Create a transform to move the local path to the mouse cursor's world position.
-        var transform = CGAffineTransform(translationX: mouse.x, y: mouse.y)
-        guard let worldPath = localPath.copy(using: &transform) else {
-            return []
-        }
+        guard !localPath.isEmpty else { return CKGroup() }
 
         // 4. Define the preview's appearance.
         let copperColor = NSColor.systemRed.withAlphaComponent(0.8).cgColor
 
-        // 5. Return a single .fill primitive using the final, world-space path.
-        return [.fill(path: worldPath, color: copperColor)]
+        return CKGroup {
+            CKPath(path: localPath)
+                .position(mouse)
+                .fill(copperColor)
+        }
     }
     override func handleEscape() -> Bool {
         // Return false to indicate the tool should remain active.

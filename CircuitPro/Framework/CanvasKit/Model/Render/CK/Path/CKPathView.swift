@@ -31,13 +31,14 @@ struct CKStyled<Base: CKPathView>: CKView {
         if path.isEmpty {
             return []
         }
-        if let position = style.position, style.rotation != 0 {
+        if style.rotation != 0 {
+            let pivot = style.position ?? .zero
             var transform = CGAffineTransform(
-                translationX: position.x,
-                y: position.y
+                translationX: pivot.x,
+                y: pivot.y
             )
             .rotated(by: style.rotation)
-            .translatedBy(x: -position.x, y: -position.y)
+            .translatedBy(x: -pivot.x, y: -pivot.y)
             path = path.copy(using: &transform) ?? path
         }
         return ckPrimitives(for: path, style: style)
@@ -52,13 +53,14 @@ extension CKStyled: CKPathView where Base: CKPathView {
         if path.isEmpty {
             return path
         }
-        if let position = self.style.position, self.style.rotation != 0 {
+        if self.style.rotation != 0 {
+            let pivot = self.style.position ?? .zero
             var transform = CGAffineTransform(
-                translationX: position.x,
-                y: position.y
+                translationX: pivot.x,
+                y: pivot.y
             )
             .rotated(by: self.style.rotation)
-            .translatedBy(x: -position.x, y: -position.y)
+            .translatedBy(x: -pivot.x, y: -pivot.y)
             path = path.copy(using: &transform) ?? path
         }
         return path
