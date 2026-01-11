@@ -20,14 +20,14 @@ struct CrosshairsRL: CKView {
         context.environment.crosshairsStyle
     }
 
-     @CKViewBuilder var body: some CKView {
+    var body: some CKView {
         switch crosshairsStyle {
-        case .hidden:
-            CKEmpty()
-        case .fullScreenLines:
-            crosshairs(width: context.canvasBounds.width, height: context.canvasBounds.height)
         case .centeredCross:
             crosshairs(width: 20, height: 20)
+        case .fullScreenLines:
+            crosshairs(width: context.canvasBounds.width, height: context.canvasBounds.height)
+        case .hidden:
+            CKEmpty()
         }
     }
 

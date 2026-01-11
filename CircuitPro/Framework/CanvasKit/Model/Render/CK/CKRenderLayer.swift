@@ -2,7 +2,7 @@ import AppKit
 
 protocol CKView {
     associatedtype Body: CKView
-    var body: Body { get }
+    @CKViewBuilder var body: Body { get }
     func _render(in context: RenderContext) -> [DrawingPrimitive]
 }
 
@@ -113,8 +113,16 @@ extension CKView {
 
 @resultBuilder
 struct CKViewBuilder {
+    static func buildBlock(_ component: Never) -> Never {
+        component
+    }
+
     static func buildBlock(_ components: CKGroup...) -> CKGroup {
         CKGroup(components.flatMap { $0.children })
+    }
+
+    static func buildExpression(_ expression: Never) -> Never {
+        expression
     }
 
     static func buildExpression<V: CKView>(_ expression: V) -> CKGroup {
@@ -297,8 +305,8 @@ extension CKStyled {
 }
 
 extension CKStyledPath {
-    var body: CKEmpty {
-        CKEmpty()
+    var body: Never {
+        fatalError("CKStyledPath has no body.")
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
