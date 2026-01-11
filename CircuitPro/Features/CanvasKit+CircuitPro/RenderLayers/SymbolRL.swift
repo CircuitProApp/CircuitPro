@@ -3,7 +3,7 @@ import AppKit
 struct SymbolRL: CKView {
     @CKContext var context
 
-    @CKViewBuilder var body: some CKView {
+    var body: some CKView {
         let components = context.items.compactMap { $0 as? ComponentInstance }
         CKGroup {
             for component in components {
@@ -43,7 +43,7 @@ struct SymbolView: CKView {
 
         if !renderData.bodyPrimitives.isEmpty {
             children.append(AnyCKView(
-                CKPrimitives { _ in renderData.bodyPrimitives }
+                CKGroup(primitives: renderData.bodyPrimitives)
             ))
         }
 
@@ -352,7 +352,7 @@ struct AnchoredTextView: CKView {
             }
 
             if !entry.primitives.isEmpty {
-                CKPrimitives { _ in entry.primitives }
+                CKGroup(primitives: entry.primitives)
             }
         }
     }

@@ -61,7 +61,7 @@ private struct PrimitiveView: CKView {
                     if isHighlighted, let haloPath {
                         CKPath(path: haloPath).halo(haloColor, width: 5.0)
                     }
-                    CKPrimitives { _ in worldPrimitives }
+                    CKGroup(primitives: worldPrimitives)
                 }
             }
         } else {
@@ -151,7 +151,7 @@ private struct PinView: CKView {
                 if isHighlighted, let haloPath {
                     CKPath(path: haloPath).halo(haloColor, width: 5.0)
                 }
-                CKPrimitives { _ in worldPrimitives }
+                CKGroup(primitives: worldPrimitives)
             }
         }
     }
@@ -216,9 +216,9 @@ private struct DefinitionTextView: CKView {
                     if isHighlighted {
                         CKPath(path: path).halo(haloColor, width: 5.0)
                     }
-                    CKPrimitives { _ in [
+                    CKGroup(primitives: [
                         .fill(path: path, color: color)
-                    ] + guidePrimitives }
+                    ] + guidePrimitives)
                 }
             }
         }

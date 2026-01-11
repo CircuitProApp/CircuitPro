@@ -31,7 +31,7 @@ struct CrosshairsRL: CKView {
         }
     }
 
-    func crosshairs(width: CGFloat, height: CGFloat) -> CKPath {
+    private func crosshairs(width: CGFloat, height: CGFloat) -> some CKView {
         CKPath {
             CKLine(length: width, direction: .horizontal)
             CKLine(length: height, direction: .vertical)

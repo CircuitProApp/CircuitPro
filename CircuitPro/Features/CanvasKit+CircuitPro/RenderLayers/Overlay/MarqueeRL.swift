@@ -11,7 +11,7 @@ struct MarqueeRL: CKView {
         1.0 / max(context.magnification, .ulpOfOne)
     }
 
-     @CKViewBuilder var body: some CKView {
+    var body: some CKView {
         if let rect = context.environment.marqueeRect {
             marqueeRect(rect)
         } else {
@@ -19,7 +19,7 @@ struct MarqueeRL: CKView {
         }
     }
 
-    private func marqueeRect(_ rect: CGRect) -> CKRectangle {
+    private func marqueeRect(_ rect: CGRect) -> some CKView {
         let dashPattern: [CGFloat] = [4 * strokeWidth, 2 * strokeWidth]
 
         return CKRectangle()

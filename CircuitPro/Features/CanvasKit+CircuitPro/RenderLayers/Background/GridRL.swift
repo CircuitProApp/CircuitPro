@@ -29,8 +29,8 @@ struct GridRL: CKView {
     }
 
     private struct GridRenderData {
-        let majorPath: CKPath
-        let minorPath: CKPath
+        let majorPath: CKStyled<CKPath>
+        let minorPath: CKStyled<CKPath>
         let majorColor: CGColor
         let minorColor: CGColor
         let fade: CGFloat
@@ -87,7 +87,7 @@ struct GridRL: CKView {
         spacing: CGFloat,
         dotRadius: CGFloat,
         hostBounds: CGRect
-    ) -> (major: CKPath, minor: CKPath) {
+    ) -> (major: CKStyled<CKPath>, minor: CKStyled<CKPath>) {
         let gridOrigin = CGPoint.zero
         let startX = previousMultiple(of: spacing, beforeOrEqualTo: clipRect.minX, offset: gridOrigin.x)
         let endX = clipRect.maxX

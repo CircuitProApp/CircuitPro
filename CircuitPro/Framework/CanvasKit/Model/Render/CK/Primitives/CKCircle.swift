@@ -1,14 +1,13 @@
 import AppKit
 
-struct CKCircle: CKShape {
+struct CKCircle: CKPathView {
     var radius: CGFloat
-    var style: CKStyle = .init()
 
     init(radius: CGFloat) {
         self.radius = radius
     }
 
-    func shapePath() -> CGPath {
+    func path(in context: RenderContext, style: CKStyle) -> CGPath {
         let center = style.position ?? .zero
         let rect = CGRect(
             x: center.x - radius,

@@ -38,7 +38,7 @@ struct ConnectionDebugRL: CKView {
         NSColor.systemBlue.cgColor
     }
 
-    private func pointDots() -> CKPath {
+    private func pointDots() -> some CKView {
         let path = CGMutablePath()
         for point in context.connectionPoints {
             let rect = CGRect(x: point.position.x - 3, y: point.position.y - 3, width: 6, height: 6)

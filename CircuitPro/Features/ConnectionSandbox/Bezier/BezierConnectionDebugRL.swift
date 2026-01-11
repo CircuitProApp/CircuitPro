@@ -53,7 +53,7 @@ struct BezierConnectionDebugRL: CKView {
         return path
     }
 
-    private func pointDots(points: [SocketPoint]) -> CKPath {
+    private func pointDots(points: [SocketPoint]) -> some CKView {
         let path = CGMutablePath()
         for point in points {
             let rect = CGRect(x: point.position.x - 3, y: point.position.y - 3, width: 6, height: 6)

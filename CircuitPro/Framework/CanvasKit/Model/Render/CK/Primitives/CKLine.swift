@@ -1,6 +1,6 @@
 import AppKit
 
-struct CKLine: CKShape {
+struct CKLine: CKPathView {
     enum Direction {
         case horizontal
         case vertical
@@ -10,7 +10,6 @@ struct CKLine: CKShape {
     var direction: Direction?
     var start: CGPoint?
     var end: CGPoint?
-    var style: CKStyle = .init()
 
     init(length: CGFloat, direction: Direction) {
         self.length = length
@@ -22,7 +21,7 @@ struct CKLine: CKShape {
         self.end = end
     }
 
-    func shapePath() -> CGPath {
+    func path(in context: RenderContext, style: CKStyle) -> CGPath {
         let startPoint: CGPoint
         let endPoint: CGPoint
 

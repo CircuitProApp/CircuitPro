@@ -1,14 +1,13 @@
 import AppKit
 
-struct CKPath: CKStyledPath {
-    var style: CKStyle = .init()
+struct CKPath: CKPathView {
     private let builder: (RenderContext) -> CGPath
 
     init(path: CGPath) {
         self.builder = { _ in path }
     }
 
-    init(@CKPathBuilder _ content: () -> [AnyCKPath]) {
+    init(@CKPathBuilder _ content: () -> [AnyCKPathView]) {
         let children = content()
         self.builder = { context in
             let merged = CGMutablePath()
@@ -22,7 +21,7 @@ struct CKPath: CKStyledPath {
         }
     }
 
-    func path(in context: RenderContext) -> CGPath {
+    func path(in context: RenderContext, style: CKStyle) -> CGPath {
         let base = builder(context)
         guard let position = style.position else {
             return base

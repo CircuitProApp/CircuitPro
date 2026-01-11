@@ -1,15 +1,19 @@
 import AppKit
 import CoreText
 
-struct CKText: CKShape {
+struct CKText: CKPathView {
     let content: String
     let font: NSFont
-    var style: CKStyle = .init()
 
     init(_ content: String, font: NSFont) {
         self.content = content
         self.font = font
-        self.style.fillColor = NSColor.labelColor.cgColor
+    }
+
+    var defaultStyle: CKStyle {
+        var style = CKStyle()
+        style.fillColor = NSColor.labelColor.cgColor
+        return style
     }
 
     static func path(for string: String, font: NSFont) -> CGPath {
@@ -49,7 +53,7 @@ struct CKText: CKShape {
         return composite
     }
 
-    func shapePath() -> CGPath {
+    func path(in context: RenderContext, style: CKStyle) -> CGPath {
         let textPath = CKText.path(for: content, font: font)
         guard !textPath.isEmpty else { return CGMutablePath() }
         let bounds = textPath.boundingBoxOfPath

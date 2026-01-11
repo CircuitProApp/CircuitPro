@@ -56,8 +56,14 @@ struct DrawingSheetRL: CKView {
         }
     }
 
-    private func backgroundLayer(metrics: DrawingMetrics, backgroundColor: CGColor) -> CKPrimitives {
-        CKPrimitives { _ in
+    private func backgroundLayer(metrics: DrawingMetrics, backgroundColor: CGColor) -> some CKView {
+        CKGroup(primitives: backgroundPrimitives(metrics: metrics, backgroundColor: backgroundColor))
+    }
+
+    private func backgroundPrimitives(
+        metrics: DrawingMetrics,
+        backgroundColor: CGColor
+    ) -> [DrawingPrimitive] {
             var primitives: [DrawingPrimitive] = []
             let rulerBGPath = CGMutablePath()
             rulerBGPath.addRect(metrics.outerBounds)
@@ -70,7 +76,6 @@ struct DrawingSheetRL: CKView {
             }
 
             return primitives
-        }
     }
 
     private func safeFont(_ size: CGFloat, _ weight: NSFont.Weight) -> NSFont {
@@ -117,7 +122,7 @@ private struct CKRulerDrawer {
         }
     }
 
-    private func ticksLayer(metrics: DrawingMetrics, tickSpacing: CGFloat) -> CKPath {
+    private func ticksLayer(metrics: DrawingMetrics, tickSpacing: CGFloat) -> some CKView {
         let tickPath = CGMutablePath()
         let inner = metrics.innerBounds
         let outer = metrics.outerBounds
@@ -141,7 +146,7 @@ private struct CKRulerDrawer {
         return CKPath(path: tickPath).stroke(lineColor.cgColor, width: 1.0)
     }
 
-    private func labelsLayer(metrics: DrawingMetrics, tickSpacing: CGFloat) -> CKPath {
+    private func labelsLayer(metrics: DrawingMetrics, tickSpacing: CGFloat) -> some CKView {
         let font = safeFont(9, .regular)
         let inner = metrics.innerBounds
         let outer = metrics.outerBounds

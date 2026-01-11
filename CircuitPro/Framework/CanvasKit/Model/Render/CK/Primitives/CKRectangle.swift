@@ -1,14 +1,13 @@
 import AppKit
 
-struct CKRectangle: CKShape {
+struct CKRectangle: CKPathView {
     var cornerRadius: CGFloat = 0
-    var style: CKStyle = .init()
 
     init(cornerRadius: CGFloat = 0) {
         self.cornerRadius = cornerRadius
     }
 
-    func shapePath() -> CGPath {
+    func path(in context: RenderContext, style: CKStyle) -> CGPath {
         let size = style.size ?? .zero
         let center = style.position ?? .zero
         let origin = CGPoint(
@@ -23,5 +22,4 @@ struct CKRectangle: CKShape {
             transform: nil
         )
     }
-
 }

@@ -49,7 +49,7 @@ struct FootprintView: CKView {
 
         if !renderData.bodyPrimitives.isEmpty {
             children.append(AnyCKView(
-                CKPrimitives { _ in renderData.bodyPrimitives }
+                CKGroup(primitives: renderData.bodyPrimitives)
             ))
         }
 
