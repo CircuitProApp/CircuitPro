@@ -1,6 +1,6 @@
 import AppKit
 
-protocol CKPathView: CKView {
+protocol CKPathView: CKView, CKHitTestable {
     func path(in context: RenderContext, style: CKStyle) -> CGPath
     var defaultStyle: CKStyle { get }
 }

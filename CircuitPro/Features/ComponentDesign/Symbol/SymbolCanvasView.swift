@@ -15,15 +15,10 @@ struct SymbolCanvasView: View {
     @BindableEnvironment(CanvasEditorManager.self)
     private var symbolEditor
 
-    @State private var tool: CanvasTool? = CursorTool()
-
     var body: some View {
-
-        let defaultTool = CursorTool()
-
             CanvasView(
                 viewport: $canvasManager.viewport,
-                tool: $symbolEditor.selectedTool.unwrapping(withDefault: defaultTool),
+                tool: $symbolEditor.selectedTool.unwrapping(withDefault: CursorTool()),
                 items: $symbolEditor.items,
                 selectedIDs: $symbolEditor.selectedElementIDs,
                 environment: canvasManager.environment,
@@ -38,13 +33,13 @@ struct SymbolCanvasView: View {
                     CrosshairsRL(),
                 ],
                 interactions: [
-                    HoverHighlightInteraction(),
-                    KeyCommandInteraction(),
-                    HandleInteraction(),
+                    // HoverHighlightInteraction(),
+                    // KeyCommandInteraction(),
+                    // HandleInteraction(),
                     ToolInteraction(),
-                    SelectionInteraction(),
-                    DragInteraction(),
-                    MarqueeInteraction(),
+                    // SelectionInteraction(),
+                    // DragInteraction(),
+                    // MarqueeInteraction(),
                 ],
                 inputProcessors: [
                     GridSnapProcessor()

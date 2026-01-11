@@ -27,6 +27,7 @@ struct RenderContext {
 
     let snapProvider: any SnapProvider
     let items: [any CanvasItem]
+    let hitTargets: HitTargetRegistry
 
     // MARK: - Extensible Application-Specific Data
     public let environment: CanvasEnvironmentValues
@@ -43,7 +44,7 @@ struct RenderContext {
         }
     }
 
-    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor]) {
+    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor], hitTargets: HitTargetRegistry) {
         self.magnification = magnification
         self.mouseLocation = mouseLocation
         self.selectedTool = selectedTool
@@ -58,6 +59,7 @@ struct RenderContext {
         self.items = items
         self.environment = environment
         self.inputProcessors = inputProcessors
+        self.hitTargets = hitTargets
     }
 }
 

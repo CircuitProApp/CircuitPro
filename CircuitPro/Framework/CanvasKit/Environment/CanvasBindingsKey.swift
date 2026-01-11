@@ -37,4 +37,18 @@ extension CanvasEnvironmentValues {
         copy.items = items
         return copy
     }
+
+    func updateItem<T: CanvasItem>(
+        _ id: UUID,
+        as type: T.Type = T.self,
+        _ update: (inout T) -> Void
+    ) {
+        guard let itemsBinding = items else { return }
+        var items = itemsBinding.wrappedValue
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        guard var item = items[index] as? T else { return }
+        update(&item)
+        items[index] = item
+        itemsBinding.wrappedValue = items
+    }
 }

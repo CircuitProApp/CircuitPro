@@ -217,6 +217,20 @@ struct CanvasView: NSViewRepresentable {
             controller.onSelectionChange = nil
         }
 
+        environment = environment
+            .withHoverHandler { [weak controller] id, isInside in
+                guard let controller else { return }
+                if isInside {
+                    controller.setInteractionHighlight(itemIDs: [id])
+                } else if controller.highlightedItemIDs == [id] {
+                    controller.setInteractionHighlight(itemIDs: [])
+                }
+            }
+            .withTapHandler { [weak controller] id in
+                controller?.updateSelection([id])
+            }
+            .withDragHandler { _ , _ in }
+
         controller.sync(
             tool: self.tool,
             magnification: self.viewport.magnification,

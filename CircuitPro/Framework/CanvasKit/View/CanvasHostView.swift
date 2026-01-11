@@ -58,6 +58,7 @@ final class CanvasHostView: NSView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
 
+        controller.hitTargets.reset()
         controller.renderer.render(views: controller.renderViews, context: context)
 
         CATransaction.commit()
