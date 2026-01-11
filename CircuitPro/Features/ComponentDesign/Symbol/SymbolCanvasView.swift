@@ -23,7 +23,6 @@ struct SymbolCanvasView: View {
                     // HoverHighlightInteraction(),
                     // KeyCommandInteraction(),
                     // HandleInteraction(),
-                    ToolInteraction(),
                     // SelectionInteraction(),
                     // DragInteraction(),
                     // MarqueeInteraction(),
@@ -37,7 +36,6 @@ struct SymbolCanvasView: View {
                 AxesRL()
                 DrawingSheetRL()
                 PrimitiveRL()
-                PreviewRL()
                 HandlesRL()
                 MarqueeRL()
                 CrosshairsRL()

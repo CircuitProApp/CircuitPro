@@ -10,20 +10,21 @@ final class CursorTool: CanvasTool {
     // MARK: - Overridden Properties
 
     // We override the base class properties to provide the specific UI for this tool.
-    override var symbolName: String { CircuitProSymbols.Graphic.cursor } 
+    override var symbolName: String { CircuitProSymbols.Graphic.cursor }
     override var label: String { "Select" }
-    
+    override var handlesInput: Bool { false }
+
     // The `id` property is no longer needed; the base class handles identity automatically.
 
     // MARK: - Overridden Methods
 
-    // The tap behavior is intentionally left blank. The `ToolInteraction`
-    // will see that the active tool `is CursorTool` and will pass the event
-    // on to the `SelectionInteraction` and `DragInteraction`.
+    // The tap behavior is intentionally left blank. The canvas input handler
+    // skips tool handling for `CursorTool`, allowing selection/drag interactions
+    // to process the event instead.
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
         return .noResult
     }
-    
+
     // We can provide a custom implementation for `handleEscape`. For the cursor tool,
     // this could mean deselecting all nodes, which is often an expected behavior.
     override func handleEscape() -> Bool {

@@ -31,7 +31,6 @@ struct SchematicCanvasView: View {
 
                 WireRL(),
                 SymbolRL(),
-                PreviewRL(),
                 MarqueeRL(),
                 CrosshairsRL(),
             ],
@@ -39,7 +38,6 @@ struct SchematicCanvasView: View {
                 HoverHighlightInteraction(),
                 WireHoverHighlightInteraction(),
                 KeyCommandInteraction(),
-                ToolInteraction(),
                 SelectionInteraction(),
                 DragInteraction(),
                 WireDragInteraction(),

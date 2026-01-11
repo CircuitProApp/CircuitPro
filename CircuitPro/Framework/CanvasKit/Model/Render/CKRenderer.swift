@@ -54,13 +54,16 @@ final class DefaultCKRenderer: CKRenderer {
 
         for view in views {
             let primitives = view._render(in: context)
+            let forceBatchBreak = view is ToolPreviewView
+            var isFirstPrimitive = true
             for primitive in primitives {
                 let key = BatchKey(primitive: primitive)
-                if let last = batches.last, last.key == key {
+                if let last = batches.last, last.key == key, !(forceBatchBreak && isFirstPrimitive) {
                     batches[batches.count - 1].append(primitive)
                 } else {
                     batches.append(PrimitiveBatch(key: key, primitive: primitive))
                 }
+                isFirstPrimitive = false
             }
         }
 

@@ -41,6 +41,27 @@ final class CanvasInputHandler {
         controller.mouseLocation = rawPoint
         let processedPoint = process(point: rawPoint, context: context)
 
+        if let tool = controller.selectedTool, tool.handlesInput {
+            let interactionContext = ToolInteractionContext(
+                clickCount: event.clickCount,
+                renderContext: context
+            )
+            let result = tool.handleTap(at: processedPoint, context: interactionContext)
+            switch result {
+            case .noResult:
+                host.performLayerUpdate()
+                return
+            case .newItem(let item):
+                if let itemsBinding = context.environment.items {
+                    var items = itemsBinding.wrappedValue
+                    items.append(item)
+                    itemsBinding.wrappedValue = items
+                    host.performLayerUpdate()
+                    return
+                }
+            }
+        }
+
         if let target = context.hitTargets.hitTest(rawPoint) {
             if target.onDrag != nil || target.onTap != nil {
                 pendingHitTarget = target

@@ -38,6 +38,10 @@ class CanvasTool: Hashable {
     /// The user-facing name for this tool. Subclasses should override this.
     var label: String { "Unnamed Tool" }
 
+    /// Whether the tool should handle direct pointer input.
+    /// Selection tools should return false to let interactions process events.
+    var handlesInput: Bool { true }
+
 
     // MARK: - Primary Actions (Override in Subclasses)
 

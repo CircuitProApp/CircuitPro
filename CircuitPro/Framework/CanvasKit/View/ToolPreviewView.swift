@@ -1,6 +1,6 @@
 import AppKit
 
-struct PreviewRL: CKView {
+struct ToolPreviewView: CKView {
     @CKContext var context
 
     var body: some CKView {

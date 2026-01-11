@@ -34,10 +34,8 @@ struct WireSandboxView: View {
                 WireRL(),
                 ConnectionDebugRL(),
                 CrosshairsRL(),
-                PreviewRL(),
             ],
             interactions: [
-                ToolInteraction(),
                 WireHoverHighlightInteraction(),
                 WireDragInteraction(),
             ],
