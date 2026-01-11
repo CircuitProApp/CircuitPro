@@ -17,7 +17,7 @@ struct CanvasView: NSViewRepresentable {
     private var connectionEngine: (any ConnectionEngine)?
 
     // MARK: - Callbacks & Configuration
-    let environment: CanvasEnvironmentValues
+    var environment: CanvasEnvironmentValues
     let renderViews: [any CKView]
     let interactions: [any CanvasInteraction]
     let inputProcessors: [any InputProcessor]
@@ -28,7 +28,6 @@ struct CanvasView: NSViewRepresentable {
     var onCanvasChange: ((CanvasChangeContext) -> Void)?
 
     init(
-        viewport: Binding<CanvasViewport>,
         tool: Binding<CanvasTool?> = .constant(nil),
         items: Binding<[any CanvasItem]>,
         selectedIDs: Binding<Set<UUID>>,
@@ -75,7 +74,7 @@ struct CanvasView: NSViewRepresentable {
         onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil,
         @CKViewBuilder content: @escaping () -> CKGroup
     ) {
-        self._viewport = viewport
+        self._viewport = .constant(CanvasViewport(size: .zero, magnification: 1.0, visibleRect: CanvasViewport.autoCenter))
         self._tool = tool
         self._layers = layers
         self._activeLayerId = activeLayerId
@@ -263,5 +262,25 @@ struct CanvasView: NSViewRepresentable {
 extension CGFloat {
     func isApproximatelyEqual(to other: CGFloat, tolerance: CGFloat = 1e-9) -> Bool {
         return abs(self - other) <= tolerance
+    }
+}
+
+extension CanvasView {
+    func viewport(_ binding: Binding<CanvasViewport>) -> CanvasView {
+        var copy = self
+        copy._viewport = binding
+        return copy
+    }
+
+    func canvasTool(_ binding: Binding<CanvasTool?>) -> CanvasView {
+        var copy = self
+        copy._tool = binding
+        return copy
+    }
+
+    func canvasEnvironment(_ value: CanvasEnvironmentValues) -> CanvasView {
+        var copy = self
+        copy.environment = value
+        return copy
     }
 }

@@ -17,21 +17,8 @@ struct SymbolCanvasView: View {
 
     var body: some View {
             CanvasView(
-                viewport: $canvasManager.viewport,
-                tool: $symbolEditor.selectedTool.unwrapping(withDefault: CursorTool()),
                 items: $symbolEditor.items,
                 selectedIDs: $symbolEditor.selectedElementIDs,
-                environment: canvasManager.environment,
-                renderViews: [
-                    GridRL(),
-                    AxesRL(),
-                    DrawingSheetRL(),
-                    PrimitiveRL(),
-                    PreviewRL(),
-                    HandlesRL(),
-                    MarqueeRL(),
-                    CrosshairsRL(),
-                ],
                 interactions: [
                     // HoverHighlightInteraction(),
                     // KeyCommandInteraction(),
@@ -45,7 +32,19 @@ struct SymbolCanvasView: View {
                     GridSnapProcessor()
                 ],
                 snapProvider: CircuitProSnapProvider()
-            )
+            ) {
+                GridRL()
+                AxesRL()
+                DrawingSheetRL()
+                PrimitiveRL()
+                PreviewRL()
+                HandlesRL()
+                MarqueeRL()
+                CrosshairsRL()
+            }
+            .canvasTool($symbolEditor.selectedTool.unwrapping(withDefault: CursorTool()))
+            .canvasEnvironment(canvasManager.environment)
+            .viewport($canvasManager.viewport)
             .onCanvasChange { context in
                 canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
             }

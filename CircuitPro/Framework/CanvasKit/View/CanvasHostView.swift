@@ -50,8 +50,7 @@ final class CanvasHostView: NSView {
         // This is the ideal central point for this event.
         let changeContext = CanvasChangeContext(
             rawMouseLocation: context.mouseLocation,
-            processedMouseLocation: context.processedMouseLocation,
-            visibleRect: context.visibleRect
+            processedMouseLocation: context.processedMouseLocation
         )
         controller.onCanvasChange?(changeContext)
 
