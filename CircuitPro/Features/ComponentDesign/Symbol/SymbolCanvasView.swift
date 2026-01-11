@@ -38,7 +38,7 @@ struct SymbolCanvasView: View {
                 PrimitiveRL()
                 HandlesRL()
                 MarqueeRL()
-                CrosshairsRL()
+                CrosshairsView()
             }
             .canvasTool($symbolEditor.selectedTool.unwrapping(withDefault: CursorTool()))
             .canvasEnvironment(canvasManager.environment)

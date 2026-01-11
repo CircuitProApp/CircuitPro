@@ -26,7 +26,7 @@ struct LayoutCanvasView: View {
                 FootprintRL(),
                 HandlesRL(),
                 MarqueeRL(),
-                CrosshairsRL(),
+                CrosshairsView(),
             ],
             interactions: [
                 HoverHighlightInteraction(),

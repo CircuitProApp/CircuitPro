@@ -32,7 +32,7 @@ struct SchematicCanvasView: View {
                 WireRL(),
                 SymbolRL(),
                 MarqueeRL(),
-                CrosshairsRL(),
+                CrosshairsView(),
             ],
             interactions: [
                 HoverHighlightInteraction(),

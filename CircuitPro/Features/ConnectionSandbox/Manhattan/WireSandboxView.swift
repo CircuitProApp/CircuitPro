@@ -33,7 +33,7 @@ struct WireSandboxView: View {
                 GridRL(),
                 WireRL(),
                 ConnectionDebugRL(),
-                CrosshairsRL(),
+                CrosshairsView(),
             ],
             interactions: [
                 WireHoverHighlightInteraction(),

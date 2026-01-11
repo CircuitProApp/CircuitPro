@@ -1,13 +1,16 @@
 import AppKit
 import CoreText
+import SwiftUI
 
 struct CKText: CKPathView {
     let content: String
     let font: NSFont
+    let anchor: TextAnchor
 
-    init(_ content: String, font: NSFont) {
+    init(_ content: String, font: NSFont, anchor: TextAnchor = .center) {
         self.content = content
         self.font = font
+        self.anchor = anchor
     }
 
     var defaultStyle: CKStyle {
@@ -53,14 +56,25 @@ struct CKText: CKPathView {
         return composite
     }
 
+    static func bounds(for string: String, font: NSFont) -> CGRect {
+        let attrString = NSAttributedString(string: string, attributes: [.font: font])
+        let line = CTLineCreateWithAttributedString(attrString)
+        var ascent: CGFloat = 0
+        var descent: CGFloat = 0
+        var leading: CGFloat = 0
+        let width = CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
+        return CGRect(x: 0, y: -descent, width: width, height: ascent + descent + leading)
+    }
+
     func path(in context: RenderContext, style: CKStyle) -> CGPath {
         let textPath = CKText.path(for: content, font: font)
         guard !textPath.isEmpty else { return CGMutablePath() }
-        let bounds = textPath.boundingBoxOfPath
+        let bounds = CKText.bounds(for: content, font: font)
         let position = style.position ?? .zero
+        let anchorPoint = anchor.point(in: bounds)
         let transform = CGAffineTransform(
-            translationX: position.x - bounds.midX,
-            y: position.y - bounds.midY
+            translationX: position.x - anchorPoint.x,
+            y: position.y - anchorPoint.y
         )
         let finalPath = CGMutablePath()
         finalPath.addPath(textPath, transform: transform)

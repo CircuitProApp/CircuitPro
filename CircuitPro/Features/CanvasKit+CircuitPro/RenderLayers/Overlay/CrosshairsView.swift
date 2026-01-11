@@ -1,6 +1,6 @@
 import AppKit
 
-struct CrosshairsRL: CKView {
+struct CrosshairsView: CKView {
 
     @CKContext var context
 
@@ -32,7 +32,7 @@ struct CrosshairsRL: CKView {
     }
 
     private func crosshairs(width: CGFloat, height: CGFloat) -> some CKView {
-        CKPath {
+        CKGroup {
             CKLine(length: width, direction: .horizontal)
             CKLine(length: height, direction: .vertical)
         }

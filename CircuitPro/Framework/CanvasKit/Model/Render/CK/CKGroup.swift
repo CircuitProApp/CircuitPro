@@ -24,17 +24,21 @@ struct CKGroup: CKView {
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
         children.flatMap { $0._render(in: context) }
     }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        children.flatMap { $0._paths(in: context) }
+    }
 }
 
 private extension DrawingPrimitive {
-    func asCKView() -> some CKView {
+    func asCKView() -> AnyCKView {
         switch self {
         case let .fill(path, color, rule, clipPath):
             var view = CKPath(path: path).fill(color, rule: rule)
             if let clipPath {
                 view = view.clip(clipPath)
             }
-            return view
+            return AnyCKView(view)
         case let .stroke(
             path,
             color,
@@ -56,7 +60,7 @@ private extension DrawingPrimitive {
             if let clipPath {
                 view = view.clip(clipPath)
             }
-            return view
+            return AnyCKView(view)
         }
     }
 }

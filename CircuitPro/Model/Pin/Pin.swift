@@ -29,12 +29,14 @@ extension Pin {
     var label: String {
         name.isEmpty ? "Pin \(number)" : name
     }
-}
 
-extension Pin {
     /// The rotation in radians. Conforms to `Transformable`.
     var rotation: CGFloat {
         get { cardinalRotation.radians }
         set { cardinalRotation = .closest(to: newValue) }
+    }
+
+    var length: CGFloat {
+        lengthType.cgFloatValue
     }
 }

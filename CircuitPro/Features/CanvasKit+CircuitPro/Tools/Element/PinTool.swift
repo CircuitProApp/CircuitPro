@@ -25,14 +25,14 @@ final class PinTool: CanvasTool {
     }
 
     override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
-        // 1. Create a temporary pin model to represent the preview.
-        // Its position can be .zero since we are describing it in a local space.
+        // Render a temporary pin view at the cursor location.
         let number = nextPinNumber(in: context)
         let previewPin = Pin(
-            name: "", number: number, position: .zero, cardinalRotation: rotation, type: .unknown,
+            name: "", number: number, position: mouse, cardinalRotation: rotation, type: .unknown,
             lengthType: .regular)
-        let pinColor = context.environment.schematicTheme.pinColor
-        return previewPin.previewView(at: mouse, color: pinColor)
+        return CKGroup {
+            PinView(pin: previewPin)
+        }
     }
 
     private func nextPinNumber(in context: RenderContext) -> Int {

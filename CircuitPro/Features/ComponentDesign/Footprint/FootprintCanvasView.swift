@@ -32,7 +32,7 @@ struct FootprintCanvasView: View {
                 PrimitiveRL(),
                 HandlesRL(),
                 MarqueeRL(),
-                CrosshairsRL(),
+                CrosshairsView(),
             ],
             interactions: [
                 HoverHighlightInteraction(),

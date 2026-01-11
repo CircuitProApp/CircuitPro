@@ -4,6 +4,7 @@ protocol CKView {
     associatedtype Body: CKView
     @CKViewBuilder var body: Body { get }
     func _render(in context: RenderContext) -> [DrawingPrimitive]
+    func _paths(in context: RenderContext) -> [CGPath]
 }
 
 protocol CKHitTestable {
@@ -77,6 +78,16 @@ struct CKInteractionView<Content: CKView>: CKView {
                 return path
             }
         }
+        if primitives.isEmpty {
+            let paths = content._paths(in: context).filter { !$0.isEmpty }
+            if !paths.isEmpty {
+                let merged = CGMutablePath()
+                for path in paths {
+                    merged.addPath(path)
+                }
+                return merged
+            }
+        }
         let union = primitivesBoundingBox(primitives)
         guard !union.isNull, !union.isEmpty else { return CGMutablePath() }
         return CGPath(rect: union, transform: nil)
@@ -109,6 +120,169 @@ extension Never: CKView {
 extension CKView {
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
         body._render(in: context)
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        _render(in: context).compactMap { $0.path }
+    }
+}
+
+struct CKTransformView<Content: CKView>: CKView {
+    typealias Body = Never
+
+    let content: Content
+    var position: CGPoint?
+    var rotation: CGFloat
+
+    var body: Never {
+        fatalError("CKTransformView has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        applyTransforms(to: content._render(in: context))
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        applyTransforms(to: content._paths(in: context))
+    }
+
+    private func applyTransforms(to primitives: [DrawingPrimitive]) -> [DrawingPrimitive] {
+        var transformed = primitives
+        if let position {
+            var translation = CGAffineTransform(translationX: position.x, y: position.y)
+            transformed = transformed.map { $0.applying(transform: &translation) }
+        }
+        if rotation != 0 {
+            let pivot = position ?? .zero
+            var rotationTransform = CGAffineTransform(
+                translationX: pivot.x,
+                y: pivot.y
+            )
+            .rotated(by: rotation)
+            .translatedBy(x: -pivot.x, y: -pivot.y)
+            transformed = transformed.map { $0.applying(transform: &rotationTransform) }
+        }
+        return transformed
+    }
+
+    private func applyTransforms(to paths: [CGPath]) -> [CGPath] {
+        var transformed = paths
+        if let position {
+            var translation = CGAffineTransform(translationX: position.x, y: position.y)
+            transformed = transformed.map { $0.copy(using: &translation) ?? $0 }
+        }
+        if rotation != 0 {
+            let pivot = position ?? .zero
+            var rotationTransform = CGAffineTransform(
+                translationX: pivot.x,
+                y: pivot.y
+            )
+            .rotated(by: rotation)
+            .translatedBy(x: -pivot.x, y: -pivot.y)
+            transformed = transformed.map { $0.copy(using: &rotationTransform) ?? $0 }
+        }
+        return transformed
+    }
+}
+
+struct CKStrokeView<Content: CKView>: CKView {
+    typealias Body = Never
+
+    let content: Content
+    var color: CGColor
+    var width: CGFloat
+    var lineCap: CAShapeLayerLineCap = .round
+    var lineJoin: CAShapeLayerLineJoin = .miter
+    var miterLimit: CGFloat = 10
+    var lineDash: [NSNumber]?
+    var clipPath: CGPath?
+
+    var body: Never {
+        fatalError("CKStrokeView has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        let strokes = content._paths(in: context)
+            .filter { !$0.isEmpty }
+            .map {
+                DrawingPrimitive.stroke(
+                    path: $0,
+                    color: color,
+                    lineWidth: width,
+                    lineCap: lineCap,
+                    lineJoin: lineJoin,
+                    miterLimit: miterLimit,
+                    lineDash: lineDash,
+                    clipPath: clipPath
+                )
+            }
+        return strokes
+    }
+}
+
+struct CKFillView<Content: CKView>: CKView {
+    typealias Body = Never
+
+    let content: Content
+    var color: CGColor
+    var rule: CAShapeLayerFillRule = .nonZero
+    var clipPath: CGPath?
+
+    var body: Never {
+        fatalError("CKFillView has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        let fills = content._paths(in: context)
+            .filter { !$0.isEmpty }
+            .map { DrawingPrimitive.fill(path: $0, color: color, rule: rule, clipPath: clipPath) }
+        return fills
+    }
+}
+
+struct CKHaloView<Content: CKView>: CKView {
+    typealias Body = Never
+
+    let content: Content
+    var color: CGColor
+    var width: CGFloat
+
+    var body: Never {
+        fatalError("CKHaloView has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        let base = content._render(in: context)
+        let halos = content._paths(in: context)
+            .filter { !$0.isEmpty }
+            .map {
+                DrawingPrimitive.stroke(
+                    path: $0,
+                    color: color,
+                    lineWidth: width,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    miterLimit: 10,
+                    lineDash: nil,
+                    clipPath: nil
+                )
+            }
+        return halos + base
+    }
+}
+
+struct CKClipView<Content: CKView>: CKView {
+    typealias Body = Never
+
+    let content: Content
+    var clipPath: CGPath
+
+    var body: Never {
+        fatalError("CKClipView has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        content._render(in: context).map { $0.withClip(clipPath) }
     }
 }
 
@@ -170,6 +344,42 @@ struct CKHitTargetView<Content: CKView>: CKView {
 }
 
 extension CKView {
+    func position(_ point: CGPoint) -> CKTransformView<Self> {
+        CKTransformView(content: self, position: point, rotation: 0)
+    }
+
+    func position(x: CGFloat, y: CGFloat) -> CKTransformView<Self> {
+        position(CGPoint(x: x, y: y))
+    }
+
+    func rotation(_ angle: CGFloat) -> CKTransformView<Self> {
+        CKTransformView(content: self, position: nil, rotation: angle)
+    }
+
+    func stroke(_ color: CGColor, width: CGFloat = 1.0) -> CKStrokeView<Self> {
+        CKStrokeView(content: self, color: color, width: width)
+    }
+
+    func fill(_ color: CGColor) -> CKFillView<Self> {
+        CKFillView(content: self, color: color)
+    }
+
+    func fill(_ color: CGColor, rule: CAShapeLayerFillRule) -> CKFillView<Self> {
+        CKFillView(content: self, color: color, rule: rule)
+    }
+
+    func halo(_ color: CGColor, width: CGFloat) -> CKHaloView<Self> {
+        CKHaloView(content: self, color: color, width: width)
+    }
+
+    func clip(_ path: CGPath) -> CKClipView<Self> {
+        CKClipView(content: self, clipPath: path)
+    }
+
+    func clip(to rect: CGRect) -> CKClipView<Self> {
+        CKClipView(content: self, clipPath: CGPath(rect: rect, transform: nil))
+    }
+
     func hoverable(_ id: UUID) -> CKInteractionView<Self> {
         CKInteractionView(
             content: self,
@@ -467,6 +677,72 @@ extension CKInteractionView {
     }
 }
 
+extension CKTransformView {
+    func position(_ point: CGPoint) -> CKTransformView<Content> {
+        var copy = self
+        copy.position = point
+        return copy
+    }
+
+    func position(x: CGFloat, y: CGFloat) -> CKTransformView<Content> {
+        position(CGPoint(x: x, y: y))
+    }
+
+    func rotation(_ angle: CGFloat) -> CKTransformView<Content> {
+        var copy = self
+        copy.rotation = angle
+        return copy
+    }
+}
+
+extension CKStrokeView {
+    func lineCap(_ lineCap: CAShapeLayerLineCap) -> CKStrokeView<Content> {
+        var copy = self
+        copy.lineCap = lineCap
+        return copy
+    }
+
+    func lineJoin(_ lineJoin: CAShapeLayerLineJoin) -> CKStrokeView<Content> {
+        var copy = self
+        copy.lineJoin = lineJoin
+        return copy
+    }
+
+    func miterLimit(_ limit: CGFloat) -> CKStrokeView<Content> {
+        var copy = self
+        copy.miterLimit = limit
+        return copy
+    }
+
+    func lineDash(_ pattern: [CGFloat]) -> CKStrokeView<Content> {
+        var copy = self
+        copy.lineDash = pattern.map { NSNumber(value: Double($0)) }
+        return copy
+    }
+
+    func clip(_ path: CGPath) -> CKStrokeView<Content> {
+        var copy = self
+        copy.clipPath = path
+        return copy
+    }
+
+    func clip(to rect: CGRect) -> CKStrokeView<Content> {
+        clip(CGPath(rect: rect, transform: nil))
+    }
+}
+
+extension CKFillView {
+    func clip(_ path: CGPath) -> CKFillView<Content> {
+        var copy = self
+        copy.clipPath = path
+        return copy
+    }
+
+    func clip(to rect: CGRect) -> CKFillView<Content> {
+        clip(CGPath(rect: rect, transform: nil))
+    }
+}
+
 private extension DrawingPrimitive {
     var boundingBox: CGRect {
         switch self {
@@ -475,6 +751,33 @@ private extension DrawingPrimitive {
         case let .stroke(path, _, lineWidth, _, _, _, _, _):
             let inset = lineWidth / 2
             return path.boundingBoxOfPath.insetBy(dx: -inset, dy: -inset)
+        }
+    }
+
+    var path: CGPath? {
+        switch self {
+        case let .fill(path, _, _, _):
+            return path
+        case let .stroke(path, _, _, _, _, _, _, _):
+            return path
+        }
+    }
+
+    func withClip(_ clipPath: CGPath) -> DrawingPrimitive {
+        switch self {
+        case let .fill(path, color, rule, _):
+            return .fill(path: path, color: color, rule: rule, clipPath: clipPath)
+        case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash, _):
+            return .stroke(
+                path: path,
+                color: color,
+                lineWidth: lineWidth,
+                lineCap: lineCap,
+                lineJoin: lineJoin,
+                miterLimit: miterLimit,
+                lineDash: lineDash,
+                clipPath: clipPath
+            )
         }
     }
 }

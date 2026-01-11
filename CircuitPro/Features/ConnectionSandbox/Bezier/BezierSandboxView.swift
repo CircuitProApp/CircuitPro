@@ -52,7 +52,7 @@ struct BezierSandboxView: View {
                 GridRL(),
                 NodeDebugRL(),
                 BezierConnectionDebugRL(),
-                CrosshairsRL(),
+                CrosshairsView(),
             ],
             interactions: [
                 NodeDragInteraction(),

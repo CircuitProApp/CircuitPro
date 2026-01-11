@@ -15,6 +15,11 @@ extension CKPathView {
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
         CKStyled(base: self, style: defaultStyle)._render(in: context)
     }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        let path = self.path(in: context, style: defaultStyle)
+        return path.isEmpty ? [] : [path]
+    }
 }
 
 struct CKStyled<Base: CKPathView>: CKView {

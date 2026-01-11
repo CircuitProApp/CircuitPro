@@ -5,9 +5,7 @@ extension Pin {
 
     // MARK: - Core Geometric Properties (Local Space)
 
-    var length: CGFloat {
-        lengthType.cgFloatValue
-    }
+
 
     var endpointRadius: CGFloat { 4.0 }
 

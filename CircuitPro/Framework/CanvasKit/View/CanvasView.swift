@@ -28,6 +28,7 @@ struct CanvasView: NSViewRepresentable {
     var onCanvasChange: ((CanvasChangeContext) -> Void)?
 
     init(
+        viewport: Binding<CanvasViewport>,
         tool: Binding<CanvasTool?> = .constant(nil),
         items: Binding<[any CanvasItem]>,
         selectedIDs: Binding<Set<UUID>>,
@@ -59,7 +60,6 @@ struct CanvasView: NSViewRepresentable {
     }
 
     init(
-        viewport: Binding<CanvasViewport>,
         tool: Binding<CanvasTool?> = .constant(nil),
         items: Binding<[any CanvasItem]>,
         selectedIDs: Binding<Set<UUID>>,

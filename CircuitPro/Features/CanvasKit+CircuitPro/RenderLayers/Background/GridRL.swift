@@ -8,7 +8,7 @@ struct GridRL: CKView {
     private let majorBaseAlpha: CGFloat = 0.8
     private let minorBaseAlpha: CGFloat = 0.4
 
-    @CKViewBuilder var body: some CKView {
+    var body: some CKView {
         if !context.environment.grid.isVisible {
             CKEmpty()
         } else {
@@ -16,21 +16,26 @@ struct GridRL: CKView {
         }
     }
 
-    @CKViewBuilder private var gridLayer: some CKView {
+    private var gridLayer: some CKView {
         if let data = gridRenderData() {
-            CKGroup {
-                data.majorPath.fill(data.majorColor)
-                data.minorPath.fill(data.minorColor)
+            return CKGroup {
+                CKPath(path: data.majorPath)
+                    .fill(data.majorColor)
+                    .clip(data.clipPath)
+                CKPath(path: data.minorPath)
+                    .fill(data.minorColor)
+                    .clip(data.clipPath)
             }
             .opacity(data.fade)
         } else {
-            CKEmpty()
+            return CKGroup().opacity(0)
         }
     }
 
     private struct GridRenderData {
-        let majorPath: CKStyled<CKPath>
-        let minorPath: CKStyled<CKPath>
+        let majorPath: CGPath
+        let minorPath: CGPath
+        let clipPath: CGPath
         let majorColor: CGColor
         let minorColor: CGColor
         let fade: CGFloat
@@ -52,7 +57,7 @@ struct GridRL: CKView {
         clipRect = clipRect.insetBy(dx: dotRadius, dy: dotRadius)
         guard !clipRect.isNull, !clipRect.isEmpty else { return nil }
 
-        let (majorPath, minorPath) = dotGridPaths(
+        let (majorPath, minorPath, localClip) = dotGridPaths(
             clipRect: clipRect,
             spacing: spacing,
             dotRadius: dotRadius,
@@ -66,6 +71,7 @@ struct GridRL: CKView {
         return GridRenderData(
             majorPath: majorPath,
             minorPath: minorPath,
+            clipPath: CGPath(rect: localClip, transform: nil),
             majorColor: majorColor,
             minorColor: minorColor,
             fade: fade
@@ -87,7 +93,7 @@ struct GridRL: CKView {
         spacing: CGFloat,
         dotRadius: CGFloat,
         hostBounds: CGRect
-    ) -> (major: CKStyled<CKPath>, minor: CKStyled<CKPath>) {
+    ) -> (major: CGPath, minor: CGPath, clipRect: CGRect) {
         let gridOrigin = CGPoint.zero
         let startX = previousMultiple(of: spacing, beforeOrEqualTo: clipRect.minX, offset: gridOrigin.x)
         let endX = clipRect.maxX
@@ -123,10 +129,7 @@ struct GridRL: CKView {
             }
         }
 
-        let major = CKPath(path: majorPath).clip(to: localClip)
-        let minor = CKPath(path: minorPath).clip(to: localClip)
-
-        return (major, minor)
+        return (majorPath, minorPath, localClip)
     }
 
     private func adjustedSpacing(unitSpacing: CGFloat, magnification: CGFloat) -> CGFloat {
