@@ -29,7 +29,7 @@ struct WireSandboxView: View {
             selectedIDs: .constant([]),
             connectionEngine: manhattanEngine,
             environment: canvasManager.environment,
-            renderLayers: [
+            renderViews: [
                 GridRL(),
                 WireRL(),
                 ConnectionDebugRL(),

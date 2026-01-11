@@ -1,36 +1,42 @@
 import AppKit
 
-struct SymbolRL: CKView {
+struct FootprintRL: CKView {
     @CKContext var context
 
     @CKViewBuilder var body: some CKView {
         let components = context.items.compactMap { $0 as? ComponentInstance }
         CKGroup {
             for component in components {
-                SymbolView(component: component)
+                FootprintView(component: component)
             }
         }
     }
 }
 
-struct SymbolView: CKView {
+struct FootprintView: CKView {
     @CKContext var context
     let component: ComponentInstance
 
     var body: CKGroup {
-        guard let symbolDef = component.symbolInstance.definition else {
+        guard let footprint = component.footprintInstance,
+              let definition = footprint.definition,
+              case .placed(let side) = footprint.placement
+        else {
             return CKGroup()
         }
 
         let ownerTransform = CGAffineTransform(
-            translationX: component.symbolInstance.position.x,
-            y: component.symbolInstance.position.y
+            translationX: footprint.position.x,
+            y: footprint.position.y
         )
-        .rotated(by: component.symbolInstance.rotation)
+        .rotated(by: footprint.rotation)
 
-        let renderData = symbolRenderData(
+        let layerSide = layerSide(for: side)
+        let renderData = footprintRenderData(
             component: component,
-            symbolDef: symbolDef,
+            footprint: footprint,
+            definition: definition,
+            placement: layerSide,
             ownerTransform: ownerTransform
         )
 
@@ -54,62 +60,85 @@ struct SymbolView: CKView {
         return CKGroup(children)
     }
 
-    private struct SymbolRenderData {
+    private struct PadLayerColor {
+        let color: CGColor
+        let layerID: UUID?
+    }
+
+    private struct FootprintRenderData {
         let bodyPrimitives: [DrawingPrimitive]
         let haloPath: CGPath?
         let haloColor: CGColor
         let isHighlighted: Bool
-        let textEntries: [TextEntry]
+        let textEntries: [SymbolView.TextEntry]
     }
 
-    private func symbolRenderData(
+    private func footprintRenderData(
         component: ComponentInstance,
-        symbolDef: SymbolDefinition,
+        footprint: FootprintInstance,
+        definition: FootprintDefinition,
+        placement: LayerSide,
         ownerTransform: CGAffineTransform
-    ) -> SymbolRenderData {
-        var bodyPrimitives: [DrawingPrimitive] = []
+    ) -> FootprintRenderData {
+        let resolvedPrimitives = resolveFootprintPrimitives(
+            definition.primitives,
+            placement: placement,
+            layers: context.layers
+        )
 
-        for primitive in symbolDef.primitives {
+        var bodyPrimitives: [DrawingPrimitive] = []
+        for primitive in resolvedPrimitives {
+            guard isLayerVisible(primitive.layerId, layers: context.layers) else { continue }
             let color = resolveColor(
                 for: primitive,
                 in: context,
-                fallback: context.environment.schematicTheme.symbolColor
+                fallback: context.environment.canvasTheme.textColor
             )
             let drawPrimitives = primitive.makeDrawingPrimitives(with: color)
             guard !drawPrimitives.isEmpty else { continue }
 
             var transform = CGAffineTransform(
-                translationX: primitive.position.x, y: primitive.position.y
+                translationX: primitive.position.x,
+                y: primitive.position.y
             )
             .rotated(by: primitive.rotation)
             .concatenating(ownerTransform)
+
             let worldPrimitives = drawPrimitives.map { $0.applying(transform: &transform) }
             bodyPrimitives.append(contentsOf: worldPrimitives)
         }
 
-        for pin in symbolDef.pins {
-            let pinColor = context.environment.schematicTheme.pinColor
-            let localPrimitives = pin.makeDrawingPrimitives()
-                .map { recolor($0, to: pinColor) }
-            guard !localPrimitives.isEmpty else { continue }
-            var transform = CGAffineTransform(
-                translationX: pin.position.x, y: pin.position.y
+        let padColor = padLayerColor(
+            placement: placement,
+            layers: context.layers,
+            fallback: context.environment.canvasTheme.textColor
+        )
+
+        for pad in definition.pads {
+            guard isLayerVisible(padColor.layerID, layers: context.layers) else { continue }
+            var transform = CGAffineTransform(translationX: pad.position.x, y: pad.position.y)
+                .concatenating(ownerTransform)
+            let path = pad.calculateCompositePath().copy(using: &transform)
+                ?? pad.calculateCompositePath()
+            bodyPrimitives.append(
+                .fill(path: path, color: padColor.color, rule: .evenOdd)
             )
-            .concatenating(ownerTransform)
-            let worldPrimitives = localPrimitives.map { $0.applying(transform: &transform) }
-            bodyPrimitives.append(contentsOf: worldPrimitives)
         }
 
-        let haloPath = componentBodyHalo(
-            primitives: symbolDef.primitives,
-            pins: symbolDef.pins,
+        let haloPath = componentHalo(
+            primitives: resolvedPrimitives,
+            pads: definition.pads,
             ownerTransform: ownerTransform
         )
+        let haloColor = context.environment.canvasTheme.textColor.applyingOpacity(0.35)
         let isHighlighted = context.highlightedItemIDs.contains(component.id)
-        let haloColor = context.environment.schematicTheme.symbolColor.applyingOpacity(0.4)
-        let textEntries = componentTextEntries(component, context: context)
+        let textEntries = componentTextEntries(
+            component,
+            footprint: footprint,
+            ownerTransform: ownerTransform
+        )
 
-        return SymbolRenderData(
+        return FootprintRenderData(
             bodyPrimitives: bodyPrimitives,
             haloPath: haloPath,
             haloColor: haloColor,
@@ -118,29 +147,55 @@ struct SymbolView: CKView {
         )
     }
 
-    struct TextEntry {
-        let id: UUID
-        let primitives: [DrawingPrimitive]
-        let haloPath: CGPath?
-        let haloColor: CGColor?
-        let ownerID: UUID?
+    private func padLayerColor(
+        placement: LayerSide,
+        layers: [any CanvasLayer],
+        fallback: CGColor
+    ) -> PadLayerColor {
+        let layer = layers.first { layer in
+            guard let pcbLayer = layer as? PCBLayer,
+                  pcbLayer.layerKind == .copper
+            else { return false }
+            return pcbLayer.layerSide == placement
+        }
+        return PadLayerColor(color: layer?.color ?? fallback, layerID: layer?.id)
+    }
+
+    private func resolveFootprintPrimitives(
+        _ primitives: [AnyCanvasPrimitive],
+        placement: LayerSide,
+        layers: [any CanvasLayer]
+    ) -> [AnyCanvasPrimitive] {
+        let kindByID = Dictionary(uniqueKeysWithValues: LayerKind.allCases.map { ($0.stableId, $0) })
+
+        return primitives.map { primitive in
+            var copy = primitive
+            guard let layerID = copy.layerId,
+                  let kind = kindByID[layerID]
+            else { return copy }
+
+            if let resolvedLayer = layers.first(where: { layer in
+                guard let pcbLayer = layer as? PCBLayer else { return false }
+                return pcbLayer.layerKind == kind && pcbLayer.layerSide == placement
+            }) {
+                copy.layerId = resolvedLayer.id
+            }
+
+            return copy
+        }
     }
 
     private func componentTextEntries(
         _ component: ComponentInstance,
-        context: RenderContext
-    ) -> [TextEntry] {
-        let ownerTransform = CGAffineTransform(
-            translationX: component.symbolInstance.position.x,
-            y: component.symbolInstance.position.y
-        )
-        .rotated(by: component.symbolInstance.rotation)
-        let ownerRotation = component.symbolInstance.rotation
-        let resolvedItems = component.symbolInstance.resolvedItems
+        footprint: FootprintInstance,
+        ownerTransform: CGAffineTransform
+    ) -> [SymbolView.TextEntry] {
+        let ownerRotation = footprint.rotation
+        let resolvedItems = footprint.resolvedItems
 
-        var entries: [TextEntry] = []
+        var entries: [SymbolView.TextEntry] = []
         for resolvedText in resolvedItems where resolvedText.isVisible {
-            let displayText = component.displayString(for: resolvedText, target: .symbol)
+            let displayText = component.displayString(for: resolvedText, target: .footprint)
             guard !displayText.isEmpty else { continue }
 
             let path = CanvasTextGeometry.worldPath(
@@ -155,8 +210,10 @@ struct SymbolView: CKView {
             )
             guard !path.isEmpty else { continue }
 
+            let textColor = resolvedText.color.cgColor
+
             var primitives: [DrawingPrimitive] = []
-            primitives.append(.fill(path: path, color: textColor(for: context)))
+            primitives.append(.fill(path: path, color: textColor))
 
             let anchorPoint = CanvasTextGeometry.worldAnchorPosition(
                 anchorPosition: resolvedText.anchorPosition,
@@ -165,7 +222,8 @@ struct SymbolView: CKView {
             primitives.append(contentsOf: anchorGuidePrimitives(
                 anchorPoint: anchorPoint,
                 textBounds: path.boundingBoxOfPath,
-                context: context
+                context: context,
+                color: textColor
             ))
 
             let textID = CanvasTextID.makeID(
@@ -174,11 +232,11 @@ struct SymbolView: CKView {
                 fallback: resolvedText.id
             )
             entries.append(
-                TextEntry(
+                SymbolView.TextEntry(
                     id: textID,
                     primitives: primitives,
                     haloPath: path,
-                    haloColor: textColor(for: context),
+                    haloColor: textColor,
                     ownerID: component.id
                 )
             )
@@ -187,9 +245,9 @@ struct SymbolView: CKView {
         return entries
     }
 
-    private func componentBodyHalo(
+    private func componentHalo(
         primitives: [AnyCanvasPrimitive],
-        pins: [Pin] = [],
+        pads: [Pad],
         ownerTransform: CGAffineTransform
     ) -> CGPath? {
         let composite = CGMutablePath()
@@ -197,20 +255,19 @@ struct SymbolView: CKView {
         for primitive in primitives {
             guard let halo = primitive.makeHaloPath() else { continue }
             let primTransform = CGAffineTransform(
-                translationX: primitive.position.x, y: primitive.position.y
+                translationX: primitive.position.x,
+                y: primitive.position.y
             )
             .rotated(by: primitive.rotation)
             .concatenating(ownerTransform)
             composite.addPath(halo, transform: primTransform)
         }
 
-        for pin in pins {
-            guard let halo = pin.makeHaloPath() else { continue }
-            let pinTransform = CGAffineTransform(
-                translationX: pin.position.x, y: pin.position.y
-            )
-            .concatenating(ownerTransform)
-            composite.addPath(halo, transform: pinTransform)
+        for pad in pads {
+            let path = pad.calculateCompositePath()
+            var transform = CGAffineTransform(translationX: pad.position.x, y: pad.position.y)
+                .concatenating(ownerTransform)
+            composite.addPath(path, transform: transform)
         }
 
         return composite.isEmpty ? nil : composite
@@ -225,52 +282,34 @@ struct SymbolView: CKView {
             return overrideColor
         }
         if let layerId = primitive.layerId,
-            let layer = context.layers.first(where: { $0.id == layerId })
-        {
+           let layer = context.layers.first(where: { $0.id == layerId }) {
             return layer.color
         }
         return fallback
     }
 
-    private func recolor(_ primitive: DrawingPrimitive, to color: CGColor) -> DrawingPrimitive {
-        switch primitive {
-        case let .fill(path, _, rule, clipPath):
-            return .fill(path: path, color: color, rule: rule, clipPath: clipPath)
-        case let .stroke(path, _, lineWidth, lineCap, lineJoin, miterLimit, lineDash, clipPath):
-            return .stroke(
-                path: path,
-                color: color,
-                lineWidth: lineWidth,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                miterLimit: miterLimit,
-                lineDash: lineDash,
-                clipPath: clipPath
-            )
-        }
-    }
-
-    private func textColor(for context: RenderContext) -> CGColor {
-        context.environment.schematicTheme.textColor
+    private func isLayerVisible(_ layerId: UUID?, layers: [any CanvasLayer]) -> Bool {
+        guard let layerId else { return true }
+        return layers.first(where: { $0.id == layerId })?.isVisible ?? true
     }
 
     private func anchorGuidePrimitives(
         anchorPoint: CGPoint,
         textBounds: CGRect,
-        context: RenderContext
+        context: RenderContext,
+        color: CGColor
     ) -> [DrawingPrimitive] {
         guard !textBounds.isNull else { return [] }
 
         var guides: [DrawingPrimitive] = []
 
-        let guideColor = anchorGuideColor(for: context)
         if let connector = anchorConnectorPath(anchorPoint: anchorPoint, textBounds: textBounds) {
             let dashLength = 4 / context.magnification
             let gapLength = 2 / context.magnification
             guides.append(
                 .stroke(
                     path: connector,
-                    color: guideColor,
+                    color: color,
                     lineWidth: 1 / context.magnification,
                     lineCap: .round,
                     lineJoin: .round,
@@ -289,7 +328,7 @@ struct SymbolView: CKView {
         guides.append(
             .stroke(
                 path: cross,
-                color: guideColor,
+                color: color,
                 lineWidth: 1 / context.magnification
             )
         )
@@ -325,35 +364,12 @@ struct SymbolView: CKView {
         return path
     }
 
-    private func anchorGuideColor(for context: RenderContext) -> CGColor {
-        let base = textColor(for: context)
-        guard let nsColor = NSColor(cgColor: base) else {
-            return base
-        }
-        let blended = nsColor.blended(withFraction: 0.6, of: .black) ?? nsColor
-        return blended.withAlphaComponent(0.7).cgColor
-    }
-}
-
-struct AnchoredTextView: CKView {
-    @CKContext var context
-    let entry: SymbolView.TextEntry
-
-    @CKViewBuilder var body: some CKView {
-        let isHighlighted =
-            context.highlightedItemIDs.contains(entry.id)
-            || (entry.ownerID.map { context.highlightedItemIDs.contains($0) } ?? false)
-
-        CKGroup {
-            if isHighlighted, let haloPath = entry.haloPath {
-                let color = (entry.haloColor ?? context.environment.schematicTheme.textColor)
-                    .applyingOpacity(0.4)
-                CKPath(path: haloPath).halo(color, width: 5.0)
-            }
-
-            if !entry.primitives.isEmpty {
-                CKPrimitives { _ in entry.primitives }
-            }
+    private func layerSide(for side: BoardSide) -> LayerSide {
+        switch side {
+        case .front:
+            return .front
+        case .back:
+            return .back
         }
     }
 }

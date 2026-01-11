@@ -1,6 +1,6 @@
 import AppKit
 
-struct CrosshairsRL: CKRenderLayer {
+struct CrosshairsRL: CKView {
 
     @CKContext var context
 
@@ -20,10 +20,10 @@ struct CrosshairsRL: CKRenderLayer {
         context.environment.crosshairsStyle
     }
 
-    var body: CKLayer {
+     @CKViewBuilder var body: some CKView {
         switch crosshairsStyle {
         case .hidden:
-            CKLayer.empty
+            CKEmpty()
         case .fullScreenLines:
             crosshairs(width: context.canvasBounds.width, height: context.canvasBounds.height)
         case .centeredCross:

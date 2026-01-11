@@ -1,11 +1,20 @@
 import AppKit
 
-struct NodeDebugRL: CKRenderLayer {
+struct NodeDebugRL: CKView {
     @CKContext var context
 
-    var body: CKLayer {
+     @CKViewBuilder var body: some CKView {
+        let path = nodePath(items: context.items)
+        CKGroup {
+            CKPath(path: path)
+                .fill(NSColor.systemGray.withAlphaComponent(0.3).cgColor)
+                .stroke(NSColor.systemGray.cgColor, width: 2)
+        }
+    }
+
+    private func nodePath(items: [any CanvasItem]) -> CGPath {
         let path = CGMutablePath()
-        for item in context.items {
+        for item in items {
             guard let node = item as? SandboxNode else { continue }
             let rect = CGRect(
                 x: node.position.x - node.size.width * 0.5,
@@ -22,11 +31,6 @@ struct NodeDebugRL: CKRenderLayer {
                 )
             )
         }
-
-        return CKLayer {
-            CKPath(path: path)
-                .fill(NSColor.systemGray.withAlphaComponent(0.3).cgColor)
-                .stroke(NSColor.systemGray.cgColor, width: 2)
-        }
+        return path
     }
 }

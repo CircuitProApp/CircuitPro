@@ -27,10 +27,11 @@ struct SymbolCanvasView: View {
                 items: $symbolEditor.items,
                 selectedIDs: $symbolEditor.selectedElementIDs,
                 environment: canvasManager.environment,
-                renderLayers: [
+                renderViews: [
                     GridRL(),
                     AxesRL(),
                     DrawingSheetRL(),
+                    PrimitiveRL(),
                     PreviewRL(),
                     HandlesRL(),
                     MarqueeRL(),

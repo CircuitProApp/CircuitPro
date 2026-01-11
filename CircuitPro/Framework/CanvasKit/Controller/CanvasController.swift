@@ -46,7 +46,7 @@ final class CanvasController {
 
     // MARK: - Pluggable Pipelines
 
-    let renderLayers: [any CKRenderLayer]
+    let renderViews: [any CKView]
     let interactions: [any CanvasInteraction]
     let inputProcessors: [any InputProcessor]
     let snapProvider: any SnapProvider
@@ -60,13 +60,13 @@ final class CanvasController {
     // MARK: - Init
 
     init(
-        renderLayers: [any CKRenderLayer],
+        renderViews: [any CKView],
         interactions: [any CanvasInteraction],
         inputProcessors: [any InputProcessor],
         snapProvider: any SnapProvider,
         renderer: CKRenderer = DefaultCKRenderer()
     ) {
-        self.renderLayers = renderLayers
+        self.renderViews = renderViews
         self.interactions = interactions
         self.inputProcessors = inputProcessors
         self.snapProvider = snapProvider

@@ -1,6 +1,6 @@
 import AppKit
 
-struct GridRL: CKRenderLayer {
+struct GridRL: CKView {
     @CKContext var context
 
     private let fadeOutStart: CGFloat = 0.60
@@ -8,37 +8,49 @@ struct GridRL: CKRenderLayer {
     private let majorBaseAlpha: CGFloat = 0.8
     private let minorBaseAlpha: CGFloat = 0.4
 
-    var body: CKLayer {
+    @CKViewBuilder var body: some CKView {
         if !context.environment.grid.isVisible {
-            CKLayer.empty
+            CKEmpty()
         } else {
             gridLayer
         }
     }
 
-    private var gridLayer: CKLayer {
+    @CKViewBuilder private var gridLayer: some CKView {
+        if let data = gridRenderData() {
+            CKGroup {
+                data.majorPath.fill(data.majorColor)
+                data.minorPath.fill(data.minorColor)
+            }
+            .opacity(data.fade)
+        } else {
+            CKEmpty()
+        }
+    }
+
+    private struct GridRenderData {
+        let majorPath: CKPath
+        let minorPath: CKPath
+        let majorColor: CGColor
+        let minorColor: CGColor
+        let fade: CGFloat
+    }
+
+    private func gridRenderData() -> GridRenderData? {
         let hostBounds = context.canvasBounds
         let visible = context.visibleRect
         let fade = fadeFactor(magnification: context.magnification)
-        if hostBounds.isEmpty || visible.isEmpty || fade <= 0 {
-            return .empty
-        }
+        guard !hostBounds.isEmpty, !visible.isEmpty, fade > 0 else { return nil }
 
         let unitSpacing = context.environment.grid.spacing.canvasPoints
         let spacing = adjustedSpacing(unitSpacing: unitSpacing, magnification: context.magnification)
-        if spacing <= 0 {
-            return .empty
-        }
+        guard spacing > 0 else { return nil }
 
         let dotRadius = 1.0 / max(context.magnification, 1.0)
         var clipRect = visible.intersection(hostBounds)
-        if clipRect.isNull || clipRect.isEmpty {
-            return .empty
-        }
+        guard !clipRect.isNull, !clipRect.isEmpty else { return nil }
         clipRect = clipRect.insetBy(dx: dotRadius, dy: dotRadius)
-        if clipRect.isNull || clipRect.isEmpty {
-            return .empty
-        }
+        guard !clipRect.isNull, !clipRect.isEmpty else { return nil }
 
         let (majorPath, minorPath) = dotGridPaths(
             clipRect: clipRect,
@@ -51,11 +63,13 @@ struct GridRL: CKRenderLayer {
         let majorColor = applyAlpha(majorBaseAlpha, to: baseColor)
         let minorColor = applyAlpha(minorBaseAlpha, to: baseColor)
 
-        return CKLayer {
-            majorPath.fill(majorColor)
-            minorPath.fill(minorColor)
-        }
-        .opacity(fade)
+        return GridRenderData(
+            majorPath: majorPath,
+            minorPath: minorPath,
+            majorColor: majorColor,
+            minorColor: minorColor,
+            fade: fade
+        )
     }
 
     private func applyAlpha(_ alpha: CGFloat, to color: CGColor) -> CGColor {

@@ -20,9 +20,10 @@ struct LayoutCanvasView: View {
             activeLayerId: $editorSession.layoutController.activeLayerId,
             environment: canvasManager.environment
                 .withTextTarget(.footprint),
-            renderLayers: [
+            renderViews: [
                 GridRL(),
                 DrawingSheetRL(),
+                FootprintRL(),
                 PreviewRL(),
                 HandlesRL(),
                 MarqueeRL(),

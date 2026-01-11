@@ -2,7 +2,7 @@ import AppKit
 
 protocol CKRenderer {
     func install(on hostLayer: CALayer)
-    func render(layers: [any CKRenderLayer], context: RenderContext)
+    func render(views: [any CKView], context: RenderContext)
 }
 
 final class DefaultCKRenderer: CKRenderer {
@@ -14,14 +14,14 @@ final class DefaultCKRenderer: CKRenderer {
         hostLayer.addSublayer(rootLayer)
     }
 
-    func render(layers: [any CKRenderLayer], context: RenderContext) {
+    func render(views: [any CKView], context: RenderContext) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
 
         rootLayer.frame = context.canvasBounds
 
         CKContextStorage.current = context
-        let batches = buildBatches(from: layers, context: context)
+        let batches = buildBatches(from: views, context: context)
         CKContextStorage.current = nil
 
         if batches.isEmpty {
@@ -47,13 +47,13 @@ final class DefaultCKRenderer: CKRenderer {
     }
 
     private func buildBatches(
-        from layers: [any CKRenderLayer],
+        from views: [any CKView],
         context: RenderContext
     ) -> [PrimitiveBatch] {
         var batches: [PrimitiveBatch] = []
 
-        for layer in layers {
-            let primitives = layer.body.primitives(in: context)
+        for view in views {
+            let primitives = view._render(in: context)
             for primitive in primitives {
                 let key = BatchKey(primitive: primitive)
                 if let last = batches.last, last.key == key {

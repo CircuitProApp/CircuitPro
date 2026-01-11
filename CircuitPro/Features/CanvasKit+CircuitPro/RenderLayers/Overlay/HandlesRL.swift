@@ -1,13 +1,14 @@
 import AppKit
 
-struct HandlesRL: CKRenderLayer {
+struct HandlesRL: CKView {
     @CKContext var context
 
-    var body: CKLayer {
-        guard let graphHandle = findEditable(in: context) else {
-            return .empty
+    @CKViewBuilder var body: some CKView {
+        if let graphHandle = findEditable(in: context) {
+            handlesLayer(handles: graphHandle.handles, transform: graphHandle.transform)
+        } else {
+            CKEmpty()
         }
-        return handlesLayer(handles: graphHandle.handles, transform: graphHandle.transform)
     }
 
     private func findEditable(in context: RenderContext) -> (handles: [CanvasHandle], transform: CGAffineTransform)? {
@@ -22,14 +23,37 @@ struct HandlesRL: CKRenderLayer {
         return (primitive.handles(), transform)
     }
 
-    private func handlesLayer(handles: [CanvasHandle], transform: CGAffineTransform) -> CKLayer {
-        guard !handles.isEmpty else { return .empty }
+    @CKViewBuilder private func handlesLayer(
+        handles: [CanvasHandle],
+        transform: CGAffineTransform
+    ) -> some CKView {
+        if handles.isEmpty {
+            CKEmpty()
+        } else {
+            let handleScreenSize: CGFloat = 10.0
+            let sizeInWorldCoords = handleScreenSize / max(context.magnification, .ulpOfOne)
+            let half = sizeInWorldCoords / 2.0
+            let lineWidth = 1.0 / max(context.magnification, .ulpOfOne)
 
-        let handleScreenSize: CGFloat = 10.0
-        let sizeInWorldCoords = handleScreenSize / max(context.magnification, .ulpOfOne)
-        let half = sizeInWorldCoords / 2.0
-        let lineWidth = 1.0 / max(context.magnification, .ulpOfOne)
+            let path = handlesPath(
+                handles: handles,
+                transform: transform,
+                half: half,
+                sizeInWorldCoords: sizeInWorldCoords
+            )
 
+            CKPath(path: path)
+                .fill(NSColor.white.cgColor)
+                .stroke(NSColor.systemBlue.cgColor, width: lineWidth)
+        }
+    }
+
+    private func handlesPath(
+        handles: [CanvasHandle],
+        transform: CGAffineTransform,
+        half: CGFloat,
+        sizeInWorldCoords: CGFloat
+    ) -> CGPath {
         let path = CGMutablePath()
         for handle in handles {
             let worldHandlePosition = handle.position.applying(transform)
@@ -41,10 +65,6 @@ struct HandlesRL: CKRenderLayer {
             )
             path.addEllipse(in: handleRect)
         }
-
-        return CKPath(path: path)
-            .fill(NSColor.white.cgColor)
-            .stroke(NSColor.systemBlue.cgColor, width: lineWidth)
-            .layer
+        return path
     }
 }

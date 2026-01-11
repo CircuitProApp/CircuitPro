@@ -25,10 +25,11 @@ struct FootprintCanvasView: View {
             layers: $footprintEditor.layers,
             activeLayerId: $footprintEditor.activeLayerId,
             environment: canvasManager.environment,
-            renderLayers: [
+            renderViews: [
                 GridRL(),
                 AxesRL(),
                 DrawingSheetRL(),
+                PrimitiveRL(),
                 PreviewRL(),
                 HandlesRL(),
                 MarqueeRL(),

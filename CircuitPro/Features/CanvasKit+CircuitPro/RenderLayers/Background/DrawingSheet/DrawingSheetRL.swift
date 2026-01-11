@@ -1,6 +1,6 @@
 import AppKit
 
-struct DrawingSheetRL: CKRenderLayer {
+struct DrawingSheetRL: CKView {
     @CKContext var context
 
     private let inset: CGFloat = 20
@@ -12,7 +12,7 @@ struct DrawingSheetRL: CKRenderLayer {
         "Unit": "mm"
     ]
 
-    var body: CKLayer {
+    @CKViewBuilder var body: some CKView {
         let hSpacing = 10 * unitsPerMM
         let vSpacing = 10 * unitsPerMM
 
@@ -28,7 +28,7 @@ struct DrawingSheetRL: CKRenderLayer {
         let backgroundColor = context.environment.canvasTheme.backgroundColor
         let markerColor = NSColor(cgColor: context.environment.canvasTheme.sheetMarkerColor) ?? .black
 
-        return CKLayer {
+        CKGroup {
             backgroundLayer(metrics: metrics, backgroundColor: backgroundColor)
             CKBorderDrawer()
                 .layer(metrics: metrics, lineColor: markerColor.cgColor)
@@ -56,8 +56,8 @@ struct DrawingSheetRL: CKRenderLayer {
         }
     }
 
-    private func backgroundLayer(metrics: DrawingMetrics, backgroundColor: CGColor) -> CKLayer {
-        CKLayer { _ in
+    private func backgroundLayer(metrics: DrawingMetrics, backgroundColor: CGColor) -> CKPrimitives {
+        CKPrimitives { _ in
             var primitives: [DrawingPrimitive] = []
             let rulerBGPath = CGMutablePath()
             rulerBGPath.addRect(metrics.outerBounds)
@@ -83,11 +83,11 @@ struct DrawingSheetRL: CKRenderLayer {
 }
 
 private struct CKBorderDrawer {
-    func layer(metrics: DrawingMetrics, lineColor: CGColor) -> CKLayer {
+    @CKViewBuilder func layer(metrics: DrawingMetrics, lineColor: CGColor) -> some CKView {
         let outerPath = CGPath(rect: metrics.outerBounds.insetBy(dx: 0.5, dy: 0.5), transform: nil)
         let innerPath = CGPath(rect: metrics.innerBounds, transform: nil)
 
-        return CKLayer {
+        CKGroup {
             CKPath(path: outerPath).stroke(lineColor, width: 1.0)
             CKPath(path: innerPath).stroke(lineColor, width: 1.0)
         }
@@ -103,19 +103,21 @@ private struct CKRulerDrawer {
     let safeFont: (CGFloat, NSFont.Weight) -> NSFont
     let showLabels: Bool
 
-    func layer(metrics: DrawingMetrics) -> CKLayer {
+    @CKViewBuilder func layer(metrics: DrawingMetrics) -> some CKView {
         let spacing = isVertical() ? metrics.verticalTickSpacing : metrics.horizontalTickSpacing
-        guard spacing > 0 else { return .empty }
-
-        return CKLayer {
-            ticksLayer(metrics: metrics, tickSpacing: spacing)
-            if showLabels {
-                labelsLayer(metrics: metrics, tickSpacing: spacing)
+        if spacing > 0 {
+            CKGroup {
+                ticksLayer(metrics: metrics, tickSpacing: spacing)
+                if showLabels {
+                    labelsLayer(metrics: metrics, tickSpacing: spacing)
+                }
             }
+        } else {
+            CKEmpty()
         }
     }
 
-    private func ticksLayer(metrics: DrawingMetrics, tickSpacing: CGFloat) -> CKLayer {
+    private func ticksLayer(metrics: DrawingMetrics, tickSpacing: CGFloat) -> CKPath {
         let tickPath = CGMutablePath()
         let inner = metrics.innerBounds
         let outer = metrics.outerBounds
@@ -136,10 +138,10 @@ private struct CKRulerDrawer {
             }
         }
 
-        return CKPath(path: tickPath).stroke(lineColor.cgColor, width: 1.0).layer
+        return CKPath(path: tickPath).stroke(lineColor.cgColor, width: 1.0)
     }
 
-    private func labelsLayer(metrics: DrawingMetrics, tickSpacing: CGFloat) -> CKLayer {
+    private func labelsLayer(metrics: DrawingMetrics, tickSpacing: CGFloat) -> CKPath {
         let font = safeFont(9, .regular)
         let inner = metrics.innerBounds
         let outer = metrics.outerBounds
@@ -177,7 +179,7 @@ private struct CKRulerDrawer {
             }
         }
 
-        return CKPath(path: path).fill(textColor.cgColor).layer
+        return CKPath(path: path).fill(textColor.cgColor)
     }
 
     private func isVertical() -> Bool { position == .left || position == .right }
@@ -203,10 +205,21 @@ private struct CKTitleBlockDrawer {
     let cellHeight: CGFloat
     let safeFont: (CGFloat, NSFont.Weight) -> NSFont
 
-    func layer(metrics: DrawingMetrics) -> CKLayer {
+    @CKViewBuilder func layer(metrics: DrawingMetrics) -> some CKView {
         let rect = metrics.titleBlockFrame
-        guard rect.height > 0 else { return .empty }
+        if rect.height > 0 {
+            let linePath = titleBlockLinePath(rect: rect)
+            let textPath = titleBlockTextPath(rect: rect)
+            CKGroup {
+                CKPath(path: linePath).stroke(lineColor.cgColor, width: 1.0)
+                CKPath(path: textPath).fill(textColor.cgColor)
+            }
+        } else {
+            CKEmpty()
+        }
+    }
 
+    private func titleBlockLinePath(rect: CGRect) -> CGPath {
         let linePath = CGMutablePath()
         linePath.addRect(rect)
         for i in 1..<cellValues.count {
@@ -214,7 +227,10 @@ private struct CKTitleBlockDrawer {
             linePath.move(to: CGPoint(x: rect.minX, y: y))
             linePath.addLine(to: CGPoint(x: rect.maxX, y: y))
         }
+        return linePath
+    }
 
+    private func titleBlockTextPath(rect: CGRect) -> CGPath {
         let keyFont = safeFont(8, .semibold)
         let valueFont = safeFont(11, .regular)
         let textPath = CGMutablePath()
@@ -250,9 +266,6 @@ private struct CKTitleBlockDrawer {
             textPath.addPath(valuePath, transform: valueTransform)
         }
 
-        return CKLayer {
-            CKPath(path: linePath).stroke(lineColor.cgColor, width: 1.0)
-            CKPath(path: textPath).fill(textColor.cgColor)
-        }
+        return textPath
     }
 }

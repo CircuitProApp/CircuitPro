@@ -1,60 +1,60 @@
 import AppKit
 
-struct WireRL: CKRenderLayer {
+struct WireRL: CKView {
     @CKContext var context
 
-    var body: CKLayer {
-        guard let engine = context.connectionEngine else {
-            return .empty
-        }
-
-        let routingContext = ConnectionRoutingContext { point in
-            context.snapProvider.snap(point: point, context: context)
-        }
-        let routes = engine.routes(
-            points: context.connectionPoints,
-            links: context.connectionLinks,
-            context: routingContext
-        )
-
-        let strokeColor = context.environment.schematicTheme.wireColor
-        let haloWidth: CGFloat = 6.0
-        let lineWidth: CGFloat = 1.0
-
-        let linkIDs = Set(context.connectionLinks.map { $0.id })
-        let selectedLinkIDs = linkIDs.intersection(context.highlightedItemIDs)
-
-        return CKLayer {
-            if let selectionPath = combinedPath(for: selectedLinkIDs, routes: routes),
-               let selectionColor = NSColor(cgColor: strokeColor)?
-                .withAlphaComponent(0.45)
-                .cgColor {
-                CKPath(path: selectionPath)
-                    .halo(selectionColor, width: haloWidth)
+     @CKViewBuilder var body: some CKView {
+        if let engine = context.connectionEngine {
+            let routingContext = ConnectionRoutingContext { point in
+                context.snapProvider.snap(point: point, context: context)
             }
-
-            if let hoverPath = combinedPath(for: context.highlightedLinkIDs, routes: routes),
-               let hoverColor = NSColor(cgColor: strokeColor)?
-                .withAlphaComponent(0.35)
-                .cgColor {
-                CKPath(path: hoverPath)
-                    .halo(hoverColor, width: haloWidth)
-            }
-
-            if let basePath = combinedPath(for: linkIDs, routes: routes) {
-                CKPath(path: basePath)
-                    .stroke(strokeColor, width: lineWidth)
-            }
-
-            let dotPath = junctionDotsPath(
-                pointsByID: context.connectionPointPositionsByID,
+            let routes = engine.routes(
+                points: context.connectionPoints,
                 links: context.connectionLinks,
-                dotRadius: 3.0
+                context: routingContext
             )
-            if !dotPath.isEmpty {
-                CKPath(path: dotPath)
-                    .fill(strokeColor)
+
+            let strokeColor = context.environment.schematicTheme.wireColor
+            let haloWidth: CGFloat = 6.0
+            let lineWidth: CGFloat = 1.0
+
+            let linkIDs = Set(context.connectionLinks.map { $0.id })
+            let selectedLinkIDs = linkIDs.intersection(context.highlightedItemIDs)
+
+            CKGroup {
+                if let selectionPath = combinedPath(for: selectedLinkIDs, routes: routes),
+                   let selectionColor = NSColor(cgColor: strokeColor)?
+                    .withAlphaComponent(0.45)
+                    .cgColor {
+                    CKPath(path: selectionPath)
+                        .halo(selectionColor, width: haloWidth)
+                }
+
+                if let hoverPath = combinedPath(for: context.highlightedLinkIDs, routes: routes),
+                   let hoverColor = NSColor(cgColor: strokeColor)?
+                    .withAlphaComponent(0.35)
+                    .cgColor {
+                    CKPath(path: hoverPath)
+                        .halo(hoverColor, width: haloWidth)
+                }
+
+                if let basePath = combinedPath(for: linkIDs, routes: routes) {
+                    CKPath(path: basePath)
+                        .stroke(strokeColor, width: lineWidth)
+                }
+
+                let dotPath = junctionDotsPath(
+                    pointsByID: context.connectionPointPositionsByID,
+                    links: context.connectionLinks,
+                    dotRadius: 3.0
+                )
+                if !dotPath.isEmpty {
+                    CKPath(path: dotPath)
+                        .fill(strokeColor)
+                }
             }
+        } else {
+            CKEmpty()
         }
     }
 

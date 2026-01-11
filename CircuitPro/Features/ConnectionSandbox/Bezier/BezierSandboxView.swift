@@ -48,7 +48,7 @@ struct BezierSandboxView: View {
             selectedIDs: .constant([]),
             connectionEngine: bezierEngine,
             environment: canvasManager.environment,
-            renderLayers: [
+            renderViews: [
                 GridRL(),
                 NodeDebugRL(),
                 BezierConnectionDebugRL(),

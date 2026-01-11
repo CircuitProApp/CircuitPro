@@ -25,7 +25,7 @@ struct SchematicCanvasView: View {
             selectedIDs: $editorSession.selectedItemIDs,
             connectionEngine: WireEngine(),
             environment: canvasManager.environment,
-            renderLayers: [
+            renderViews: [
                 GridRL(),
                 DrawingSheetRL(),
 

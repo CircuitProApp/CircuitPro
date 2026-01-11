@@ -1,6 +1,6 @@
 import AppKit
 
-struct MarqueeRL: CKRenderLayer {
+struct MarqueeRL: CKView {
     @CKContext var context
 
     var marqueeColor: CGColor {
@@ -11,11 +11,11 @@ struct MarqueeRL: CKRenderLayer {
         1.0 / max(context.magnification, .ulpOfOne)
     }
 
-    var body: CKLayer {
+     @CKViewBuilder var body: some CKView {
         if let rect = context.environment.marqueeRect {
             marqueeRect(rect)
         } else {
-            CKLayer.empty
+            CKEmpty()
         }
     }
 

@@ -1,34 +1,146 @@
 import AppKit
 
-struct CKLayer {
+protocol CKView {
+    associatedtype Body: CKView
+    var body: Body { get }
+    func _render(in context: RenderContext) -> [DrawingPrimitive]
+}
+
+extension Never: CKView {
+    var body: Never {
+        fatalError("Never has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        []
+    }
+}
+
+extension CKView {
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        body._render(in: context)
+    }
+}
+
+struct CKEmpty: CKView {
+    typealias Body = Never
+
+    var body: Never {
+        fatalError("CKEmpty has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        []
+    }
+}
+
+struct AnyCKView: CKView {
+    typealias Body = Never
+    private let renderer: (RenderContext) -> [DrawingPrimitive]
+
+    init<V: CKView>(_ view: V) {
+        self.renderer = view._render
+    }
+
+    var body: Never {
+        fatalError("AnyCKView has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        renderer(context)
+    }
+}
+
+struct CKGroup: CKView {
+    typealias Body = Never
+    fileprivate let children: [AnyCKView]
+    static let empty = CKGroup()
+
+    init(_ children: [AnyCKView] = []) {
+        self.children = children
+    }
+
+    init(@CKViewBuilder _ content: () -> CKGroup) {
+        self = content()
+    }
+
+    var body: Never {
+        fatalError("CKGroup has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        children.flatMap { $0._render(in: context) }
+    }
+}
+
+struct CKPrimitives: CKView {
+    typealias Body = Never
     private let renderer: (RenderContext) -> [DrawingPrimitive]
 
     init(_ renderer: @escaping (RenderContext) -> [DrawingPrimitive]) {
         self.renderer = renderer
     }
 
-    init(@CKBuilder _ content: @escaping () -> CKLayer) {
-        self.renderer = { context in
-            content().primitives(in: context)
-        }
+    var body: Never {
+        fatalError("CKPrimitives has no body.")
     }
 
-    func primitives(in context: RenderContext) -> [DrawingPrimitive] {
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
         renderer(context)
     }
-
-    static let empty = CKLayer { _ in [] }
 }
 
-extension CKLayer {
-    func opacity(_ value: CGFloat) -> CKLayer {
-        CKLayer { context in
-            let opacity = value.clamped(to: 0...1)
-            return primitives(in: context).map { $0.applyingOpacity(opacity) }
-        }
+struct CKOpacity: CKView {
+    typealias Body = Never
+    let content: AnyCKView
+    let opacity: CGFloat
+
+    var body: Never {
+        fatalError("CKOpacity has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        let value = opacity.clamped(to: 0...1)
+        return content._render(in: context).map { $0.applyingOpacity(value) }
     }
 }
 
+extension CKView {
+    func opacity(_ value: CGFloat) -> CKOpacity {
+        CKOpacity(content: AnyCKView(self), opacity: value)
+    }
+}
+
+@resultBuilder
+struct CKViewBuilder {
+    static func buildBlock(_ components: CKGroup...) -> CKGroup {
+        CKGroup(components.flatMap { $0.children })
+    }
+
+    static func buildExpression<V: CKView>(_ expression: V) -> CKGroup {
+        CKGroup([AnyCKView(expression)])
+    }
+
+    static func buildExpression(_ expression: CKGroup) -> CKGroup {
+        expression
+    }
+
+    static func buildOptional(_ component: CKGroup?) -> CKGroup {
+        component ?? CKGroup()
+    }
+
+    static func buildEither(first component: CKGroup) -> CKGroup {
+        component
+    }
+
+    static func buildEither(second component: CKGroup) -> CKGroup {
+        component
+    }
+
+    static func buildArray(_ components: [CKGroup]) -> CKGroup {
+        CKGroup(components.flatMap { $0.children })
+    }
+}
 
 protocol CKPathProvider {
     func path(in context: RenderContext) -> CGPath
@@ -43,45 +155,6 @@ struct AnyCKPath: CKPathProvider {
 
     func path(in context: RenderContext) -> CGPath {
         builder(context)
-    }
-}
-
-protocol CKRenderable {
-    var layer: CKLayer { get }
-}
-
-extension CKLayer: CKRenderable {
-    var layer: CKLayer { self }
-}
-
-@resultBuilder
-struct CKBuilder {
-    static func buildBlock(_ components: CKLayer...) -> CKLayer {
-        CKLayer { context in
-            components.flatMap { $0.primitives(in: context) }
-        }
-    }
-
-    static func buildExpression(_ expression: CKRenderable) -> CKLayer {
-        expression.layer
-    }
-
-    static func buildOptional(_ component: CKLayer?) -> CKLayer {
-        component ?? .empty
-    }
-
-    static func buildEither(first component: CKLayer) -> CKLayer {
-        component
-    }
-
-    static func buildEither(second component: CKLayer) -> CKLayer {
-        component
-    }
-
-    static func buildArray(_ components: [CKLayer]) -> CKLayer {
-        CKLayer { context in
-            components.flatMap { $0.primitives(in: context) }
-        }
     }
 }
 
@@ -118,10 +191,6 @@ struct CKPathBuilder {
     }
 }
 
-protocol CKRenderLayer {
-    @CKBuilder var body: CKLayer { get }
-}
-
 struct CKStyle {
     var position: CGPoint?
     var size: CGSize?
@@ -146,7 +215,7 @@ protocol CKStyled {
     var style: CKStyle { get set }
 }
 
-protocol CKStyledPath: CKRenderable, CKPathProvider, CKStyled {}
+protocol CKStyledPath: CKPathProvider, CKStyled, CKView {}
 
 protocol CKShape: CKStyledPath {
     func shapePath() -> CGPath
@@ -228,53 +297,31 @@ extension CKStyled {
 }
 
 extension CKStyledPath {
-    var layer: CKLayer {
-        CKLayer { context in
-            var path = path(in: context)
-            if path.isEmpty {
-                return []
-            }
-            if let position = style.position, style.rotation != 0 {
-                var transform = CGAffineTransform(
-                    translationX: position.x,
-                    y: position.y
-                )
-                .rotated(by: style.rotation)
-                .translatedBy(x: -position.x, y: -position.y)
-                path = path.copy(using: &transform) ?? path
-            }
-            return ckPrimitives(for: path, style: style)
+    var body: CKEmpty {
+        CKEmpty()
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        var path = path(in: context)
+        if path.isEmpty {
+            return []
         }
+        if let position = style.position, style.rotation != 0 {
+            var transform = CGAffineTransform(
+                translationX: position.x,
+                y: position.y
+            )
+            .rotated(by: style.rotation)
+            .translatedBy(x: -position.x, y: -position.y)
+            path = path.copy(using: &transform) ?? path
+        }
+        return ckPrimitives(for: path, style: style)
     }
 }
 
 extension CKShape {
     func path(in context: RenderContext) -> CGPath {
         shapePath()
-    }
-}
-
-struct CKGroup: CKStyledPath {
-    var style: CKStyle = .init()
-    private let children: [AnyCKPath]
-
-    init(@CKPathBuilder _ content: () -> [AnyCKPath]) {
-        self.children = content()
-    }
-
-    func path(in context: RenderContext) -> CGPath {
-        let merged = CGMutablePath()
-        for child in children {
-            let childPath = child.path(in: context)
-            if !childPath.isEmpty {
-                merged.addPath(childPath)
-            }
-        }
-        guard let position = style.position else {
-            return merged
-        }
-        var transform = CGAffineTransform(translationX: position.x, y: position.y)
-        return merged.copy(using: &transform) ?? merged
     }
 }
 

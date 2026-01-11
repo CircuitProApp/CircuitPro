@@ -18,7 +18,7 @@ struct CanvasView: NSViewRepresentable {
 
     // MARK: - Callbacks & Configuration
     let environment: CanvasEnvironmentValues
-    let renderLayers: [any CKRenderLayer]
+    let renderViews: [any CKView]
     let interactions: [any CanvasInteraction]
     let inputProcessors: [any InputProcessor]
     let snapProvider: any SnapProvider
@@ -36,7 +36,7 @@ struct CanvasView: NSViewRepresentable {
         activeLayerId: Binding<UUID?> = .constant(nil),
         connectionEngine: (any ConnectionEngine)? = nil,
         environment: CanvasEnvironmentValues = .init(),
-        renderLayers: [any CKRenderLayer],
+        renderViews: [any CKView],
         interactions: [any CanvasInteraction],
         inputProcessors: [any InputProcessor] = [],
         snapProvider: any SnapProvider = NoOpSnapProvider(),
@@ -51,7 +51,39 @@ struct CanvasView: NSViewRepresentable {
         self.selectedIDsBinding = selectedIDs
         self.connectionEngine = connectionEngine
         self.environment = environment
-        self.renderLayers = renderLayers
+        self.renderViews = renderViews
+        self.interactions = interactions
+        self.inputProcessors = inputProcessors
+        self.snapProvider = snapProvider
+        self.registeredDraggedTypes = registeredDraggedTypes
+        self.onPasteboardDropped = onPasteboardDropped
+    }
+
+    init(
+        viewport: Binding<CanvasViewport>,
+        tool: Binding<CanvasTool?> = .constant(nil),
+        items: Binding<[any CanvasItem]>,
+        selectedIDs: Binding<Set<UUID>>,
+        layers: Binding<[any CanvasLayer]> = .constant([] as [any CanvasLayer]),
+        activeLayerId: Binding<UUID?> = .constant(nil),
+        connectionEngine: (any ConnectionEngine)? = nil,
+        environment: CanvasEnvironmentValues = .init(),
+        interactions: [any CanvasInteraction],
+        inputProcessors: [any InputProcessor] = [],
+        snapProvider: any SnapProvider = NoOpSnapProvider(),
+        registeredDraggedTypes: [NSPasteboard.PasteboardType] = [],
+        onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil,
+        @CKViewBuilder content: @escaping () -> CKGroup
+    ) {
+        self._viewport = viewport
+        self._tool = tool
+        self._layers = layers
+        self._activeLayerId = activeLayerId
+        self.itemsBinding = items
+        self.selectedIDsBinding = selectedIDs
+        self.connectionEngine = connectionEngine
+        self.environment = environment
+        self.renderViews = [content()]
         self.interactions = interactions
         self.inputProcessors = inputProcessors
         self.snapProvider = snapProvider
@@ -73,14 +105,14 @@ struct CanvasView: NSViewRepresentable {
 
         init(
             viewport: Binding<CanvasViewport>,
-            renderLayers: [any CKRenderLayer],
+            renderViews: [any CKView],
             interactions: [any CanvasInteraction],
             inputProcessors: [any InputProcessor],
             snapProvider: any SnapProvider
         ) {
             self.viewportBinding = viewport
             self.canvasController = CanvasController(
-                renderLayers: renderLayers,
+                renderViews: renderViews,
                 interactions: interactions,
                 inputProcessors: inputProcessors,
                 snapProvider: snapProvider
@@ -128,7 +160,7 @@ struct CanvasView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator {
         let coordinator = Coordinator(
             viewport: $viewport,
-            renderLayers: self.renderLayers,
+            renderViews: self.renderViews,
             interactions: self.interactions,
             inputProcessors: self.inputProcessors,
             snapProvider: self.snapProvider

@@ -1,34 +1,29 @@
 import AppKit
 
-struct BezierConnectionDebugRL: CKRenderLayer {
+struct BezierConnectionDebugRL: CKView {
     @CKContext var context
 
-    var body: CKLayer {
-        guard let engine = context.connectionEngine else {
-            return .empty
-        }
+    @CKViewBuilder var body: some CKView {
+        if let engine = context.connectionEngine {
+            let points = connectionPoints(from: context.items)
+            let routingContext = ConnectionRoutingContext { point in
+                context.snapProvider.snap(point: point, context: context)
+            }
+            let routes = engine.routes(
+                points: points,
+                links: context.connectionLinks,
+                context: routingContext
+            )
 
-        let points = connectionPoints(from: context.items)
-        let routingContext = ConnectionRoutingContext { point in
-            context.snapProvider.snap(point: point, context: context)
-        }
-        let routes = engine.routes(
-            points: points,
-            links: context.connectionLinks,
-            context: routingContext
-        )
+            let path = routePath(routes: routes)
 
-        let path = CGMutablePath()
-        for route in routes.values {
-            guard let bezier = route as? BezierRoute else { continue }
-            path.move(to: bezier.start)
-            path.addCurve(to: bezier.end, control1: bezier.c1, control2: bezier.c2)
-        }
-
-        return CKLayer {
-            CKPath(path: path)
-                .stroke(NSColor.systemPurple.cgColor, width: 2)
-            pointDots(points: points)
+            CKGroup {
+                CKPath(path: path)
+                    .stroke(NSColor.systemPurple.cgColor, width: 2)
+                pointDots(points: points)
+            }
+        } else {
+            CKEmpty()
         }
     }
 
@@ -48,12 +43,22 @@ struct BezierConnectionDebugRL: CKRenderLayer {
         return points
     }
 
-    private func pointDots(points: [SocketPoint]) -> CKLayer {
+    private func routePath(routes: [UUID: any ConnectionRoute]) -> CGPath {
+        let path = CGMutablePath()
+        for route in routes.values {
+            guard let bezier = route as? BezierRoute else { continue }
+            path.move(to: bezier.start)
+            path.addCurve(to: bezier.end, control1: bezier.c1, control2: bezier.c2)
+        }
+        return path
+    }
+
+    private func pointDots(points: [SocketPoint]) -> CKPath {
         let path = CGMutablePath()
         for point in points {
             let rect = CGRect(x: point.position.x - 3, y: point.position.y - 3, width: 6, height: 6)
             path.addEllipse(in: rect)
         }
-        return CKPath(path: path).fill(NSColor.systemBlue.cgColor).layer
+        return CKPath(path: path).fill(NSColor.systemBlue.cgColor)
     }
 }

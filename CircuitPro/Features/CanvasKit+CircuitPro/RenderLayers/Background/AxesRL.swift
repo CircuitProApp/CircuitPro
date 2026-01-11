@@ -1,13 +1,13 @@
 import AppKit
 
-struct AxesRL: CKRenderLayer {
+struct AxesRL: CKView {
     @CKContext var context
 
     var strokeWidth: CGFloat {
         1.0 / max(context.magnification, .ulpOfOne)
     }
 
-    var body: CKLayer {
+     @CKViewBuilder var body: some CKView {
         let bounds = context.canvasBounds
         let center = CGPoint(x: bounds.midX, y: bounds.midY)
 
