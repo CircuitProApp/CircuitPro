@@ -49,6 +49,12 @@ final class CanvasEditorManager {
         Set(textDefinitions.map { $0.content })
     }
 
+    private var componentData: (name: String, prefix: String, properties: [Property.Definition]) = (
+        name: "",
+        prefix: "",
+        properties: []
+    )
+
     // MARK: - State Management
 
     init(textTarget: TextTarget = .symbol) {
@@ -279,7 +285,7 @@ extension CanvasEditorManager {
     func updateDynamicTextElements(
         componentData: (name: String, prefix: String, properties: [Property.Definition])
     ) {
-        _ = componentData
+        self.componentData = componentData
     }
 
     /// Removes property text entries that no longer exist.
@@ -330,6 +336,10 @@ extension CanvasEditorManager {
             if options.showUnit, !prop.unit.symbol.isEmpty { parts.append(prop.unit.symbol) }
             return parts.joined(separator: " ")
         }
+    }
+
+    func resolveText(_ definition: CircuitText.Definition) -> String {
+        resolveText(for: definition.content, componentData: componentData)
     }
 
     /// Creates a binding to a component property text's display options.

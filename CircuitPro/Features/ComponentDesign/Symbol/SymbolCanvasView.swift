@@ -35,13 +35,17 @@ struct SymbolCanvasView: View {
                 GridRL()
                 AxesRL()
                 DrawingSheetRL()
-                PrimitiveRL()
+                DesignView()
                 HandlesRL()
                 MarqueeRL()
                 CrosshairsView()
             }
             .canvasTool($symbolEditor.selectedTool.unwrapping(withDefault: CursorTool()))
-            .canvasEnvironment(canvasManager.environment)
+            .canvasEnvironment(
+                canvasManager.environment.withDefinitionTextResolver { definition in
+                    symbolEditor.resolveText(definition)
+                }
+            )
             .viewport($canvasManager.viewport)
             .onCanvasChange { context in
                 canvasManager.mouseLocation = context.processedMouseLocation ?? .zero

@@ -1,17 +1,22 @@
 import AppKit
 
-struct PrimitiveRL: CKView {
+struct DesignView: CKView {
     @CKContext var context
     @CanvasItems(Pin.self) var pins
     @CanvasItems(Pad.self) var pads
-
+    @CanvasItems(AnyCanvasPrimitive.self) var primitives
+    @CanvasItems(CircuitText.Definition.self) var texts
     var body: some CKView {
-        let primitives = context.items.compactMap { $0 as? AnyCanvasPrimitive }
-        let textItems = context.items.compactMap { $0 as? CircuitText.Definition }
-
         CKGroup {
             for primitive in primitives {
-                PrimitiveView(primitive: primitive)
+                PrimitiveView(primitive: primitive.value)
+                    .hoverable(primitive.id)
+                    .selectable(primitive.id)
+                    .onDragGesture { delta in
+                        primitive.update { primitive in
+                            primitive.translate(by: CGVector(dx: delta.processed.x, dy: delta.processed.y))
+                        }
+                    }
             }
 
             for pad in pads {
@@ -36,8 +41,13 @@ struct PrimitiveRL: CKView {
                     }
             }
 
-            for text in textItems {
-                DefinitionTextView(text: text)
+            for text in texts {
+                AnchoredTextView(text: text.value)
+                    .onDragGesture { delta in
+                        text.update { text in
+                            text.translate(by: CGVector(dx: delta.processed.x, dy: delta.processed.y))
+                        }
+                    }
             }
         }
     }

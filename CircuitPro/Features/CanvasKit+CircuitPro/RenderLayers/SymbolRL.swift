@@ -47,9 +47,9 @@ struct SymbolView: CKView {
             ))
         }
 
-        for entry in renderData.textEntries {
-            children.append(AnyCKView(AnchoredTextView(entry: entry)))
-        }
+//        for entry in renderData.textEntries {
+//            children.append(AnyCKView(AnchoredTextView(entry: entry)))
+//        }
 
         return CKGroup(children)
     }

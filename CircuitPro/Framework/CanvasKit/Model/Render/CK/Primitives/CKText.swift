@@ -66,6 +66,106 @@ struct CKText: CKPathView {
         return CGRect(x: 0, y: -descent, width: width, height: ascent + descent + leading)
     }
 
+    static func localBounds(for string: String, font: NSFont, anchor: TextAnchor) -> CGRect {
+        let bounds = self.bounds(for: string, font: font)
+        let anchorPoint = anchor.point(in: bounds)
+        return bounds.offsetBy(dx: -anchorPoint.x, dy: -anchorPoint.y)
+    }
+
+    static func worldBounds(
+        for string: String,
+        font: NSFont,
+        anchor: TextAnchor,
+        position: CGPoint,
+        rotation: CGFloat
+    ) -> CGRect {
+        let local = localBounds(for: string, font: font, anchor: anchor)
+        let corners = [
+            CGPoint(x: local.minX, y: local.minY),
+            CGPoint(x: local.minX, y: local.maxY),
+            CGPoint(x: local.maxX, y: local.minY),
+            CGPoint(x: local.maxX, y: local.maxY)
+        ]
+        var transform = CGAffineTransform(translationX: position.x, y: position.y)
+        if rotation != 0 {
+            transform = transform.rotated(by: rotation)
+        }
+        var minX = CGFloat.greatestFiniteMagnitude
+        var minY = CGFloat.greatestFiniteMagnitude
+        var maxX = -CGFloat.greatestFiniteMagnitude
+        var maxY = -CGFloat.greatestFiniteMagnitude
+        for corner in corners {
+            let point = corner.applying(transform)
+            minX = min(minX, point.x)
+            minY = min(minY, point.y)
+            maxX = max(maxX, point.x)
+            maxY = max(maxY, point.y)
+        }
+        guard minX.isFinite, minY.isFinite, maxX.isFinite, maxY.isFinite else {
+            return .null
+        }
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
+    static func worldPath(
+        for string: String,
+        font: NSFont,
+        anchor: TextAnchor,
+        position: CGPoint,
+        rotation: CGFloat
+    ) -> CGPath {
+        let textPath = CKText.path(for: string, font: font)
+        guard !textPath.isEmpty else { return textPath }
+        let bounds = CKText.bounds(for: string, font: font)
+        let anchorPoint = anchor.point(in: bounds)
+        var transform = CGAffineTransform(
+            translationX: position.x - anchorPoint.x,
+            y: position.y - anchorPoint.y
+        )
+        var positioned = textPath.copy(using: &transform) ?? textPath
+        if rotation != 0 {
+            var rotationTransform = CGAffineTransform(
+                translationX: position.x,
+                y: position.y
+            )
+            .rotated(by: rotation)
+            .translatedBy(x: -position.x, y: -position.y)
+            positioned = positioned.copy(using: &rotationTransform) ?? positioned
+        }
+        return positioned
+    }
+
+    static func hitRectPath(
+        for string: String,
+        font: NSFont,
+        anchor: TextAnchor,
+        position: CGPoint,
+        rotation: CGFloat
+    ) -> CGPath {
+        let localBounds = CKText.localBounds(for: string, font: font, anchor: anchor)
+        return hitRectPath(localBounds: localBounds, position: position, rotation: rotation)
+    }
+
+    static func hitRectPath(
+        localBounds: CGRect,
+        position: CGPoint,
+        rotation: CGFloat
+    ) -> CGPath {
+        let rectPath = CGPath(rect: localBounds, transform: nil)
+        var translation = CGAffineTransform(translationX: position.x, y: position.y)
+        var positioned = rectPath.copy(using: &translation) ?? rectPath
+        if rotation != 0 {
+            var rotationTransform = CGAffineTransform(
+                translationX: position.x,
+                y: position.y
+            )
+            .rotated(by: rotation)
+            .translatedBy(x: -position.x, y: -position.y)
+            positioned = positioned.copy(using: &rotationTransform) ?? positioned
+        }
+        return positioned
+    }
+
     func path(in context: RenderContext, style: CKStyle) -> CGPath {
         let textPath = CKText.path(for: content, font: font)
         guard !textPath.isEmpty else { return CGMutablePath() }

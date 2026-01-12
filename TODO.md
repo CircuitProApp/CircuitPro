@@ -1,0 +1,1 @@
+- Remove color from canvas primitives; resolve color at render-time instead of storing it on the primitive.

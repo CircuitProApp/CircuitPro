@@ -246,6 +246,7 @@ struct CKStrokeView<Content: CKView>: CKView {
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        let base = content._render(in: context)
         let strokes = content._paths(in: context)
             .filter { !$0.isEmpty }
             .map {
@@ -260,7 +261,7 @@ struct CKStrokeView<Content: CKView>: CKView {
                     clipPath: clipPath
                 )
             }
-        return strokes
+        return base + strokes
     }
 }
 

@@ -52,10 +52,10 @@ struct FootprintView: CKView {
                 CKGroup(primitives: renderData.bodyPrimitives)
             ))
         }
-
-        for entry in renderData.textEntries {
-            children.append(AnyCKView(AnchoredTextView(entry: entry)))
-        }
+//
+//        for entry in renderData.textEntries {
+//            children.append(AnyCKView(AnchoredTextView(entry: entry)))
+//        }
 
         return CKGroup(children)
     }

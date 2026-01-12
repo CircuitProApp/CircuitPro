@@ -24,12 +24,14 @@ struct FootprintCanvasView: View {
             selectedIDs: $footprintEditor.selectedElementIDs,
             layers: $footprintEditor.layers,
             activeLayerId: $footprintEditor.activeLayerId,
-            environment: canvasManager.environment,
+            environment: canvasManager.environment.withDefinitionTextResolver { definition in
+                footprintEditor.resolveText(definition)
+            },
             renderViews: [
                 GridRL(),
                 AxesRL(),
                 DrawingSheetRL(),
-                PrimitiveRL(),
+                DesignView(),
                 HandlesRL(),
                 MarqueeRL(),
                 CrosshairsView(),

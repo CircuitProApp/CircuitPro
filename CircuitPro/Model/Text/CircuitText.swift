@@ -41,3 +41,15 @@ struct CircuitText {
     /// The visibility of the text. Can be set to `false` in an override to hide it.
     var isVisible: Bool = true
 }
+
+extension CircuitText.Definition: Transformable {
+    var position: CGPoint {
+        get { relativePosition }
+        set { relativePosition = newValue }
+    }
+
+    var rotation: CGFloat {
+        get { cardinalRotation.radians }
+        set { cardinalRotation = .closest(to: newValue) }
+    }
+}
