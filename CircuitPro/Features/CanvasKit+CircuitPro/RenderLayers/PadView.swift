@@ -4,34 +4,33 @@ struct PadView: CKView {
     @CKContext var context
     let pad: Pad
 
-    @CKViewBuilder var body: some CKView {
-        var transform = CGAffineTransform(translationX: pad.position.x, y: pad.position.y)
-            .rotated(by: pad.rotation)
-        let path = pad.calculateCompositePath().copy(using: &transform)
-            ?? pad.calculateCompositePath()
-
-        let color = padColor(
-            layers: context.layers,
-            fallback: context.environment.canvasTheme.textColor
-        )
-        let isHighlighted = context.highlightedItemIDs.contains(pad.id)
-        let haloColor = color.applyingOpacity(0.35)
-
-        CKGroup {
-            if isHighlighted {
-                CKPath(path: path).halo(haloColor, width: 5.0)
-            }
-            CKPath(path: path).fill(color)
-        }
+    var showHalo: Bool {
+        context.highlightedItemIDs.contains(pad.id) ||
+            context.selectedItemIDs.contains(pad.id)
     }
 
-    private func padColor(layers: [any CanvasLayer], fallback: CGColor) -> CGColor {
-        if let layer = layers.first(where: { layer in
-            guard let pcbLayer = layer as? PCBLayer else { return false }
-            return pcbLayer.layerKind == .copper
-        }) {
-            return layer.color
+    var placementSide: BoardSide = .front
+
+    var padColor: CGColor {
+        placementSide == .front ? NSColor.systemRed.cgColor : NSColor.systemBlue.cgColor
+    }
+
+    var body: some CKView {
+        CKComposite(rule: .evenOdd) {
+            switch pad.shape {
+            case .rect(let width, let height):
+                CKRectangle()
+                    .frame(width: width, height: height)
+            case .circle(let radius):
+                CKCircle(radius: radius)
+            }
+            if pad.type == .throughHole, let drillDiameter = pad.drillDiameter, drillDiameter > 0 {
+                CKCircle(radius: drillDiameter / 2)
+            }
         }
-        return fallback
+        .position(pad.position)
+        .rotation(pad.rotation)
+        .fill(padColor)
+        .halo(showHalo ? padColor.copy(alpha: 0.4) ?? .clear : .clear, width: 5.0)
     }
 }

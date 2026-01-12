@@ -35,12 +35,12 @@ struct FootprintCanvasView: View {
                 CrosshairsView(),
             ],
             interactions: [
-                HoverHighlightInteraction(),
-                KeyCommandInteraction(),
-                HandleInteraction(),
-                SelectionInteraction(),
-                DragInteraction(),
-                MarqueeInteraction(),
+                // HoverHighlightInteraction(),
+                // KeyCommandInteraction(),
+                // HandleInteraction(),
+                // SelectionInteraction(),
+                // DragInteraction(),
+                // MarqueeInteraction(),
             ],
             inputProcessors: [
                 GridSnapProcessor()

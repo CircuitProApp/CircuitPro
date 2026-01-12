@@ -127,6 +127,44 @@ extension CKView {
     }
 }
 
+private protocol CKCompositeRuleProvider {
+    var compositeRule: CAShapeLayerFillRule { get }
+}
+
+struct CKComposite: CKView {
+    typealias Body = Never
+
+    let rule: CAShapeLayerFillRule
+    let content: CKGroup
+
+    init(rule: CAShapeLayerFillRule = .nonZero, @CKViewBuilder _ content: () -> CKGroup) {
+        self.rule = rule
+        self.content = content()
+    }
+
+    var body: Never {
+        fatalError("CKComposite has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        []
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        let paths = content._paths(in: context)
+        guard !paths.isEmpty else { return [] }
+        let merged = CGMutablePath()
+        paths.forEach { merged.addPath($0) }
+        return [merged]
+    }
+}
+
+extension CKComposite: CKCompositeRuleProvider {
+    var compositeRule: CAShapeLayerFillRule {
+        rule
+    }
+}
+
 struct CKTransformView<Content: CKView>: CKView {
     typealias Body = Never
 
@@ -182,6 +220,12 @@ struct CKTransformView<Content: CKView>: CKView {
             transformed = transformed.map { $0.copy(using: &rotationTransform) ?? $0 }
         }
         return transformed
+    }
+}
+
+extension CKTransformView: CKCompositeRuleProvider where Content: CKCompositeRuleProvider {
+    var compositeRule: CAShapeLayerFillRule {
+        content.compositeRule
     }
 }
 
@@ -286,6 +330,40 @@ struct CKClipView<Content: CKView>: CKView {
     }
 }
 
+struct CKCompositeView<Content: CKView, Composite: CKView>: CKView {
+    typealias Body = Never
+
+    let content: Content
+    let composite: Composite
+    let rule: CAShapeLayerFillRule
+
+    var body: Never {
+        fatalError("CKCompositeView has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        content._render(in: context)
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        let basePaths = content._paths(in: context)
+        let compositePaths = composite._paths(in: context)
+        if basePaths.isEmpty && compositePaths.isEmpty {
+            return []
+        }
+        let merged = CGMutablePath()
+        basePaths.forEach { merged.addPath($0) }
+        compositePaths.forEach { merged.addPath($0) }
+        return [merged]
+    }
+}
+
+extension CKCompositeView: CKCompositeRuleProvider {
+    var compositeRule: CAShapeLayerFillRule {
+        rule
+    }
+}
+
 struct CKHitTargetView<Content: CKView>: CKView {
     typealias Body = Never
 
@@ -361,7 +439,8 @@ extension CKView {
     }
 
     func fill(_ color: CGColor) -> CKFillView<Self> {
-        CKFillView(content: self, color: color)
+        let rule = (self as? CKCompositeRuleProvider)?.compositeRule ?? .nonZero
+        return CKFillView(content: self, color: color, rule: rule)
     }
 
     func fill(_ color: CGColor, rule: CAShapeLayerFillRule) -> CKFillView<Self> {
@@ -378,6 +457,13 @@ extension CKView {
 
     func clip(to rect: CGRect) -> CKClipView<Self> {
         CKClipView(content: self, clipPath: CGPath(rect: rect, transform: nil))
+    }
+
+    func composite(
+        rule: CAShapeLayerFillRule = .nonZero,
+        @CKViewBuilder _ content: () -> CKGroup
+    ) -> CKCompositeView<Self, CKGroup> {
+        CKCompositeView(content: self, composite: content(), rule: rule)
     }
 
     func hoverable(_ id: UUID) -> CKInteractionView<Self> {
