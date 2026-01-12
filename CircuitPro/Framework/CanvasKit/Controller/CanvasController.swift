@@ -52,6 +52,7 @@ final class CanvasController {
     let snapProvider: any SnapProvider
     let renderer: CKRenderer
     let hitTargets = HitTargetRegistry()
+    let canvasDragHandlers = CanvasDragHandlerRegistry()
 
     // MARK: - Callbacks to Owner
 
@@ -115,7 +116,8 @@ final class CanvasController {
             items: items,
             environment: self.environment,
             inputProcessors: self.inputProcessors,
-            hitTargets: hitTargets
+            hitTargets: hitTargets,
+            canvasDragHandlers: canvasDragHandlers
         )
     }
 

@@ -137,6 +137,22 @@ struct CKInteractionView<Content: CKView>: CKView {
     }
 }
 
+struct CKCanvasDragView<Content: CKView>: CKView {
+    typealias Body = Never
+
+    let content: Content
+    let dragHandler: CanvasGlobalDragHandler
+
+    var body: Never {
+        fatalError("CKCanvasDragView has no body.")
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        context.canvasDragHandlers.add(dragHandler)
+        return content._render(in: context)
+    }
+}
+
 extension Never: CKView {
     var body: Never {
         fatalError("Never has no body.")
@@ -598,6 +614,15 @@ extension CKView {
             contentShape: nil,
             dragPhaseHandler: nil,
             dragDeltaHandler: action
+        )
+    }
+
+    func onCanvasDrag(
+        _ action: @escaping (CanvasGlobalDragPhase, RenderContext, CanvasController) -> Void
+    ) -> CKCanvasDragView<Self> {
+        CKCanvasDragView(
+            content: self,
+            dragHandler: CanvasGlobalDragHandler(id: UUID(), handler: action)
         )
     }
 

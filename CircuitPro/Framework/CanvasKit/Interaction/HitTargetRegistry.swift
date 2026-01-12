@@ -52,4 +52,14 @@ final class HitTargetRegistry {
         }
         return best
     }
+
+    func hitTestAll(in rect: CGRect) -> [UUID] {
+        var hits = Set<UUID>()
+        for target in targets {
+            if rect.intersects(target.path.boundingBoxOfPath) {
+                hits.insert(target.id)
+            }
+        }
+        return Array(hits)
+    }
 }

@@ -52,6 +52,7 @@ struct CanvasView: NSViewRepresentable {
         self.connectionEngine = connectionEngine
         var env = environment
         env.handleDragState = env.handleDragState
+        env.marqueeDragState = env.marqueeDragState
         self.environment = env
         self.renderViews = renderViews
         self.interactions = interactions
@@ -69,7 +70,6 @@ struct CanvasView: NSViewRepresentable {
         activeLayerId: Binding<UUID?> = .constant(nil),
         connectionEngine: (any ConnectionEngine)? = nil,
         environment: CanvasEnvironmentValues = .init(),
-        interactions: [any CanvasInteraction],
         inputProcessors: [any InputProcessor] = [],
         snapProvider: any SnapProvider = NoOpSnapProvider(),
         registeredDraggedTypes: [NSPasteboard.PasteboardType] = [],
@@ -85,9 +85,10 @@ struct CanvasView: NSViewRepresentable {
         self.connectionEngine = connectionEngine
         var env = environment
         env.handleDragState = env.handleDragState
+        env.marqueeDragState = env.marqueeDragState
         self.environment = env
         self.renderViews = [content()]
-        self.interactions = interactions
+        self.interactions = []
         self.inputProcessors = inputProcessors
         self.snapProvider = snapProvider
         self.registeredDraggedTypes = registeredDraggedTypes
@@ -284,7 +285,10 @@ extension CanvasView {
 
     func canvasEnvironment(_ value: CanvasEnvironmentValues) -> CanvasView {
         var copy = self
-        copy.environment = value
+        var env = value
+        env.handleDragState = env.handleDragState
+        env.marqueeDragState = env.marqueeDragState
+        copy.environment = env
         return copy
     }
 }

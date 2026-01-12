@@ -17,6 +17,9 @@ final class CanvasInputHandler {
     private var dragTarget: CanvasHitTarget?
     private var dragLastRawPoint: CGPoint?
     private var dragLastProcessedPoint: CGPoint?
+    private var globalDragLastRawPoint: CGPoint?
+    private var globalDragLastProcessedPoint: CGPoint?
+    private var globalDragActive = false
     private var pendingHitTarget: CanvasHitTarget?
     private var pendingStartRawPoint: CGPoint?
     private var pendingStartProcessedPoint: CGPoint?
@@ -62,6 +65,21 @@ final class CanvasInputHandler {
             }
         }
 
+        globalDragActive = true
+        globalDragLastRawPoint = rawPoint
+        globalDragLastProcessedPoint = processedPoint
+        controller.canvasDragHandlers.handle(
+            .began(CanvasGlobalDragEvent(
+                event: event,
+                rawLocation: rawPoint,
+                processedLocation: processedPoint,
+                rawDelta: .zero,
+                processedDelta: .zero
+            )),
+            context: context,
+            controller: controller
+        )
+
         if let target = context.hitTargets.hitTest(rawPoint) {
             if target.onDrag != nil || target.onTap != nil {
                 pendingHitTarget = target
@@ -85,6 +103,26 @@ final class CanvasInputHandler {
         let rawPoint = host.convert(event.locationInWindow, from: nil)
         controller.mouseLocation = rawPoint
         let processedPoint = process(point: rawPoint, context: context)
+
+        if globalDragActive {
+            let lastRaw = globalDragLastRawPoint ?? rawPoint
+            let lastProcessed = globalDragLastProcessedPoint ?? processedPoint
+            let rawDelta = CGPoint(x: rawPoint.x - lastRaw.x, y: rawPoint.y - lastRaw.y)
+            let processedDelta = CGPoint(x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
+            globalDragLastRawPoint = rawPoint
+            globalDragLastProcessedPoint = processedPoint
+            controller.canvasDragHandlers.handle(
+                .changed(CanvasGlobalDragEvent(
+                    event: event,
+                    rawLocation: rawPoint,
+                    processedLocation: processedPoint,
+                    rawDelta: rawDelta,
+                    processedDelta: processedDelta
+                )),
+                context: context,
+                controller: controller
+            )
+        }
 
         if let target = dragTarget, let onDrag = target.onDrag {
             let lastRaw = dragLastRawPoint ?? rawPoint
@@ -140,6 +178,27 @@ final class CanvasInputHandler {
         let rawPoint = host.convert(event.locationInWindow, from: nil)
         controller.mouseLocation = rawPoint
         let processedPoint = process(point: rawPoint, context: context)
+
+        if globalDragActive {
+            let lastRaw = globalDragLastRawPoint ?? rawPoint
+            let lastProcessed = globalDragLastProcessedPoint ?? processedPoint
+            let rawDelta = CGPoint(x: rawPoint.x - lastRaw.x, y: rawPoint.y - lastRaw.y)
+            let processedDelta = CGPoint(x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
+            controller.canvasDragHandlers.handle(
+                .ended(CanvasGlobalDragEvent(
+                    event: event,
+                    rawLocation: rawPoint,
+                    processedLocation: processedPoint,
+                    rawDelta: rawDelta,
+                    processedDelta: processedDelta
+                )),
+                context: context,
+                controller: controller
+            )
+            globalDragActive = false
+            globalDragLastRawPoint = nil
+            globalDragLastProcessedPoint = nil
+        }
 
         if let target = dragTarget, let onDrag = target.onDrag {
             onDrag(.ended)
@@ -200,6 +259,9 @@ final class CanvasInputHandler {
         controller.mouseLocation = nil
         controller.setInteractionHighlight(itemIDs: [])
         controller.setInteractionLinkHighlight(linkIDs: [])
+        globalDragActive = false
+        globalDragLastRawPoint = nil
+        globalDragLastProcessedPoint = nil
         if let prevID = hoveredTargetID,
            let previous = controller.hitTargets.targets.first(where: { $0.id == prevID }) {
             previous.onHover?(false)

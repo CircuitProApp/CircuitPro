@@ -28,6 +28,7 @@ struct RenderContext {
     let snapProvider: any SnapProvider
     let items: [any CanvasItem]
     let hitTargets: HitTargetRegistry
+    let canvasDragHandlers: CanvasDragHandlerRegistry
     let hitTestDepth: Int
     let hitTestTransform: CGAffineTransform
 
@@ -46,7 +47,7 @@ struct RenderContext {
         }
     }
 
-    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor], hitTargets: HitTargetRegistry, hitTestDepth: Int = 0, hitTestTransform: CGAffineTransform = .identity) {
+    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor], hitTargets: HitTargetRegistry, canvasDragHandlers: CanvasDragHandlerRegistry, hitTestDepth: Int = 0, hitTestTransform: CGAffineTransform = .identity) {
         self.magnification = magnification
         self.mouseLocation = mouseLocation
         self.selectedTool = selectedTool
@@ -62,6 +63,7 @@ struct RenderContext {
         self.environment = environment
         self.inputProcessors = inputProcessors
         self.hitTargets = hitTargets
+        self.canvasDragHandlers = canvasDragHandlers
         self.hitTestDepth = hitTestDepth
         self.hitTestTransform = hitTestTransform
     }
@@ -85,6 +87,7 @@ extension RenderContext {
             environment: environment,
             inputProcessors: inputProcessors,
             hitTargets: hitTargets,
+            canvasDragHandlers: canvasDragHandlers,
             hitTestDepth: depth,
             hitTestTransform: hitTestTransform
         )
@@ -107,6 +110,7 @@ extension RenderContext {
             environment: environment,
             inputProcessors: inputProcessors,
             hitTargets: hitTargets,
+            canvasDragHandlers: canvasDragHandlers,
             hitTestDepth: hitTestDepth,
             hitTestTransform: hitTestTransform.concatenating(transform)
         )

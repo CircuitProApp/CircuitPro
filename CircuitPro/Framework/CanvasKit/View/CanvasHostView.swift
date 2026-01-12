@@ -58,6 +58,7 @@ final class CanvasHostView: NSView {
         CATransaction.setDisableActions(true)
 
         controller.hitTargets.reset()
+        controller.canvasDragHandlers.reset()
         var views = controller.renderViews
         views.append(ToolPreviewView())
         controller.renderer.render(views: views, context: context)

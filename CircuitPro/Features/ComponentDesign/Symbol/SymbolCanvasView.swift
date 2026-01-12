@@ -19,14 +19,6 @@ struct SymbolCanvasView: View {
             CanvasView(
                 items: $symbolEditor.items,
                 selectedIDs: $symbolEditor.selectedElementIDs,
-                interactions: [
-                    // HoverHighlightInteraction(),
-                    // KeyCommandInteraction(),
-                    // HandleInteraction(),
-                    // SelectionInteraction(),
-                    // DragInteraction(),
-                    // MarqueeInteraction(),
-                ],
                 inputProcessors: [
                     GridSnapProcessor()
                 ],
