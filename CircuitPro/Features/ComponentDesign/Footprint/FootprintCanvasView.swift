@@ -29,7 +29,7 @@ struct FootprintCanvasView: View {
             },
             renderViews: [
                 GridRL(),
-                AxesRL(),
+                AxesView(),
                 DrawingSheetRL(),
                 DesignView(),
                 HandlesRL(),

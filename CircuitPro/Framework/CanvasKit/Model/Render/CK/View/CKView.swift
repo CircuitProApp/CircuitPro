@@ -20,6 +20,7 @@ struct CKInteractionView<Content: CKView>: CKView {
     var isSelectable: Bool
     var isDraggable: Bool
     var contentShape: CGPath?
+    var hitTestPriority: Int
     var dragPhaseHandler: ((CanvasDragPhase) -> Void)?
     var dragDeltaHandler: ((CanvasDragDelta) -> Void)?
 
@@ -27,9 +28,36 @@ struct CKInteractionView<Content: CKView>: CKView {
         fatalError("CKInteractionView has no body.")
     }
 
+    init(
+        content: Content,
+        targetID: UUID,
+        isHoverable: Bool,
+        isSelectable: Bool,
+        isDraggable: Bool,
+        contentShape: CGPath?,
+        hitTestPriority: Int = 0,
+        dragPhaseHandler: ((CanvasDragPhase) -> Void)?,
+        dragDeltaHandler: ((CanvasDragDelta) -> Void)?
+    ) {
+        self.content = content
+        self.targetID = targetID
+        self.isHoverable = isHoverable
+        self.isSelectable = isSelectable
+        self.isDraggable = isDraggable
+        self.contentShape = contentShape
+        self.hitTestPriority = hitTestPriority
+        self.dragPhaseHandler = dragPhaseHandler
+        self.dragDeltaHandler = dragDeltaHandler
+    }
+
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let primitives = content._render(in: context)
-        let targetPath = contentShape ?? hitPath(in: context, primitives: primitives)
+        let childContext = context.withHitTestDepth(context.hitTestDepth + 1)
+        let primitives = content._render(in: childContext)
+        var targetPath = contentShape ?? hitPath(in: context, primitives: primitives)
+        if !context.hitTestTransform.isIdentity {
+            var transform = context.hitTestTransform
+            targetPath = targetPath.copy(using: &transform) ?? targetPath
+        }
         if targetPath.isEmpty {
             return primitives
         }
@@ -61,6 +89,8 @@ struct CKInteractionView<Content: CKView>: CKView {
                 CanvasHitTarget(
                     id: targetID,
                     path: targetPath,
+                    priority: hitTestPriority,
+                    depth: context.hitTestDepth,
                     onHover: onHover,
                     onTap: onTap,
                     onDrag: onDrag
@@ -177,7 +207,17 @@ struct CKTransformView<Content: CKView>: CKView {
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        applyTransforms(to: content._render(in: context))
+        var transform = CGAffineTransform.identity
+        if let position {
+            transform = CGAffineTransform(translationX: position.x, y: position.y)
+        }
+        if rotation != 0 {
+            transform = transform.rotated(by: rotation)
+        }
+        let childContext = context
+            .withHitTestDepth(context.hitTestDepth + 1)
+            .withHitTestTransform(transform)
+        return applyTransforms(to: content._render(in: childContext))
     }
 
     func _paths(in context: RenderContext) -> [CGPath] {
@@ -374,19 +414,45 @@ struct CKHitTargetView<Content: CKView>: CKView {
     let onTap: (() -> Void)?
     let onDrag: ((CanvasDragPhase) -> Void)?
     let targetID: UUID
+    let hitTestPriority: Int
 
     var body: Never {
         fatalError("CKHitTargetView has no body.")
     }
 
+    init(
+        content: Content,
+        contentShape: CGPath?,
+        onHover: ((Bool) -> Void)?,
+        onTap: (() -> Void)?,
+        onDrag: ((CanvasDragPhase) -> Void)?,
+        targetID: UUID,
+        hitTestPriority: Int = 0
+    ) {
+        self.content = content
+        self.contentShape = contentShape
+        self.onHover = onHover
+        self.onTap = onTap
+        self.onDrag = onDrag
+        self.targetID = targetID
+        self.hitTestPriority = hitTestPriority
+    }
+
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let primitives = content._render(in: context)
-        let targetPath = contentShape ?? hitPath(in: context, primitives: primitives)
+        let childContext = context.withHitTestDepth(context.hitTestDepth + 1)
+        let primitives = content._render(in: childContext)
+        var targetPath = contentShape ?? hitPath(in: context, primitives: primitives)
+        if !context.hitTestTransform.isIdentity {
+            var transform = context.hitTestTransform
+            targetPath = targetPath.copy(using: &transform) ?? targetPath
+        }
         if !targetPath.isEmpty {
             context.hitTargets.add(
                 CanvasHitTarget(
                     id: targetID,
                     path: targetPath,
+                    priority: hitTestPriority,
+                    depth: context.hitTestDepth,
                     onHover: onHover,
                     onTap: onTap,
                     onDrag: onDrag
@@ -439,17 +505,33 @@ extension CKView {
         CKStrokeView(content: self, color: color, width: width)
     }
 
+    func stroke(_ color: CKColor, width: CGFloat = 1.0) -> CKStrokeView<Self> {
+        stroke(color.cgColor, width: width)
+    }
+
     func fill(_ color: CGColor) -> CKFillView<Self> {
         let rule = (self as? CKCompositeRuleProvider)?.compositeRule ?? .nonZero
         return CKFillView(content: self, color: color, rule: rule)
+    }
+
+    func fill(_ color: CKColor) -> CKFillView<Self> {
+        fill(color.cgColor)
     }
 
     func fill(_ color: CGColor, rule: CAShapeLayerFillRule) -> CKFillView<Self> {
         CKFillView(content: self, color: color, rule: rule)
     }
 
+    func fill(_ color: CKColor, rule: CAShapeLayerFillRule) -> CKFillView<Self> {
+        fill(color.cgColor, rule: rule)
+    }
+
     func halo(_ color: CGColor, width: CGFloat) -> CKHaloView<Self> {
         CKHaloView(content: self, color: color, width: width)
+    }
+
+    func halo(_ color: CKColor, width: CGFloat) -> CKHaloView<Self> {
+        halo(color.cgColor, width: width)
     }
 
     func clip(_ path: CGPath) -> CKClipView<Self> {
@@ -638,7 +720,8 @@ extension CKHitTargetView {
             onHover: onHover,
             onTap: onTap,
             onDrag: onDrag,
-            targetID: targetID
+            targetID: targetID,
+            hitTestPriority: hitTestPriority
         )
     }
 
@@ -649,7 +732,8 @@ extension CKHitTargetView {
             onHover: action,
             onTap: onTap,
             onDrag: onDrag,
-            targetID: targetID
+            targetID: targetID,
+            hitTestPriority: hitTestPriority
         )
     }
 
@@ -660,7 +744,8 @@ extension CKHitTargetView {
             onHover: onHover,
             onTap: action,
             onDrag: onDrag,
-            targetID: targetID
+            targetID: targetID,
+            hitTestPriority: hitTestPriority
         )
     }
 
@@ -671,7 +756,8 @@ extension CKHitTargetView {
             onHover: onHover,
             onTap: onTap,
             onDrag: action,
-            targetID: targetID
+            targetID: targetID,
+            hitTestPriority: hitTestPriority
         )
     }
 }
@@ -690,6 +776,7 @@ extension CKInteractionView {
             isSelectable: isSelectable,
             isDraggable: isDraggable,
             contentShape: contentShape,
+            hitTestPriority: hitTestPriority,
             dragPhaseHandler: dragPhaseHandler,
             dragDeltaHandler: dragDeltaHandler
         )
@@ -708,6 +795,7 @@ extension CKInteractionView {
             isSelectable: true,
             isDraggable: isDraggable,
             contentShape: contentShape,
+            hitTestPriority: hitTestPriority,
             dragPhaseHandler: dragPhaseHandler,
             dragDeltaHandler: dragDeltaHandler
         )
@@ -760,6 +848,12 @@ extension CKInteractionView {
     func contentShape(_ path: CGPath) -> CKInteractionView<Content> {
         var copy = self
         copy.contentShape = path
+        return copy
+    }
+
+    func hitTestPriority(_ priority: Int) -> CKInteractionView<Content> {
+        var copy = self
+        copy.hitTestPriority = priority
         return copy
     }
 }
@@ -868,6 +962,7 @@ private extension DrawingPrimitive {
         }
     }
 }
+
 
 private struct CKOpacityView: CKView {
     typealias Body = Never

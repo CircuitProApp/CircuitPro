@@ -50,7 +50,9 @@ struct CanvasView: NSViewRepresentable {
         self.itemsBinding = items
         self.selectedIDsBinding = selectedIDs
         self.connectionEngine = connectionEngine
-        self.environment = environment
+        var env = environment
+        env.handleDragState = env.handleDragState
+        self.environment = env
         self.renderViews = renderViews
         self.interactions = interactions
         self.inputProcessors = inputProcessors
@@ -81,7 +83,9 @@ struct CanvasView: NSViewRepresentable {
         self.itemsBinding = items
         self.selectedIDsBinding = selectedIDs
         self.connectionEngine = connectionEngine
-        self.environment = environment
+        var env = environment
+        env.handleDragState = env.handleDragState
+        self.environment = env
         self.renderViews = [content()]
         self.interactions = interactions
         self.inputProcessors = inputProcessors

@@ -9,7 +9,7 @@ struct DesignView: CKView {
     var body: some CKView {
         CKGroup {
             for primitive in primitives {
-                PrimitiveView(primitive: primitive.value)
+                PrimitiveView(primitive: primitive)
                     .hoverable(primitive.id)
                     .selectable(primitive.id)
                     .onDragGesture { delta in
@@ -42,7 +42,9 @@ struct DesignView: CKView {
             }
 
             for text in texts {
-                AnchoredTextView(text: text.value)
+                TextView(text: text.value)
+                    .hoverable(text.id)
+                    .selectable(text.id)
                     .onDragGesture { delta in
                         text.update { text in
                             text.translate(by: CGVector(dx: delta.processed.x, dy: delta.processed.y))

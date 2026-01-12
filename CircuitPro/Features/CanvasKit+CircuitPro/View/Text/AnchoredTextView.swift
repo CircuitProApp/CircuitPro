@@ -2,7 +2,7 @@ import AppKit
 
 struct AnchoredTextView: CKView {
     @CKContext var context
-    let text: CircuitText.Definition
+    let text: CanvasItemRef<CircuitText.Definition>
 
 
     var textColor: CGColor {
@@ -20,36 +20,43 @@ struct AnchoredTextView: CKView {
     }
 
     var showHalo: Bool {
-        context.highlightedItemIDs.contains(text.id)
+        context.highlightedItemIDs.contains(text.id) ||
+            context.selectedItemIDs.contains(text.id)
     }
 
     var body: some CKView {
+        let definition = text.value
         let display = displayText(
-            for: text,
+            for: definition,
             resolver: context.environment.definitionTextResolver
         )
         let localBounds = CKText.localBounds(
             for: display,
-            font: text.font.nsFont,
-            anchor: text.anchor
+            font: definition.font.nsFont,
+            anchor: definition.anchor
         )
         let hitPath = CKText.hitRectPath(
             localBounds: localBounds,
-            position: text.relativePosition,
-            rotation: text.cardinalRotation.radians
+            position: definition.relativePosition,
+            rotation: definition.cardinalRotation.radians
         )
 
         CKGroup {
-            CKText(display, font: text.font.nsFont, anchor: text.anchor)
-                .position(text.relativePosition)
-                .rotation(text.cardinalRotation.radians)
+            CKText(display, font: definition.font.nsFont, anchor: definition.anchor)
+                .position(definition.relativePosition)
+                .rotation(definition.cardinalRotation.radians)
                 .halo((showHalo ? textColor.copy(alpha: 0.3) : .clear) ?? .clear, width: 5)
                 .contentShape(hitPath)
                 .hoverable(text.id)
                 .selectable(text.id)
+                .onDragGesture { delta in
+                    text.update { text in
+                        text.translate(by: CGVector(dx: delta.processed.x, dy: delta.processed.y))
+                    }
+                }
 
-            if let edge = anchorConnectorEdge(from: text.anchorPosition, localBounds: localBounds) {
-                CKLine(from: text.anchorPosition, to: edge)
+            if let edge = anchorConnectorEdge(from: definition.anchorPosition, localBounds: localBounds) {
+                CKLine(from: definition.anchorPosition, to: edge)
                     .stroke(anchorColor, width: 1.0 / context.magnification)
                     .lineDash([5, 5])
             }
@@ -58,15 +65,15 @@ struct AnchoredTextView: CKView {
                 CKLine(length: 5, direction: .horizontal)
                 CKLine(length: 5, direction: .vertical)
             }
-            .position(text.anchorPosition)
+            .position(definition.anchorPosition)
             .stroke(anchorColor, width: 1.0 / context.magnification)
         }
     }
 
     private func anchorConnectorEdge(from anchorPoint: CGPoint, localBounds: CGRect) -> CGPoint? {
         guard !localBounds.isEmpty else { return nil }
-        let rotation = text.cardinalRotation.radians
-        let position = text.relativePosition
+        let rotation = text.value.cardinalRotation.radians
+        let position = text.value.relativePosition
 
         let inverse = CGAffineTransform(
             translationX: -position.x,

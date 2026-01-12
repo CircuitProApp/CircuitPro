@@ -93,7 +93,12 @@ final class CanvasInputHandler {
             let processedDelta = CGPoint(x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
             dragLastRawPoint = rawPoint
             dragLastProcessedPoint = processedPoint
-            onDrag(.changed(delta: CanvasDragDelta(raw: rawDelta, processed: processedDelta)))
+            onDrag(.changed(delta: CanvasDragDelta(
+                raw: rawDelta,
+                processed: processedDelta,
+                rawLocation: rawPoint,
+                processedLocation: processedPoint
+            )))
             host.performLayerUpdate()
             return
         }
@@ -111,7 +116,12 @@ final class CanvasInputHandler {
                 onDrag(.began)
                 let rawDelta = CGPoint(x: rawPoint.x - startRaw.x, y: rawPoint.y - startRaw.y)
                 let processedDelta = CGPoint(x: processedPoint.x - startProcessed.x, y: processedPoint.y - startProcessed.y)
-                onDrag(.changed(delta: CanvasDragDelta(raw: rawDelta, processed: processedDelta)))
+                onDrag(.changed(delta: CanvasDragDelta(
+                    raw: rawDelta,
+                    processed: processedDelta,
+                    rawLocation: rawPoint,
+                    processedLocation: processedPoint
+                )))
                 host.performLayerUpdate()
                 return
             }

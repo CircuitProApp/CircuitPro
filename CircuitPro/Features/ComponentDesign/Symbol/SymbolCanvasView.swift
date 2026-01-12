@@ -33,10 +33,9 @@ struct SymbolCanvasView: View {
                 snapProvider: CircuitProSnapProvider()
             ) {
                 GridRL()
-                AxesRL()
+                AxesView()
                 DrawingSheetRL()
                 DesignView()
-                HandlesRL()
                 MarqueeRL()
                 CrosshairsView()
             }

@@ -28,6 +28,8 @@ struct RenderContext {
     let snapProvider: any SnapProvider
     let items: [any CanvasItem]
     let hitTargets: HitTargetRegistry
+    let hitTestDepth: Int
+    let hitTestTransform: CGAffineTransform
 
     // MARK: - Extensible Application-Specific Data
     public let environment: CanvasEnvironmentValues
@@ -44,7 +46,7 @@ struct RenderContext {
         }
     }
 
-    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor], hitTargets: HitTargetRegistry) {
+    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor], hitTargets: HitTargetRegistry, hitTestDepth: Int = 0, hitTestTransform: CGAffineTransform = .identity) {
         self.magnification = magnification
         self.mouseLocation = mouseLocation
         self.selectedTool = selectedTool
@@ -60,6 +62,54 @@ struct RenderContext {
         self.environment = environment
         self.inputProcessors = inputProcessors
         self.hitTargets = hitTargets
+        self.hitTestDepth = hitTestDepth
+        self.hitTestTransform = hitTestTransform
+    }
+}
+
+extension RenderContext {
+    func withHitTestDepth(_ depth: Int) -> RenderContext {
+        RenderContext(
+            magnification: magnification,
+            mouseLocation: mouseLocation,
+            selectedTool: selectedTool,
+            highlightedItemIDs: highlightedItemIDs,
+            selectedItemIDs: selectedItemIDs,
+            highlightedLinkIDs: highlightedLinkIDs,
+            hostViewBounds: canvasBounds,
+            visibleRect: visibleRect,
+            layers: layers,
+            activeLayerId: activeLayerId,
+            snapProvider: snapProvider,
+            items: items,
+            environment: environment,
+            inputProcessors: inputProcessors,
+            hitTargets: hitTargets,
+            hitTestDepth: depth,
+            hitTestTransform: hitTestTransform
+        )
+    }
+
+    func withHitTestTransform(_ transform: CGAffineTransform) -> RenderContext {
+        RenderContext(
+            magnification: magnification,
+            mouseLocation: mouseLocation,
+            selectedTool: selectedTool,
+            highlightedItemIDs: highlightedItemIDs,
+            selectedItemIDs: selectedItemIDs,
+            highlightedLinkIDs: highlightedLinkIDs,
+            hostViewBounds: canvasBounds,
+            visibleRect: visibleRect,
+            layers: layers,
+            activeLayerId: activeLayerId,
+            snapProvider: snapProvider,
+            items: items,
+            environment: environment,
+            inputProcessors: inputProcessors,
+            hitTargets: hitTargets,
+            hitTestDepth: hitTestDepth,
+            hitTestTransform: hitTestTransform.concatenating(transform)
+        )
     }
 }
 
