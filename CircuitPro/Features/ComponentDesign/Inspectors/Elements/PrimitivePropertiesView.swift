@@ -9,12 +9,12 @@ import SwiftUI
 
 struct PrimitivePropertiesView: View {
     @Binding var primitive: AnyCanvasPrimitive
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             Text("\(primitive.displayName) Properties")
                 .font(.title3.weight(.semibold))
-            
+
             switch primitive {
             case .rectangle:
                 // Use the new binding helper, consistent with other cases.
@@ -43,42 +43,42 @@ struct PrimitivePropertiesView: View {
 
 struct RectanglePropertiesView: View {
     @Binding var rectangle: CanvasRectangle
-    
-    
+
+
     var body: some View {
-       
+
             InspectorSection("Transform") {
-          
+
                     PointControlView(
                         title: "Position",
                         point: $rectangle.position,
                         displayOffset: PaperSize.component.centerOffset()
                     )
-                
+
                 InspectorRow("Size") {
-                  
-                    InspectorNumericField(label: "W", value: $rectangle.shape.size.width, unit: "mm")
-                    InspectorNumericField(label: "H", value: $rectangle.shape.size.height, unit: "mm")
-                    
-            
+
+                    InspectorNumericField(label: "W", value: $rectangle.size.width, unit: "mm")
+                    InspectorNumericField(label: "H", value: $rectangle.size.height, unit: "mm")
+
+
                 }
-          
+
                 RotationControlView(object: $rectangle)
-                
+
             }
-         
+
             Divider()
-            PrimitiveStyleControlView(object: $rectangle)        
+            PrimitiveStyleControlView(object: $rectangle)
 
     }
 }
 
 struct CirclePropertiesView: View {
     @Binding var circle: CanvasCircle
-    
+
     var body: some View {
 
-           
+
             InspectorSection("Transform") {
 
                 PointControlView(
@@ -86,27 +86,27 @@ struct CirclePropertiesView: View {
                     point: $circle.position,
                     displayOffset: PaperSize.component.centerOffset()
                 )
-                
-          
+
+
                 InspectorRow("Radius", style: .leading) {
-                    InspectorNumericField(value: $circle.shape.radius, unit: "mm")
-                    
+                    InspectorNumericField(value: $circle.radius, unit: "mm")
+
                 }
-             
+
                 RotationControlView(object: $circle)
-                
+
             }
-    
+
             Divider()
             PrimitiveStyleControlView(object: $circle)
-            
-  
+
+
     }
 }
 
 struct LinePropertiesView: View {
     @Binding var line: CanvasLine
-    
+
     var body: some View {
 
             InspectorSection("Transform") {
@@ -125,52 +125,9 @@ struct LinePropertiesView: View {
 
             Divider()
             PrimitiveStyleControlView(object: $line)
-    
- 
+
+
     }
 }
 
 // Allows creating bindings to the specific values within an enum binding.
-extension Binding where Value == AnyPrimitive {
-    var rectangle: Binding<RectanglePrimitive>? {
-        guard case .rectangle = self.wrappedValue else { return nil }
-        return Binding<RectanglePrimitive>(
-            get: {
-                if case .rectangle(let value) = self.wrappedValue {
-                    return value
-                } else {
-                    fatalError("The primitive is no longer a rectangle.")
-                }
-            },
-            set: { self.wrappedValue = .rectangle($0) }
-        )
-    }
-    
-    var circle: Binding<CirclePrimitive>? {
-        guard case .circle = self.wrappedValue else { return nil }
-        return Binding<CirclePrimitive>(
-            get: {
-                if case .circle(let value) = self.wrappedValue {
-                    return value
-                } else {
-                    fatalError("The primitive is no longer a circle.")
-                }
-            },
-            set: { self.wrappedValue = .circle($0) }
-        )
-    }
-    
-    var line: Binding<LinePrimitive>? {
-        guard case .line = self.wrappedValue else { return nil }
-        return Binding<LinePrimitive>(
-            get: {
-                if case .line(let value) = self.wrappedValue {
-                    return value
-                } else {
-                    fatalError("The primitive is no longer a line.")
-                }
-            },
-            set: { self.wrappedValue = .line($0) }
-        )
-    }
-}

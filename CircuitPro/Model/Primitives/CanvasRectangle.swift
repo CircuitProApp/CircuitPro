@@ -10,18 +10,19 @@ import AppKit
 struct CanvasRectangle: CanvasPrimitive {
 
     let id: UUID
-    var shape: RectanglePrimitive
+    var size: CGSize
+    var cornerRadius: CGFloat
     var position: CGPoint
     var rotation: CGFloat
     var strokeWidth: CGFloat
     var filled: Bool
     var color: SDColor?
-    
+
     var layerId: UUID?
 
     func handles() -> [CanvasHandle] {
-        let halfW = shape.size.width / 2
-        let halfH = shape.size.height / 2
+        let halfW = size.width / 2
+        let halfH = size.height / 2
 
         // Handles are defined in the primitive's local coordinate space,
         // assuming a center at (0,0) and no rotation. The render layer
@@ -44,7 +45,7 @@ struct CanvasRectangle: CanvasPrimitive {
         // In this space, the rectangle is centered at (0,0) before this update.
 
         // The new size is the absolute difference between the two local points.
-        shape.size = CGSize(
+        size = CGSize(
             width: max(abs(dragLocal.x - oppLocal.x), 1),
             height: max(abs(dragLocal.y - oppLocal.y), 1)
         )
@@ -73,16 +74,22 @@ struct CanvasRectangle: CanvasPrimitive {
     func makePath() -> CGPath {
         // Create the rect centered at the origin, not at self.position.
         let frame = CGRect(
-            x: -shape.size.width * 0.5,
-            y: -shape.size.height * 0.5,
-            width: shape.size.width,
-            height: shape.size.height
+            x: -size.width * 0.5,
+            y: -size.height * 0.5,
+            width: size.width,
+            height: size.height
         )
 
         let path = CGMutablePath()
-        let clampedCornerRadius = max(0, min(shape.cornerRadius, min(shape.size.width, shape.size.height) * 0.5))
+        let clampedCornerRadius = max(0, min(cornerRadius, min(size.width, size.height) * 0.5))
         path.addRoundedRect(in: frame, cornerWidth: clampedCornerRadius, cornerHeight: clampedCornerRadius)
 
         return path
+    }
+}
+
+extension CanvasRectangle {
+    var maximumCornerRadius: CGFloat {
+        min(size.width, size.height) / 2
     }
 }

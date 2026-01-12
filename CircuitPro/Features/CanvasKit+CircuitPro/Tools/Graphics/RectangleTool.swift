@@ -26,7 +26,8 @@ final class RectangleTool: CanvasTool {
             // will correctly be created as an "unlayered" element.
             let primitive = CanvasRectangle(
                 id: UUID(),
-                shape: RectanglePrimitive(size: rect.size, cornerRadius: 0),
+                size: rect.size,
+                cornerRadius: 0,
                 position: CGPoint(x: rect.midX, y: rect.midY),
                 rotation: 0,
                 strokeWidth: 1,

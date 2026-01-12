@@ -10,22 +10,22 @@ import AppKit
 struct CanvasLine: CanvasPrimitive {
 
     let id: UUID
-    var shape: LinePrimitive
+    var length: CGFloat
     var position: CGPoint
     var rotation: CGFloat
     var strokeWidth: CGFloat
     var color: SDColor?
-    
+
     // A line can't be filled, but the protocol requires this.
     // We could consider a protocol composition approach later to refine this.
     var filled: Bool = false
-    
+
     var layerId: UUID?
-    
+
     var startPoint: CGPoint {
          get {
              // Calculate the start point from the center, rotation, and half-length.
-             let halfLength = shape.length / 2
+             let halfLength = length / 2
              let dx = halfLength * cos(rotation)
              let dy = halfLength * sin(rotation)
              return CGPoint(x: position.x - dx, y: position.y - dy)
@@ -35,11 +35,11 @@ struct CanvasLine: CanvasPrimitive {
              // and recalculate all fundamental properties.
              let end = self.endPoint // Capture the current end point before changing properties.
              let newStart = newValue
-             
+
              let dx = end.x - newStart.x
              let dy = end.y - newStart.y
-             
-             self.shape.length = hypot(dx, dy)
+
+             self.length = hypot(dx, dy)
              self.rotation = atan2(dy, dx)
              self.position = CGPoint(x: (newStart.x + end.x) / 2, y: (newStart.y + end.y) / 2)
          }
@@ -51,7 +51,7 @@ struct CanvasLine: CanvasPrimitive {
      var endPoint: CGPoint {
          get {
              // Calculate the end point from the center, rotation, and half-length.
-             let halfLength = shape.length / 2
+             let halfLength = length / 2
              let dx = halfLength * cos(rotation)
              let dy = halfLength * sin(rotation)
              return CGPoint(x: position.x + dx, y: position.y + dy)
@@ -61,16 +61,16 @@ struct CanvasLine: CanvasPrimitive {
              // and recalculate all fundamental properties.
              let start = self.startPoint // Capture the current start point.
              let newEnd = newValue
-             
+
              let dx = newEnd.x - start.x
              let dy = newEnd.y - start.y
-             
-             self.shape.length = hypot(dx, dy)
+
+             self.length = hypot(dx, dy)
              self.rotation = atan2(dy, dx)
              self.position = CGPoint(x: (start.x + newEnd.x) / 2, y: (start.y + newEnd.y) / 2)
          }
      }
-    
+
     init(id: UUID = UUID(), start: CGPoint, end: CGPoint, strokeWidth: CGFloat, layerId: UUID?) {
         self.id = id
         self.strokeWidth = strokeWidth
@@ -79,8 +79,8 @@ struct CanvasLine: CanvasPrimitive {
         // Perform the calculation to set the fundamental properties.
         let dx = end.x - start.x
         let dy = end.y - start.y
-        
-        self.shape = LinePrimitive(length: hypot(dx, dy))
+
+        self.length = hypot(dx, dy)
         self.rotation = atan2(dy, dx)
         self.position = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
     }
@@ -88,7 +88,7 @@ struct CanvasLine: CanvasPrimitive {
     func handles() -> [CanvasHandle] {
         // The handles are defined in local space, as if the line were
         // horizontal and centered at (0,0).
-        let halfLength = shape.length / 2
+        let halfLength = length / 2
         return [
             CanvasHandle(kind: .lineStart, position: CGPoint(x: -halfLength, y: 0)),
             CanvasHandle(kind: .lineEnd,   position: CGPoint(x:  halfLength, y: 0))
@@ -126,8 +126,8 @@ struct CanvasLine: CanvasPrimitive {
         // all fundamental properties from scratch. This is the most reliable approach.
         let dx = newEndWorld.x - newStartWorld.x
         let dy = newEndWorld.y - newStartWorld.y
-        
-        self.shape.length = hypot(dx, dy)
+
+        self.length = hypot(dx, dy)
         self.rotation = atan2(dy, dx)
         self.position = CGPoint(x: (newStartWorld.x + newEndWorld.x) / 2, y: (newStartWorld.y + newEndWorld.y) / 2)
     }
@@ -136,15 +136,14 @@ struct CanvasLine: CanvasPrimitive {
         // Create a simple horizontal line of the correct length,
         // centered at the origin (0,0). The renderer will apply the
         // position and rotation.
-        let halfLength = shape.length / 2
+        let halfLength = length / 2
         let localStart = CGPoint(x: -halfLength, y: 0)
         let localEnd = CGPoint(x: halfLength, y: 0)
-        
+
         let path = CGMutablePath()
         path.move(to: localStart)
         path.addLine(to: localEnd)
-        
+
         return path
     }
 }
-

@@ -10,19 +10,19 @@ import AppKit
 struct CanvasCircle: CanvasPrimitive {
 
     let id: UUID
-    var shape: CirclePrimitive
+    var radius: CGFloat
     var position: CGPoint
     var rotation: CGFloat
     var strokeWidth: CGFloat
     var color: SDColor?
     var filled: Bool
-    
+
     var layerId: UUID?
 
     func handles() -> [CanvasHandle] {
         // The handle is defined in local space, assuming a center at (0,0)
         // and no rotation. The render layer will apply the world transform.
-        return [CanvasHandle(kind: .circleRadius, position: CGPoint(x: shape.radius, y: 0))]
+        return [CanvasHandle(kind: .circleRadius, position: CGPoint(x: radius, y: 0))]
     }
 
     mutating func updateHandle(
@@ -38,7 +38,7 @@ struct CanvasCircle: CanvasPrimitive {
         let dragVectorInParentSpace = newPos.applying(CGAffineTransform(rotationAngle: self.rotation))
 
         // The new radius is the length of this stable vector.
-        shape.radius = max(hypot(dragVectorInParentSpace.x, dragVectorInParentSpace.y), 1)
+        radius = max(hypot(dragVectorInParentSpace.x, dragVectorInParentSpace.y), 1)
 
         // The new rotation is the angle of this stable vector.
         rotation = atan2(dragVectorInParentSpace.y, dragVectorInParentSpace.x)
@@ -54,11 +54,11 @@ struct CanvasCircle: CanvasPrimitive {
     }
     func makePath() -> CGPath {
         let path = CGMutablePath()
-        
+
         // THE FIX: The center is now CGPoint.zero, not self.position.
         path.addArc(
             center: .zero,
-            radius: shape.radius,
+            radius: radius,
             startAngle: 0,
             endAngle: .pi * 2,
             clockwise: false

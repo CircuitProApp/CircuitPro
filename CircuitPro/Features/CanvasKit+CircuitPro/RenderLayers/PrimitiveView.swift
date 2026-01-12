@@ -15,14 +15,14 @@ struct PrimitiveView: CKView {
             CKGroup {
                 switch primitive.value {
                 case .rectangle(let rect):
-                    CKRectangle(cornerRadius: rect.shape.cornerRadius)
-                        .frame(width: rect.shape.size.width, height: rect.shape.size.height)
+                    CKRectangle(cornerRadius: rect.cornerRadius)
+                        .frame(width: rect.size.width, height: rect.size.height)
                 case .circle(let circle):
-                    CKCircle(radius: circle.shape.radius)
+                    CKCircle(radius: circle.radius)
 
 
                 case .line(let line):
-                    CKLine(length: line.shape.length, direction: .horizontal)
+                    CKLine(length: line.length, direction: .horizontal)
                 }
             }
             .fill(primitive.value.filled ? primitive.value.color?.cgColor ?? .white : .clear)
@@ -32,8 +32,8 @@ struct PrimitiveView: CKView {
             CKGroup {
                 switch primitive.value {
                 case .rectangle(let rect):
-                    let halfW = rect.shape.size.width / 2
-                    let halfH = rect.shape.size.height / 2
+                    let halfW = rect.size.width / 2
+                    let halfH = rect.size.height / 2
 
                     HandleView()
                         .position(x: -halfW, y: halfH)
@@ -60,7 +60,7 @@ struct PrimitiveView: CKView {
                         }
                         .hitTestPriority(10)
                 case .circle(let circle):
-                    let r = circle.shape.radius
+                    let r = circle.radius
                     HandleView()
                         .position(x: r, y: 0)
                         .onDragGesture { phase in
@@ -69,7 +69,7 @@ struct PrimitiveView: CKView {
                         .hitTestPriority(10)
 
                 case .line(let line):
-                    let half = line.shape.length / 2
+                    let half = line.length / 2
                     HandleView()
                         .position(x: -half, y: 0)
                         .onDragGesture { phase in
@@ -99,7 +99,7 @@ struct PrimitiveView: CKView {
                 x: delta.processedLocation.x - center.x,
                 y: delta.processedLocation.y - center.y
             )
-            circle.shape.radius = max(hypot(world.x, world.y), 1)
+            circle.radius = max(hypot(world.x, world.y), 1)
             circle.rotation = atan2(world.y, world.x)
             prim = .circle(circle)
         }
@@ -140,8 +140,8 @@ struct PrimitiveView: CKView {
         switch phase {
         case .began:
             guard case .rectangle(let rect) = primitive.value else { return }
-            let halfW = rect.shape.size.width / 2
-            let halfH = rect.shape.size.height / 2
+            let halfW = rect.size.width / 2
+            let halfH = rect.size.height / 2
             let oppositeLocal = rectHandleLocal(
                 kind: kind.opposite ?? kind,
                 halfW: halfW,

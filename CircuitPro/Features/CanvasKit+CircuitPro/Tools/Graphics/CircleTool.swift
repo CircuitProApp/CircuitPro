@@ -27,7 +27,7 @@ final class CircleTool: CanvasTool {
             // 1. Create the primitive data model, preserving the original signature.
             let circlePrimitive = CanvasCircle(
                 id: UUID(),
-                shape: CirclePrimitive(radius: radius),
+                radius: radius,
                 position: centerPoint,
                 rotation: 0,
                 strokeWidth: 1,
