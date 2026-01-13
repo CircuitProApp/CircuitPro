@@ -7,9 +7,8 @@
 
 import AppKit
 
-/// A lean input router that receives raw AppKit events, processes them, and passes
-/// them to a pluggable list of interactions. It delegates the responsibility of
-/// triggering imperative redraws to the interactions themselves.
+/// A lean input router that receives raw AppKit events, processes them, and dispatches
+/// to hit targets and global handlers. It delegates redraw decisions to those handlers.
 final class CanvasInputHandler {
 
     unowned let controller: CanvasController
@@ -89,13 +88,6 @@ final class CanvasInputHandler {
             }
         }
 
-        for interaction in controller.interactions {
-            let pointToUse = interaction.wantsRawInput ? rawPoint : processedPoint
-            if interaction.mouseDown(with: event, at: pointToUse, context: context, controller: controller) {
-                host.performLayerUpdate()
-                return
-            }
-        }
     }
 
     func mouseDragged(_ event: NSEvent, in host: CanvasHostView) {
@@ -165,11 +157,6 @@ final class CanvasInputHandler {
             }
         }
 
-        for interaction in controller.interactions {
-            let pointToUse = interaction.wantsRawInput ? rawPoint : processedPoint
-            interaction.mouseDragged(to: pointToUse, context: context, controller: controller)
-        }
-
         host.performLayerUpdate()
     }
 
@@ -220,11 +207,6 @@ final class CanvasInputHandler {
             }
         }
 
-        for interaction in controller.interactions {
-            let pointToUse = interaction.wantsRawInput ? rawPoint : processedPoint
-            interaction.mouseUp(at: pointToUse, context: context, controller: controller)
-        }
-
         host.performLayerUpdate()
     }
 
@@ -245,11 +227,6 @@ final class CanvasInputHandler {
             }
             hoveredTargetID = hitID
             hitTarget?.onHover?(true)
-        }
-
-        for interaction in controller.interactions {
-            let pointToUse = interaction.wantsRawInput ? rawPoint : processedPoint
-            interaction.mouseMoved(at: pointToUse, context: context, controller: controller)
         }
 
         host.performLayerUpdate()
@@ -277,15 +254,6 @@ final class CanvasInputHandler {
     }
 
     func keyDown(_ event: NSEvent, in host: CanvasHostView) -> Bool {
-        let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
-
-        for interaction in controller.interactions {
-            if interaction.keyDown(with: event, context: context, controller: controller) {
-                host.performLayerUpdate()
-                return true // Event was handled.
-            }
-        }
-
         return false // Event was not handled.
     }
 }

@@ -167,8 +167,8 @@ struct AppearanceSettingsView: View {
         }
         .navigationTitle("Appearance")
         .formStyle(.grouped)
-        .onChange(of: stylesData) { _ in
-            let loaded = CanvasStyleStore.loadStyles(from: stylesData)
+        .onChange(of: stylesData) { newValue, _ in
+            let loaded = CanvasStyleStore.loadStyles(from: newValue)
             if !loaded.contains(where: { $0.id.uuidString == selectedLightStyleID }) {
                 selectedLightStyleID = loaded[0].id.uuidString
             }
@@ -179,7 +179,7 @@ struct AppearanceSettingsView: View {
         .onAppear {
             assignMode = (colorScheme == .dark) ? .dark : .light
         }
-        .onChange(of: colorScheme) { _ in
+        .onChange(of: colorScheme) { _, _ in
             syncAssignMode()
         }
     }
@@ -448,3 +448,4 @@ private struct CanvasAddSwatch: View {
         .contentShape(Circle())
     }
 }
+

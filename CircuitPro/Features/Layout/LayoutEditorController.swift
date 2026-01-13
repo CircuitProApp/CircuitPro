@@ -83,16 +83,16 @@ final class LayoutEditorController {
 
     // MARK: - Private Helpers
     private func refreshCanvasLayers(for design: CircuitDesign) {
-        let unsortedCanvasLayers = design.layers.map { layerType in
+        let unsortedCanvasLayers: [PCBLayer] = design.layers.map { layerType in
             PCBLayer(layerType: layerType)
         }
 
-        self.canvasLayers = unsortedCanvasLayers.sorted { (layerA, layerB) -> Bool in
+        self.canvasLayers = unsortedCanvasLayers.sorted { (layerA: PCBLayer, layerB: PCBLayer) -> Bool in
             if layerA.zIndex != layerB.zIndex {
                 return layerA.zIndex < layerB.zIndex
             }
-            let sideA = (layerA as? PCBLayer)?.layerSide
-            let sideB = (layerB as? PCBLayer)?.layerSide
+            let sideA = layerA.layerSide
+            let sideB = layerB.layerSide
             if let sideA, let sideB, sideA != sideB {
                 return sideA.drawingOrder < sideB.drawingOrder
             }
@@ -136,3 +136,4 @@ final class LayoutEditorController {
     }
     */
 }
+

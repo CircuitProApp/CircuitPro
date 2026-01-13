@@ -11,7 +11,6 @@ struct LayoutCanvasView: View {
 
     var body: some View {
         CanvasView(
-            viewport: $canvasManager.viewport,
             tool: $editorSession.layoutController.selectedTool.unwrapping(
                 withDefault: CursorTool()),
             items: $editorSession.layoutController.items,
@@ -20,27 +19,19 @@ struct LayoutCanvasView: View {
             activeLayerId: $editorSession.layoutController.activeLayerId,
             environment: canvasManager.environment
                 .withTextTarget(.footprint),
-            renderViews: [
-                GridRL(),
-                DrawingSheetRL(),
-                FootprintRL(),
-                HandlesRL(),
-                MarqueeRL(),
-                CrosshairsView(),
-            ],
-            interactions: [
-                HoverHighlightInteraction(),
-                KeyCommandInteraction(),
-                HandleInteraction(),
-                SelectionInteraction(),
-                DragInteraction(),
-                MarqueeInteraction(),
-            ],
             inputProcessors: [GridSnapProcessor()],
             snapProvider: CircuitProSnapProvider(),
             registeredDraggedTypes: [.transferablePlacement],
             onPasteboardDropped: handlePlacementDrop
-        )
+        ) {
+            GridRL()
+            DrawingSheetRL()
+            FootprintRL()
+            HandlesRL()
+            MarqueeView()
+            CrosshairsView()
+        }
+        .viewport($canvasManager.viewport)
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }

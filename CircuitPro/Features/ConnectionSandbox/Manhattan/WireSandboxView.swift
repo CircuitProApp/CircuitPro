@@ -23,27 +23,22 @@ struct WireSandboxView: View {
 
     var body: some View {
         CanvasView(
-            viewport: $canvasManager.viewport,
             tool: $selectedTool,
             items: $manhattanItems,
             selectedIDs: .constant([]),
             connectionEngine: manhattanEngine,
             environment: canvasManager.environment,
-            renderViews: [
-                GridRL(),
-                WireRL(),
-                ConnectionDebugRL(),
-                CrosshairsView(),
-            ],
-            interactions: [
-                WireHoverHighlightInteraction(),
-                WireDragInteraction(),
-            ],
             inputProcessors: [
                 GridSnapProcessor(),
             ],
             snapProvider: CircuitProSnapProvider()
-        )
+        ) {
+            GridRL()
+            WireRL()
+            ConnectionDebugRL()
+            CrosshairsView()
+        }
+        .viewport($canvasManager.viewport)
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }

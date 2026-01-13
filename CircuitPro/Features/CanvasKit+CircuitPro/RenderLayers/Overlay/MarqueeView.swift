@@ -1,6 +1,6 @@
 import AppKit
 
-struct MarqueeRL: CKView {
+struct MarqueeView: CKView {
     @CKContext var context
 
     var marqueeColor: CGColor {

@@ -18,7 +18,6 @@ struct FootprintCanvasView: View {
     var body: some View {
 
         CanvasView(
-            viewport: $canvasManager.viewport,
             tool: $footprintEditor.selectedTool.unwrapping(withDefault: CursorTool()),
             items: $footprintEditor.items,
             selectedIDs: $footprintEditor.selectedElementIDs,
@@ -27,28 +26,20 @@ struct FootprintCanvasView: View {
             environment: canvasManager.environment.withDefinitionTextResolver { definition in
                 footprintEditor.resolveText(definition)
             },
-            renderViews: [
-                GridRL(),
-                AxesView(),
-                DrawingSheetRL(),
-                DesignView(),
-                HandlesRL(),
-                MarqueeRL(),
-                CrosshairsView(),
-            ],
-            interactions: [
-                // HoverHighlightInteraction(),
-                // KeyCommandInteraction(),
-                // HandleInteraction(),
-                // SelectionInteraction(),
-                // DragInteraction(),
-                // MarqueeInteraction(),
-            ],
             inputProcessors: [
                 GridSnapProcessor()
             ],
             snapProvider: CircuitProSnapProvider()
-        )
+        ) {
+            GridRL()
+            AxesView()
+            DrawingSheetRL()
+            DesignView()
+            HandlesRL()
+            MarqueeView()
+            CrosshairsView()
+        }
+        .viewport($canvasManager.viewport)
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }

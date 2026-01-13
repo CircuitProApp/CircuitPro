@@ -16,7 +16,7 @@ struct ComponentListRowView: View {
         HStack {
             Text(component.referenceDesignatorPrefix)
                 .frame(width: 32, height: 32)
-                .background(component.category.color ?? .accentColor)
+                .background(component.category.color)
                 .clipShape(.rect(cornerRadius: 4))
                 .font(.subheadline)
                 .fontDesign(.rounded)

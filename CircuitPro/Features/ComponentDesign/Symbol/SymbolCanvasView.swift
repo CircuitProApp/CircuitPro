@@ -28,7 +28,7 @@ struct SymbolCanvasView: View {
                 AxesView()
                 DrawingSheetRL()
                 DesignView()
-                MarqueeRL()
+                MarqueeView()
                 CrosshairsView()
             }
             .canvasTool($symbolEditor.selectedTool.unwrapping(withDefault: CursorTool()))

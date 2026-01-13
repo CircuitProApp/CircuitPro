@@ -18,7 +18,7 @@ enum CanvasTextID {
     }
 
     static func stableID(for ownerID: UUID, definitionID: UUID) -> UUID {
-        var ownerBytes = ownerID.uuid
+        let ownerBytes = ownerID.uuid
         var definitionBytes = definitionID.uuid
         var resultBytes = ownerBytes
 

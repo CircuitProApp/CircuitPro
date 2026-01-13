@@ -41,7 +41,7 @@ enum AnyPack: Identifiable, Hashable {
     
     var description: String {
         switch self {
-        case .installed(let installedPack):
+        case .installed:
             return "No description"
         case .remote(let remotePack):
             return remotePack.description

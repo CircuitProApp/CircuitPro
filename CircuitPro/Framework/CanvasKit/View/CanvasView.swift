@@ -19,48 +19,12 @@ struct CanvasView: NSViewRepresentable {
     // MARK: - Callbacks & Configuration
     var environment: CanvasEnvironmentValues
     let renderViews: [any CKView]
-    let interactions: [any CanvasInteraction]
     let inputProcessors: [any InputProcessor]
     let snapProvider: any SnapProvider
 
     let registeredDraggedTypes: [NSPasteboard.PasteboardType]
     let onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
     var onCanvasChange: ((CanvasChangeContext) -> Void)?
-
-    init(
-        viewport: Binding<CanvasViewport>,
-        tool: Binding<CanvasTool?> = .constant(nil),
-        items: Binding<[any CanvasItem]>,
-        selectedIDs: Binding<Set<UUID>>,
-        layers: Binding<[any CanvasLayer]> = .constant([] as [any CanvasLayer]),
-        activeLayerId: Binding<UUID?> = .constant(nil),
-        connectionEngine: (any ConnectionEngine)? = nil,
-        environment: CanvasEnvironmentValues = .init(),
-        renderViews: [any CKView],
-        interactions: [any CanvasInteraction],
-        inputProcessors: [any InputProcessor] = [],
-        snapProvider: any SnapProvider = NoOpSnapProvider(),
-        registeredDraggedTypes: [NSPasteboard.PasteboardType] = [],
-        onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil
-    ) {
-        self._viewport = viewport
-        self._tool = tool
-        self._layers = layers
-        self._activeLayerId = activeLayerId
-        self.itemsBinding = items
-        self.selectedIDsBinding = selectedIDs
-        self.connectionEngine = connectionEngine
-        var env = environment
-        env.handleDragState = env.handleDragState
-        env.marqueeDragState = env.marqueeDragState
-        self.environment = env
-        self.renderViews = renderViews
-        self.interactions = interactions
-        self.inputProcessors = inputProcessors
-        self.snapProvider = snapProvider
-        self.registeredDraggedTypes = registeredDraggedTypes
-        self.onPasteboardDropped = onPasteboardDropped
-    }
 
     init(
         tool: Binding<CanvasTool?> = .constant(nil),
@@ -88,7 +52,6 @@ struct CanvasView: NSViewRepresentable {
         env.marqueeDragState = env.marqueeDragState
         self.environment = env
         self.renderViews = [content()]
-        self.interactions = []
         self.inputProcessors = inputProcessors
         self.snapProvider = snapProvider
         self.registeredDraggedTypes = registeredDraggedTypes
@@ -110,14 +73,12 @@ struct CanvasView: NSViewRepresentable {
         init(
             viewport: Binding<CanvasViewport>,
             renderViews: [any CKView],
-            interactions: [any CanvasInteraction],
             inputProcessors: [any InputProcessor],
             snapProvider: any SnapProvider
         ) {
             self.viewportBinding = viewport
             self.canvasController = CanvasController(
                 renderViews: renderViews,
-                interactions: interactions,
                 inputProcessors: inputProcessors,
                 snapProvider: snapProvider
             )
@@ -135,8 +96,7 @@ struct CanvasView: NSViewRepresentable {
                 }
             }
 
-            guard let clipView = scrollView.contentView as? NSClipView else { return }
-
+            let clipView: NSClipView = scrollView.contentView
             clipView.postsBoundsChangedNotifications = true
 
             boundsChangeObserver = NotificationCenter.default.addObserver(
@@ -165,7 +125,6 @@ struct CanvasView: NSViewRepresentable {
         let coordinator = Coordinator(
             viewport: $viewport,
             renderViews: self.renderViews,
-            interactions: self.interactions,
             inputProcessors: self.inputProcessors,
             snapProvider: self.snapProvider
         )
@@ -253,7 +212,8 @@ struct CanvasView: NSViewRepresentable {
             scrollView.magnification = self.viewport.magnification
         }
 
-        if let clipView = scrollView.contentView as? NSClipView {
+        do {
+            let clipView: NSClipView = scrollView.contentView
             if self.viewport.visibleRect != CanvasViewport.autoCenter && clipView.bounds.origin != self.viewport.visibleRect.origin {
                 clipView.bounds.origin = self.viewport.visibleRect.origin
             }
@@ -292,3 +252,4 @@ extension CanvasView {
         return copy
     }
 }
+

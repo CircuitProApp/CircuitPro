@@ -39,7 +39,7 @@ class CanvasTool: Hashable {
     var label: String { "Unnamed Tool" }
 
     /// Whether the tool should handle direct pointer input.
-    /// Selection tools should return false to let interactions process events.
+    /// Selection tools should return false to let hit targets handle events.
     var handlesInput: Bool { true }
 
 

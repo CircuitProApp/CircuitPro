@@ -29,10 +29,6 @@ struct PrimitivePropertiesView: View {
                 if let lineBinding = $primitive.line {
                     LinePropertiesView(line: lineBinding)
                 }
-            default:
-                // This case can be removed if you cover all enum cases.
-                Text("Unsupported primitive")
-                    .foregroundStyle(.secondary)
             }
         }
         .padding(10)

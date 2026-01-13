@@ -18,36 +18,26 @@ struct SchematicCanvasView: View {
     var body: some View {
 
         CanvasView(
-            viewport: $canvasManager.viewport,
             tool: $editorSession.schematicController.selectedTool.unwrapping(
                 withDefault: CursorTool()),
             items: $editorSession.schematicController.items,
             selectedIDs: $editorSession.selectedItemIDs,
             connectionEngine: WireEngine(),
             environment: canvasManager.environment,
-            renderViews: [
-                GridRL(),
-                DrawingSheetRL(),
-
-                WireRL(),
-                SymbolRL(),
-                MarqueeRL(),
-                CrosshairsView(),
-            ],
-            interactions: [
-                HoverHighlightInteraction(),
-                WireHoverHighlightInteraction(),
-                KeyCommandInteraction(),
-                SelectionInteraction(),
-                DragInteraction(),
-                WireDragInteraction(),
-                MarqueeInteraction(),
-            ],
             inputProcessors: [GridSnapProcessor()],
             snapProvider: CircuitProSnapProvider(),
             registeredDraggedTypes: [.transferableComponent],
             onPasteboardDropped: handleComponentDrop
-        )
+        ) {
+            GridRL()
+            DrawingSheetRL()
+
+            WireRL()
+            SymbolRL()
+            MarqueeView()
+            CrosshairsView()
+        }
+        .viewport($canvasManager.viewport)
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }

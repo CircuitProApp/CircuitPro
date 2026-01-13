@@ -42,26 +42,22 @@ struct BezierSandboxView: View {
 
     var body: some View {
         CanvasView(
-            viewport: $canvasManager.viewport,
             tool: .constant(nil),
             items: $bezierItems,
             selectedIDs: .constant([]),
             connectionEngine: bezierEngine,
             environment: canvasManager.environment,
-            renderViews: [
-                GridRL(),
-                NodeDebugRL(),
-                BezierConnectionDebugRL(),
-                CrosshairsView(),
-            ],
-            interactions: [
-                NodeDragInteraction(),
-            ],
             inputProcessors: [
                 GridSnapProcessor(),
             ],
             snapProvider: CircuitProSnapProvider()
-        )
+        ) {
+            GridRL()
+            NodeDebugRL()
+            BezierConnectionDebugRL()
+            CrosshairsView()
+        }
+        .viewport($canvasManager.viewport)
         .onCanvasChange { context in
             canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
         }
