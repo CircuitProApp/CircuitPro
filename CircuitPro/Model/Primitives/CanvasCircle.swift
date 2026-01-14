@@ -5,7 +5,8 @@
 //  Created by Giorgi Tchelidze on 21.06.25.
 //
 
-import AppKit
+import CoreGraphics
+import Foundation
 
 struct CanvasCircle: CanvasPrimitive {
 
@@ -14,25 +15,10 @@ struct CanvasCircle: CanvasPrimitive {
     var position: CGPoint
     var rotation: CGFloat
     var strokeWidth: CGFloat
-    var color: SDColor?
     var filled: Bool
 
     var layerId: UUID?
 
-    func makePath() -> CGPath {
-        let path = CGMutablePath()
-
-        // THE FIX: The center is now CGPoint.zero, not self.position.
-        path.addArc(
-            center: .zero,
-            radius: radius,
-            startAngle: 0,
-            endAngle: .pi * 2,
-            clockwise: false
-        )
-
-        return path
-    }
 }
 
 extension CanvasCircle: CanvasItem {}

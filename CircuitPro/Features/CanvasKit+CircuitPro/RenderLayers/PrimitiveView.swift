@@ -35,7 +35,7 @@ struct PrimitiveView: CKView {
 
 extension PrimitiveView: CKHitTestable {
     func hitTestPath(in context: RenderContext) -> CGPath {
-        let base = primitive.makePath()
+        let base = PrimitiveGeometry.localPath(for: primitive)
         guard !base.isEmpty else { return CGMutablePath() }
 
         var transform = CGAffineTransform(

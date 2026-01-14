@@ -47,8 +47,6 @@ struct CanvasView: NSViewRepresentable {
         self.selectedIDsBinding = selectedIDs
         self.connectionEngine = connectionEngine
         var env = environment
-        env.handleDragState = env.handleDragState
-        env.marqueeDragState = env.marqueeDragState
         self.environment = env
         self.renderViews = [content()]
         self.inputProcessors = inputProcessors
@@ -241,8 +239,6 @@ extension CanvasView {
     func canvasEnvironment(_ value: CanvasEnvironmentValues) -> CanvasView {
         var copy = self
         var env = value
-        env.handleDragState = env.handleDragState
-        env.marqueeDragState = env.marqueeDragState
         copy.environment = env
         return copy
     }

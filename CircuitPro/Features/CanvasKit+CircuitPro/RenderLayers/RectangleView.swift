@@ -15,8 +15,8 @@ struct RectangleView: CKView {
         CKGroup {
             CKRectangle(cornerRadius: rectangle.cornerRadius)
                 .frame(width: rectangle.size.width, height: rectangle.size.height)
-                .fill(rectangle.filled ? rectangle.color?.cgColor ?? .white : .clear)
-                .stroke(rectangle.color?.cgColor ?? .white, width: rectangle.strokeWidth)
+                .fill(rectangle.filled ? strokeColor : .clear)
+                .stroke(strokeColor, width: rectangle.strokeWidth)
                 .halo(showHalo ? .white.haloOpacity() : .clear, width: 5.0)
 
             if isEditable {
@@ -26,33 +26,38 @@ struct RectangleView: CKView {
                 HandleView()
                     .position(x: -halfW, y: halfH)
                     .onDragGesture { phase in
-                        updateRectangleHandle(.rectTopLeft, phase: phase)
+                        updateRectangleHandle(.topLeft, phase: phase)
                     }
                     .hitTestPriority(10)
                 HandleView()
                     .position(x: halfW, y: halfH)
                     .onDragGesture { phase in
-                        updateRectangleHandle(.rectTopRight, phase: phase)
+                        updateRectangleHandle(.topRight, phase: phase)
                     }
                     .hitTestPriority(10)
                 HandleView()
                     .position(x: halfW, y: -halfH)
                     .onDragGesture { phase in
-                        updateRectangleHandle(.rectBottomRight, phase: phase)
+                        updateRectangleHandle(.bottomRight, phase: phase)
                     }
                     .hitTestPriority(10)
                 HandleView()
                     .position(x: -halfW, y: -halfH)
                     .onDragGesture { phase in
-                        updateRectangleHandle(.rectBottomLeft, phase: phase)
+                        updateRectangleHandle(.bottomLeft, phase: phase)
                     }
                     .hitTestPriority(10)
             }
         }
     }
 
+    private var strokeColor: CGColor {
+        context.layers.first { $0.id == rectangle.layerId }?.color
+            ?? context.environment.canvasTheme.textColor
+    }
+
     private func updateRectangleHandle(
-        _ kind: CanvasHandle.Kind,
+        _ kind: HandleKind,
         phase: CanvasDragPhase
     ) {
         switch phase {
@@ -76,34 +81,32 @@ struct RectangleView: CKView {
     }
 
     private func rectHandleLocal(
-        kind: CanvasHandle.Kind,
+        kind: HandleKind,
         halfW: CGFloat,
         halfH: CGFloat
     ) -> CGPoint {
         switch kind {
-        case .rectTopLeft:
+        case .topLeft:
             return CGPoint(x: -halfW, y: halfH)
-        case .rectTopRight:
+        case .topRight:
             return CGPoint(x: halfW, y: halfH)
-        case .rectBottomRight:
+        case .bottomRight:
             return CGPoint(x: halfW, y: -halfH)
-        case .rectBottomLeft:
+        case .bottomLeft:
             return CGPoint(x: -halfW, y: -halfH)
-        default:
-            return .zero
         }
     }
 
     private func updatedRectangle(
         from baseline: CanvasRectangle,
-        kind: CanvasHandle.Kind,
+        kind: HandleKind,
         dragWorld: CGPoint
     ) -> CanvasRectangle {
         var updated = baseline
         let halfW = baseline.size.width / 2
         let halfH = baseline.size.height / 2
         let oppositeLocal = rectHandleLocal(
-            kind: kind.opposite ?? kind,
+            kind: kind.opposite,
             halfW: halfW,
             halfH: halfH
         )
@@ -129,5 +132,25 @@ struct RectangleView: CKView {
             y: baseline.position.y + positionOffset.y
         )
         return updated
+    }
+}
+
+private enum HandleKind {
+    case topLeft
+    case topRight
+    case bottomRight
+    case bottomLeft
+
+    var opposite: HandleKind {
+        switch self {
+        case .topLeft:
+            return .bottomRight
+        case .topRight:
+            return .bottomLeft
+        case .bottomRight:
+            return .topLeft
+        case .bottomLeft:
+            return .topRight
+        }
     }
 }

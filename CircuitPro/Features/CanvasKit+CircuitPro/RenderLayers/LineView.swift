@@ -14,7 +14,7 @@ struct LineView: CKView {
     var body: some CKView {
         CKGroup {
             CKLine(length: line.length, direction: .horizontal)
-                .stroke(line.color?.cgColor ?? .white, width: line.strokeWidth)
+                .stroke(strokeColor, width: line.strokeWidth)
                 .halo(showHalo ? .white.haloOpacity() : .clear, width: 5.0)
 
             if isEditable {
@@ -22,21 +22,26 @@ struct LineView: CKView {
                 HandleView()
                     .position(x: -half, y: 0)
                     .onDragGesture { phase in
-                        updateLineHandle(.lineStart, phase: phase)
+                        updateLineHandle(.start, phase: phase)
                     }
                     .hitTestPriority(10)
                 HandleView()
                     .position(x: half, y: 0)
                     .onDragGesture { phase in
-                        updateLineHandle(.lineEnd, phase: phase)
+                        updateLineHandle(.end, phase: phase)
                     }
                     .hitTestPriority(10)
             }
         }
     }
 
+    private var strokeColor: CGColor {
+        context.layers.first { $0.id == line.layerId }?.color
+            ?? context.environment.canvasTheme.textColor
+    }
+
     private func updateLineHandle(
-        _ kind: CanvasHandle.Kind,
+        _ kind: HandleKind,
         phase: CanvasDragPhase
     ) {
         switch phase {
@@ -48,7 +53,7 @@ struct LineView: CKView {
                 guard case .line = prim else { return }
                 var updated = baseline
                 let dragWorld = delta.processedLocation
-                if kind == .lineStart {
+                if kind == .start {
                     updated.startPoint = dragWorld
                 } else {
                     updated.endPoint = dragWorld
@@ -59,4 +64,9 @@ struct LineView: CKView {
             dragBaseline = nil
         }
     }
+}
+
+private enum HandleKind {
+    case start
+    case end
 }

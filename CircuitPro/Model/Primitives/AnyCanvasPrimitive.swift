@@ -5,7 +5,6 @@
 //  Created by Giorgi Tchelidze on 21.06.25.
 //
 
-import AppKit
 import CoreGraphics
 import Foundation
 import SwiftUI
@@ -118,29 +117,6 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         }
     }
 
-    var color: SDColor? {
-        get {
-            switch self {
-            case .line(let line): return line.color
-            case .rectangle(let rectangle): return rectangle.color
-            case .circle(let circle): return circle.color
-            }
-        }
-        set {
-            switch self {
-            case .line(var line):
-                line.color = newValue
-                self = .line(line)
-            case .rectangle(var rectangle):
-                rectangle.color = newValue
-                self = .rectangle(rectangle)
-            case .circle(var circle):
-                circle.color = newValue
-                self = .circle(circle)
-            }
-        }
-    }
-
     var filled: Bool {
         get {
             switch self {
@@ -164,97 +140,15 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         }
     }
 
-    // MARK: - Unified Path
-    func makePath() -> CGPath {
-        switch self {
-        case .line(let line): return line.makePath()
-        case .rectangle(let rectangle): return rectangle.makePath()
-        case .circle(let circle): return circle.makePath()
-        }
-    }
-
-    var snapsToCenter: Bool {
-        switch self {
-        case .rectangle: return false  // uses corner snapping
-        case .line, .circle: return true  // uses center snapping
-        }
-    }
-
-    // MARK: - Layered Drawing Helpers
-    private func resolveColor(in context: RenderContext) -> CGColor {
-        if let overrideColor = self.color?.cgColor {
-            return overrideColor
-        }
-        if let layerId = self.layerId,
-            let layer = context.layers.first(where: { $0.id == layerId })
-        {
-            return layer.color
-        }
-        return NSColor.systemBlue.cgColor
-    }
-
 }
 
 extension AnyCanvasPrimitive: CanvasItem {}
-
-extension AnyCanvasPrimitive: HitTestable {
-    func makeDrawingPrimitives(in context: RenderContext) -> [LayeredDrawingPrimitive] {
-        let color = resolveColor(in: context)
-        let primitives = makeDrawingPrimitives(with: color)
-        var transform = CGAffineTransform(translationX: position.x, y: position.y)
-            .rotated(by: rotation)
-        let worldPrimitives = primitives.map { $0.applying(transform: &transform) }
-
-        let targets: [UUID?]
-        if !layerIds.isEmpty {
-            targets = layerIds.map { Optional($0) }
-        } else {
-            targets = [layerId]
-        }
-
-        return targets.flatMap { layerId in
-            worldPrimitives.map { LayeredDrawingPrimitive($0, layerId: layerId) }
-        }
-    }
-
-    func hitTest(point: CGPoint, tolerance: CGFloat) -> Bool {
-        let transform = CGAffineTransform(translationX: position.x, y: position.y)
-            .rotated(by: rotation)
-        let localPoint = point.applying(transform.inverted())
-        return hitTest(localPoint, tolerance: tolerance) != nil
-    }
-
-    var boundingBox: CGRect {
-        boundingBoxInWorld()
-    }
-
-    private func boundingBoxInWorld() -> CGRect {
-        var box = localBoundingBox()
-        let transform = CGAffineTransform(translationX: position.x, y: position.y)
-            .rotated(by: rotation)
-        box = box.applying(transform)
-        return box
-    }
-
-    private func localBoundingBox() -> CGRect {
-        var box = makePath().boundingBoxOfPath
-        if !filled {
-            let inset = -strokeWidth / 2
-            box = box.insetBy(dx: inset, dy: inset)
-        }
-        return box
-    }
-}
 
 extension AnyCanvasPrimitive: MultiLayerable {
     var layerIds: [UUID] {
         get { layerId.map { [$0] } ?? [] }
         set { layerId = newValue.first }
     }
-}
-
-extension AnyCanvasPrimitive {
-    var hitTestPriority: Int { 1 }
 }
 
 extension AnyCanvasPrimitive {

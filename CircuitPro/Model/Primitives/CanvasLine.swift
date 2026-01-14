@@ -5,7 +5,8 @@
 //  Created by Giorgi Tchelidze on 21.06.25.
 //
 
-import AppKit
+import CoreGraphics
+import Foundation
 
 struct CanvasLine: CanvasPrimitive {
 
@@ -14,7 +15,6 @@ struct CanvasLine: CanvasPrimitive {
     var position: CGPoint
     var rotation: CGFloat
     var strokeWidth: CGFloat
-    var color: SDColor?
 
     // A line can't be filled, but the protocol requires this.
     // We could consider a protocol composition approach later to refine this.
@@ -85,20 +85,6 @@ struct CanvasLine: CanvasPrimitive {
         self.position = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
     }
 
-    func makePath() -> CGPath {
-        // Create a simple horizontal line of the correct length,
-        // centered at the origin (0,0). The renderer will apply the
-        // position and rotation.
-        let halfLength = length / 2
-        let localStart = CGPoint(x: -halfLength, y: 0)
-        let localEnd = CGPoint(x: halfLength, y: 0)
-
-        let path = CGMutablePath()
-        path.move(to: localStart)
-        path.addLine(to: localEnd)
-
-        return path
-    }
 }
 
 extension CanvasLine: CanvasItem {}

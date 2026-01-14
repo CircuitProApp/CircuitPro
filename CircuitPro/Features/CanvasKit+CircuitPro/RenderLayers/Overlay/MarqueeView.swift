@@ -2,6 +2,9 @@ import AppKit
 
 struct MarqueeView: CKView {
     @CKContext var context
+    @CKState private var marqueeRect: CGRect?
+    @CKState private var origin: CGPoint?
+    @CKState private var isAdditive: Bool = false
 
     var marqueeColor: CGColor {
         context.environment.canvasTheme.crosshairColor
@@ -13,7 +16,7 @@ struct MarqueeView: CKView {
 
     var body: some CKView {
         CKGroup {
-            if let rect = context.environment.marqueeRect {
+            if let rect = marqueeRect {
                 marqueeRect(rect)
             } else {
                 CKEmpty()
@@ -40,40 +43,35 @@ struct MarqueeView: CKView {
         context: RenderContext,
         controller: CanvasController
     ) {
-        let state = context.environment.marqueeDragState
-
         switch phase {
         case .began(let event):
             guard controller.selectedTool is CursorTool else { return }
             guard context.hitTargets.hitTest(event.rawLocation) == nil else { return }
 
-            let isAdditive = event.event.modifierFlags.contains(.shift)
-            state.begin(origin: event.rawLocation, isAdditive: isAdditive)
-            controller.updateEnvironment {
-                $0.marqueeRect = CGRect(origin: event.rawLocation, size: .zero)
-            }
+            isAdditive = event.event.modifierFlags.contains(.shift)
+            origin = event.rawLocation
+            marqueeRect = CGRect(origin: event.rawLocation, size: .zero)
         case .changed(let event):
-            guard let origin = state.origin else { return }
+            guard let origin = origin else { return }
             let marqueeRect = CGRect(origin: origin, size: .zero)
                 .union(CGRect(origin: event.rawLocation, size: .zero))
-            controller.updateEnvironment {
-                $0.marqueeRect = marqueeRect
-            }
+            self.marqueeRect = marqueeRect
 
             let rawHits = context.hitTargets.hitTestAll(in: marqueeRect)
             controller.setInteractionHighlight(itemIDs: Set(rawHits))
         case .ended(_):
-            guard state.origin != nil else { return }
+            guard origin != nil else { return }
             let highlightedIDs = controller.highlightedItemIDs
-            let finalSelection = state.isAdditive
+            let finalSelection = isAdditive
                 ? context.selectedItemIDs.union(highlightedIDs)
                 : Set(highlightedIDs)
             if finalSelection != context.selectedItemIDs {
                 controller.updateSelection(finalSelection)
             }
 
-            state.reset()
-            controller.updateEnvironment { $0.marqueeRect = nil }
+            origin = nil
+            isAdditive = false
+            marqueeRect = nil
             controller.setInteractionHighlight(itemIDs: [])
         }
     }

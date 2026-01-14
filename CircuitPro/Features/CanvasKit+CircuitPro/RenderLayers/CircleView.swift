@@ -14,8 +14,8 @@ struct CircleView: CKView {
     var body: some CKView {
         CKGroup {
             CKCircle(radius: circle.radius)
-                .fill(circle.filled ? circle.color?.cgColor ?? .white : .clear)
-                .stroke(circle.color?.cgColor ?? .white, width: circle.strokeWidth)
+                .fill(circle.filled ? strokeColor : .clear)
+                .stroke(strokeColor, width: circle.strokeWidth)
                 .halo(showHalo ? .white.haloOpacity() : .clear, width: 5.0)
 
             if isEditable {
@@ -27,6 +27,11 @@ struct CircleView: CKView {
                     .hitTestPriority(10)
             }
         }
+    }
+
+    private var strokeColor: CGColor {
+        context.layers.first { $0.id == circle.layerId }?.color
+            ?? context.environment.canvasTheme.textColor
     }
 
     private func updateCircleHandle(_ phase: CanvasDragPhase) {

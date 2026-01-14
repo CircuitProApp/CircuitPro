@@ -72,10 +72,6 @@ private struct SchematicThemeKey: CanvasEnvironmentKey {
     static let defaultValue = SchematicTheme.default
 }
 
-private struct MarqueeRectKey: CanvasEnvironmentKey {
-    static let defaultValue: CGRect? = nil
-}
-
 private struct TextTargetKey: CanvasEnvironmentKey {
     static let defaultValue: TextTarget = .symbol
 }
@@ -108,11 +104,6 @@ extension CanvasEnvironmentValues {
     var schematicTheme: SchematicTheme {
         get { self[SchematicThemeKey.self] }
         set { self[SchematicThemeKey.self] = newValue }
-    }
-
-    var marqueeRect: CGRect? {
-        get { self[MarqueeRectKey.self] }
-        set { self[MarqueeRectKey.self] = newValue }
     }
 
     var textTarget: TextTarget {

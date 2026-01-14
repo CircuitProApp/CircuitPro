@@ -193,7 +193,7 @@ struct SymbolNodeAppearanceView: View {
         }
         var combined = CGRect.null
         for primitive in primitives {
-            var box = primitive.boundingBox
+            var box = PrimitiveGeometry.localBoundingBox(for: primitive)
             let primTransform = CGAffineTransform(
                 translationX: primitive.position.x, y: primitive.position.y
             )
