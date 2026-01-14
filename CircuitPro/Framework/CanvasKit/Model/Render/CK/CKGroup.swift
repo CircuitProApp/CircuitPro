@@ -34,6 +34,18 @@ struct CKGroup: CKView {
     }
 }
 
+extension CKGroup: CKHitTestable {
+    func hitTestPath(in context: RenderContext) -> CGPath {
+        let paths = _paths(in: context).filter { !$0.isEmpty }
+        guard !paths.isEmpty else { return CGMutablePath() }
+        let merged = CGMutablePath()
+        for path in paths {
+            merged.addPath(path)
+        }
+        return merged
+    }
+}
+
 private extension DrawingPrimitive {
     func asCKView() -> AnyCKView {
         switch self {

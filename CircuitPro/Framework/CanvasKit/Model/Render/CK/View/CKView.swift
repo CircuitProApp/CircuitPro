@@ -378,6 +378,24 @@ struct CKClipView<Content: CKView>: CKView {
     }
 }
 
+struct CKNoPathView<Content: CKView>: CKView {
+    typealias Body = CKGroup
+
+    let content: Content
+
+    var body: CKGroup {
+        .empty
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        context.render(content, index: 0)
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        []
+    }
+}
+
 struct CKColorOverrideView<Content: CKView>: CKView {
     typealias Body = CKGroup
 
@@ -580,6 +598,10 @@ extension CKView {
 
     func halo(_ color: CKColor, width: CGFloat) -> CKHaloView<Self> {
         halo(color.cgColor, width: width)
+    }
+
+    func excludeFromPaths() -> CKNoPathView<Self> {
+        CKNoPathView(content: self)
     }
 
     func color(_ color: CKColor) -> CKColorOverrideView<Self> {

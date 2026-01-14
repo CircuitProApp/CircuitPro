@@ -1,13 +1,28 @@
 import AppKit
 
 @propertyWrapper
-final class CKContext {
-    private var cached: RenderContext?
+final class CKContext<Value> {
+    private var cached: Value?
+    private let getter: (RenderContext) -> Value
 
-    var wrappedValue: RenderContext {
+    init(_ keyPath: KeyPath<RenderContext, Value> = \.self) {
+        self.getter = { $0[keyPath: keyPath] }
+    }
+
+    init<T: CanvasItem>(
+        _ keyPath: KeyPath<RenderContext, [any CanvasItem]> = \.items,
+        as type: T.Type
+    ) where Value == [T] {
+        self.getter = { context in
+            context[keyPath: keyPath].compactMap { $0 as? T }
+        }
+    }
+
+    var wrappedValue: Value {
         if let context = CKContextStorage.current ?? CKContextStorage.last {
-            cached = context
-            return context
+            let value = getter(context)
+            cached = value
+            return value
         }
         if let cached {
             return cached

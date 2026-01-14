@@ -18,12 +18,21 @@ struct SymbolView: CKView {
         let symbol = component.symbolInstance
         CKGroup {
             if let definition = symbol.definition {
-                for primitive in definition.primitives {
-                    PrimitiveView(primitive: primitive, isEditable: false)
-                        .color(bodyColor)
+                CKGroup {
+                    for primitive in definition.primitives {
+                        PrimitiveView(primitive: primitive, isEditable: false)
+                            .color(bodyColor)
+                    }
+                    for pin in definition.pins {
+                        PinView(pin: pin)
+                    }
                 }
-                for pin in definition.pins {
-                    PinView(pin: pin)
+                .hoverable(component.id)
+                .selectable(component.id)
+                .onDragGesture { delta in
+                    context.update(component) { component in
+                        component.translate(by: CGVector(dx: delta.processed.x, dy: delta.processed.y))
+                    }
                 }
             }
 
@@ -31,6 +40,7 @@ struct SymbolView: CKView {
                 AnchoredTextView(
                     text: text,
                     id: text.id,
+                    isParentHighlighted: showHalo,
                     display: { resolved in
                         component.displayString(for: resolved, target: .symbol)
                     },
@@ -38,6 +48,7 @@ struct SymbolView: CKView {
                         component.apply(updated, for: .symbol)
                     }
                 )
+                .excludeFromPaths()
             }
         }
         .position(symbol.position)

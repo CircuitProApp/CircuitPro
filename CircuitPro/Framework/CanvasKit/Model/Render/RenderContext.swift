@@ -131,6 +131,21 @@ extension RenderContext {
         updateItem(id, as: type, update)
     }
 
+    func update<T: CanvasItem>(
+        _ id: UUID,
+        _ update: (inout T) -> Void
+    ) {
+        updateItem(id, as: T.self, update)
+    }
+
+    func update<T: CanvasItem>(
+        _ item: T,
+        _ update: (inout T) -> Void
+    ) {
+        updateItem(item.id, as: T.self, update)
+    }
+
+
     func updateItem<T: CanvasItem>(
         _ id: UUID,
         as type: T.Type = T.self,

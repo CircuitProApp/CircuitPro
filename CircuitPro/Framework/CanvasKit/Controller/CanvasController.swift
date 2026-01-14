@@ -108,6 +108,7 @@ final class CanvasController {
         environment.visibleRect = visibleRect
         var allHighlightedIDs = interactionHighlightedItemIDs
         allHighlightedIDs.formUnion(selectedItemIDs)
+        let resolvedItems = itemsBinding?.wrappedValue ?? items
         return RenderContext(
             magnification: self.magnification,
             mouseLocation: self.mouseLocation,
@@ -120,7 +121,7 @@ final class CanvasController {
             layers: self.layers ?? [],
             activeLayerId: self.activeLayerId,
             snapProvider: snapProvider,
-            items: items,
+            items: resolvedItems,
             itemsBinding: itemsBinding,
             inputProcessors: self.inputProcessors,
             hitTargets: environment.hitTargets,

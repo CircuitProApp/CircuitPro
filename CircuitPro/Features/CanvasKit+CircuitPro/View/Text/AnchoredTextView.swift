@@ -5,6 +5,7 @@ struct AnchoredTextView: CKView {
     @CKEnvironment var environment
     let text: CircuitText.Resolved
     let id: UUID
+    let isParentHighlighted: Bool
     let display: (CircuitText.Resolved) -> String
     let onUpdate: (CircuitText.Resolved) -> Void
 
@@ -25,7 +26,8 @@ struct AnchoredTextView: CKView {
 
     var showHalo: Bool {
         context.highlightedItemIDs.contains(id) ||
-            context.selectedItemIDs.contains(id)
+            context.selectedItemIDs.contains(id) ||
+            isParentHighlighted
     }
 
     var body: some CKView {
@@ -48,7 +50,6 @@ struct AnchoredTextView: CKView {
                     .position(resolved.relativePosition)
                     .rotation(resolved.cardinalRotation.radians)
                     .halo((showHalo ? textColor.copy(alpha: 0.3) : .clear) ?? .clear, width: 5)
-                    .contentShape(hitPath)
                     .hoverable(id)
                     .selectable(id)
                     .onDragGesture { delta in
@@ -57,11 +58,13 @@ struct AnchoredTextView: CKView {
                         updated.relativePosition.y += delta.processed.y
                         onUpdate(updated)
                     }
+                    .contentShape(hitPath)
 
                 if let edge = anchorConnectorEdge(from: resolved.anchorPosition, localBounds: localBounds) {
                     CKLine(from: resolved.anchorPosition, to: edge)
                         .stroke(anchorColor, width: 1.0 / context.magnification)
                         .lineDash([5, 5])
+                        .excludeFromPaths()
                 }
 
                 CKGroup {
@@ -70,6 +73,7 @@ struct AnchoredTextView: CKView {
                 }
                 .position(resolved.anchorPosition)
                 .stroke(anchorColor, width: 1.0 / context.magnification)
+                .excludeFromPaths()
             }
         }
     }
