@@ -14,11 +14,6 @@ struct PinView: CKView {
         environment.schematicTheme.textColor
     }
 
-    var showHalo: Bool {
-        context.highlightedItemIDs.contains(pin.id) ||
-            context.selectedItemIDs.contains(pin.id)
-    }
-
     var isWest: Bool {
         pin.cardinalRotation == .west
     }
@@ -32,7 +27,7 @@ struct PinView: CKView {
             .stroke(pinColor)
 
             CKGroup {
-                if pin.showLabel {
+                if pin.showLabel && pin.name.isNotEmpty {
                     CKText(pin.label, font: .systemFont(ofSize: 10), anchor: isWest ? .trailing : .leading)
                         .position(x: pin.length + 5, y: 0)
                         .rotation(isWest ? pin.rotation : .zero)
@@ -47,6 +42,6 @@ struct PinView: CKView {
         }
         .position(pin.position)
         .rotation(pin.rotation)
-        .halo(showHalo ? pinColor.copy(alpha: 0.4) ?? .clear : .clear, width: 5.0)
+
     }
 }

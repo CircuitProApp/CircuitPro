@@ -34,7 +34,7 @@ struct FootprintCanvasView: View {
             GridRL()
             AxesView()
             DrawingSheetRL()
-            DesignView()
+            FootprintDesignView()
             MarqueeView()
             CrosshairsView()
         }

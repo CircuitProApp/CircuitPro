@@ -1,11 +1,12 @@
 import AppKit
 
-struct DesignView: CKView {
+struct FootprintDesignView: CKView {
     @CKContext var context
-    @CanvasItems(Pin.self) var pins
+    @CKEnvironment var environment
     @CanvasItems(Pad.self) var pads
     @CanvasItems(AnyCanvasPrimitive.self) var primitives
     @CanvasItems(CircuitText.Definition.self) var texts
+
     var body: some CKView {
         CKGroup {
             for primitive in primitives {
@@ -26,17 +27,6 @@ struct DesignView: CKView {
                     .onDragGesture { delta in
                         pad.update { pad in
                             pad.translate(by: CGVector(dx: delta.processed.x, dy: delta.processed.y))
-                        }
-                    }
-            }
-
-            for pin in pins {
-                PinView(pin: pin.value)
-                    .hoverable(pin.id)
-                    .selectable(pin.id)
-                    .onDragGesture { delta in
-                        pin.update { pin in
-                            pin.translate(by: CGVector(dx: delta.processed.x, dy: delta.processed.y))
                         }
                     }
             }

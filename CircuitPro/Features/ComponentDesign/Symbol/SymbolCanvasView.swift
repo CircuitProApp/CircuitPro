@@ -27,7 +27,7 @@ struct SymbolCanvasView: View {
                 GridRL()
                 AxesView()
                 DrawingSheetRL()
-                DesignView()
+                SymbolDesignView()
                 MarqueeView()
                 CrosshairsView()
             }

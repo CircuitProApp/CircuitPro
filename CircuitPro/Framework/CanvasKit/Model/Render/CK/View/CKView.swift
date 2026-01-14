@@ -378,6 +378,47 @@ struct CKClipView<Content: CKView>: CKView {
     }
 }
 
+struct CKColorOverrideView<Content: CKView>: CKView {
+    typealias Body = CKGroup
+
+    let content: Content
+    let color: CKColor
+
+    var body: CKGroup {
+        .empty
+    }
+
+    func _render(in context: RenderContext) -> [DrawingPrimitive] {
+        context.render(content, index: 0).map { primitive in
+            switch primitive {
+            case let .fill(path, existingColor, rule, clipPath):
+                let resolvedColor = shouldOverride(color: existingColor) ? color.cgColor : existingColor
+                return .fill(path: path, color: resolvedColor, rule: rule, clipPath: clipPath)
+            case let .stroke(path, existingColor, lineWidth, lineCap, lineJoin, miterLimit, lineDash, clipPath):
+                let resolvedColor = shouldOverride(color: existingColor) ? color.cgColor : existingColor
+                return .stroke(
+                    path: path,
+                    color: resolvedColor,
+                    lineWidth: lineWidth,
+                    lineCap: lineCap,
+                    lineJoin: lineJoin,
+                    miterLimit: miterLimit,
+                    lineDash: lineDash,
+                    clipPath: clipPath
+                )
+            }
+        }
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        context.paths(content, index: 0)
+    }
+
+    private func shouldOverride(color: CGColor) -> Bool {
+        color.alpha > 0.001
+    }
+}
+
 struct CKCompositeView<Content: CKView, Composite: CKView>: CKView {
     typealias Body = CKGroup
 
@@ -539,6 +580,10 @@ extension CKView {
 
     func halo(_ color: CKColor, width: CGFloat) -> CKHaloView<Self> {
         halo(color.cgColor, width: width)
+    }
+
+    func color(_ color: CKColor) -> CKColorOverrideView<Self> {
+        CKColorOverrideView(content: self, color: color)
     }
 
     func clip(_ path: CGPath) -> CKClipView<Self> {
