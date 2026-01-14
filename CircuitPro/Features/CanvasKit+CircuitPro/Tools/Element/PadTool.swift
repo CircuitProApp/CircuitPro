@@ -45,28 +45,17 @@ final class PadTool: CanvasTool {
     }
 
     override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
-        // 1. Create a temporary Pad model to generate its local-space geometry.
-        // Its position is .zero because we only care about its shape relative to its own center.
+        // Render a temporary pad view at the cursor location.
         let number = nextPadNumber(in: context)
         let previewPad = Pad(
             number: number,
-            position: .zero,
-            shape: shape,               // Assuming `shape` is a state property of the tool
-            type: type,                 // Assuming `type` is a state property of the tool
+            position: mouse,
+            shape: shape,
+            type: type,
             drillDiameter: drillDiameter
         )
-
-        // 2. Get the pad's composite path in its local coordinate space.
-        let localPath = previewPad.calculateCompositePath()
-        guard !localPath.isEmpty else { return CKGroup() }
-
-        // 4. Define the preview's appearance.
-        let copperColor = NSColor.systemRed.withAlphaComponent(0.8).cgColor
-
         return CKGroup {
-            CKPath(path: localPath)
-                .position(mouse)
-                .fill(copperColor)
+            PadView(pad: previewPad)
         }
     }
     override func handleEscape() -> Bool {
@@ -95,4 +84,5 @@ final class PadTool: CanvasTool {
         }
         return 1
     }
+
 }
