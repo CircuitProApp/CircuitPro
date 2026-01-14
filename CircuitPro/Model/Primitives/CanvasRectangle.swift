@@ -88,6 +88,8 @@ struct CanvasRectangle: CanvasPrimitive {
     }
 }
 
+extension CanvasRectangle: CanvasItem {}
+
 extension CanvasRectangle {
     var maximumCornerRadius: CGFloat {
         min(size.width, size.height) / 2

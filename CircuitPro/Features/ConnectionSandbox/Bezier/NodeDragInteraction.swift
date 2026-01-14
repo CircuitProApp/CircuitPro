@@ -16,7 +16,7 @@ final class NodeDragInteraction: CanvasInteraction {
         controller: CanvasController
     ) -> Bool {
         dragState = nil
-        guard let itemsBinding = context.environment.items else { return false }
+        guard let itemsBinding = context.itemsBinding else { return false }
 
         guard let hit = CanvasHitTester().hitTest(point: point, context: context) else {
             return false
@@ -39,7 +39,7 @@ final class NodeDragInteraction: CanvasInteraction {
 
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard let state = dragState,
-              let itemsBinding = context.environment.items
+              let itemsBinding = context.itemsBinding
         else { return }
 
         let rawDelta = CGVector(dx: point.x - state.origin.x, dy: point.y - state.origin.y)

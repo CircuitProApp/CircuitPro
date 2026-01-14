@@ -27,14 +27,10 @@ struct LayoutCanvasView: View {
             GridRL()
             DrawingSheetRL()
             FootprintRL()
-            HandlesRL()
             MarqueeView()
             CrosshairsView()
         }
         .viewport($canvasManager.viewport)
-        .onCanvasChange { context in
-            canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
-        }
         .ignoresSafeArea()
         .overlay {
             CanvasOverlayView {

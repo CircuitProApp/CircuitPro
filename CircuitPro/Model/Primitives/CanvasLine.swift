@@ -147,3 +147,5 @@ struct CanvasLine: CanvasPrimitive {
         return path
     }
 }
+
+extension CanvasLine: CanvasItem {}

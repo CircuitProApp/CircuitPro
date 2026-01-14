@@ -7,14 +7,15 @@ struct DesignView: CKView {
     @CanvasItems(AnyCanvasPrimitive.self) var primitives
     @CanvasItems(CircuitText.Definition.self) var texts
     var body: some CKView {
+        let updateItem = context.updateItem
         CKGroup {
             for primitive in primitives {
-                PrimitiveView(primitive: primitive)
+                PrimitiveView(primitive: primitive.value, isEditable: true)
                     .hoverable(primitive.id)
                     .selectable(primitive.id)
                     .onDragGesture { delta in
-                        primitive.update { primitive in
-                            primitive.translate(by: CGVector(dx: delta.processed.x, dy: delta.processed.y))
+                        updateItem(primitive.id, as: AnyCanvasPrimitive.self) { item in
+                            item.translate(by: CGVector(dx: delta.processed.x, dy: delta.processed.y))
                         }
                     }
             }

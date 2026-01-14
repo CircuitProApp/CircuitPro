@@ -38,9 +38,6 @@ struct SchematicCanvasView: View {
             CrosshairsView()
         }
         .viewport($canvasManager.viewport)
-        .onCanvasChange { context in
-            canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
-        }
         .ignoresSafeArea()
         .overlay {
             CanvasOverlayView {

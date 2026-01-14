@@ -23,7 +23,7 @@ final class WireTool: CanvasTool {
     private var state: DrawingState?
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
-        guard let itemsBinding = context.renderContext.environment.items else {
+        guard let itemsBinding = context.renderContext.itemsBinding else {
             return .noResult
         }
 

@@ -24,7 +24,6 @@ struct CanvasView: NSViewRepresentable {
 
     let registeredDraggedTypes: [NSPasteboard.PasteboardType]
     let onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
-    var onCanvasChange: ((CanvasChangeContext) -> Void)?
 
     init(
         tool: Binding<CanvasTool?> = .constant(nil),
@@ -129,7 +128,6 @@ struct CanvasView: NSViewRepresentable {
             snapProvider: self.snapProvider
         )
         coordinator.canvasController.onPasteboardDropped = self.onPasteboardDropped
-        coordinator.canvasController.onCanvasChange = self.onCanvasChange
         return coordinator
     }
 
@@ -158,15 +156,11 @@ struct CanvasView: NSViewRepresentable {
     @MainActor
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let controller = context.coordinator.canvasController
-        controller.onCanvasChange = self.onCanvasChange
 
         let items = itemsBinding?.wrappedValue ?? []
 
         var environment = self.environment
             .withConnectionEngine(connectionEngine)
-        if let itemsBinding {
-            environment = environment.withItems(itemsBinding)
-        }
 
         let selectedIDs = selectedIDsBinding?.wrappedValue ?? []
         if let selectedIDsBinding {
@@ -201,7 +195,8 @@ struct CanvasView: NSViewRepresentable {
             layers: self.layers,
             activeLayerId: self.activeLayerId,
             selectedItemIDs: selectedIDs,
-            items: items
+            items: items,
+            itemsBinding: itemsBinding
         )
 
         if let hostView = scrollView.documentView, hostView.frame.size != self.viewport.size {
@@ -252,4 +247,3 @@ extension CanvasView {
         return copy
     }
 }
-

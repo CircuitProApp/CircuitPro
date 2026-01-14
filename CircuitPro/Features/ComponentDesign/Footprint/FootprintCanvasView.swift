@@ -35,14 +35,10 @@ struct FootprintCanvasView: View {
             AxesView()
             DrawingSheetRL()
             DesignView()
-            HandlesRL()
             MarqueeView()
             CrosshairsView()
         }
         .viewport($canvasManager.viewport)
-        .onCanvasChange { context in
-            canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
-        }
         .ignoresSafeArea()
         .overlay {
             CanvasOverlayView {

@@ -39,9 +39,6 @@ struct WireSandboxView: View {
             CrosshairsView()
         }
         .viewport($canvasManager.viewport)
-        .onCanvasChange { context in
-            canvasManager.mouseLocation = context.processedMouseLocation ?? .zero
-        }
         .overlay(alignment: .bottomLeading) {
             VStack {
                 Button {

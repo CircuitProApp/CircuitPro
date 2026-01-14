@@ -72,7 +72,7 @@ struct KeyCommandInteraction: CanvasInteraction {
         case .noResult:
             return false
         case .newItem(let item):
-            if let itemsBinding = context.environment.items {
+            if let itemsBinding = context.itemsBinding {
                 var items = itemsBinding.wrappedValue
                 items.append(item)
                 itemsBinding.wrappedValue = items
@@ -97,7 +97,7 @@ struct KeyCommandInteraction: CanvasInteraction {
         let selectedItemIDs = context.selectedItemIDs
         guard !selectedItemIDs.isEmpty else { return false }
 
-        if let itemsBinding = context.environment.items {
+        if let itemsBinding = context.itemsBinding {
             let items = itemsBinding.wrappedValue
             let componentInstanceIDs = Set(
                 items.compactMap { item in
@@ -131,7 +131,7 @@ struct KeyCommandInteraction: CanvasInteraction {
 
         let selectedItemIDs = context.selectedItemIDs
         guard !selectedItemIDs.isEmpty else { return false }
-        if let itemsBinding = context.environment.items {
+        if let itemsBinding = context.itemsBinding {
             var items = itemsBinding.wrappedValue
             var didRotate = false
             for index in items.indices {

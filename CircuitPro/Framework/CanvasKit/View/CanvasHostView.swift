@@ -46,18 +46,10 @@ final class CanvasHostView: NSView {
         let context = controller.currentContext(for: self.bounds, visibleRect: self.visibleRect)
         self.layer?.backgroundColor = context.environment.canvasTheme.backgroundColor
 
-        // Create the change context and fire the callback.
-        // This is the ideal central point for this event.
-        let changeContext = CanvasChangeContext(
-            rawMouseLocation: context.mouseLocation,
-            processedMouseLocation: context.processedMouseLocation
-        )
-        controller.onCanvasChange?(changeContext)
-
         CATransaction.begin()
         CATransaction.setDisableActions(true)
 
-        controller.hitTargets.reset()
+        controller.environment.hitTargets.reset()
         controller.canvasDragHandlers.reset()
         var views = controller.renderViews
         views.append(ToolPreviewView())

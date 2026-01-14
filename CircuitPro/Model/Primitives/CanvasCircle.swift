@@ -67,3 +67,5 @@ struct CanvasCircle: CanvasPrimitive {
         return path
     }
 }
+
+extension CanvasCircle: CanvasItem {}

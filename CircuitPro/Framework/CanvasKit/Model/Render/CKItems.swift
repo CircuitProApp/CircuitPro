@@ -46,7 +46,7 @@ struct CanvasItems<T: CanvasItem> {
             fatalError("CanvasItems accessed outside of render update.")
         }
 
-        let itemsBinding = context.environment.items
+        let itemsBinding = context.itemsBinding
         let snapshot = context.items.compactMap { $0 as? T }
 
         return snapshot.map { item in

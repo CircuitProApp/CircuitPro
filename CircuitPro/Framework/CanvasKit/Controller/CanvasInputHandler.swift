@@ -40,8 +40,9 @@ final class CanvasInputHandler {
     func mouseDown(_ event: NSEvent, in host: CanvasHostView) {
         let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
         let rawPoint = host.convert(event.locationInWindow, from: nil)
-        controller.mouseLocation = rawPoint
+        controller.environment.mouseLocation = rawPoint
         let processedPoint = process(point: rawPoint, context: context)
+        controller.environment.processedMouseLocation = processedPoint
 
         if let tool = controller.selectedTool, tool.handlesInput {
             let interactionContext = ToolInteractionContext(
@@ -54,7 +55,7 @@ final class CanvasInputHandler {
                 host.performLayerUpdate()
                 return
             case .newItem(let item):
-                if let itemsBinding = context.environment.items {
+                if let itemsBinding = context.itemsBinding {
                     var items = itemsBinding.wrappedValue
                     items.append(item)
                     itemsBinding.wrappedValue = items
@@ -93,8 +94,9 @@ final class CanvasInputHandler {
     func mouseDragged(_ event: NSEvent, in host: CanvasHostView) {
         let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
         let rawPoint = host.convert(event.locationInWindow, from: nil)
-        controller.mouseLocation = rawPoint
+        controller.environment.mouseLocation = rawPoint
         let processedPoint = process(point: rawPoint, context: context)
+        controller.environment.processedMouseLocation = processedPoint
 
         if globalDragActive {
             let lastRaw = globalDragLastRawPoint ?? rawPoint
@@ -163,8 +165,9 @@ final class CanvasInputHandler {
     func mouseUp(_ event: NSEvent, in host: CanvasHostView) {
         let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
         let rawPoint = host.convert(event.locationInWindow, from: nil)
-        controller.mouseLocation = rawPoint
+        controller.environment.mouseLocation = rawPoint
         let processedPoint = process(point: rawPoint, context: context)
+        controller.environment.processedMouseLocation = processedPoint
 
         if globalDragActive {
             let lastRaw = globalDragLastRawPoint ?? rawPoint
@@ -215,8 +218,9 @@ final class CanvasInputHandler {
     func mouseMoved(_ event: NSEvent, in host: CanvasHostView) {
         let context = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
         let rawPoint = host.convert(event.locationInWindow, from: nil)
-        controller.mouseLocation = rawPoint
+        controller.environment.mouseLocation = rawPoint
         let processedPoint = process(point: rawPoint, context: context)
+        controller.environment.processedMouseLocation = processedPoint
 
         let hitTarget = context.hitTargets.hitTest(rawPoint)
         let hitID = hitTarget?.id
@@ -233,14 +237,15 @@ final class CanvasInputHandler {
     }
 
     func mouseExited() {
-        controller.mouseLocation = nil
+        controller.environment.mouseLocation = nil
+        controller.environment.processedMouseLocation = nil
         controller.setInteractionHighlight(itemIDs: [])
         controller.setInteractionLinkHighlight(linkIDs: [])
         globalDragActive = false
         globalDragLastRawPoint = nil
         globalDragLastProcessedPoint = nil
         if let prevID = hoveredTargetID,
-           let previous = controller.hitTargets.targets.first(where: { $0.id == prevID }) {
+           let previous = controller.environment.hitTargets.targets.first(where: { $0.id == prevID }) {
             previous.onHover?(false)
         }
         hoveredTargetID = nil

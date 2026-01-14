@@ -11,11 +11,22 @@ import Observation
 @Observable
 final class CanvasManager {
 
-    var environment = CanvasEnvironmentValues()
+    var runtime: CanvasRuntimeState
+    var environment: CanvasEnvironmentValues
 
     var viewport = CanvasViewport.centered(documentSize: PaperSize.iso(.a4).canvasSize())
 
-    var mouseLocation: CGPoint = .zero
+    init() {
+        let runtime = CanvasRuntimeState()
+        var environment = CanvasEnvironmentValues()
+        environment.useRuntime(runtime)
+        self.runtime = runtime
+        self.environment = environment
+    }
+
+    var mouseLocation: CGPoint {
+        runtime.processedMouseLocation ?? .zero
+    }
 
     var mouseLocationInMM: CGPoint {
         mouseLocation / CircuitPro.Constants.pointsPerMillimeter

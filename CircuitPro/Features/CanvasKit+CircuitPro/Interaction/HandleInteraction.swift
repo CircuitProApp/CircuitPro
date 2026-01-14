@@ -15,7 +15,7 @@ final class HandleInteraction: CanvasInteraction {
     }
 
     private func startItemDrag(point: CGPoint, context: RenderContext) -> Bool {
-        guard let itemsBinding = context.environment.items else { return false }
+        guard let itemsBinding = context.itemsBinding else { return false }
         guard context.selectedItemIDs.count == 1, let selectedID = context.selectedItemIDs.first else { return false }
         guard let primitive = itemsBinding.wrappedValue.first(where: {
             $0.id == selectedID && $0 is AnyCanvasPrimitive
@@ -51,7 +51,7 @@ final class HandleInteraction: CanvasInteraction {
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
         switch state {
         case .draggingItems(let id, let handleKind, let oppositeWorldPosition):
-            guard let itemsBinding = context.environment.items else { return }
+            guard let itemsBinding = context.itemsBinding else { return }
             var items = itemsBinding.wrappedValue
             guard let index = items.firstIndex(where: { $0.id == id }),
                   var primitive = items[index] as? AnyCanvasPrimitive

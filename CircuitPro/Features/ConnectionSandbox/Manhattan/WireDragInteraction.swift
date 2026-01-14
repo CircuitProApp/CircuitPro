@@ -83,7 +83,7 @@ final class WireDragInteraction: CanvasInteraction {
 
     func mouseDragged(to point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard var state = dragState,
-              let itemsBinding = context.environment.items
+              let itemsBinding = context.itemsBinding
         else { return }
 
         let rawDelta = CGVector(dx: point.x - state.origin.x, dy: point.y - state.origin.y)
@@ -162,7 +162,7 @@ final class WireDragInteraction: CanvasInteraction {
 
     func mouseUp(at point: CGPoint, context: RenderContext, controller: CanvasController) {
         guard dragState != nil,
-              let itemsBinding = context.environment.items,
+              let itemsBinding = context.itemsBinding,
               let engine = context.connectionEngine
         else {
             dragState = nil

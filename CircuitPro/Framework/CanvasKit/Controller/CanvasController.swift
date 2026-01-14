@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import SwiftUI
 
 final class CanvasController {
 
@@ -26,16 +27,23 @@ final class CanvasController {
 
     // MARK: - Universal View State
 
-    var magnification: CGFloat = 1.0
+    var magnification: CGFloat {
+        get { environment.magnification }
+        set { environment.magnification = newValue }
+    }
 
-    private var _rawMouseLocation: CGPoint?
     var mouseLocation: CGPoint? {
-        get { _rawMouseLocation }
+        get { environment.mouseLocation }
         set {
-            guard _rawMouseLocation != newValue else { return }
-            _rawMouseLocation = newValue
+            guard environment.mouseLocation != newValue else { return }
+            environment.mouseLocation = newValue
             view?.performLayerUpdate() // Redraw for layers like Crosshairs.
         }
+    }
+
+    var visibleRect: CGRect {
+        get { environment.visibleRect }
+        set { environment.visibleRect = newValue }
     }
 
     var selectedTool: CanvasTool?
@@ -43,6 +51,7 @@ final class CanvasController {
     var layers: [any CanvasLayer]?
     var activeLayerId: UUID?
     var items: [any CanvasItem] = []
+    var itemsBinding: Binding<[any CanvasItem]>?
 
     // MARK: - Pluggable Pipelines
 
@@ -50,12 +59,10 @@ final class CanvasController {
     let inputProcessors: [any InputProcessor]
     let snapProvider: any SnapProvider
     let renderer: CKRenderer
-    let hitTargets = HitTargetRegistry()
     let canvasDragHandlers = CanvasDragHandlerRegistry()
 
     // MARK: - Callbacks to Owner
 
-    var onCanvasChange: ((CanvasChangeContext) -> Void)?
     var onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)?
 
     // MARK: - Init
@@ -82,7 +89,8 @@ final class CanvasController {
         layers: [any CanvasLayer]?,
         activeLayerId: UUID?,
         selectedItemIDs: Set<UUID>,
-        items: [any CanvasItem]
+        items: [any CanvasItem],
+        itemsBinding: Binding<[any CanvasItem]>?
     ) {
         // --- Other State ---
         if self.selectedTool?.id != tool?.id { self.selectedTool = tool }
@@ -92,10 +100,12 @@ final class CanvasController {
         self.activeLayerId = activeLayerId
         updateSelection(selectedItemIDs, notify: false)
         self.items = items
+        self.itemsBinding = itemsBinding
     }
 
     /// Creates a definitive, non-optional RenderContext for a given drawing pass.
     func currentContext(for hostViewBounds: CGRect, visibleRect: CGRect) -> RenderContext {
+        environment.visibleRect = visibleRect
         var allHighlightedIDs = interactionHighlightedItemIDs
         allHighlightedIDs.formUnion(selectedItemIDs)
         return RenderContext(
@@ -111,9 +121,10 @@ final class CanvasController {
             activeLayerId: self.activeLayerId,
             snapProvider: snapProvider,
             items: items,
+            itemsBinding: itemsBinding,
             environment: self.environment,
             inputProcessors: self.inputProcessors,
-            hitTargets: hitTargets,
+            hitTargets: environment.hitTargets,
             canvasDragHandlers: canvasDragHandlers
         )
     }
@@ -121,6 +132,7 @@ final class CanvasController {
     // MARK: - Viewport Event Handlers
 
     func viewportDidScroll(to newVisibleRect: CGRect) {
+        environment.visibleRect = newVisibleRect
         view?.performLayerUpdate() // Redraw for layers like Grid.
     }
 

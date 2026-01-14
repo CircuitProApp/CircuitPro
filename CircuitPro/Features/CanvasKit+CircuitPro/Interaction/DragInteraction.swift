@@ -106,7 +106,7 @@ final class DragInteraction: CanvasInteraction {
     }
 
     private func applyConnectionNormalization(context: RenderContext) {
-        guard let itemsBinding = context.environment.items,
+        guard let itemsBinding = context.itemsBinding,
               let engine = context.connectionEngine
         else { return }
 
@@ -181,7 +181,7 @@ final class DragInteraction: CanvasInteraction {
             selectedIDs = [hit]
         }
 
-        guard let itemsBinding = context.environment.items else { return false }
+        guard let itemsBinding = context.itemsBinding else { return false }
         let selectedItems = makeDraggableItems(
             selectedIDs: selectedIDs,
             items: itemsBinding.wrappedValue,
@@ -238,7 +238,7 @@ final class DragInteraction: CanvasInteraction {
             return false
         }
 
-        guard let itemsBinding = context.environment.items else { return false }
+        guard let itemsBinding = context.itemsBinding else { return false }
         let items = itemsBinding.wrappedValue
 
         var selectedIDs = context.selectedItemIDs
@@ -310,7 +310,7 @@ final class DragInteraction: CanvasInteraction {
         let finalDelta = context.snapProvider.snap(delta: rawDelta, context: context)
         let deltaPoint = CGPoint(x: finalDelta.dx, y: finalDelta.dy)
 
-        if let itemsBinding = context.environment.items {
+        if let itemsBinding = context.itemsBinding {
             var items = itemsBinding.wrappedValue
 
             for (id, original) in state.definitionTexts {
@@ -390,7 +390,7 @@ final class DragInteraction: CanvasInteraction {
         movedItemIDs: Set<UUID>,
         context: RenderContext
     ) {
-        guard let itemsBinding = context.environment.items else { return }
+        guard let itemsBinding = context.itemsBinding else { return }
         var items = itemsBinding.wrappedValue
         let points = items.compactMap { $0 as? any ConnectionPoint }
         let links = items.compactMap { $0 as? any ConnectionLink }

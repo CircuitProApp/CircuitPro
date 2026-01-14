@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import SwiftUI
 
 /// A snapshot of the canvas state, passed to each CK render layer during a drawing pass.
 /// This struct bundles all the information a layer might need to render itself.
@@ -27,6 +28,7 @@ struct RenderContext {
 
     let snapProvider: any SnapProvider
     let items: [any CanvasItem]
+    let itemsBinding: Binding<[any CanvasItem]>?
     let hitTargets: HitTargetRegistry
     let canvasDragHandlers: CanvasDragHandlerRegistry
     let hitTestDepth: Int
@@ -47,7 +49,7 @@ struct RenderContext {
         }
     }
 
-    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor], hitTargets: HitTargetRegistry, canvasDragHandlers: CanvasDragHandlerRegistry, hitTestDepth: Int = 0, hitTestTransform: CGAffineTransform = .identity) {
+    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], itemsBinding: Binding<[any CanvasItem]>?, environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor], hitTargets: HitTargetRegistry, canvasDragHandlers: CanvasDragHandlerRegistry, hitTestDepth: Int = 0, hitTestTransform: CGAffineTransform = .identity) {
         self.magnification = magnification
         self.mouseLocation = mouseLocation
         self.selectedTool = selectedTool
@@ -60,6 +62,7 @@ struct RenderContext {
         self.activeLayerId = activeLayerId
         self.snapProvider = snapProvider
         self.items = items
+        self.itemsBinding = itemsBinding
         self.environment = environment
         self.inputProcessors = inputProcessors
         self.hitTargets = hitTargets
@@ -84,6 +87,7 @@ extension RenderContext {
             activeLayerId: activeLayerId,
             snapProvider: snapProvider,
             items: items,
+            itemsBinding: itemsBinding,
             environment: environment,
             inputProcessors: inputProcessors,
             hitTargets: hitTargets,
@@ -107,6 +111,7 @@ extension RenderContext {
             activeLayerId: activeLayerId,
             snapProvider: snapProvider,
             items: items,
+            itemsBinding: itemsBinding,
             environment: environment,
             inputProcessors: inputProcessors,
             hitTargets: hitTargets,
@@ -120,6 +125,20 @@ extension RenderContext {
 extension RenderContext {
     var connectionEngine: (any ConnectionEngine)? {
         environment.connectionEngine
+    }
+
+    func updateItem<T: CanvasItem>(
+        _ id: UUID,
+        as type: T.Type = T.self,
+        _ update: (inout T) -> Void
+    ) {
+        guard let itemsBinding else { return }
+        var items = itemsBinding.wrappedValue
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        guard var item = items[index] as? T else { return }
+        update(&item)
+        items[index] = item
+        itemsBinding.wrappedValue = items
     }
 
     var connectionPoints: [any ConnectionPoint] {
