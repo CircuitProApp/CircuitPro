@@ -2,6 +2,7 @@ import AppKit
 
 struct CircleView: CKView {
     @CKContext var context
+    @CKEnvironment var environment
     let circle: CanvasCircle
     let isEditable: Bool
     @CKState private var dragCenter: CGPoint?
@@ -31,7 +32,7 @@ struct CircleView: CKView {
 
     private var strokeColor: CGColor {
         context.layers.first { $0.id == circle.layerId }?.color
-            ?? context.environment.canvasTheme.textColor
+            ?? environment.canvasTheme.textColor
     }
 
     private func updateCircleHandle(_ phase: CanvasDragPhase) {

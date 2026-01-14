@@ -2,12 +2,13 @@ import AppKit
 
 struct MarqueeView: CKView {
     @CKContext var context
+    @CKEnvironment var environment
     @CKState private var marqueeRect: CGRect?
     @CKState private var origin: CGPoint?
     @CKState private var isAdditive: Bool = false
 
     var marqueeColor: CGColor {
-        context.environment.canvasTheme.crosshairColor
+        environment.canvasTheme.crosshairColor
     }
 
     var strokeWidth: CGFloat {

@@ -24,7 +24,11 @@ final class PinTool: CanvasTool {
         return .newItem(pin)
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
+    override func preview(
+        mouse: CGPoint,
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) -> CKGroup {
         // Render a temporary pin view at the cursor location.
         let number = nextPinNumber(in: context)
         let previewPin = Pin(

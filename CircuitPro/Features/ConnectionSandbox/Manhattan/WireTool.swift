@@ -31,7 +31,8 @@ final class WireTool: CanvasTool {
         let magnification = max(context.renderContext.magnification, 0.0001)
         let snapPoint = context.renderContext.snapProvider.snap(
             point: location,
-            context: context.renderContext
+            context: context.renderContext,
+            environment: context.environment
         )
         let tolerance = 6.0 / magnification
 
@@ -67,7 +68,11 @@ final class WireTool: CanvasTool {
             appendLinkIfMissing(startID: state.startID, endID: endID, items: &items, tolerance: tolerance)
         }
 
-            applyNormalization(to: &items, context: context.renderContext)
+            applyNormalization(
+                to: &items,
+                context: context.renderContext,
+                environment: context.environment
+            )
 
             let resolved = ensurePointExists(
                 id: endID,
@@ -96,10 +101,14 @@ final class WireTool: CanvasTool {
         return .noResult
     }
 
-     func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
+    func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
         guard let state else { return [] }
 
-        let snapped = context.snapProvider.snap(point: mouse, context: context)
+        let snapped = context.snapProvider.snap(
+            point: mouse,
+            context: context,
+            environment: CanvasEnvironmentValues()
+        )
         let corner = cornerPoint(from: state.startPoint, to: snapped, direction: state.direction)
 
         let path = CGMutablePath()
@@ -110,7 +119,7 @@ final class WireTool: CanvasTool {
         return [
             .stroke(
                 path: path,
-                color: context.environment.schematicTheme.wireColor,
+                color: NSColor.systemBlue.cgColor,
                 lineWidth: 1.0,
                 lineDash: [4, 4]
             )
@@ -391,15 +400,16 @@ final class WireTool: CanvasTool {
 
     private func applyNormalization(
         to items: inout [any CanvasItem],
-        context: RenderContext
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
     ) {
-        guard let engine = context.connectionEngine else { return }
+        guard let engine = environment.connectionEngine else { return }
         let points = items.compactMap { $0 as? any ConnectionPoint }
         let links = items.compactMap { $0 as? any ConnectionLink }
         let normalizationContext = ConnectionNormalizationContext(
             magnification: context.magnification,
             snapPoint: { point in
-                context.snapProvider.snap(point: point, context: context)
+                context.snapProvider.snap(point: point, context: context, environment: environment)
             }
         )
         let delta = engine.normalize(points: points, links: links, context: normalizationContext)

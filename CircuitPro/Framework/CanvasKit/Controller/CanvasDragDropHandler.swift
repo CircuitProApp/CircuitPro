@@ -17,7 +17,11 @@ final class CanvasDragDropHandler {
     /// Runs a given point through the controller's ordered pipeline of input processors.
     private func process(point: CGPoint, context: RenderContext) -> CGPoint {
         return controller.inputProcessors.reduce(point) { currentPoint, processor in
-            processor.process(point: currentPoint, context: context)
+            processor.process(
+                point: currentPoint,
+                context: context,
+                environment: controller.environment
+            )
         }
     }
 

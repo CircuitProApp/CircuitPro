@@ -2,6 +2,7 @@ import AppKit
 
 struct RectangleView: CKView {
     @CKContext var context
+    @CKEnvironment var environment
     let rectangle: CanvasRectangle
     let isEditable: Bool
     @CKState private var dragBaseline: CanvasRectangle?
@@ -53,7 +54,7 @@ struct RectangleView: CKView {
 
     private var strokeColor: CGColor {
         context.layers.first { $0.id == rectangle.layerId }?.color
-            ?? context.environment.canvasTheme.textColor
+            ?? environment.canvasTheme.textColor
     }
 
     private func updateRectangleHandle(

@@ -2,6 +2,7 @@ import AppKit
 
 struct LineView: CKView {
     @CKContext var context
+    @CKEnvironment var environment
     let line: CanvasLine
     let isEditable: Bool
     @CKState private var dragBaseline: CanvasLine?
@@ -37,7 +38,7 @@ struct LineView: CKView {
 
     private var strokeColor: CGColor {
         context.layers.first { $0.id == line.layerId }?.color
-            ?? context.environment.canvasTheme.textColor
+            ?? environment.canvasTheme.textColor
     }
 
     private func updateLineHandle(

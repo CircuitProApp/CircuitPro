@@ -3,13 +3,14 @@ import AppKit
 struct CrosshairsView: CKView {
 
     @CKContext var context
+    @CKEnvironment var environment
 
     var position: CGPoint {
-        context.processedMouseLocation ?? .zero
+        environment.processedMouseLocation ?? .zero
     }
 
     var color: CGColor {
-        context.environment.canvasTheme.crosshairColor
+        environment.canvasTheme.crosshairColor
     }
 
     var strokeWidth: CGFloat {
@@ -17,7 +18,7 @@ struct CrosshairsView: CKView {
     }
 
     var crosshairsStyle: CrosshairsStyle {
-        context.environment.crosshairsStyle
+        environment.crosshairsStyle
     }
 
     var body: some CKView {

@@ -2,6 +2,7 @@ import AppKit
 
 struct DrawingSheetRL: CKView {
     @CKContext var context
+    @CKEnvironment var environment
 
     private let inset: CGFloat = 20
     private let cellHeight: CGFloat = 25
@@ -25,8 +26,8 @@ struct DrawingSheetRL: CKView {
             cellValues: bakedCellValues
         )
 
-        let backgroundColor = context.environment.canvasTheme.backgroundColor
-        let markerColor = NSColor(cgColor: context.environment.canvasTheme.sheetMarkerColor) ?? .black
+        let backgroundColor = environment.canvasTheme.backgroundColor
+        let markerColor = NSColor(cgColor: environment.canvasTheme.sheetMarkerColor) ?? .black
 
         CKGroup {
             backgroundLayer(metrics: metrics, backgroundColor: backgroundColor)

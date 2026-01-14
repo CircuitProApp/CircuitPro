@@ -32,7 +32,11 @@ final class CanvasInputHandler {
     /// Runs a given point through the controller's ordered pipeline of input processors.
     private func process(point: CGPoint, context: RenderContext) -> CGPoint {
         return controller.inputProcessors.reduce(point) { currentPoint, processor in
-            processor.process(point: currentPoint, context: context)
+            processor.process(
+                point: currentPoint,
+                context: context,
+                environment: controller.environment
+            )
         }
     }
 
@@ -48,7 +52,8 @@ final class CanvasInputHandler {
         if let tool = controller.selectedTool, tool.handlesInput {
             let interactionContext = ToolInteractionContext(
                 clickCount: event.clickCount,
-                renderContext: context
+                renderContext: context,
+                environment: controller.environment
             )
             let result = tool.handleTap(at: processedPoint, context: interactionContext)
             switch result {

@@ -63,7 +63,11 @@ final class TraceTool: CanvasTool {
         }
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
+    override func preview(
+        mouse: CGPoint,
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) -> CKGroup {
         guard case .drawing(let lastPoint) = state else { return CKGroup() }
 
         let color = context.layers.first(where: { $0.id == context.activeLayerId })?.color ?? NSColor.systemBlue.cgColor

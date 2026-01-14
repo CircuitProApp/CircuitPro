@@ -2,11 +2,12 @@ import AppKit
 
 struct WireRL: CKView {
     @CKContext var context
+    @CKEnvironment var environment
 
      @CKViewBuilder var body: some CKView {
-        if let engine = context.connectionEngine {
+        if let engine = environment.connectionEngine {
             let routingContext = ConnectionRoutingContext { point in
-                context.snapProvider.snap(point: point, context: context)
+                context.snapProvider.snap(point: point, context: context, environment: environment)
             }
             let routes = engine.routes(
                 points: context.connectionPoints,
@@ -14,7 +15,7 @@ struct WireRL: CKView {
                 context: routingContext
             )
 
-            let strokeColor = context.environment.schematicTheme.wireColor
+            let strokeColor = environment.schematicTheme.wireColor
             let haloWidth: CGFloat = 6.0
             let lineWidth: CGFloat = 1.0
 

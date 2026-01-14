@@ -15,6 +15,7 @@ struct ToolInteractionContext {
     /// A reference to the full rendering context, providing the tool with access
     /// to the overall state of the canvas if needed.
     let renderContext: RenderContext
+    let environment: CanvasEnvironmentValues
 
     var activeLayerId: UUID? {
         renderContext.activeLayerId

@@ -2,7 +2,7 @@ import AppKit
 
 protocol CKRenderer {
     func install(on hostLayer: CALayer)
-    func render(views: [any CKView], context: RenderContext)
+    func render(views: [any CKView], context: RenderContext, environment: CanvasEnvironmentValues)
 }
 
 final class DefaultCKRenderer: CKRenderer {
@@ -15,7 +15,7 @@ final class DefaultCKRenderer: CKRenderer {
         hostLayer.addSublayer(rootLayer)
     }
 
-    func render(views: [any CKView], context: RenderContext) {
+    func render(views: [any CKView], context: RenderContext, environment: CanvasEnvironmentValues) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
 
@@ -23,10 +23,13 @@ final class DefaultCKRenderer: CKRenderer {
 
         CKContextStorage.current = context
         CKContextStorage.last = context
+        CKContextStorage.environment = environment
+        CKContextStorage.lastEnvironment = environment
         CKContextStorage.stateStore = stateStore
         CKContextStorage.resetViewScope()
         let batches = buildBatches(from: views, context: context)
         CKContextStorage.current = nil
+        CKContextStorage.environment = nil
 
         if batches.isEmpty {
             hideAllLayers()

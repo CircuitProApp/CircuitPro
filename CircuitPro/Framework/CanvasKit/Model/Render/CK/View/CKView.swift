@@ -62,9 +62,10 @@ struct CKInteractionView<Content: CKView>: CKView {
             return primitives
         }
 
-        let hoverHandler = context.environment.onHoverItem
-        let tapHandler = context.environment.onTapItem
-        let dragHandler = context.environment.onDragItem
+        let environment = CKContextStorage.environment ?? CanvasEnvironmentValues()
+        let hoverHandler = environment.onHoverItem
+        let tapHandler = environment.onTapItem
+        let dragHandler = environment.onDragItem
 
         let onHover: ((Bool) -> Void)? = isHoverable ? { isInside in
             hoverHandler?(targetID, isInside)

@@ -46,7 +46,11 @@ final class CircleTool: CanvasTool {
         }
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
+    override func preview(
+        mouse: CGPoint,
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) -> CKGroup {
         guard let centerPoint = center else { return CKGroup() }
 
         // Create the preview path for the rubber-band effect.

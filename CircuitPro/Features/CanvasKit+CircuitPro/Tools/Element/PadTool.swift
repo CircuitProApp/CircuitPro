@@ -44,7 +44,11 @@ final class PadTool: CanvasTool {
         return .newItem(pad)
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
+    override func preview(
+        mouse: CGPoint,
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) -> CKGroup {
         // Render a temporary pad view at the cursor location.
         let number = nextPadNumber(in: context)
         let previewPad = Pad(

@@ -34,22 +34,9 @@ struct RenderContext {
     let hitTestDepth: Int
     let hitTestTransform: CGAffineTransform
 
-    // MARK: - Extensible Application-Specific Data
-    public let environment: CanvasEnvironmentValues
-
     private let inputProcessors: [any InputProcessor]
 
-
-    var processedMouseLocation: CGPoint? {
-        guard let location = mouseLocation else { return nil }
-
-        // This is the same logic from CanvasInputHandler, now available to render layers.
-        return inputProcessors.reduce(location) { currentPoint, processor in
-            processor.process(point: currentPoint, context: self)
-        }
-    }
-
-    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], itemsBinding: Binding<[any CanvasItem]>?, environment: CanvasEnvironmentValues, inputProcessors: [any InputProcessor], hitTargets: HitTargetRegistry, canvasDragHandlers: CanvasDragHandlerRegistry, hitTestDepth: Int = 0, hitTestTransform: CGAffineTransform = .identity) {
+    init(magnification: CGFloat, mouseLocation: CGPoint?, selectedTool: CanvasTool?, highlightedItemIDs: Set<UUID>, selectedItemIDs: Set<UUID>, highlightedLinkIDs: Set<UUID>, hostViewBounds: CGRect, visibleRect: CGRect, layers: [any CanvasLayer], activeLayerId: UUID?, snapProvider: any SnapProvider, items: [any CanvasItem], itemsBinding: Binding<[any CanvasItem]>?, inputProcessors: [any InputProcessor], hitTargets: HitTargetRegistry, canvasDragHandlers: CanvasDragHandlerRegistry, hitTestDepth: Int = 0, hitTestTransform: CGAffineTransform = .identity) {
         self.magnification = magnification
         self.mouseLocation = mouseLocation
         self.selectedTool = selectedTool
@@ -63,7 +50,6 @@ struct RenderContext {
         self.snapProvider = snapProvider
         self.items = items
         self.itemsBinding = itemsBinding
-        self.environment = environment
         self.inputProcessors = inputProcessors
         self.hitTargets = hitTargets
         self.canvasDragHandlers = canvasDragHandlers
@@ -104,7 +90,6 @@ extension RenderContext {
             snapProvider: snapProvider,
             items: items,
             itemsBinding: itemsBinding,
-            environment: environment,
             inputProcessors: inputProcessors,
             hitTargets: hitTargets,
             canvasDragHandlers: canvasDragHandlers,
@@ -128,7 +113,6 @@ extension RenderContext {
             snapProvider: snapProvider,
             items: items,
             itemsBinding: itemsBinding,
-            environment: environment,
             inputProcessors: inputProcessors,
             hitTargets: hitTargets,
             canvasDragHandlers: canvasDragHandlers,
@@ -139,10 +123,6 @@ extension RenderContext {
 }
 
 extension RenderContext {
-    var connectionEngine: (any ConnectionEngine)? {
-        environment.connectionEngine
-    }
-
     func update<T: CanvasItem>(
         _ id: UUID,
         as type: T.Type = T.self,

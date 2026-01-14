@@ -9,13 +9,17 @@ import CoreGraphics
 
 /// An input processor that snaps incoming points to the canvas grid.
 struct GridSnapProcessor: InputProcessor {
-    func process(point: CGPoint, context: RenderContext) -> CGPoint {
+    func process(
+        point: CGPoint,
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) -> CGPoint {
         // All your familiar snapping logic now lives here.
-        guard context.environment.snapping.isEnabled else {
+        guard environment.snapping.isEnabled else {
             return point
         }
 
-        let gridSize = context.environment.grid.spacing.canvasPoints
+        let gridSize = environment.grid.spacing.canvasPoints
         guard gridSize > 0 else {
             return point
         }

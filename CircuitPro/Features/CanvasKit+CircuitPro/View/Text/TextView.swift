@@ -2,20 +2,21 @@ import AppKit
 
 struct TextView: CKView {
     @CKContext var context
+    @CKEnvironment var environment
     let text: CircuitText.Definition
-    
+
     var textColor: CGColor {
-        context.environment.schematicTheme.textColor
+        environment.schematicTheme.textColor
     }
 
     var showHalo: Bool {
         context.highlightedItemIDs.contains(text.id)
     }
-    
+
     var body: some CKView {
         let display = displayText(
             for: text,
-            resolver: context.environment.definitionTextResolver
+            resolver: environment.definitionTextResolver
         )
         CKText(display, font: text.font.nsFont, anchor: text.anchor)
             .position(text.relativePosition)

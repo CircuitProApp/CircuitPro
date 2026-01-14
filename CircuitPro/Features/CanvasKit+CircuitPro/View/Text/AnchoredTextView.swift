@@ -2,15 +2,16 @@ import AppKit
 
 struct AnchoredTextView: CKView {
     @CKContext var context
+    @CKEnvironment var environment
     let text: CanvasItemRef<CircuitText.Definition>
 
 
     var textColor: CGColor {
-        context.environment.schematicTheme.textColor
+        environment.schematicTheme.textColor
     }
 
     var anchorColor: CGColor {
-        let base = context.environment.schematicTheme.textColor
+        let base = environment.schematicTheme.textColor
         guard let ns = NSColor(cgColor: base) else { return base }
         let rgb = ns.usingColorSpace(.sRGB) ?? ns
         let r = rgb.redComponent, g = rgb.greenComponent, b = rgb.blueComponent
@@ -28,7 +29,7 @@ struct AnchoredTextView: CKView {
         let definition = text.value
         let display = displayText(
             for: definition,
-            resolver: context.environment.definitionTextResolver
+            resolver: environment.definitionTextResolver
         )
         let localBounds = CKText.localBounds(
             for: display,

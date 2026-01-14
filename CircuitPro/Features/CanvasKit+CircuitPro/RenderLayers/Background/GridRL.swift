@@ -2,6 +2,7 @@ import AppKit
 
 struct GridRL: CKView {
     @CKContext var context
+    @CKEnvironment var environment
 
     private let fadeOutStart: CGFloat = 0.60
     private let fadeOutEnd: CGFloat = 0.45
@@ -9,7 +10,7 @@ struct GridRL: CKView {
     private let minorBaseAlpha: CGFloat = 0.4
 
     var body: some CKView {
-        if !context.environment.grid.isVisible {
+        if !environment.grid.isVisible {
             CKEmpty()
         } else {
             gridLayer
@@ -47,7 +48,7 @@ struct GridRL: CKView {
         let fade = fadeFactor(magnification: context.magnification)
         guard !hostBounds.isEmpty, !visible.isEmpty, fade > 0 else { return nil }
 
-        let unitSpacing = context.environment.grid.spacing.canvasPoints
+        let unitSpacing = environment.grid.spacing.canvasPoints
         let spacing = adjustedSpacing(unitSpacing: unitSpacing, magnification: context.magnification)
         guard spacing > 0 else { return nil }
 
@@ -64,7 +65,7 @@ struct GridRL: CKView {
             hostBounds: hostBounds
         )
 
-        let baseColor = context.environment.canvasTheme.gridPrimaryColor
+        let baseColor = environment.canvasTheme.gridPrimaryColor
         let majorColor = applyAlpha(majorBaseAlpha, to: baseColor)
         let minorColor = applyAlpha(minorBaseAlpha, to: baseColor)
 

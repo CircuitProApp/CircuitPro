@@ -2,15 +2,16 @@ import AppKit
 
 struct PinView: CKView {
     @CKContext var context
+    @CKEnvironment var environment
 
     let pin: Pin
 
     var pinColor: CGColor {
-        context.environment.schematicTheme.pinColor
+        environment.schematicTheme.pinColor
     }
 
     var textColor: CGColor {
-        context.environment.schematicTheme.textColor
+        environment.schematicTheme.textColor
     }
 
     var showHalo: Bool {

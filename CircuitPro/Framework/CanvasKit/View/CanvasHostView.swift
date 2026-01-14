@@ -44,7 +44,7 @@ final class CanvasHostView: NSView {
 
     func performLayerUpdate() {
         let context = controller.currentContext(for: self.bounds, visibleRect: self.visibleRect)
-        self.layer?.backgroundColor = context.environment.canvasTheme.backgroundColor
+        self.layer?.backgroundColor = controller.environment.canvasTheme.backgroundColor
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -53,7 +53,7 @@ final class CanvasHostView: NSView {
         controller.canvasDragHandlers.reset()
         var views = controller.renderViews
         views.append(ToolPreviewView())
-        controller.renderer.render(views: views, context: context)
+        controller.renderer.render(views: views, context: context, environment: controller.environment)
 
         CATransaction.commit()
     }

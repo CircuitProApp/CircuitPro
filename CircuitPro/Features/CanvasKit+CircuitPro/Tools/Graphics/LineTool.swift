@@ -40,7 +40,11 @@ final class LineTool: CanvasTool {
         }
     }
 
-    override func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
+    override func preview(
+        mouse: CGPoint,
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) -> CKGroup {
         guard let startPoint = start else { return CKGroup() }
 
         // Create the rubber-band path for the preview.

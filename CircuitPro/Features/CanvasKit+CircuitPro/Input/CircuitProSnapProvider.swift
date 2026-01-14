@@ -9,10 +9,14 @@ import AppKit
 
 class CircuitProSnapProvider: SnapProvider {
 
-    func snap(point: CGPoint, context: RenderContext) -> CGPoint {
-        guard context.environment.snapping.isEnabled else { return point }
+    func snap(
+        point: CGPoint,
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) -> CGPoint {
+        guard environment.snapping.isEnabled else { return point }
 
-        let gridSize = context.environment.grid.spacing.canvasPoints
+        let gridSize = environment.grid.spacing.canvasPoints
         guard gridSize > 0 else { return point }
 
         return CGPoint(
@@ -21,10 +25,14 @@ class CircuitProSnapProvider: SnapProvider {
         )
     }
 
-    func snap(delta: CGVector, context: RenderContext) -> CGVector {
-        guard context.environment.snapping.isEnabled else { return delta }
+    func snap(
+        delta: CGVector,
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) -> CGVector {
+        guard environment.snapping.isEnabled else { return delta }
 
-        let gridSize = context.environment.grid.spacing.canvasPoints
+        let gridSize = environment.grid.spacing.canvasPoints
         guard gridSize > 0 else { return delta }
 
         return CGVector(

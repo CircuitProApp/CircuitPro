@@ -21,8 +21,7 @@ final class CKEnvironment {
     private var cached: CanvasEnvironmentValues?
 
     var wrappedValue: CanvasEnvironmentValues {
-        if let context = CKContextStorage.current ?? CKContextStorage.last {
-            let environment = context.environment
+        if let environment = CKContextStorage.environment ?? CKContextStorage.lastEnvironment {
             cached = environment
             return environment
         }
@@ -106,6 +105,8 @@ enum CKContextStorage {
     static var current: RenderContext?
     static var last: RenderContext?
     static var stateStore: CKStateStore?
+    static var environment: CanvasEnvironmentValues?
+    static var lastEnvironment: CanvasEnvironmentValues?
 
     private static var viewPath: [Int] = []
     private static var stateIndices: [Int] = []

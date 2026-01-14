@@ -122,7 +122,6 @@ final class CanvasController {
             snapProvider: snapProvider,
             items: items,
             itemsBinding: itemsBinding,
-            environment: self.environment,
             inputProcessors: self.inputProcessors,
             hitTargets: environment.hitTargets,
             canvasDragHandlers: canvasDragHandlers

@@ -52,7 +52,11 @@ class CanvasTool: Hashable {
     }
 
     /// Provides a temporary preview view (e.g., rubber-banding a line).
-    func preview(mouse: CGPoint, context: RenderContext) -> CKGroup {
+    func preview(
+        mouse: CGPoint,
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) -> CKGroup {
         return CKGroup()
     }
 

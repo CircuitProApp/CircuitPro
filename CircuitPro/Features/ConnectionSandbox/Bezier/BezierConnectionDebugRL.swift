@@ -2,12 +2,13 @@ import AppKit
 
 struct BezierConnectionDebugRL: CKView {
     @CKContext var context
+    @CKEnvironment var environment
 
     @CKViewBuilder var body: some CKView {
-        if let engine = context.connectionEngine {
+        if let engine = environment.connectionEngine {
             let points = connectionPoints(from: context.items)
             let routingContext = ConnectionRoutingContext { point in
-                context.snapProvider.snap(point: point, context: context)
+                context.snapProvider.snap(point: point, context: context, environment: environment)
             }
             let routes = engine.routes(
                 points: points,
