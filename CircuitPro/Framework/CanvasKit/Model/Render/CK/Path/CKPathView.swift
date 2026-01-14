@@ -8,12 +8,12 @@ protocol CKPathView: CKView, CKHitTestable {
 extension CKPathView {
     var defaultStyle: CKStyle { CKStyle() }
 
-    var body: Never {
-        fatalError("CKPathView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        CKStyled(base: self, style: defaultStyle)._render(in: context)
+        context.render(CKStyled(base: self, style: defaultStyle), index: 0)
     }
 
     func _paths(in context: RenderContext) -> [CGPath] {
@@ -23,12 +23,12 @@ extension CKPathView {
 }
 
 struct CKStyled<Base: CKPathView>: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
     let base: Base
     var style: CKStyle
 
-    var body: Never {
-        fatalError("CKStyled has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {

@@ -1,7 +1,7 @@
 import AppKit
 
 struct CKGroup: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
     let children: [AnyCKView]
     static let empty = CKGroup()
 
@@ -17,16 +17,20 @@ struct CKGroup: CKView {
         self = content()
     }
 
-    var body: Never {
-        fatalError("CKGroup has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        children.flatMap { $0._render(in: context) }
+        children.enumerated().flatMap { index, child in
+            context.render(child, index: index)
+        }
     }
 
     func _paths(in context: RenderContext) -> [CGPath] {
-        children.flatMap { $0._paths(in: context) }
+        children.enumerated().flatMap { index, child in
+            context.paths(child, index: index)
+        }
     }
 }
 

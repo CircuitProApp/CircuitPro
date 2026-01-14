@@ -1,7 +1,7 @@
 import AppKit
 
 struct AnyCKView: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
     private let renderer: (RenderContext) -> [DrawingPrimitive]
     private let pathProvider: (RenderContext) -> [CGPath]
 
@@ -10,8 +10,8 @@ struct AnyCKView: CKView {
         self.pathProvider = view._paths
     }
 
-    var body: Never {
-        fatalError("AnyCKView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {

@@ -20,7 +20,7 @@ struct CanvasHitTarget {
     let depth: Int
     let onHover: ((Bool) -> Void)?
     let onTap: (() -> Void)?
-    let onDrag: ((CanvasDragPhase) -> Void)?
+    let onDrag: ((CanvasDragPhase, CanvasDragSession) -> Void)?
 }
 
 final class HitTargetRegistry {

@@ -8,6 +8,7 @@ protocol CKRenderer {
 final class DefaultCKRenderer: CKRenderer {
     private let rootLayer = CALayer()
     private var shapeLayerPool: [CAShapeLayer] = []
+    private let stateStore = CKStateStore()
 
     func install(on hostLayer: CALayer) {
         rootLayer.contentsScale = hostLayer.contentsScale
@@ -21,6 +22,9 @@ final class DefaultCKRenderer: CKRenderer {
         rootLayer.frame = context.canvasBounds
 
         CKContextStorage.current = context
+        CKContextStorage.last = context
+        CKContextStorage.stateStore = stateStore
+        CKContextStorage.resetViewScope()
         let batches = buildBatches(from: views, context: context)
         CKContextStorage.current = nil
 
@@ -52,8 +56,8 @@ final class DefaultCKRenderer: CKRenderer {
     ) -> [PrimitiveBatch] {
         var batches: [PrimitiveBatch] = []
 
-        for view in views {
-            let primitives = view._render(in: context)
+        for (index, view) in views.enumerated() {
+            let primitives = context.render(view, index: index)
             let forceBatchBreak = view is ToolPreviewView
             var isFirstPrimitive = true
             for primitive in primitives {

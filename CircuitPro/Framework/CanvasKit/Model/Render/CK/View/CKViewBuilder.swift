@@ -2,16 +2,8 @@ import AppKit
 
 @resultBuilder
 struct CKViewBuilder {
-    static func buildBlock(_ component: Never) -> Never {
-        component
-    }
-
     static func buildBlock(_ components: CKGroup...) -> CKGroup {
         CKGroup(components.flatMap { $0.children })
-    }
-
-    static func buildExpression(_ expression: Never) -> Never {
-        expression
     }
 
     static func buildExpression<V: CKView>(_ expression: V) -> CKGroup {

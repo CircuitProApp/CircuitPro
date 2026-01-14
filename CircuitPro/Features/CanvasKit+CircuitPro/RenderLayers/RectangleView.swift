@@ -2,9 +2,9 @@ import AppKit
 
 struct RectangleView: CKView {
     @CKContext var context
-    @CKEnvironment var environment
     let rectangle: CanvasRectangle
     let isEditable: Bool
+    @CKState private var dragBaseline: CanvasRectangle?
 
     var showHalo: Bool {
         context.highlightedItemIDs.contains(rectangle.id) ||
@@ -12,10 +12,6 @@ struct RectangleView: CKView {
     }
 
     var body: some CKView {
-        let updateRectangle = { (update: (inout AnyCanvasPrimitive) -> Void) in
-            context.updateItem(rectangle.id, as: AnyCanvasPrimitive.self, update)
-        }
-        let dragState = environment.handleDragState
         CKGroup {
             CKRectangle(cornerRadius: rectangle.cornerRadius)
                 .frame(width: rectangle.size.width, height: rectangle.size.height)
@@ -30,25 +26,25 @@ struct RectangleView: CKView {
                 HandleView()
                     .position(x: -halfW, y: halfH)
                     .onDragGesture { phase in
-                        updateRectangleHandle(.rectTopLeft, phase: phase, update: updateRectangle, dragState: dragState)
+                        updateRectangleHandle(.rectTopLeft, phase: phase)
                     }
                     .hitTestPriority(10)
                 HandleView()
                     .position(x: halfW, y: halfH)
                     .onDragGesture { phase in
-                        updateRectangleHandle(.rectTopRight, phase: phase, update: updateRectangle, dragState: dragState)
+                        updateRectangleHandle(.rectTopRight, phase: phase)
                     }
                     .hitTestPriority(10)
                 HandleView()
                     .position(x: halfW, y: -halfH)
                     .onDragGesture { phase in
-                        updateRectangleHandle(.rectBottomRight, phase: phase, update: updateRectangle, dragState: dragState)
+                        updateRectangleHandle(.rectBottomRight, phase: phase)
                     }
                     .hitTestPriority(10)
                 HandleView()
                     .position(x: -halfW, y: -halfH)
                     .onDragGesture { phase in
-                        updateRectangleHandle(.rectBottomLeft, phase: phase, update: updateRectangle, dragState: dragState)
+                        updateRectangleHandle(.rectBottomLeft, phase: phase)
                     }
                     .hitTestPriority(10)
             }
@@ -57,41 +53,25 @@ struct RectangleView: CKView {
 
     private func updateRectangleHandle(
         _ kind: CanvasHandle.Kind,
-        phase: CanvasDragPhase,
-        update: ((inout AnyCanvasPrimitive) -> Void) -> Void,
-        dragState: CanvasHandleDragState
+        phase: CanvasDragPhase
     ) {
         switch phase {
         case .began:
-            let halfW = rectangle.size.width / 2
-            let halfH = rectangle.size.height / 2
-            let oppositeLocal = rectHandleLocal(
-                kind: kind.opposite ?? kind,
-                halfW: halfW,
-                halfH: halfH
-            )
-            let oppositeWorld = toWorld(
-                oppositeLocal,
-                position: rectangle.position,
-                rotation: rectangle.rotation
-            )
-            dragState.begin(ownerID: rectangle.id, kind: kind, oppositeWorld: oppositeWorld)
+            dragBaseline = rectangle
         case .changed(let delta):
-            guard let oppositeWorld = dragState.oppositeWorld(ownerID: rectangle.id, kind: kind) else { return }
-            let dragWorld = delta.processedLocation
-            let worldToLocal = CGAffineTransform(
-                translationX: rectangle.position.x,
-                y: rectangle.position.y
-            )
-            .rotated(by: rectangle.rotation)
-            .inverted()
-            let dragLocal = dragWorld.applying(worldToLocal)
-            let oppositeLocal = oppositeWorld.applying(worldToLocal)
-            update { prim in
-                prim.updateHandle(kind, to: dragLocal, opposite: oppositeLocal)
+            guard let baseline = dragBaseline else { return }
+            context.update(rectangle.id) { prim in
+                guard case .rectangle = prim else { return }
+                prim = .rectangle(
+                    updatedRectangle(
+                        from: baseline,
+                        kind: kind,
+                        dragWorld: delta.processedLocation
+                    )
+                )
             }
         case .ended:
-            dragState.end(ownerID: rectangle.id, kind: kind)
+            dragBaseline = nil
         }
     }
 
@@ -114,8 +94,40 @@ struct RectangleView: CKView {
         }
     }
 
-    private func toWorld(_ local: CGPoint, position: CGPoint, rotation: CGFloat) -> CGPoint {
-        let rotated = local.applying(CGAffineTransform(rotationAngle: rotation))
-        return CGPoint(x: rotated.x + position.x, y: rotated.y + position.y)
+    private func updatedRectangle(
+        from baseline: CanvasRectangle,
+        kind: CanvasHandle.Kind,
+        dragWorld: CGPoint
+    ) -> CanvasRectangle {
+        var updated = baseline
+        let halfW = baseline.size.width / 2
+        let halfH = baseline.size.height / 2
+        let oppositeLocal = rectHandleLocal(
+            kind: kind.opposite ?? kind,
+            halfW: halfW,
+            halfH: halfH
+        )
+        let worldToLocal = CGAffineTransform(
+            translationX: baseline.position.x,
+            y: baseline.position.y
+        )
+        .rotated(by: baseline.rotation)
+        .inverted()
+        let dragLocal = dragWorld.applying(worldToLocal)
+
+        updated.size = CGSize(
+            width: max(abs(dragLocal.x - oppositeLocal.x), 1),
+            height: max(abs(dragLocal.y - oppositeLocal.y), 1)
+        )
+        let newCenterLocal = CGPoint(
+            x: (dragLocal.x + oppositeLocal.x) * 0.5,
+            y: (dragLocal.y + oppositeLocal.y) * 0.5
+        )
+        let positionOffset = newCenterLocal.applying(CGAffineTransform(rotationAngle: baseline.rotation))
+        updated.position = CGPoint(
+            x: baseline.position.x + positionOffset.x,
+            y: baseline.position.y + positionOffset.y
+        )
+        return updated
     }
 }

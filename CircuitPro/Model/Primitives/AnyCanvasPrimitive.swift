@@ -180,32 +180,6 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         }
     }
 
-    func handles() -> [CanvasHandle] {
-        switch self {
-        case .line(let line): return line.handles()
-        case .rectangle(let rectangle): return rectangle.handles()
-        case .circle(let circle): return circle.handles()
-        }
-    }
-
-    mutating func updateHandle(
-        _ kind: CanvasHandle.Kind,
-        to newPos: CGPoint,
-        opposite opp: CGPoint? = nil
-    ) {
-        switch self {
-        case .line(var line):
-            line.updateHandle(kind, to: newPos, opposite: opp)
-            self = .line(line)
-        case .rectangle(var rectangle):
-            rectangle.updateHandle(kind, to: newPos, opposite: opp)
-            self = .rectangle(rectangle)
-        case .circle(var circle):
-            circle.updateHandle(kind, to: newPos, opposite: opp)
-            self = .circle(circle)
-        }
-    }
-
     // MARK: - Layered Drawing Helpers
     private func resolveColor(in context: RenderContext) -> CGColor {
         if let overrideColor = self.color?.cgColor {

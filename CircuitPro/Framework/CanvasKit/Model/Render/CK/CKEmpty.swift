@@ -1,10 +1,10 @@
 import AppKit
 
 struct CKEmpty: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
-    var body: Never {
-        fatalError("CKEmpty has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {

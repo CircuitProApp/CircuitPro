@@ -73,6 +73,22 @@ struct RenderContext {
 }
 
 extension RenderContext {
+    func render<V: CKView>(_ view: V, index: Int = 0) -> [DrawingPrimitive] {
+        CKContextStorage.withViewScope(index: index) {
+            CKStateRegistry.prepare(view)
+            return view._render(in: self)
+        }
+    }
+
+    func paths<V: CKView>(_ view: V, index: Int = 0) -> [CGPath] {
+        CKContextStorage.withViewScope(index: index) {
+            CKStateRegistry.prepare(view)
+            return view._paths(in: self)
+        }
+    }
+}
+
+extension RenderContext {
     func withHitTestDepth(_ depth: Int) -> RenderContext {
         RenderContext(
             magnification: magnification,
@@ -125,6 +141,14 @@ extension RenderContext {
 extension RenderContext {
     var connectionEngine: (any ConnectionEngine)? {
         environment.connectionEngine
+    }
+
+    func update<T: CanvasItem>(
+        _ id: UUID,
+        as type: T.Type = T.self,
+        _ update: (inout T) -> Void
+    ) {
+        updateItem(id, as: type, update)
     }
 
     func updateItem<T: CanvasItem>(

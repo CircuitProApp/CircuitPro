@@ -2,9 +2,9 @@ import AppKit
 
 struct LineView: CKView {
     @CKContext var context
-    @CKEnvironment var environment
     let line: CanvasLine
     let isEditable: Bool
+    @CKState private var dragBaseline: CanvasLine?
 
     var showHalo: Bool {
         context.highlightedItemIDs.contains(line.id) ||
@@ -12,9 +12,6 @@ struct LineView: CKView {
     }
 
     var body: some CKView {
-        let updateLine = { (update: (inout AnyCanvasPrimitive) -> Void) in
-            context.updateItem(line.id, as: AnyCanvasPrimitive.self, update)
-        }
         CKGroup {
             CKLine(length: line.length, direction: .horizontal)
                 .stroke(line.color?.cgColor ?? .white, width: line.strokeWidth)
@@ -25,13 +22,13 @@ struct LineView: CKView {
                 HandleView()
                     .position(x: -half, y: 0)
                     .onDragGesture { phase in
-                        updateLineHandle(.lineStart, phase: phase, update: updateLine)
+                        updateLineHandle(.lineStart, phase: phase)
                     }
                     .hitTestPriority(10)
                 HandleView()
                     .position(x: half, y: 0)
                     .onDragGesture { phase in
-                        updateLineHandle(.lineEnd, phase: phase, update: updateLine)
+                        updateLineHandle(.lineEnd, phase: phase)
                     }
                     .hitTestPriority(10)
             }
@@ -40,30 +37,26 @@ struct LineView: CKView {
 
     private func updateLineHandle(
         _ kind: CanvasHandle.Kind,
-        phase: CanvasDragPhase,
-        update: ((inout AnyCanvasPrimitive) -> Void) -> Void
+        phase: CanvasDragPhase
     ) {
-        let dragState = environment.handleDragState
         switch phase {
         case .began:
-            let oppositeWorld = (kind == .lineStart) ? line.endPoint : line.startPoint
-            dragState.begin(ownerID: line.id, kind: kind, oppositeWorld: oppositeWorld)
+            dragBaseline = line
         case .changed(let delta):
-            guard let oppositeWorld = dragState.oppositeWorld(ownerID: line.id, kind: kind) else { return }
-            let dragWorld = delta.processedLocation
-            let worldToLocal = CGAffineTransform(
-                translationX: line.position.x,
-                y: line.position.y
-            )
-            .rotated(by: line.rotation)
-            .inverted()
-            let dragLocal = dragWorld.applying(worldToLocal)
-            let oppositeLocal = oppositeWorld.applying(worldToLocal)
-            update { prim in
-                prim.updateHandle(kind, to: dragLocal, opposite: oppositeLocal)
+            guard let baseline = dragBaseline else { return }
+            context.update(line.id) { prim in
+                guard case .line = prim else { return }
+                var updated = baseline
+                let dragWorld = delta.processedLocation
+                if kind == .lineStart {
+                    updated.startPoint = dragWorld
+                } else {
+                    updated.endPoint = dragWorld
+                }
+                prim = .line(updated)
             }
         case .ended:
-            dragState.end(ownerID: line.id, kind: kind)
+            dragBaseline = nil
         }
     }
 }

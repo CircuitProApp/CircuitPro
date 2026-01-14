@@ -85,53 +85,6 @@ struct CanvasLine: CanvasPrimitive {
         self.position = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
     }
 
-    func handles() -> [CanvasHandle] {
-        // The handles are defined in local space, as if the line were
-        // horizontal and centered at (0,0).
-        let halfLength = length / 2
-        return [
-            CanvasHandle(kind: .lineStart, position: CGPoint(x: -halfLength, y: 0)),
-            CanvasHandle(kind: .lineEnd,   position: CGPoint(x:  halfLength, y: 0))
-        ]
-    }
-
-    mutating func updateHandle(
-        _ kind: CanvasHandle.Kind,
-        to dragLocal: CGPoint,
-        opposite oppLocal: CGPoint?
-    ) {
-        guard let oppLocal = oppLocal else { return }
-
-        // The method receives points in the line's original local space.
-        // To robustly calculate the new geometry, we first need to convert these
-        // local points back into world space using the line's current transform.
-        let oldTransform = CGAffineTransform(translationX: self.position.x, y: self.position.y)
-            .rotated(by: self.rotation)
-
-        // Determine which point is the new start and which is the new end based
-        // on the handle that was dragged.
-        let newStartWorld: CGPoint
-        let newEndWorld: CGPoint
-
-        if kind == .lineStart {
-            newStartWorld = dragLocal.applying(oldTransform)
-            newEndWorld = oppLocal.applying(oldTransform)
-        } else {
-            newStartWorld = oppLocal.applying(oldTransform)
-            newEndWorld = dragLocal.applying(oldTransform)
-        }
-
-        // Now that we have the definitive start and end points in world space,
-        // we can use the same logic as our convenience initializer to recalculate
-        // all fundamental properties from scratch. This is the most reliable approach.
-        let dx = newEndWorld.x - newStartWorld.x
-        let dy = newEndWorld.y - newStartWorld.y
-
-        self.length = hypot(dx, dy)
-        self.rotation = atan2(dy, dx)
-        self.position = CGPoint(x: (newStartWorld.x + newEndWorld.x) / 2, y: (newStartWorld.y + newEndWorld.y) / 2)
-    }
-
     func makePath() -> CGPath {
         // Create a simple horizontal line of the correct length,
         // centered at the origin (0,0). The renderer will apply the

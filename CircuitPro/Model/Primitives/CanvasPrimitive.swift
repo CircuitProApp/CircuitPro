@@ -7,7 +7,7 @@
 
 import AppKit
 
-protocol CanvasPrimitive: Transformable, HandleEditable, Identifiable, Codable, Equatable, Hashable, Layerable {
+protocol CanvasPrimitive: Transformable, Identifiable, Codable, Equatable, Hashable, Layerable {
 
     var id: UUID { get }
     var layerId: UUID? { get set }

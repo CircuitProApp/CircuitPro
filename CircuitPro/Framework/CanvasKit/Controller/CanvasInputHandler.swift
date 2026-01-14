@@ -16,6 +16,7 @@ final class CanvasInputHandler {
     private var dragTarget: CanvasHitTarget?
     private var dragLastRawPoint: CGPoint?
     private var dragLastProcessedPoint: CGPoint?
+    private var dragSessions: [UUID: CanvasDragSession] = [:]
     private var globalDragLastRawPoint: CGPoint?
     private var globalDragLastProcessedPoint: CGPoint?
     private var globalDragActive = false
@@ -119,6 +120,11 @@ final class CanvasInputHandler {
         }
 
         if let target = dragTarget, let onDrag = target.onDrag {
+            let session = dragSessions[target.id] ?? {
+                let session = CanvasDragSession()
+                dragSessions[target.id] = session
+                return session
+            }()
             let lastRaw = dragLastRawPoint ?? rawPoint
             let lastProcessed = dragLastProcessedPoint ?? processedPoint
             let rawDelta = CGPoint(x: rawPoint.x - lastRaw.x, y: rawPoint.y - lastRaw.y)
@@ -130,7 +136,7 @@ final class CanvasInputHandler {
                 processed: processedDelta,
                 rawLocation: rawPoint,
                 processedLocation: processedPoint
-            )))
+            )), session)
             host.performLayerUpdate()
             return
         }
@@ -143,9 +149,14 @@ final class CanvasInputHandler {
             if hypot(dx, dy) >= dragThreshold {
                 pendingHitTarget = nil
                 dragTarget = target
+                let session = dragSessions[target.id] ?? {
+                    let session = CanvasDragSession()
+                    dragSessions[target.id] = session
+                    return session
+                }()
                 dragLastRawPoint = rawPoint
                 dragLastProcessedPoint = processedPoint
-                onDrag(.began)
+                onDrag(.began, session)
                 let rawDelta = CGPoint(x: rawPoint.x - startRaw.x, y: rawPoint.y - startRaw.y)
                 let processedDelta = CGPoint(x: processedPoint.x - startProcessed.x, y: processedPoint.y - startProcessed.y)
                 onDrag(.changed(delta: CanvasDragDelta(
@@ -153,7 +164,7 @@ final class CanvasInputHandler {
                     processed: processedDelta,
                     rawLocation: rawPoint,
                     processedLocation: processedPoint
-                )))
+                )), session)
                 host.performLayerUpdate()
                 return
             }
@@ -191,7 +202,12 @@ final class CanvasInputHandler {
         }
 
         if let target = dragTarget, let onDrag = target.onDrag {
-            onDrag(.ended)
+            if let session = dragSessions[target.id] {
+                onDrag(.ended, session)
+                dragSessions[target.id] = nil
+            } else {
+                onDrag(.ended, CanvasDragSession())
+            }
             dragTarget = nil
             dragLastRawPoint = nil
             dragLastProcessedPoint = nil
@@ -255,6 +271,7 @@ final class CanvasInputHandler {
         dragTarget = nil
         dragLastRawPoint = nil
         dragLastProcessedPoint = nil
+        dragSessions.removeAll()
         controller.view?.performLayerUpdate()
     }
 

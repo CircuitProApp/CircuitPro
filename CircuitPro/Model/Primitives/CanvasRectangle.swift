@@ -20,57 +20,6 @@ struct CanvasRectangle: CanvasPrimitive {
 
     var layerId: UUID?
 
-    func handles() -> [CanvasHandle] {
-        let halfW = size.width / 2
-        let halfH = size.height / 2
-
-        // Handles are defined in the primitive's local coordinate space,
-        // assuming a center at (0,0) and no rotation. The render layer
-        // is responsible for applying the node's world transform.
-        return [
-            CanvasHandle(kind: .rectTopLeft,    position: CGPoint(x: -halfW, y:  halfH)),
-            CanvasHandle(kind: .rectTopRight,   position: CGPoint(x:  halfW, y:  halfH)),
-            CanvasHandle(kind: .rectBottomRight,position: CGPoint(x:  halfW, y: -halfH)),
-            CanvasHandle(kind: .rectBottomLeft, position: CGPoint(x: -halfW, y: -halfH))
-        ]
-    }
-    mutating func updateHandle(
-        _ kind: CanvasHandle.Kind,
-        to dragLocal: CGPoint,
-        opposite oppLocal: CGPoint?
-    ) {
-        guard let oppLocal = oppLocal else { return }
-
-        // dragLocal and oppLocal are in the node's local coordinate space.
-        // In this space, the rectangle is centered at (0,0) before this update.
-
-        // The new size is the absolute difference between the two local points.
-        size = CGSize(
-            width: max(abs(dragLocal.x - oppLocal.x), 1),
-            height: max(abs(dragLocal.y - oppLocal.y), 1)
-        )
-
-        // The new center of the rectangle is the midpoint of the diagonal.
-        // This point is also in the node's local coordinate space.
-        let newCenterLocal = CGPoint(
-            x: (dragLocal.x + oppLocal.x) * 0.5,
-            y: (dragLocal.y + oppLocal.y) * 0.5
-        )
-
-        // The primitive's `position` is its origin's location in the parent's coordinate space.
-        // The `newCenterLocal` represents the offset we need to move our origin by,
-        // from the perspective of our local coordinate system.
-        // To apply this offset to our `position`, we must first transform
-        // the offset vector from our local space to the parent's space.
-        // The transform from local to parent space is just the rotation component.
-        let positionOffset = newCenterLocal.applying(CGAffineTransform(rotationAngle: rotation))
-
-        // Add the transformed offset to the current position.
-        position = CGPoint(
-            x: position.x + positionOffset.x,
-            y: position.y + positionOffset.y
-        )
-    }
     func makePath() -> CGPath {
         // Create the rect centered at the origin, not at self.position.
         let frame = CGRect(

@@ -12,7 +12,7 @@ protocol CKHitTestable {
 }
 
 struct CKInteractionView<Content: CKView>: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
     let content: Content
     let targetID: UUID
@@ -21,11 +21,11 @@ struct CKInteractionView<Content: CKView>: CKView {
     var isDraggable: Bool
     var contentShape: CGPath?
     var hitTestPriority: Int
-    var dragPhaseHandler: ((CanvasDragPhase) -> Void)?
-    var dragDeltaHandler: ((CanvasDragDelta) -> Void)?
+    var dragPhaseHandler: ((CanvasDragPhase, CanvasDragSession) -> Void)?
+    var dragDeltaHandler: ((CanvasDragDelta, CanvasDragSession) -> Void)?
 
-    var body: Never {
-        fatalError("CKInteractionView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     init(
@@ -36,8 +36,8 @@ struct CKInteractionView<Content: CKView>: CKView {
         isDraggable: Bool,
         contentShape: CGPath?,
         hitTestPriority: Int = 0,
-        dragPhaseHandler: ((CanvasDragPhase) -> Void)?,
-        dragDeltaHandler: ((CanvasDragDelta) -> Void)?
+        dragPhaseHandler: ((CanvasDragPhase, CanvasDragSession) -> Void)?,
+        dragDeltaHandler: ((CanvasDragDelta, CanvasDragSession) -> Void)?
     ) {
         self.content = content
         self.targetID = targetID
@@ -52,7 +52,7 @@ struct CKInteractionView<Content: CKView>: CKView {
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
         let childContext = context.withHitTestDepth(context.hitTestDepth + 1)
-        let primitives = content._render(in: childContext)
+        let primitives = childContext.render(content, index: 0)
         var targetPath = contentShape ?? hitPath(in: context, primitives: primitives)
         if !context.hitTestTransform.isIdentity {
             var transform = context.hitTestTransform
@@ -74,13 +74,13 @@ struct CKInteractionView<Content: CKView>: CKView {
             tapHandler?(targetID)
         } : nil
 
-        let onDrag: ((CanvasDragPhase) -> Void)? = (isDraggable || dragPhaseHandler != nil || dragDeltaHandler != nil) ? { phase in
+        let onDrag: ((CanvasDragPhase, CanvasDragSession) -> Void)? = (isDraggable || dragPhaseHandler != nil || dragDeltaHandler != nil) ? { phase, session in
             if isDraggable {
                 dragHandler?(targetID, phase)
             }
-            dragPhaseHandler?(phase)
+            dragPhaseHandler?(phase, session)
             if case let .changed(delta) = phase {
-                dragDeltaHandler?(delta)
+                dragDeltaHandler?(delta, session)
             }
         } : nil
 
@@ -109,7 +109,7 @@ struct CKInteractionView<Content: CKView>: CKView {
             }
         }
         if primitives.isEmpty {
-            let paths = content._paths(in: context).filter { !$0.isEmpty }
+            let paths = context.paths(content, index: 0).filter { !$0.isEmpty }
             if !paths.isEmpty {
                 let merged = CGMutablePath()
                 for path in paths {
@@ -138,28 +138,18 @@ struct CKInteractionView<Content: CKView>: CKView {
 }
 
 struct CKCanvasDragView<Content: CKView>: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
     let content: Content
     let dragHandler: CanvasGlobalDragHandler
 
-    var body: Never {
-        fatalError("CKCanvasDragView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
         context.canvasDragHandlers.add(dragHandler)
-        return content._render(in: context)
-    }
-}
-
-extension Never: CKView {
-    var body: Never {
-        fatalError("Never has no body.")
-    }
-
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        []
+        return context.render(content, index: 0)
     }
 }
 
@@ -178,7 +168,7 @@ private protocol CKCompositeRuleProvider {
 }
 
 struct CKComposite: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
     let rule: CAShapeLayerFillRule
     let content: CKGroup
@@ -188,8 +178,8 @@ struct CKComposite: CKView {
         self.content = content()
     }
 
-    var body: Never {
-        fatalError("CKComposite has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
@@ -197,7 +187,7 @@ struct CKComposite: CKView {
     }
 
     func _paths(in context: RenderContext) -> [CGPath] {
-        let paths = content._paths(in: context)
+        let paths = context.paths(content, index: 0)
         guard !paths.isEmpty else { return [] }
         let merged = CGMutablePath()
         paths.forEach { merged.addPath($0) }
@@ -212,14 +202,14 @@ extension CKComposite: CKCompositeRuleProvider {
 }
 
 struct CKTransformView<Content: CKView>: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
     let content: Content
     var position: CGPoint?
     var rotation: CGFloat
 
-    var body: Never {
-        fatalError("CKTransformView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
@@ -233,11 +223,11 @@ struct CKTransformView<Content: CKView>: CKView {
         let childContext = context
             .withHitTestDepth(context.hitTestDepth + 1)
             .withHitTestTransform(transform)
-        return applyTransforms(to: content._render(in: childContext))
+        return applyTransforms(to: childContext.render(content, index: 0))
     }
 
     func _paths(in context: RenderContext) -> [CGPath] {
-        applyTransforms(to: content._paths(in: context))
+        applyTransforms(to: context.paths(content, index: 0))
     }
 
     private func applyTransforms(to primitives: [DrawingPrimitive]) -> [DrawingPrimitive] {
@@ -286,7 +276,7 @@ extension CKTransformView: CKCompositeRuleProvider where Content: CKCompositeRul
 }
 
 struct CKStrokeView<Content: CKView>: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
     let content: Content
     var color: CGColor
@@ -297,13 +287,13 @@ struct CKStrokeView<Content: CKView>: CKView {
     var lineDash: [NSNumber]?
     var clipPath: CGPath?
 
-    var body: Never {
-        fatalError("CKStrokeView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let base = content._render(in: context)
-        let strokes = content._paths(in: context)
+        let base = context.render(content, index: 0)
+        let strokes = context.paths(content, index: 0)
             .filter { !$0.isEmpty }
             .map {
                 DrawingPrimitive.stroke(
@@ -322,19 +312,19 @@ struct CKStrokeView<Content: CKView>: CKView {
 }
 
 struct CKFillView<Content: CKView>: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
     let content: Content
     var color: CGColor
     var rule: CAShapeLayerFillRule = .nonZero
     var clipPath: CGPath?
 
-    var body: Never {
-        fatalError("CKFillView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let fills = content._paths(in: context)
+        let fills = context.paths(content, index: 0)
             .filter { !$0.isEmpty }
             .map { DrawingPrimitive.fill(path: $0, color: color, rule: rule, clipPath: clipPath) }
         return fills
@@ -342,19 +332,19 @@ struct CKFillView<Content: CKView>: CKView {
 }
 
 struct CKHaloView<Content: CKView>: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
     let content: Content
     var color: CGColor
     var width: CGFloat
 
-    var body: Never {
-        fatalError("CKHaloView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let base = content._render(in: context)
-        let halos = content._paths(in: context)
+        let base = context.render(content, index: 0)
+        let halos = context.paths(content, index: 0)
             .filter { !$0.isEmpty }
             .map {
                 DrawingPrimitive.stroke(
@@ -373,38 +363,38 @@ struct CKHaloView<Content: CKView>: CKView {
 }
 
 struct CKClipView<Content: CKView>: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
     let content: Content
     var clipPath: CGPath
 
-    var body: Never {
-        fatalError("CKClipView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        content._render(in: context).map { $0.withClip(clipPath) }
+        context.render(content, index: 0).map { $0.withClip(clipPath) }
     }
 }
 
 struct CKCompositeView<Content: CKView, Composite: CKView>: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
     let content: Content
     let composite: Composite
     let rule: CAShapeLayerFillRule
 
-    var body: Never {
-        fatalError("CKCompositeView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        content._render(in: context)
+        context.render(content, index: 0)
     }
 
     func _paths(in context: RenderContext) -> [CGPath] {
-        let basePaths = content._paths(in: context)
-        let compositePaths = composite._paths(in: context)
+        let basePaths = context.paths(content, index: 0)
+        let compositePaths = context.paths(composite, index: 1)
         if basePaths.isEmpty && compositePaths.isEmpty {
             return []
         }
@@ -422,18 +412,18 @@ extension CKCompositeView: CKCompositeRuleProvider {
 }
 
 struct CKHitTargetView<Content: CKView>: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
 
     let content: Content
     let contentShape: CGPath?
     let onHover: ((Bool) -> Void)?
     let onTap: (() -> Void)?
-    let onDrag: ((CanvasDragPhase) -> Void)?
+    let onDrag: ((CanvasDragPhase, CanvasDragSession) -> Void)?
     let targetID: UUID
     let hitTestPriority: Int
 
-    var body: Never {
-        fatalError("CKHitTargetView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     init(
@@ -441,7 +431,7 @@ struct CKHitTargetView<Content: CKView>: CKView {
         contentShape: CGPath?,
         onHover: ((Bool) -> Void)?,
         onTap: (() -> Void)?,
-        onDrag: ((CanvasDragPhase) -> Void)?,
+        onDrag: ((CanvasDragPhase, CanvasDragSession) -> Void)?,
         targetID: UUID,
         hitTestPriority: Int = 0
     ) {
@@ -456,7 +446,7 @@ struct CKHitTargetView<Content: CKView>: CKView {
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
         let childContext = context.withHitTestDepth(context.hitTestDepth + 1)
-        let primitives = content._render(in: childContext)
+        let primitives = childContext.render(content, index: 0)
         var targetPath = contentShape ?? hitPath(in: context, primitives: primitives)
         if !context.hitTestTransform.isIdentity {
             var transform = context.hitTestTransform
@@ -592,6 +582,12 @@ extension CKView {
     }
 
     func onDragGesture(_ action: @escaping (CanvasDragPhase) -> Void) -> CKInteractionView<Self> {
+        onDragGesture { phase, _ in
+            action(phase)
+        }
+    }
+
+    func onDragGesture(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKInteractionView<Self> {
         CKInteractionView(
             content: self,
             targetID: UUID(),
@@ -605,6 +601,12 @@ extension CKView {
     }
 
     func onDragGesture(_ action: @escaping (CanvasDragDelta) -> Void) -> CKInteractionView<Self> {
+        onDragGesture { delta, _ in
+            action(delta)
+        }
+    }
+
+    func onDragGesture(_ action: @escaping (CanvasDragDelta, CanvasDragSession) -> Void) -> CKInteractionView<Self> {
         CKInteractionView(
             content: self,
             targetID: UUID(),
@@ -693,6 +695,12 @@ extension CKView {
     }
 
     func onDrag(_ action: @escaping (CanvasDragPhase) -> Void) -> CKHitTargetView<Self> {
+        onDrag { phase, _ in
+            action(phase)
+        }
+    }
+
+    func onDrag(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKHitTargetView<Self> {
         CKHitTargetView(
             content: self,
             contentShape: nil,
@@ -704,6 +712,12 @@ extension CKView {
     }
 
     func onDrag(id: UUID, _ action: @escaping (CanvasDragPhase) -> Void) -> CKHitTargetView<Self> {
+        onDrag(id: id) { phase, _ in
+            action(phase)
+        }
+    }
+
+    func onDrag(id: UUID, _ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKHitTargetView<Self> {
         CKHitTargetView(
             content: self,
             contentShape: nil,
@@ -775,6 +789,12 @@ extension CKHitTargetView {
     }
 
     func onDrag(_ action: @escaping (CanvasDragPhase) -> Void) -> CKHitTargetView<Content> {
+        onDrag { phase, _ in
+            action(phase)
+        }
+    }
+
+    func onDrag(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKHitTargetView<Content> {
         CKHitTargetView(
             content: content,
             contentShape: contentShape,
@@ -827,11 +847,17 @@ extension CKInteractionView {
     }
 
     func onDragGesture(_ action: @escaping (CanvasDragPhase) -> Void) -> CKInteractionView<Content> {
+        onDragGesture { phase, _ in
+            action(phase)
+        }
+    }
+
+    func onDragGesture(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKInteractionView<Content> {
         var copy = self
         if let existing = copy.dragPhaseHandler {
-            copy.dragPhaseHandler = { phase in
-                existing(phase)
-                action(phase)
+            copy.dragPhaseHandler = { phase, session in
+                existing(phase, session)
+                action(phase, session)
             }
         } else {
             copy.dragPhaseHandler = action
@@ -840,11 +866,17 @@ extension CKInteractionView {
     }
 
     func onDragGesture(_ action: @escaping (CanvasDragDelta) -> Void) -> CKInteractionView<Content> {
+        onDragGesture { delta, _ in
+            action(delta)
+        }
+    }
+
+    func onDragGesture(_ action: @escaping (CanvasDragDelta, CanvasDragSession) -> Void) -> CKInteractionView<Content> {
         var copy = self
         if let existing = copy.dragDeltaHandler {
-            copy.dragDeltaHandler = { delta in
-                existing(delta)
-                action(delta)
+            copy.dragDeltaHandler = { delta, session in
+                existing(delta, session)
+                action(delta, session)
             }
         } else {
             copy.dragDeltaHandler = action
@@ -990,17 +1022,17 @@ private extension DrawingPrimitive {
 
 
 private struct CKOpacityView: CKView {
-    typealias Body = Never
+    typealias Body = CKGroup
     let content: AnyCKView
     let opacity: CGFloat
 
-    var body: Never {
-        fatalError("CKOpacityView has no body.")
+    var body: CKGroup {
+        .empty
     }
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
         let value = opacity.clamped(to: 0...1)
-        return content._render(in: context).map { $0.applyingOpacity(value) }
+        return context.render(content, index: 0).map { $0.applyingOpacity(value) }
     }
 }
 
