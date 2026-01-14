@@ -51,11 +51,13 @@ struct MarqueeView: CKView {
             isAdditive = event.event.modifierFlags.contains(.shift)
             origin = event.rawLocation
             marqueeRect = CGRect(origin: event.rawLocation, size: .zero)
+            controller.view?.performLayerUpdate()
         case .changed(let event):
             guard let origin = origin else { return }
             let marqueeRect = CGRect(origin: origin, size: .zero)
                 .union(CGRect(origin: event.rawLocation, size: .zero))
             self.marqueeRect = marqueeRect
+            controller.view?.performLayerUpdate()
 
             let rawHits = context.hitTargets.hitTestAll(in: marqueeRect)
             controller.setInteractionHighlight(itemIDs: Set(rawHits))
@@ -72,6 +74,7 @@ struct MarqueeView: CKView {
             origin = nil
             isAdditive = false
             marqueeRect = nil
+            controller.view?.performLayerUpdate()
             controller.setInteractionHighlight(itemIDs: [])
         }
     }

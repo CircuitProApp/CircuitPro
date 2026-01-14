@@ -36,10 +36,16 @@ final class CKEnvironment {
 @propertyWrapper
 final class CKState<Value> {
     private var cachedKey: CKViewStateKey?
+    private var cachedKeyIsFallback = false
     private let initialValue: Value
+    private let fallbackKey: CKViewStateKey
 
     init(wrappedValue: Value) {
         self.initialValue = wrappedValue
+        self.fallbackKey = CKViewStateKey(
+            path: [-1],
+            index: CKContextStorage.nextFallbackIndex()
+        )
     }
 
     var wrappedValue: Value {
@@ -64,14 +70,25 @@ final class CKState<Value> {
     }
 
     private func resolveKey() -> CKViewStateKey {
+        if let cachedKey, !cachedKeyIsFallback {
+            return cachedKey
+        }
+        if let key = CKContextStorage.nextStateKey() {
+            if let cachedKey, cachedKeyIsFallback,
+               let store = CKContextStorage.stateStore,
+               let value: Value = store.value(for: cachedKey) {
+                store.set(value, for: key)
+            }
+            cachedKey = key
+            cachedKeyIsFallback = false
+            return key
+        }
         if let cachedKey {
             return cachedKey
         }
-        guard let key = CKContextStorage.nextStateKey() else {
-            fatalError("CKState accessed outside of render update.")
-        }
-        cachedKey = key
-        return key
+        cachedKey = fallbackKey
+        cachedKeyIsFallback = true
+        return fallbackKey
     }
 }
 
@@ -92,6 +109,7 @@ enum CKContextStorage {
 
     private static var viewPath: [Int] = []
     private static var stateIndices: [Int] = []
+    private static var fallbackSeed: Int = 0
 
     static func resetViewScope() {
         viewPath = []
@@ -113,6 +131,12 @@ enum CKContextStorage {
         let index = stateIndices[stateIndices.count - 1]
         stateIndices[stateIndices.count - 1] = index + 1
         return CKViewStateKey(path: viewPath, index: index)
+    }
+
+    static func nextFallbackIndex() -> Int {
+        let index = fallbackSeed
+        fallbackSeed += 1
+        return index
     }
 }
 
