@@ -84,15 +84,6 @@ private struct DefinitionTextResolverKey: CanvasEnvironmentKey {
     static let defaultValue: DefinitionTextResolver? = nil
 }
 
-enum CanvasInteractionMode {
-    case graphAndScene
-    case graphOnly
-}
-
-private struct InteractionModeKey: CanvasEnvironmentKey {
-    static let defaultValue = CanvasInteractionMode.graphAndScene
-}
-
 extension CanvasEnvironmentValues {
     var grid: CanvasGrid {
         get { self[GridKey.self] }
@@ -132,17 +123,6 @@ extension CanvasEnvironmentValues {
     var definitionTextResolver: DefinitionTextResolver? {
         get { self[DefinitionTextResolverKey.self] }
         set { self[DefinitionTextResolverKey.self] = newValue }
-    }
-
-    var interactionMode: CanvasInteractionMode {
-        get { self[InteractionModeKey.self] }
-        set { self[InteractionModeKey.self] = newValue }
-    }
-
-    func withInteractionMode(_ mode: CanvasInteractionMode) -> CanvasEnvironmentValues {
-        var copy = self
-        copy.interactionMode = mode
-        return copy
     }
 
     func withTextTarget(_ target: TextTarget) -> CanvasEnvironmentValues {
