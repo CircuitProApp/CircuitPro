@@ -3,9 +3,10 @@ import AppKit
 struct ConnectionDebugRL: CKView {
     @CKContext var context
     @CKEnvironment var environment
+    let engine: any ConnectionEngine
 
     @CKViewBuilder var body: some CKView {
-        if let engine = environment.connectionEngine {
+        if true {
             let routingContext = ConnectionRoutingContext { point in
                 context.snapProvider.snap(point: point, context: context, environment: environment)
             }
@@ -30,8 +31,6 @@ struct ConnectionDebugRL: CKView {
                 }
                 pointDots()
             }
-        } else {
-            CKEmpty()
         }
     }
 

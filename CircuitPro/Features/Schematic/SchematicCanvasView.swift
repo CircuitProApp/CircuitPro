@@ -14,6 +14,7 @@ struct SchematicCanvasView: View {
     @PackManager private var packManager
 
     @Bindable var canvasManager: CanvasManager
+    private let wireEngine = WireEngine()
 
     var body: some View {
 
@@ -22,7 +23,6 @@ struct SchematicCanvasView: View {
                 withDefault: CursorTool()),
             items: $editorSession.schematicController.items,
             selectedIDs: $editorSession.selectedItemIDs,
-            connectionEngine: WireEngine(),
             environment: canvasManager.environment,
             inputProcessors: [GridSnapProcessor()],
             snapProvider: CircuitProSnapProvider(),
@@ -32,7 +32,7 @@ struct SchematicCanvasView: View {
             GridRL()
             DrawingSheetRL()
 
-            SchematicView()
+            SchematicView(engine: wireEngine)
             MarqueeView()
             CrosshairsView()
         }
@@ -41,7 +41,8 @@ struct SchematicCanvasView: View {
         .overlay {
             CanvasOverlayView {
                 SchematicToolbarView(
-                    selectedSchematicTool: $editorSession.schematicController.selectedTool
+                    selectedSchematicTool: $editorSession.schematicController.selectedTool,
+                    wireEngine: wireEngine
                 )
             } status: {
                 CanvasStatusView()

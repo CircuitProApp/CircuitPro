@@ -14,7 +14,6 @@ struct CanvasView: NSViewRepresentable {
 
     private var itemsBinding: Binding<[any CanvasItem]>?
     private var selectedIDsBinding: Binding<Set<UUID>>?
-    private var connectionEngine: (any ConnectionEngine)?
 
     // MARK: - Callbacks & Configuration
     var environment: CanvasEnvironmentValues
@@ -31,7 +30,6 @@ struct CanvasView: NSViewRepresentable {
         selectedIDs: Binding<Set<UUID>>,
         layers: Binding<[any CanvasLayer]> = .constant([] as [any CanvasLayer]),
         activeLayerId: Binding<UUID?> = .constant(nil),
-        connectionEngine: (any ConnectionEngine)? = nil,
         environment: CanvasEnvironmentValues = .init(),
         inputProcessors: [any InputProcessor] = [],
         snapProvider: any SnapProvider = NoOpSnapProvider(),
@@ -45,7 +43,6 @@ struct CanvasView: NSViewRepresentable {
         self._activeLayerId = activeLayerId
         self.itemsBinding = items
         self.selectedIDsBinding = selectedIDs
-        self.connectionEngine = connectionEngine
         var env = environment
         self.environment = env
         self.renderViews = [content()]
@@ -158,7 +155,6 @@ struct CanvasView: NSViewRepresentable {
         let items = itemsBinding?.wrappedValue ?? []
 
         var environment = self.environment
-            .withConnectionEngine(connectionEngine)
 
         let selectedIDs = selectedIDsBinding?.wrappedValue ?? []
         if let selectedIDsBinding {

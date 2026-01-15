@@ -9,13 +9,18 @@ struct WireView: CKView {
     @CKState private var globalDragTargetID: UUID?
 
     private let baseTolerance: CGFloat = 6
+    private let engine: (any ConnectionEngine)?
+
+    init(engine: (any ConnectionEngine)?) {
+        self.engine = engine
+    }
 
     var wireColor: CKColor {
         CKColor(environment.schematicTheme.wireColor)
     }
 
     @CKViewBuilder var body: some CKView {
-        if let engine = environment.connectionEngine {
+        if let engine {
             let routingContext = ConnectionRoutingContext { point in
                 context.snapProvider.snap(point: point, context: context, environment: environment)
             }
@@ -239,7 +244,7 @@ struct WireView: CKView {
     private func endDrag() {
         guard dragState != nil,
               let itemsBinding = context.itemsBinding,
-              let engine = environment.connectionEngine
+              let engine
         else {
             dragState = nil
             return
@@ -316,7 +321,7 @@ struct WireView: CKView {
         controller: CanvasController
     ) {
         guard let itemsBinding = context.itemsBinding,
-              let engine = controller.environment.connectionEngine
+              let engine
         else { return }
 
         switch phase {

@@ -45,7 +45,6 @@ struct BezierSandboxView: View {
             tool: .constant(nil),
             items: $bezierItems,
             selectedIDs: .constant([]),
-            connectionEngine: bezierEngine,
             environment: canvasManager.environment,
             inputProcessors: [
                 GridSnapProcessor(),
@@ -54,7 +53,7 @@ struct BezierSandboxView: View {
         ) {
             GridRL()
             NodeDebugRL()
-            BezierConnectionDebugRL()
+            BezierConnectionDebugRL(engine: bezierEngine)
             CrosshairsView()
         }
         .viewport($canvasManager.viewport)

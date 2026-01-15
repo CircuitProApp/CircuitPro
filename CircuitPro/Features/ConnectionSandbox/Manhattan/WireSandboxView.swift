@@ -3,7 +3,7 @@ import SwiftUI
 struct WireSandboxView: View {
     @State private var canvasManager = CanvasManager()
     @State private var selectedTool: CanvasTool?
-    @State private var wireTool = WireTool()
+    @State private var wireTool: WireTool
 
     @State private var manhattanItems: [any CanvasItem] = {
         let a = WireVertex(position: CGPoint(x: 140, y: 140))
@@ -21,12 +21,15 @@ struct WireSandboxView: View {
 
     private let manhattanEngine = WireEngine()
 
+    init() {
+        _wireTool = State(initialValue: WireTool(engine: manhattanEngine))
+    }
+
     var body: some View {
         CanvasView(
             tool: $selectedTool,
             items: $manhattanItems,
             selectedIDs: .constant([]),
-            connectionEngine: manhattanEngine,
             environment: canvasManager.environment,
             inputProcessors: [
                 GridSnapProcessor(),
@@ -34,8 +37,8 @@ struct WireSandboxView: View {
             snapProvider: CircuitProSnapProvider()
         ) {
             GridRL()
-            WireView()
-            ConnectionDebugRL()
+            WireView(engine: manhattanEngine)
+            ConnectionDebugRL(engine: manhattanEngine)
             CrosshairsView()
         }
         .viewport($canvasManager.viewport)

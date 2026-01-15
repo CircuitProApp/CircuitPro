@@ -2,6 +2,12 @@ import AppKit
 import SwiftUI
 
 final class WireTool: CanvasTool {
+    private let engine: (any ConnectionEngine)?
+
+    init(engine: (any ConnectionEngine)? = nil) {
+        self.engine = engine
+        super.init()
+    }
     override var symbolName: String { CircuitProSymbols.Schematic.wire }
     override var label: String { "Wire" }
 
@@ -101,13 +107,17 @@ final class WireTool: CanvasTool {
         return .noResult
     }
 
-    func preview(mouse: CGPoint, context: RenderContext) -> [DrawingPrimitive] {
-        guard let state else { return [] }
+    override func preview(
+        mouse: CGPoint,
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) -> CKGroup {
+        guard let state else { return CKGroup() }
 
         let snapped = context.snapProvider.snap(
             point: mouse,
             context: context,
-            environment: CanvasEnvironmentValues()
+            environment: environment
         )
         let corner = cornerPoint(from: state.startPoint, to: snapped, direction: state.direction)
 
@@ -116,14 +126,11 @@ final class WireTool: CanvasTool {
         path.addLine(to: corner)
         path.addLine(to: snapped)
 
-        return [
-            .stroke(
-                path: path,
-                color: NSColor.systemBlue.cgColor,
-                lineWidth: 1.0,
-                lineDash: [4, 4]
-            )
-        ]
+        return CKGroup {
+            CKPath(path: path)
+                .stroke(NSColor.systemBlue.cgColor, width: 1.0)
+                .lineDash([4, 4])
+        }
     }
 
     override func handleEscape() -> Bool {
@@ -403,7 +410,7 @@ final class WireTool: CanvasTool {
         context: RenderContext,
         environment: CanvasEnvironmentValues
     ) {
-        guard let engine = environment.connectionEngine else { return }
+        guard let engine else { return }
         let points = items.compactMap { $0 as? any ConnectionPoint }
         let links = items.compactMap { $0 as? any ConnectionLink }
         let normalizationContext = ConnectionNormalizationContext(
