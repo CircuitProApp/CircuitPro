@@ -6,8 +6,10 @@ struct CKEmpty: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        []
+extension CKEmpty: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        CKRenderNode(geometry: .group, children: [], renderChildren: false)
     }
 }

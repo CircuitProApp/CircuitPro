@@ -2,20 +2,15 @@ import AppKit
 
 struct AnyCKView: CKView {
     typealias Body = CKGroup
-    private let renderer: (RenderContext) -> [DrawingPrimitive]
-    private let pathProvider: (RenderContext) -> [CGPath]
-    private let hitTestPathProvider: ((RenderContext) -> CGPath?)?
+    private let nodeProvider: (RenderContext) -> CKRenderNode?
+    private let prepareState: (() -> Void)?
 
     init<V: CKView>(_ view: V) {
-        self.renderer = view._render
-        self.pathProvider = view._paths
-        if let hitTestable = view as? any CKHitTestable {
-            self.hitTestPathProvider = { context in
-                let path = hitTestable.hitTestPath(in: context)
-                return path.isEmpty ? nil : path
-            }
-        } else {
-            self.hitTestPathProvider = nil
+        self.nodeProvider = { context in
+            view.makeNode(in: context)
+        }
+        self.prepareState = {
+            CKStateRegistry.prepare(view)
         }
     }
 
@@ -23,15 +18,15 @@ struct AnyCKView: CKView {
         .empty
     }
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        renderer(context)
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        prepareState?()
+        return nodeProvider(context)
     }
 
-    func _paths(in context: RenderContext) -> [CGPath] {
-        pathProvider(context)
-    }
-
-    func hitTestPath(in context: RenderContext) -> CGPath? {
-        hitTestPathProvider?(context)
+    func makeNode(in context: RenderContext, index: Int) -> CKRenderNode? {
+        return CKContextStorage.withViewScope(index: index) {
+            prepareState?()
+            return nodeProvider(context)
+        }
     }
 }

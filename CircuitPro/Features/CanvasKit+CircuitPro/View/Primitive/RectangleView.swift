@@ -14,8 +14,7 @@ struct RectangleView: CKView {
 
     var body: some CKView {
         CKGroup {
-            CKRectangle(cornerRadius: rectangle.cornerRadius)
-                .frame(width: rectangle.size.width, height: rectangle.size.height)
+            CKRectangle(size: rectangle.size, cornerRadius: rectangle.cornerRadius)
                 .fill(rectangle.filled ? strokeColor : .clear)
                 .stroke(strokeColor, width: rectangle.strokeWidth)
                 .halo(showHalo ? .white.haloOpacity() : .clear, width: 5.0)

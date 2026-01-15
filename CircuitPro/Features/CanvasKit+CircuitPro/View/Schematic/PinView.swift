@@ -45,22 +45,3 @@ struct PinView: CKView {
 
     }
 }
-
-extension PinView: CKHitTestable {
-    func hitTestPath(in context: RenderContext) -> CGPath {
-        let base = CGMutablePath()
-        base.move(to: .zero)
-        base.addLine(to: CGPoint(x: pin.length, y: 0))
-        let circleRect = CGRect(x: -5.0, y: -5.0, width: 10.0, height: 10.0)
-        base.addPath(CGPath(ellipseIn: circleRect, transform: nil))
-        guard !base.isEmpty else { return CGMutablePath() }
-        let padding = 4.0 / max(context.magnification, 0.001)
-        let strokeWidth = 1.0 + padding
-        return base.copy(
-            strokingWithWidth: strokeWidth,
-            lineCap: .round,
-            lineJoin: .round,
-            miterLimit: 10
-        )
-    }
-}

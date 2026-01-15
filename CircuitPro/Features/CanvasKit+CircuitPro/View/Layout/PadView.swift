@@ -19,8 +19,7 @@ struct PadView: CKView {
         CKComposite(rule: .evenOdd) {
             switch pad.shape {
             case .rect(let width, let height):
-                CKRectangle()
-                    .frame(width: width, height: height)
+                CKRectangle(width: width, height: height)
             case .circle(let radius):
                 CKCircle(radius: radius)
             }

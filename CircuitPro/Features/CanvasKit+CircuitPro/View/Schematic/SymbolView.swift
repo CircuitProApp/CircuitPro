@@ -27,6 +27,7 @@ struct SymbolView: CKView {
                         PinView(pin: pin)
                     }
                 }
+                .halo(showHalo ? bodyColor.haloOpacity() : .clear, width: 5)
                 .hoverable(component.id)
                 .selectable(component.id)
                 .onDragGesture { delta in
@@ -58,11 +59,9 @@ struct SymbolView: CKView {
                         }
                     }
                 )
-                .excludeFromPaths()
             }
         }
         .position(symbol.position)
         .rotation(symbol.rotation)
-        .halo(showHalo ? bodyColor.haloOpacity() : .clear, width: 5)
     }
 }

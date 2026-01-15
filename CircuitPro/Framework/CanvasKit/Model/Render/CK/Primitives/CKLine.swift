@@ -1,6 +1,6 @@
 import AppKit
 
-struct CKLine: CKPathView {
+struct CKLine: CKView {
     enum Direction {
         case horizontal
         case vertical
@@ -21,31 +21,37 @@ struct CKLine: CKPathView {
         self.end = end
     }
 
-    func path(in context: RenderContext, style: CKStyle) -> CGPath {
-        let startPoint: CGPoint
-        let endPoint: CGPoint
+}
 
-        if let start = start, let end = end {
-            startPoint = start
-            endPoint = end
-        } else {
-            let center = style.position ?? .zero
-            let half = (length ?? 0) * 0.5
-            let resolvedDirection = direction ?? .horizontal
+extension CKLine: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        CKRenderNode(
+            geometry: .path { _ in
+                let startPoint: CGPoint
+                let endPoint: CGPoint
 
-            switch resolvedDirection {
-            case .horizontal:
-                startPoint = CGPoint(x: center.x - half, y: center.y)
-                endPoint = CGPoint(x: center.x + half, y: center.y)
-            case .vertical:
-                startPoint = CGPoint(x: center.x, y: center.y - half)
-                endPoint = CGPoint(x: center.x, y: center.y + half)
+                if let start = start, let end = end {
+                    startPoint = start
+                    endPoint = end
+                } else {
+                    let half = (length ?? 0) * 0.5
+                    let resolvedDirection = direction ?? .horizontal
+
+                    switch resolvedDirection {
+                    case .horizontal:
+                        startPoint = CGPoint(x: -half, y: 0)
+                        endPoint = CGPoint(x: half, y: 0)
+                    case .vertical:
+                        startPoint = CGPoint(x: 0, y: -half)
+                        endPoint = CGPoint(x: 0, y: half)
+                    }
+                }
+
+                let path = CGMutablePath()
+                path.move(to: startPoint)
+                path.addLine(to: endPoint)
+                return path
             }
-        }
-
-        let path = CGMutablePath()
-        path.move(to: startPoint)
-        path.addLine(to: endPoint)
-        return path
+        )
     }
 }

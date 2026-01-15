@@ -27,7 +27,7 @@ final class DefaultCKRenderer: CKRenderer {
         CKContextStorage.lastEnvironment = environment
         CKContextStorage.stateStore = stateStore
         CKContextStorage.resetViewScope()
-        let batches = buildBatches(from: views, context: context)
+        let batches = buildBatches(from: views, context: context, environment: environment)
         CKContextStorage.current = nil
         CKContextStorage.environment = nil
 
@@ -55,12 +55,14 @@ final class DefaultCKRenderer: CKRenderer {
 
     private func buildBatches(
         from views: [any CKView],
-        context: RenderContext
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
     ) -> [PrimitiveBatch] {
         var batches: [PrimitiveBatch] = []
 
         for (index, view) in views.enumerated() {
-            let primitives = context.render(view, index: index)
+            guard let node = context.node(view, index: index) else { continue }
+            let primitives = CKNodeEvaluator.render(node, context: context, environment: environment)
             let forceBatchBreak = view is ToolPreviewView
             var isFirstPrimitive = true
             for primitive in primitives {

@@ -58,25 +58,17 @@ struct DrawingSheetRL: CKView {
     }
 
     private func backgroundLayer(metrics: DrawingMetrics, backgroundColor: CGColor) -> some CKView {
-        CKGroup(primitives: backgroundPrimitives(metrics: metrics, backgroundColor: backgroundColor))
-    }
+        let rulerBGPath = CGMutablePath()
+        rulerBGPath.addRect(metrics.outerBounds)
+        rulerBGPath.addRect(metrics.innerBounds)
 
-    private func backgroundPrimitives(
-        metrics: DrawingMetrics,
-        backgroundColor: CGColor
-    ) -> [DrawingPrimitive] {
-            var primitives: [DrawingPrimitive] = []
-            let rulerBGPath = CGMutablePath()
-            rulerBGPath.addRect(metrics.outerBounds)
-            rulerBGPath.addRect(metrics.innerBounds)
-            primitives.append(.fill(path: rulerBGPath, color: backgroundColor, rule: .evenOdd))
-
+        return CKGroup {
+            CKPath(path: rulerBGPath).fill(backgroundColor, rule: .evenOdd)
             if metrics.titleBlockFrame.height > 0 {
                 let titlePath = CGPath(rect: metrics.titleBlockFrame, transform: nil)
-                primitives.append(.fill(path: titlePath, color: backgroundColor))
+                CKPath(path: titlePath).fill(backgroundColor)
             }
-
-            return primitives
+        }
     }
 
     private func safeFont(_ size: CGFloat, _ weight: NSFont.Weight) -> NSFont {

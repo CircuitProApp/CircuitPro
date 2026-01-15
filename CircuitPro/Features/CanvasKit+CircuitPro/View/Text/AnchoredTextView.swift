@@ -40,17 +40,14 @@ struct AnchoredTextView: CKView {
             font: resolved.font.nsFont,
             anchor: resolved.anchor
         )
-        let hitPath = CKText.hitRectPath(
-            localBounds: localBounds,
-            position: resolved.relativePosition,
-            rotation: resolved.cardinalRotation.radians
-        )
+        let hitPath = CGPath(rect: localBounds, transform: nil)
 
         if resolved.isVisible {
             CKGroup {
                 CKText(display, font: resolved.font.nsFont, anchor: resolved.anchor)
                     .position(resolved.relativePosition)
                     .rotation(resolved.cardinalRotation.radians)
+                    .fill(textColor)
                     .halo((showHalo ? textColor.copy(alpha: 0.3) : .clear) ?? .clear, width: 5)
                     .hoverable(id)
                     .selectable(id)

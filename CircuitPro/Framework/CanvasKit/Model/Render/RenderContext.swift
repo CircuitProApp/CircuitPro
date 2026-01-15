@@ -59,17 +59,17 @@ struct RenderContext {
 }
 
 extension RenderContext {
-    func render<V: CKView>(_ view: V, index: Int = 0) -> [DrawingPrimitive] {
+    func node<V: CKView>(_ view: V, index: Int = 0) -> CKRenderNode? {
         CKContextStorage.withViewScope(index: index) {
             CKStateRegistry.prepare(view)
-            return view._render(in: self)
+            return view.makeNode(in: self)
         }
     }
 
-    func paths<V: CKView>(_ view: V, index: Int = 0) -> [CGPath] {
+    func node(_ view: any CKView, index: Int = 0) -> CKRenderNode? {
         CKContextStorage.withViewScope(index: index) {
             CKStateRegistry.prepare(view)
-            return view._paths(in: self)
+            return view.makeNode(in: self)
         }
     }
 }

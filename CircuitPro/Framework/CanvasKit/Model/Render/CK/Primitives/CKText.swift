@@ -2,7 +2,7 @@ import AppKit
 import CoreText
 import SwiftUI
 
-struct CKText: CKPathView {
+struct CKText: CKView {
     let content: String
     let font: NSFont
     let anchor: TextAnchor
@@ -11,12 +11,6 @@ struct CKText: CKPathView {
         self.content = content
         self.font = font
         self.anchor = anchor
-    }
-
-    var defaultStyle: CKStyle {
-        var style = CKStyle()
-        style.fillColor = NSColor.labelColor.cgColor
-        return style
     }
 
     static func path(for string: String, font: NSFont) -> CGPath {
@@ -166,18 +160,24 @@ struct CKText: CKPathView {
         return positioned
     }
 
-    func path(in context: RenderContext, style: CKStyle) -> CGPath {
-        let textPath = CKText.path(for: content, font: font)
-        guard !textPath.isEmpty else { return CGMutablePath() }
-        let bounds = CKText.bounds(for: content, font: font)
-        let position = style.position ?? .zero
-        let anchorPoint = anchor.point(in: bounds)
-        let transform = CGAffineTransform(
-            translationX: position.x - anchorPoint.x,
-            y: position.y - anchorPoint.y
+}
+
+extension CKText: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        CKRenderNode(
+            geometry: .path { _ in
+                let textPath = CKText.path(for: content, font: font)
+                guard !textPath.isEmpty else { return CGMutablePath() }
+                let bounds = CKText.bounds(for: content, font: font)
+                let anchorPoint = anchor.point(in: bounds)
+                let transform = CGAffineTransform(
+                    translationX: -anchorPoint.x,
+                    y: -anchorPoint.y
+                )
+                let finalPath = CGMutablePath()
+                finalPath.addPath(textPath, transform: transform)
+                return finalPath
+            }
         )
-        let finalPath = CGMutablePath()
-        finalPath.addPath(textPath, transform: transform)
-        return finalPath
     }
 }

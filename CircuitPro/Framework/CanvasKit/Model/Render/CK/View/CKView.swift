@@ -3,12 +3,15 @@ import AppKit
 protocol CKView {
     associatedtype Body: CKView
     @CKViewBuilder var body: Body { get }
-    func _render(in context: RenderContext) -> [DrawingPrimitive]
-    func _paths(in context: RenderContext) -> [CGPath]
+    func makeNode(in context: RenderContext) -> CKRenderNode?
 }
 
-protocol CKHitTestable {
-    func hitTestPath(in context: RenderContext) -> CGPath
+protocol CKNodeView: CKView {}
+
+extension CKNodeView {
+    var body: CKGroup {
+        .empty
+    }
 }
 
 struct CKInteractionView<Content: CKView>: CKView {
@@ -50,95 +53,29 @@ struct CKInteractionView<Content: CKView>: CKView {
         self.dragDeltaHandler = dragDeltaHandler
     }
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let childContext = context.withHitTestDepth(context.hitTestDepth + 1)
-        let primitives = childContext.render(content, index: 0)
-        var targetPath = contentShape ?? hitPath(in: context, primitives: primitives)
-        if !context.hitTestTransform.isIdentity {
-            var transform = context.hitTestTransform
-            targetPath = targetPath.copy(using: &transform) ?? targetPath
+}
+
+extension CKInteractionView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
         }
-        if targetPath.isEmpty {
-            return primitives
-        }
-
-        let environment = CKContextStorage.environment ?? CanvasEnvironmentValues()
-        let hoverHandler = environment.onHoverItem
-        let tapHandler = environment.onTapItem
-        let dragHandler = environment.onDragItem
-
-        let onHover: ((Bool) -> Void)? = isHoverable ? { isInside in
-            hoverHandler?(targetID, isInside)
-        } : nil
-
-        let onTap: (() -> Void)? = isSelectable ? {
-            tapHandler?(targetID)
-        } : nil
-
-        let onDrag: ((CanvasDragPhase, CanvasDragSession) -> Void)? = (isDraggable || dragPhaseHandler != nil || dragDeltaHandler != nil) ? { phase, session in
-            if isDraggable {
-                dragHandler?(targetID, phase)
-            }
-            dragPhaseHandler?(phase, session)
-            if case let .changed(delta) = phase {
-                dragDeltaHandler?(delta, session)
-            }
-        } : nil
-
-        if onHover != nil || onTap != nil || onDrag != nil {
-            context.hitTargets.add(
-                CanvasHitTarget(
-                    id: targetID,
-                    path: targetPath,
-                    priority: hitTestPriority,
-                    depth: context.hitTestDepth,
-                    onHover: onHover,
-                    onTap: onTap,
-                    onDrag: onDrag
-                )
-            )
-        }
-
-        return primitives
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        context.paths(content, index: 0)
-    }
-
-    private func hitPath(in context: RenderContext, primitives: [DrawingPrimitive]) -> CGPath {
-        if let hitTestable = content as? any CKHitTestable {
-            let path = hitTestable.hitTestPath(in: context)
-            if !path.isEmpty {
-                return path
-            }
-        }
-        if primitives.isEmpty {
-            let paths = context.paths(content, index: 0).filter { !$0.isEmpty }
-            if !paths.isEmpty {
-                let merged = CGMutablePath()
-                for path in paths {
-                    merged.addPath(path)
-                }
-                return merged
-            }
-        }
-        let union = primitivesBoundingBox(primitives)
-        guard !union.isNull, !union.isEmpty else { return CGMutablePath() }
-        return CGPath(rect: union, transform: nil)
-    }
-
-    private func primitivesBoundingBox(_ primitives: [DrawingPrimitive]) -> CGRect {
-        var rect = CGRect.null
-        for primitive in primitives {
-            let box = primitive.boundingBox
-            if rect.isNull {
-                rect = box
-            } else {
-                rect = rect.union(box)
-            }
-        }
-        return rect
+        let interaction = CKInteractionState(
+            id: targetID,
+            hoverable: isHoverable,
+            selectable: isSelectable,
+            draggable: isDraggable,
+            contentShape: contentShape,
+            hitTestPriority: hitTestPriority,
+            onDragPhase: dragPhaseHandler,
+            onDragDelta: dragDeltaHandler,
+            onHover: nil,
+            onTap: nil,
+            onDrag: nil
+        )
+        var node = child
+        node.interaction = interaction
+        return node
     }
 }
 
@@ -151,24 +88,25 @@ struct CKCanvasDragView<Content: CKView>: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        context.canvasDragHandlers.add(dragHandler)
-        return context.render(content, index: 0)
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        context.paths(content, index: 0)
+extension CKCanvasDragView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
+        }
+        return CKRenderNode(
+            geometry: .group,
+            children: [child],
+            renderChildren: true,
+            canvasDragHandler: dragHandler
+        )
     }
 }
 
 extension CKView {
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        body._render(in: context)
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        _render(in: context).compactMap { $0.path }
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        body.makeNode(in: context)
     }
 }
 
@@ -190,17 +128,17 @@ struct CKComposite: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        []
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        let paths = context.paths(content, index: 0)
-        guard !paths.isEmpty else { return [] }
-        let merged = CGMutablePath()
-        paths.forEach { merged.addPath($0) }
-        return [merged]
+extension CKComposite: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let node = content.makeNode(in: context) else {
+            return nil
+        }
+        var compositeNode = node
+        compositeNode.mergeChildPaths = true
+        compositeNode.renderChildren = false
+        return compositeNode
     }
 }
 
@@ -220,61 +158,22 @@ struct CKTransformView<Content: CKView>: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        var transform = CGAffineTransform.identity
+extension CKTransformView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
+        }
+        var node = child
         if let position {
-            transform = CGAffineTransform(translationX: position.x, y: position.y)
+            node.transformState.position.x += position.x
+            node.transformState.position.y += position.y
         }
         if rotation != 0 {
-            transform = transform.rotated(by: rotation)
+            node.transformState.rotation += rotation
         }
-        let childContext = context
-            .withHitTestDepth(context.hitTestDepth + 1)
-            .withHitTestTransform(transform)
-        return applyTransforms(to: childContext.render(content, index: 0))
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        applyTransforms(to: context.paths(content, index: 0))
-    }
-
-    private func applyTransforms(to primitives: [DrawingPrimitive]) -> [DrawingPrimitive] {
-        var transformed = primitives
-        if let position {
-            var translation = CGAffineTransform(translationX: position.x, y: position.y)
-            transformed = transformed.map { $0.applying(transform: &translation) }
-        }
-        if rotation != 0 {
-            let pivot = position ?? .zero
-            var rotationTransform = CGAffineTransform(
-                translationX: pivot.x,
-                y: pivot.y
-            )
-            .rotated(by: rotation)
-            .translatedBy(x: -pivot.x, y: -pivot.y)
-            transformed = transformed.map { $0.applying(transform: &rotationTransform) }
-        }
-        return transformed
-    }
-
-    private func applyTransforms(to paths: [CGPath]) -> [CGPath] {
-        var transformed = paths
-        if let position {
-            var translation = CGAffineTransform(translationX: position.x, y: position.y)
-            transformed = transformed.map { $0.copy(using: &translation) ?? $0 }
-        }
-        if rotation != 0 {
-            let pivot = position ?? .zero
-            var rotationTransform = CGAffineTransform(
-                translationX: pivot.x,
-                y: pivot.y
-            )
-            .rotated(by: rotation)
-            .translatedBy(x: -pivot.x, y: -pivot.y)
-            transformed = transformed.map { $0.copy(using: &rotationTransform) ?? $0 }
-        }
-        return transformed
+        return node
     }
 }
 
@@ -299,47 +198,24 @@ struct CKStrokeView<Content: CKView>: CKView {
     var body: CKGroup {
         .empty
     }
-
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let base = context.render(content, index: 0)
-        let strokes = context.paths(content, index: 0)
-            .filter { !$0.isEmpty }
-            .map {
-                DrawingPrimitive.stroke(
-                    path: $0,
-                    color: color,
-                    lineWidth: width,
-                    lineCap: lineCap,
-                    lineJoin: lineJoin,
-                    miterLimit: miterLimit,
-                    lineDash: lineDash,
-                    clipPath: clipPath
-                )
-            }
-        return base + strokes
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        context.paths(content, index: 0)
-    }
 }
 
-extension CKStrokeView: CKHitTestable {
-    func hitTestPath(in context: RenderContext) -> CGPath {
-        let paths = context.paths(content, index: 0).filter { !$0.isEmpty }
-        guard !paths.isEmpty else { return CGMutablePath() }
-        let merged = CGMutablePath()
-        let strokeWidth = max(width, 1.0)
-        for path in paths {
-            let stroked = path.copy(
-                strokingWithWidth: strokeWidth,
-                lineCap: lineCap.cgLineCap,
-                lineJoin: lineJoin.cgLineJoin,
-                miterLimit: miterLimit
-            )
-            merged.addPath(stroked)
+extension CKStrokeView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
         }
-        return merged
+        let stroke = CKStrokeStyle(
+            color: color,
+            width: width,
+            lineCap: lineCap,
+            lineJoin: lineJoin,
+            miterLimit: miterLimit,
+            lineDash: lineDash
+        )
+        var node = child
+        node.style.stroke = stroke
+        return node
     }
 }
 
@@ -354,16 +230,18 @@ struct CKFillView<Content: CKView>: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let fills = context.paths(content, index: 0)
-            .filter { !$0.isEmpty }
-            .map { DrawingPrimitive.fill(path: $0, color: color, rule: rule, clipPath: clipPath) }
-        return fills
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        context.paths(content, index: 0)
+extension CKFillView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
+        }
+        let fill = CKFillStyle(color: color, rule: rule)
+        var node = child
+        node.style.fill = fill
+        node.renderChildren = false
+        return node
     }
 }
 
@@ -377,28 +255,16 @@ struct CKHaloView<Content: CKView>: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let base = context.render(content, index: 0)
-        let halos = context.paths(content, index: 0)
-            .filter { !$0.isEmpty }
-            .map {
-                DrawingPrimitive.stroke(
-                    path: $0,
-                    color: color,
-                    lineWidth: width,
-                    lineCap: .round,
-                    lineJoin: .round,
-                    miterLimit: 10,
-                    lineDash: nil,
-                    clipPath: nil
-                )
-            }
-        return halos + base
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        context.paths(content, index: 0)
+extension CKHaloView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
+        }
+        var node = child
+        node.style.halos.append(CKHalo(color: color, width: width))
+        return node
     }
 }
 
@@ -411,13 +277,16 @@ struct CKClipView<Content: CKView>: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        context.render(content, index: 0).map { $0.withClip(clipPath) }
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        context.paths(content, index: 0)
+extension CKClipView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
+        }
+        var node = child
+        node.style.clipPath = clipPath
+        return node
     }
 }
 
@@ -429,13 +298,16 @@ struct CKNoPathView<Content: CKView>: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        context.render(content, index: 0)
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        []
+extension CKNoPathView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
+        }
+        var node = child
+        node.excludesFromHitPath = true
+        return node
     }
 }
 
@@ -448,35 +320,16 @@ struct CKColorOverrideView<Content: CKView>: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        context.render(content, index: 0).map { primitive in
-            switch primitive {
-            case let .fill(path, existingColor, rule, clipPath):
-                let resolvedColor = shouldOverride(color: existingColor) ? color.cgColor : existingColor
-                return .fill(path: path, color: resolvedColor, rule: rule, clipPath: clipPath)
-            case let .stroke(path, existingColor, lineWidth, lineCap, lineJoin, miterLimit, lineDash, clipPath):
-                let resolvedColor = shouldOverride(color: existingColor) ? color.cgColor : existingColor
-                return .stroke(
-                    path: path,
-                    color: resolvedColor,
-                    lineWidth: lineWidth,
-                    lineCap: lineCap,
-                    lineJoin: lineJoin,
-                    miterLimit: miterLimit,
-                    lineDash: lineDash,
-                    clipPath: clipPath
-                )
-            }
+extension CKColorOverrideView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
         }
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        context.paths(content, index: 0)
-    }
-
-    private func shouldOverride(color: CGColor) -> Bool {
-        color.alpha > 0.001
+        var node = child
+        node.style.colorOverride = color.cgColor
+        return node
     }
 }
 
@@ -490,21 +343,20 @@ struct CKCompositeView<Content: CKView, Composite: CKView>: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        context.render(content, index: 0)
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        let basePaths = context.paths(content, index: 0)
-        let compositePaths = context.paths(composite, index: 1)
-        if basePaths.isEmpty && compositePaths.isEmpty {
-            return []
-        }
-        let merged = CGMutablePath()
-        basePaths.forEach { merged.addPath($0) }
-        compositePaths.forEach { merged.addPath($0) }
-        return [merged]
+extension CKCompositeView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let base = content.makeNode(in: context),
+              let overlay = composite.makeNode(in: context)
+        else { return nil }
+        let node = CKRenderNode(
+            geometry: .group,
+            children: [base, overlay],
+            renderChildren: false,
+            mergeChildPaths: true
+        )
+        return node
     }
 }
 
@@ -547,57 +399,29 @@ struct CKHitTargetView<Content: CKView>: CKView {
         self.hitTestPriority = hitTestPriority
     }
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let childContext = context.withHitTestDepth(context.hitTestDepth + 1)
-        let primitives = childContext.render(content, index: 0)
-        var targetPath = contentShape ?? hitPath(in: context, primitives: primitives)
-        if !context.hitTestTransform.isIdentity {
-            var transform = context.hitTestTransform
-            targetPath = targetPath.copy(using: &transform) ?? targetPath
-        }
-        if !targetPath.isEmpty {
-            context.hitTargets.add(
-                CanvasHitTarget(
-                    id: targetID,
-                    path: targetPath,
-                    priority: hitTestPriority,
-                    depth: context.hitTestDepth,
-                    onHover: onHover,
-                    onTap: onTap,
-                    onDrag: onDrag
-                )
-            )
-        }
-        return primitives
-    }
+}
 
-    func _paths(in context: RenderContext) -> [CGPath] {
-        context.paths(content, index: 0)
-    }
-
-    private func hitPath(in context: RenderContext, primitives: [DrawingPrimitive]) -> CGPath {
-        if let hitTestable = content as? any CKHitTestable {
-            let path = hitTestable.hitTestPath(in: context)
-            if !path.isEmpty {
-                return path
-            }
+extension CKHitTargetView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
         }
-        let union = primitivesBoundingBox(primitives)
-        guard !union.isNull, !union.isEmpty else { return CGMutablePath() }
-        return CGPath(rect: union, transform: nil)
-    }
-
-    private func primitivesBoundingBox(_ primitives: [DrawingPrimitive]) -> CGRect {
-        var rect = CGRect.null
-        for primitive in primitives {
-            let box = primitive.boundingBox
-            if rect.isNull {
-                rect = box
-            } else {
-                rect = rect.union(box)
-            }
-        }
-        return rect
+        let interaction = CKInteractionState(
+            id: targetID,
+            hoverable: onHover != nil,
+            selectable: onTap != nil,
+            draggable: onDrag != nil,
+            contentShape: contentShape,
+            hitTestPriority: hitTestPriority,
+            onDragPhase: nil,
+            onDragDelta: nil,
+            onHover: onHover,
+            onTap: onTap,
+            onDrag: onDrag
+        )
+        var node = child
+        node.interaction = interaction
+        return node
     }
 }
 
@@ -841,28 +665,6 @@ extension CKView {
             onDrag: action,
             targetID: id
         )
-    }
-}
-
-extension CKPathView {
-    func hitTestPath(in context: RenderContext) -> CGPath {
-        let path = path(in: context, style: defaultStyle)
-        guard !path.isEmpty else { return CGMutablePath() }
-        let padding = 4.0 / max(context.magnification, 0.001)
-        let strokeWidth = max(defaultStyle.strokeWidth, 1.0) + padding
-        let stroked = path.copy(
-            strokingWithWidth: strokeWidth,
-            lineCap: defaultStyle.lineCap.cgLineCap,
-            lineJoin: defaultStyle.lineJoin.cgLineJoin,
-            miterLimit: defaultStyle.miterLimit
-        )
-        if defaultStyle.fillColor != nil {
-            let merged = CGMutablePath()
-            merged.addPath(path)
-            merged.addPath(stroked)
-            return merged
-        }
-        return stroked
     }
 }
 
@@ -1144,74 +946,21 @@ private struct CKOpacityView: CKView {
     var body: CKGroup {
         .empty
     }
+}
 
-    func _render(in context: RenderContext) -> [DrawingPrimitive] {
-        let value = opacity.clamped(to: 0...1)
-        return context.render(content, index: 0).map { $0.applyingOpacity(value) }
-    }
-
-    func _paths(in context: RenderContext) -> [CGPath] {
-        context.paths(content, index: 0)
+extension CKOpacityView: CKNodeView {
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard let child = content.makeNode(in: context) else {
+            return nil
+        }
+        var node = child
+        node.style.opacity *= opacity
+        return node
     }
 }
 
 extension CKView {
     func opacity(_ value: CGFloat) -> some CKView {
         CKOpacityView(content: AnyCKView(self), opacity: value)
-    }
-}
-
-extension DrawingPrimitive {
-    func applyingOpacity(_ opacity: CGFloat) -> DrawingPrimitive {
-        switch self {
-        case let .fill(path, color, rule, clipPath):
-            return .fill(
-                path: path,
-                color: color.applyingOpacity(opacity),
-                rule: rule,
-                clipPath: clipPath
-            )
-        case let .stroke(path, color, lineWidth, lineCap, lineJoin, miterLimit, lineDash, clipPath):
-            return .stroke(
-                path: path,
-                color: color.applyingOpacity(opacity),
-                lineWidth: lineWidth,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                miterLimit: miterLimit,
-                lineDash: lineDash,
-                clipPath: clipPath
-            )
-        }
-    }
-}
-
-private extension CAShapeLayerLineCap {
-    var cgLineCap: CGLineCap {
-        switch self {
-        case .butt:
-            return .butt
-        case .round:
-            return .round
-        case .square:
-            return .square
-        default:
-            return .butt
-        }
-    }
-}
-
-private extension CAShapeLayerLineJoin {
-    var cgLineJoin: CGLineJoin {
-        switch self {
-        case .miter:
-            return .miter
-        case .round:
-            return .round
-        case .bevel:
-            return .bevel
-        default:
-            return .miter
-        }
     }
 }

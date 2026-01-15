@@ -29,8 +29,7 @@ struct MarqueeView: CKView {
     private func marqueeRect(_ rect: CGRect) -> some CKView {
         let dashPattern: [CGFloat] = [4 * strokeWidth, 2 * strokeWidth]
 
-        return CKRectangle()
-            .frame(width: rect.width, height: rect.height)
+        return CKRectangle(width: rect.width, height: rect.height)
             .position(x: rect.midX, y: rect.midY)
             .fill(marqueeColor.copy(alpha: 0.1) ?? .clear)
             .stroke(marqueeColor, width: strokeWidth)
