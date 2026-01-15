@@ -104,25 +104,7 @@ final class CanvasInputHandler {
         let processedPoint = process(point: rawPoint, context: context)
         controller.environment.processedMouseLocation = processedPoint
 
-        if globalDragActive {
-            let lastRaw = globalDragLastRawPoint ?? rawPoint
-            let lastProcessed = globalDragLastProcessedPoint ?? processedPoint
-            let rawDelta = CGPoint(x: rawPoint.x - lastRaw.x, y: rawPoint.y - lastRaw.y)
-            let processedDelta = CGPoint(x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
-            globalDragLastRawPoint = rawPoint
-            globalDragLastProcessedPoint = processedPoint
-            controller.canvasDragHandlers.handle(
-                .changed(CanvasGlobalDragEvent(
-                    event: event,
-                    rawLocation: rawPoint,
-                    processedLocation: processedPoint,
-                    rawDelta: rawDelta,
-                    processedDelta: processedDelta
-                )),
-                context: context,
-                controller: controller
-            )
-        }
+        var handledDrag = false
 
         if let target = dragTarget, let onDrag = target.onDrag {
             let session = dragSessions[target.id] ?? {
@@ -142,8 +124,7 @@ final class CanvasInputHandler {
                 rawLocation: rawPoint,
                 processedLocation: processedPoint
             )), session)
-            host.performLayerUpdate()
-            return
+            handledDrag = true
         }
 
         if let target = pendingHitTarget, let onDrag = target.onDrag {
@@ -170,9 +151,29 @@ final class CanvasInputHandler {
                     rawLocation: rawPoint,
                     processedLocation: processedPoint
                 )), session)
-                host.performLayerUpdate()
-                return
+                handledDrag = true
             }
+        }
+
+        if globalDragActive {
+            let lastRaw = globalDragLastRawPoint ?? rawPoint
+            let lastProcessed = globalDragLastProcessedPoint ?? processedPoint
+            let rawDelta = CGPoint(x: rawPoint.x - lastRaw.x, y: rawPoint.y - lastRaw.y)
+            let processedDelta = CGPoint(x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
+            globalDragLastRawPoint = rawPoint
+            globalDragLastProcessedPoint = processedPoint
+            let updatedContext = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
+            controller.canvasDragHandlers.handle(
+                .changed(CanvasGlobalDragEvent(
+                    event: event,
+                    rawLocation: rawPoint,
+                    processedLocation: processedPoint,
+                    rawDelta: rawDelta,
+                    processedDelta: processedDelta
+                )),
+                context: updatedContext,
+                controller: controller
+            )
         }
 
         host.performLayerUpdate()
@@ -185,27 +186,6 @@ final class CanvasInputHandler {
         let processedPoint = process(point: rawPoint, context: context)
         controller.environment.processedMouseLocation = processedPoint
 
-        if globalDragActive {
-            let lastRaw = globalDragLastRawPoint ?? rawPoint
-            let lastProcessed = globalDragLastProcessedPoint ?? processedPoint
-            let rawDelta = CGPoint(x: rawPoint.x - lastRaw.x, y: rawPoint.y - lastRaw.y)
-            let processedDelta = CGPoint(x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
-            controller.canvasDragHandlers.handle(
-                .ended(CanvasGlobalDragEvent(
-                    event: event,
-                    rawLocation: rawPoint,
-                    processedLocation: processedPoint,
-                    rawDelta: rawDelta,
-                    processedDelta: processedDelta
-                )),
-                context: context,
-                controller: controller
-            )
-            globalDragActive = false
-            globalDragLastRawPoint = nil
-            globalDragLastProcessedPoint = nil
-        }
-
         if let target = dragTarget, let onDrag = target.onDrag {
             if let session = dragSessions[target.id] {
                 onDrag(.ended, session)
@@ -216,8 +196,6 @@ final class CanvasInputHandler {
             dragTarget = nil
             dragLastRawPoint = nil
             dragLastProcessedPoint = nil
-            host.performLayerUpdate()
-            return
         }
 
         if let target = pendingHitTarget {
@@ -227,8 +205,29 @@ final class CanvasInputHandler {
             if let onTap = target.onTap {
                 onTap()
                 host.performLayerUpdate()
-                return
             }
+        }
+
+        if globalDragActive {
+            let lastRaw = globalDragLastRawPoint ?? rawPoint
+            let lastProcessed = globalDragLastProcessedPoint ?? processedPoint
+            let rawDelta = CGPoint(x: rawPoint.x - lastRaw.x, y: rawPoint.y - lastRaw.y)
+            let processedDelta = CGPoint(x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
+            let updatedContext = controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
+            controller.canvasDragHandlers.handle(
+                .ended(CanvasGlobalDragEvent(
+                    event: event,
+                    rawLocation: rawPoint,
+                    processedLocation: processedPoint,
+                    rawDelta: rawDelta,
+                    processedDelta: processedDelta
+                )),
+                context: updatedContext,
+                controller: controller
+            )
+            globalDragActive = false
+            globalDragLastRawPoint = nil
+            globalDragLastProcessedPoint = nil
         }
 
         host.performLayerUpdate()

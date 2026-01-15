@@ -32,8 +32,7 @@ struct SchematicCanvasView: View {
             GridRL()
             DrawingSheetRL()
 
-            WireRL()
-            SymbolRL()
+            SchematicView()
             MarqueeView()
             CrosshairsView()
         }

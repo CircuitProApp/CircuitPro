@@ -34,7 +34,7 @@ struct WireSandboxView: View {
             snapProvider: CircuitProSnapProvider()
         ) {
             GridRL()
-            WireRL()
+            WireView()
             ConnectionDebugRL()
             CrosshairsView()
         }

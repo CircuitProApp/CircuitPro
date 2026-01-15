@@ -4,6 +4,8 @@ struct SymbolView: CKView {
     @CKContext var context
     @CKEnvironment var environment
     let component: ComponentInstance
+    @CKState private var dragStartPosition: CGPoint?
+    @CKState private var dragStartPointer: CGPoint?
 
     var showHalo: Bool {
         context.highlightedItemIDs.contains(component.id) ||
@@ -30,9 +32,27 @@ struct SymbolView: CKView {
                 .halo(showHalo ? bodyColor.haloOpacity() : .clear, width: 5)
                 .hoverable(component.id)
                 .selectable(component.id)
-                .onDragGesture { delta in
-                    context.update(component) { component in
-                        component.translate(by: CGVector(dx: delta.processed.x, dy: delta.processed.y))
+                .onDragGesture { phase in
+                    switch phase {
+                    case .began:
+                        dragStartPosition = symbol.position
+                        dragStartPointer = environment.processedMouseLocation ?? context.mouseLocation
+                    case .changed(let delta):
+                        guard let startPosition = dragStartPosition,
+                              let startPointer = dragStartPointer
+                        else { return }
+                        let pointer = delta.processedLocation
+                        let dx = pointer.x - startPointer.x
+                        let dy = pointer.y - startPointer.y
+                        context.update(component) { component in
+                            component.symbolInstance.position = CGPoint(
+                                x: startPosition.x + dx,
+                                y: startPosition.y + dy
+                            )
+                        }
+                    case .ended:
+                        dragStartPosition = nil
+                        dragStartPointer = nil
                     }
                 }
             }
