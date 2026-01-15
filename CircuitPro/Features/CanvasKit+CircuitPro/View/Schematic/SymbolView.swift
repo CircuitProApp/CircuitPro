@@ -39,13 +39,23 @@ struct SymbolView: CKView {
             for text in symbol.resolvedItems where text.isVisible {
                 AnchoredTextView(
                     text: text,
-                    id: text.id,
+                    id: CanvasTextID.makeID(
+                        for: text.source,
+                        ownerID: component.id,
+                        fallback: text.id
+                    ),
                     isParentHighlighted: showHalo,
                     display: { resolved in
                         component.displayString(for: resolved, target: .symbol)
                     },
                     onUpdate: { updated in
-                        component.apply(updated, for: .symbol)
+                        context.update(component) { component in
+                            var overrides = component.symbolInstance.textOverrides
+                            var instances = component.symbolInstance.textInstances
+                            updated.apply(toOverrides: &overrides, andInstances: &instances)
+                            component.symbolInstance.textOverrides = overrides
+                            component.symbolInstance.textInstances = instances
+                        }
                     }
                 )
                 .excludeFromPaths()

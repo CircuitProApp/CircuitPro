@@ -102,6 +102,10 @@ struct CKInteractionView<Content: CKView>: CKView {
         return primitives
     }
 
+    func _paths(in context: RenderContext) -> [CGPath] {
+        context.paths(content, index: 0)
+    }
+
     private func hitPath(in context: RenderContext, primitives: [DrawingPrimitive]) -> CGPath {
         if let hitTestable = content as? any CKHitTestable {
             let path = hitTestable.hitTestPath(in: context)
@@ -151,6 +155,10 @@ struct CKCanvasDragView<Content: CKView>: CKView {
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
         context.canvasDragHandlers.add(dragHandler)
         return context.render(content, index: 0)
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        context.paths(content, index: 0)
     }
 }
 
@@ -310,6 +318,29 @@ struct CKStrokeView<Content: CKView>: CKView {
             }
         return base + strokes
     }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        context.paths(content, index: 0)
+    }
+}
+
+extension CKStrokeView: CKHitTestable {
+    func hitTestPath(in context: RenderContext) -> CGPath {
+        let paths = context.paths(content, index: 0).filter { !$0.isEmpty }
+        guard !paths.isEmpty else { return CGMutablePath() }
+        let merged = CGMutablePath()
+        let strokeWidth = max(width, 1.0)
+        for path in paths {
+            let stroked = path.copy(
+                strokingWithWidth: strokeWidth,
+                lineCap: lineCap.cgLineCap,
+                lineJoin: lineJoin.cgLineJoin,
+                miterLimit: miterLimit
+            )
+            merged.addPath(stroked)
+        }
+        return merged
+    }
 }
 
 struct CKFillView<Content: CKView>: CKView {
@@ -329,6 +360,10 @@ struct CKFillView<Content: CKView>: CKView {
             .filter { !$0.isEmpty }
             .map { DrawingPrimitive.fill(path: $0, color: color, rule: rule, clipPath: clipPath) }
         return fills
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        context.paths(content, index: 0)
     }
 }
 
@@ -361,6 +396,10 @@ struct CKHaloView<Content: CKView>: CKView {
             }
         return halos + base
     }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        context.paths(content, index: 0)
+    }
 }
 
 struct CKClipView<Content: CKView>: CKView {
@@ -375,6 +414,10 @@ struct CKClipView<Content: CKView>: CKView {
 
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
         context.render(content, index: 0).map { $0.withClip(clipPath) }
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        context.paths(content, index: 0)
     }
 }
 
@@ -526,6 +569,10 @@ struct CKHitTargetView<Content: CKView>: CKView {
             )
         }
         return primitives
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        context.paths(content, index: 0)
     }
 
     private func hitPath(in context: RenderContext, primitives: [DrawingPrimitive]) -> CGPath {
@@ -1101,6 +1148,10 @@ private struct CKOpacityView: CKView {
     func _render(in context: RenderContext) -> [DrawingPrimitive] {
         let value = opacity.clamped(to: 0...1)
         return context.render(content, index: 0).map { $0.applyingOpacity(value) }
+    }
+
+    func _paths(in context: RenderContext) -> [CGPath] {
+        context.paths(content, index: 0)
     }
 }
 

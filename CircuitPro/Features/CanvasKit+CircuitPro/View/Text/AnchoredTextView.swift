@@ -8,6 +8,8 @@ struct AnchoredTextView: CKView {
     let isParentHighlighted: Bool
     let display: (CircuitText.Resolved) -> String
     let onUpdate: (CircuitText.Resolved) -> Void
+    @CKState private var dragStartPosition: CGPoint?
+    @CKState private var dragStartPointer: CGPoint?
 
 
     var textColor: CGColor {
@@ -52,11 +54,28 @@ struct AnchoredTextView: CKView {
                     .halo((showHalo ? textColor.copy(alpha: 0.3) : .clear) ?? .clear, width: 5)
                     .hoverable(id)
                     .selectable(id)
-                    .onDragGesture { delta in
-                        var updated = resolved
-                        updated.relativePosition.x += delta.processed.x
-                        updated.relativePosition.y += delta.processed.y
-                        onUpdate(updated)
+                    .onDragGesture { phase in
+                        switch phase {
+                        case .began:
+                            dragStartPosition = resolved.relativePosition
+                            dragStartPointer = environment.processedMouseLocation ?? context.mouseLocation
+                        case .changed(let delta):
+                            guard let startPosition = dragStartPosition,
+                                  let startPointer = dragStartPointer
+                            else { return }
+                            let pointer = delta.processedLocation
+                            let dx = pointer.x - startPointer.x
+                            let dy = pointer.y - startPointer.y
+                            var updated = resolved
+                            updated.relativePosition = CGPoint(
+                                x: startPosition.x + dx,
+                                y: startPosition.y + dy
+                            )
+                            onUpdate(updated)
+                        case .ended:
+                            dragStartPosition = nil
+                            dragStartPointer = nil
+                        }
                     }
                     .contentShape(hitPath)
 

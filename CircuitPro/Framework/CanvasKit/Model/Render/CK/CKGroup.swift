@@ -36,13 +36,25 @@ struct CKGroup: CKView {
 
 extension CKGroup: CKHitTestable {
     func hitTestPath(in context: RenderContext) -> CGPath {
-        let paths = _paths(in: context).filter { !$0.isEmpty }
-        guard !paths.isEmpty else { return CGMutablePath() }
         let merged = CGMutablePath()
-        for path in paths {
-            merged.addPath(path)
+        for (index, child) in children.enumerated() {
+            let path = CKContextStorage.withViewScope(index: index) {
+                if let hitTestPath = child.hitTestPath(in: context), !hitTestPath.isEmpty {
+                    return hitTestPath
+                }
+                let paths = child._paths(in: context).filter { !$0.isEmpty }
+                guard !paths.isEmpty else { return CGMutablePath() }
+                let combined = CGMutablePath()
+                for path in paths {
+                    combined.addPath(path)
+                }
+                return combined
+            }
+            if !path.isEmpty {
+                merged.addPath(path)
+            }
         }
-        return merged
+        return merged.isEmpty ? CGMutablePath() : merged
     }
 }
 

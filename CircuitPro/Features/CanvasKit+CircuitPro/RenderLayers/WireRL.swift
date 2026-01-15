@@ -4,7 +4,11 @@ struct WireRL: CKView {
     @CKContext var context
     @CKEnvironment var environment
 
-     @CKViewBuilder var body: some CKView {
+    var wireColor: CKColor {
+        CKColor(environment.schematicTheme.wireColor)
+    }
+
+    var body: some CKView {
         if let engine = environment.connectionEngine {
             let routingContext = ConnectionRoutingContext { point in
                 context.snapProvider.snap(point: point, context: context, environment: environment)
@@ -14,34 +18,18 @@ struct WireRL: CKView {
                 links: context.connectionLinks,
                 context: routingContext
             )
-
-            let strokeColor = environment.schematicTheme.wireColor
-            let haloWidth: CGFloat = 6.0
-            let lineWidth: CGFloat = 1.0
-
-            let linkIDs = Set(context.connectionLinks.map { $0.id })
-            let selectedLinkIDs = linkIDs.intersection(context.highlightedItemIDs)
-
+            let activeLinkIDs = context.selectedItemIDs
+                .union(context.highlightedItemIDs)
             CKGroup {
-                if let selectionPath = combinedPath(for: selectedLinkIDs, routes: routes),
-                   let selectionColor = NSColor(cgColor: strokeColor)?
-                    .withAlphaComponent(0.45)
-                    .cgColor {
-                    CKPath(path: selectionPath)
-                        .halo(selectionColor, width: haloWidth)
-                }
-
-                if let hoverPath = combinedPath(for: context.highlightedLinkIDs, routes: routes),
-                   let hoverColor = NSColor(cgColor: strokeColor)?
-                    .withAlphaComponent(0.35)
-                    .cgColor {
-                    CKPath(path: hoverPath)
-                        .halo(hoverColor, width: haloWidth)
-                }
-
-                if let basePath = combinedPath(for: linkIDs, routes: routes) {
-                    CKPath(path: basePath)
-                        .stroke(strokeColor, width: lineWidth)
+                for linkID in routes.keys {
+                    if let path = routePath(for: linkID, routes: routes) {
+                        let isHighlighted = activeLinkIDs.contains(linkID)
+                        CKPath(path: path)
+                            .halo(isHighlighted ? wireColor.haloOpacity() : .clear, width: 5)
+                            .stroke(wireColor, width: 1)
+                            .hoverable(linkID)
+                            .selectable(linkID)
+                    }
                 }
 
                 let dotPath = junctionDotsPath(
@@ -51,7 +39,7 @@ struct WireRL: CKView {
                 )
                 if !dotPath.isEmpty {
                     CKPath(path: dotPath)
-                        .fill(strokeColor)
+                        .fill(wireColor)
                 }
             }
         } else {
@@ -59,20 +47,17 @@ struct WireRL: CKView {
         }
     }
 
-    private func combinedPath(
-        for linkIDs: Set<UUID>,
+    private func routePath(
+        for linkID: UUID,
         routes: [UUID: any ConnectionRoute]
     ) -> CGPath? {
-        guard !linkIDs.isEmpty else { return nil }
+        guard let route = routes[linkID] as? ManhattanRoute else { return nil }
+        let points = route.points
+        guard points.count >= 2 else { return nil }
         let path = CGMutablePath()
-        for linkID in linkIDs {
-            guard let route = routes[linkID] as? ManhattanRoute else { continue }
-            let points = route.points
-            guard points.count >= 2 else { continue }
-            path.move(to: points[0])
-            for point in points.dropFirst() {
-                path.addLine(to: point)
-            }
+        path.move(to: points[0])
+        for point in points.dropFirst() {
+            path.addLine(to: point)
         }
         return path.isEmpty ? nil : path
     }

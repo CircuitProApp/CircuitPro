@@ -169,8 +169,23 @@ extension ComponentInstance {
             guard let prop = displayedProperties.first(where: { $0.id == definitionID }) else { return "" }
             var parts: [String] = []
             if options.showKey { parts.append(prop.key.label) }
-            if options.showValue { parts.append(prop.value.description) }
-            if options.showUnit, !prop.unit.description.isEmpty { parts.append(prop.unit.description) }
+            let valueText = prop.value.description
+            if options.showValue {
+                if valueText.isEmpty {
+                    if options.showUnit, !prop.unit.description.isEmpty {
+                        parts.append("?\(prop.unit.description)")
+                    } else {
+                        parts.append("?")
+                    }
+                } else {
+                    parts.append(valueText)
+                }
+            }
+            if options.showUnit, !prop.unit.description.isEmpty {
+                if !options.showValue || !valueText.isEmpty {
+                    parts.append(prop.unit.description)
+                }
+            }
             return parts.joined(separator: " ")
         }
     }
