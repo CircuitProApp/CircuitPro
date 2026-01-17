@@ -305,6 +305,13 @@ extension CKView {
         CKTransformView(content: self, position: nil, rotation: angle)
     }
 
+    func mergePaths() -> CKStyleModifier<Self> {
+        style { _ in }
+            .updateNode { node in
+                node.mergeChildPaths = true
+            }
+    }
+
     func style(_ apply: @escaping (inout CKStyleState) -> Void) -> CKStyleModifier<Self> {
         CKStyleModifier(content: self, apply: apply)
     }

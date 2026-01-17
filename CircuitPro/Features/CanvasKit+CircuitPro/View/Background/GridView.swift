@@ -1,6 +1,6 @@
 import AppKit
 
-struct GridRL: CKView {
+struct GridView: CKView {
     @CKContext var context
     @CKEnvironment var environment
 

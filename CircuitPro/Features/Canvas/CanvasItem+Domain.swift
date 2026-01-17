@@ -12,3 +12,5 @@ extension Pin: CanvasItem {}
 extension Pad: CanvasItem {}
 
 extension CircuitText.Definition: CanvasItem {}
+
+extension ComponentInstance: CanvasItem {}

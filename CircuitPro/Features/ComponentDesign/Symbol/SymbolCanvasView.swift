@@ -24,7 +24,7 @@ struct SymbolCanvasView: View {
                 ],
                 snapProvider: CircuitProSnapProvider()
             ) {
-                GridRL()
+                GridView()
                 AxesView()
                 DrawingSheetRL()
                 SymbolDesignView()

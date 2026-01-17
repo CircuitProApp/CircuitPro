@@ -31,7 +31,7 @@ struct FootprintCanvasView: View {
             ],
             snapProvider: CircuitProSnapProvider()
         ) {
-            GridRL()
+            GridView()
             AxesView()
             DrawingSheetRL()
             FootprintDesignView()

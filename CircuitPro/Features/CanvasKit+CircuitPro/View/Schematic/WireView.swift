@@ -27,22 +27,25 @@ struct WireView: CKView {
             points: connectionPoints,
             links: connectionLinks,
             context: routingContext
-        )
-        let activeLinkIDs = context.selectedItemIDs
-            .union(context.highlightedItemIDs)
-        let activePath = unifiedHaloPath(
-            activeLinkIDs: activeLinkIDs,
-            routes: routes
-        )
-        CKGroup {
-            if let activePath, !activePath.isEmpty {
-                CKPath(path: activePath)
+            )
+            let activeLinkIDs = context.selectedItemIDs
+                .union(context.highlightedItemIDs)
+            CKGroup {
+                if !activeLinkIDs.isEmpty {
+                    CKGroup {
+                        for linkID in activeLinkIDs {
+                            if let path = routePath(for: linkID, routes: routes) {
+                                CKPath(path: path)
+                            }
+                        }
+                    }
+                    .mergePaths()
                     .halo(wireColor.haloOpacity(), width: 5)
-            }
-            for linkID in routes.keys {
-                if let path = routePath(for: linkID, routes: routes) {
-                    CKPath(path: path)
-                        .stroke(wireColor, width: 1)
+                }
+                for linkID in routes.keys {
+                    if let path = routePath(for: linkID, routes: routes) {
+                        CKPath(path: path)
+                            .stroke(wireColor, width: 1)
                         .hoverable(linkID)
                         .selectable(linkID)
                         .onDragGesture { phase in
@@ -77,20 +80,6 @@ struct WireView: CKView {
         path.move(to: points[0])
         for point in points.dropFirst() {
             path.addLine(to: point)
-        }
-        return path.isEmpty ? nil : path
-    }
-
-    private func unifiedHaloPath(
-        activeLinkIDs: Set<UUID>,
-        routes: [UUID: any ConnectionRoute]
-    ) -> CGPath? {
-        guard !activeLinkIDs.isEmpty else { return nil }
-        let path = CGMutablePath()
-        for linkID in activeLinkIDs {
-            if let routePath = routePath(for: linkID, routes: routes) {
-                path.addPath(routePath)
-            }
         }
         return path.isEmpty ? nil : path
     }

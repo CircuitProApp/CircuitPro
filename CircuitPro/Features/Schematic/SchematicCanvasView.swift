@@ -29,7 +29,7 @@ struct SchematicCanvasView: View {
             registeredDraggedTypes: [.transferableComponent],
             onPasteboardDropped: handleComponentDrop
         ) {
-            GridRL()
+            GridView()
             DrawingSheetRL()
 
             SchematicView(engine: wireEngine)

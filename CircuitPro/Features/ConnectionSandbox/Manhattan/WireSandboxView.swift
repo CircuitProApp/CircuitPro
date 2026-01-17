@@ -36,7 +36,7 @@ struct WireSandboxView: View {
             ],
             snapProvider: CircuitProSnapProvider()
         ) {
-            GridRL()
+            GridView()
             WireView(engine: manhattanEngine)
             ConnectionDebugRL(engine: manhattanEngine)
             CrosshairsView()

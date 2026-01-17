@@ -11,11 +11,17 @@ import SwiftUI
 final class LayoutEditorController {
 
     var items: [any CanvasItem] {
-        get { projectManager.selectedDesign.componentInstances }
+        get {
+            let design = projectManager.selectedDesign
+            return design.componentInstances + design.traces.points + design.traces.links
+        }
         set {
             projectManager.selectedDesign.componentInstances = newValue.compactMap {
                 $0 as? ComponentInstance
             }
+            let points = newValue.compactMap { $0 as? TraceVertex }
+            let links = newValue.compactMap { $0 as? TraceSegment }
+            projectManager.selectedDesign.traces = Trace(points: points, links: links)
             projectManager.document.scheduleAutosave()
         }
     }
@@ -136,4 +142,3 @@ final class LayoutEditorController {
     }
     */
 }
-

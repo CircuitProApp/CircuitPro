@@ -20,5 +20,3 @@ extension ComponentInstance: Transformable {
     }
 
 }
-
-extension ComponentInstance: CanvasItem {}

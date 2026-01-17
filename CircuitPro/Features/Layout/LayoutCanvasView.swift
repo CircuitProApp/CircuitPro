@@ -8,6 +8,7 @@ struct LayoutCanvasView: View {
     private var editorSession
 
     @Bindable var canvasManager: CanvasManager
+    private let traceEngine = TraceEngine()
 
     var body: some View {
         CanvasView(
@@ -24,9 +25,9 @@ struct LayoutCanvasView: View {
             registeredDraggedTypes: [.transferablePlacement],
             onPasteboardDropped: handlePlacementDrop
         ) {
-            GridRL()
+            GridView()
             DrawingSheetRL()
-            LayoutView()
+            LayoutView(traceEngine: traceEngine)
             MarqueeView()
             CrosshairsView()
         }
@@ -35,7 +36,8 @@ struct LayoutCanvasView: View {
         .overlay {
             CanvasOverlayView {
                 LayoutToolbarView(
-                    selectedLayoutTool: $editorSession.layoutController.selectedTool
+                    selectedLayoutTool: $editorSession.layoutController.selectedTool,
+                    traceEngine: traceEngine
                 )
             } status: {
                 CanvasStatusView(configuration: .default)

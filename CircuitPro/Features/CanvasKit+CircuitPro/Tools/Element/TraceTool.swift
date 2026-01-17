@@ -5,6 +5,7 @@
 //  Created by Giorgi Tchelidze on 9/15/25.
 //
 
+import AppKit
 import SwiftUI
 
 final class TraceTool: CanvasTool {
@@ -15,52 +16,72 @@ final class TraceTool: CanvasTool {
     // It is initialized with the application's default value.
     var currentTraceWidthInPoints: CGFloat = CircuitPro.Constants.defaultTraceWidthMM * CircuitPro.Constants.pointsPerMillimeter
 
-    private enum State {
-        case idle
-        case drawing(lastPoint: CGPoint)
+    private struct DrawingState {
+        let startID: UUID
+        let startPoint: CGPoint
     }
-    private var state: State = .idle
-//    private let traceEngine: TraceEngine
+    private var state: DrawingState?
+    private let traceEngine: TraceEngine
 
-//    init(traceEngine: TraceEngine) {
-//        self.traceEngine = traceEngine
-//        super.init()
-//    }
+    init(traceEngine: TraceEngine = TraceEngine()) {
+        self.traceEngine = traceEngine
+        super.init()
+    }
 
     override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
+        guard let itemsBinding = context.renderContext.itemsBinding else {
+            return .noResult
+        }
         guard let activeLayerId = context.activeLayerId else {
             print("TraceTool Error: No active layer selected.")
             return .noResult
         }
 
-        // Use the editable property for the trace width.
-        let traceWidth = self.currentTraceWidthInPoints
+        let traceWidth = currentTraceWidthInPoints
+        let magnification = max(context.renderContext.magnification, 0.0001)
+        let snapped = context.renderContext.snapProvider.snap(
+            point: location,
+            context: context.renderContext,
+            environment: context.environment
+        )
+        let tolerance = 6.0 / magnification
+        var items = itemsBinding.wrappedValue
 
-        switch self.state {
-        case .idle:
-            self.state = .drawing(lastPoint: location)
-            return .noResult
+        let (endID, endPoint) = resolvePoint(
+            near: location,
+            snapped: snapped,
+            items: &items,
+            tolerance: tolerance
+        )
 
-        case .drawing(let lastPoint):
-//            if context.clickCount >= 2 && location == lastPoint {
-//                self.state = .idle
-//                return .noResult
-//            }
-//
-//            let pathPoints = calculateOptimalPath(from: lastPoint, to: location)
-//            // Pass the current, potentially user-modified, width to the request node.
-//            let newLastPoint = pathPoints.last ?? location
-//            self.state = .drawing(lastPoint: newLastPoint)
-//
-//            Task { @MainActor in
-//                traceEngine.addTrace(
-//                    path: pathPoints,
-//                    width: traceWidth,
-//                    layerId: activeLayerId
-//                )
-//            }
-            return .noResult
+        if let state {
+            let pathPoints = traceEngine.route(from: state.startPoint, to: endPoint)
+            let ids = ensurePointsExist(
+                for: pathPoints,
+                items: &items,
+                tolerance: tolerance
+            )
+            appendLinks(
+                for: ids,
+                width: traceWidth,
+                layerId: activeLayerId,
+                items: &items
+            )
+
+            if context.clickCount >= 2 {
+                self.state = nil
+            } else if let lastID = ids.last,
+                      let lastPoint = position(for: lastID, items: items) {
+                self.state = DrawingState(startID: lastID, startPoint: lastPoint)
+            } else {
+                self.state = DrawingState(startID: endID, startPoint: endPoint)
+            }
+        } else {
+            self.state = DrawingState(startID: endID, startPoint: endPoint)
         }
+
+        itemsBinding.wrappedValue = items
+        return .noResult
     }
 
     override func preview(
@@ -68,11 +89,16 @@ final class TraceTool: CanvasTool {
         context: RenderContext,
         environment: CanvasEnvironmentValues
     ) -> CKGroup {
-        guard case .drawing(let lastPoint) = state else { return CKGroup() }
+        guard let state else { return CKGroup() }
 
         let color = context.layers.first(where: { $0.id == context.activeLayerId })?.color ?? NSColor.systemBlue.cgColor
 
-        let pathPoints = calculateOptimalPath(from: lastPoint, to: mouse)
+        let snapped = context.snapProvider.snap(
+            point: mouse,
+            context: context,
+            environment: environment
+        )
+        let pathPoints = traceEngine.route(from: state.startPoint, to: snapped)
 
         let path = CGMutablePath()
         guard let firstPoint = pathPoints.first else { return CKGroup() }
@@ -87,39 +113,112 @@ final class TraceTool: CanvasTool {
         }
     }
 
-    private func calculateOptimalPath(from start: CGPoint, to end: CGPoint) -> [CGPoint] {
-        let delta = CGPoint(x: end.x - start.x, y: end.y - start.y)
-        let dx = abs(delta.x)
-        let dy = abs(delta.y)
-
-        if dx < 1e-6 || dy < 1e-6 || abs(dx - dy) < 1e-6 {
-            return [start, end]
-        }
-
-        let diagonalLength = min(dx, dy)
-        let corner = CGPoint(
-            x: start.x + diagonalLength * delta.x.sign(),
-            y: start.y + diagonalLength * delta.y.sign()
-        )
-
-        if hypot(corner.x - end.x, corner.y - end.y) < 1e-6 {
-            return [start, end]
-        }
-
-        return [start, corner, end]
-    }
-
     override func handleEscape() -> Bool {
-        if case .drawing = state {
-            state = .idle
+        if state != nil {
+            state = nil
             return true
         }
         return false
     }
-}
 
-fileprivate extension CGFloat {
-    func sign() -> CGFloat {
-        return (self > 0) ? 1 : ((self < 0) ? -1 : 0)
+    private func resolvePoint(
+        near location: CGPoint,
+        snapped: CGPoint,
+        items: inout [any CanvasItem],
+        tolerance: CGFloat
+    ) -> (UUID, CGPoint) {
+        let points = items.compactMap { $0 as? TraceVertex }
+        if let existing = nearestPoint(to: location, in: points, tolerance: tolerance) {
+            return (existing.id, existing.position)
+        }
+
+        let vertex = TraceVertex(position: snapped)
+        items.append(vertex)
+        return (vertex.id, vertex.position)
+    }
+
+    private func nearestPoint(
+        to location: CGPoint,
+        in points: [TraceVertex],
+        tolerance: CGFloat
+    ) -> TraceVertex? {
+        var best: (point: TraceVertex, distance: CGFloat)?
+        for point in points {
+            let distance = hypot(point.position.x - location.x, point.position.y - location.y)
+            if distance <= tolerance {
+                if let current = best {
+                    if distance < current.distance { best = (point, distance) }
+                } else {
+                    best = (point, distance)
+                }
+            }
+        }
+        return best?.point
+    }
+
+    private func ensurePointsExist(
+        for pathPoints: [CGPoint],
+        items: inout [any CanvasItem],
+        tolerance: CGFloat
+    ) -> [UUID] {
+        var ids: [UUID] = []
+        ids.reserveCapacity(pathPoints.count)
+
+        for point in pathPoints {
+            if let existing = nearestPoint(to: point, in: items.compactMap { $0 as? TraceVertex }, tolerance: tolerance) {
+                ids.append(existing.id)
+                continue
+            }
+            let vertex = TraceVertex(position: point)
+            items.append(vertex)
+            ids.append(vertex.id)
+        }
+
+        return ids
+    }
+
+    private func appendLinks(
+        for ids: [UUID],
+        width: CGFloat,
+        layerId: UUID,
+        items: inout [any CanvasItem]
+    ) {
+        guard ids.count >= 2 else { return }
+        for (startID, endID) in zip(ids, ids.dropFirst()) {
+            guard startID != endID else { continue }
+            if hasLink(between: startID, and: endID, width: width, layerId: layerId, items: items) {
+                continue
+            }
+            items.append(
+                TraceSegment(
+                    startID: startID,
+                    endID: endID,
+                    width: width,
+                    layerId: layerId
+                )
+            )
+        }
+    }
+
+    private func hasLink(
+        between a: UUID,
+        and b: UUID,
+        width: CGFloat,
+        layerId: UUID,
+        items: [any CanvasItem]
+    ) -> Bool {
+        let links = items.compactMap { $0 as? TraceSegment }
+        for link in links {
+            let matchesDirection = (link.startID == a && link.endID == b)
+                || (link.startID == b && link.endID == a)
+            if matchesDirection && link.width == width && link.layerId == layerId {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func position(for id: UUID, items: [any CanvasItem]) -> CGPoint? {
+        items.compactMap { $0 as? TraceVertex }.first(where: { $0.id == id })?.position
     }
 }

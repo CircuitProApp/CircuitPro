@@ -15,7 +15,7 @@ class CircuitDesign: Codable, Identifiable {
     var name: String
     var componentInstances: [ComponentInstance] = []
     var wires: Wire = Wire()
-    var traces: [TraceSegment] = []
+    var traces: Trace = Trace()
     // --- ADDED: Each design now has its own layer stackup ---
     var layers: [LayerType] = []
 
@@ -29,7 +29,7 @@ class CircuitDesign: Codable, Identifiable {
         name: String,
         componentInstances: [ComponentInstance] = [],
         wires: Wire = Wire(),
-        traces: [TraceSegment] = []
+        traces: Trace = Trace()
     ) {
         self.id = id
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -57,7 +57,7 @@ class CircuitDesign: Codable, Identifiable {
         self.name = try container.decode(String.self, forKey: ._name)
         self.componentInstances = try container.decode([ComponentInstance].self, forKey: ._componentInstances)
         self.wires = (try? container.decode(Wire.self, forKey: ._wires)) ?? Wire()
-        self.traces = try container.decodeIfPresent([TraceSegment].self, forKey: ._traces) ?? []
+        self.traces = (try? container.decode(Trace.self, forKey: ._traces)) ?? Trace()
 
         // For backward compatibility: if the 'layers' key doesn't exist in an old project file,
         // decode it as nil and then generate the default stackup.

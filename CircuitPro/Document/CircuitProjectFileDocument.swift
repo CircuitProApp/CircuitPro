@@ -175,8 +175,8 @@ private extension CircuitProjectFileDocument {
             }
 
             if let traces = designDir.fileWrappers?[Layout.traces]?.regularFileContents,
-               let tracesArr = try? JSONDecoder().decode([TraceSegment].self, from: traces) {
-                project.designs[index].traces = tracesArr
+               let traceData = try? JSONDecoder().decode(Trace.self, from: traces) {
+                project.designs[index].traces = traceData
             }
         }
 

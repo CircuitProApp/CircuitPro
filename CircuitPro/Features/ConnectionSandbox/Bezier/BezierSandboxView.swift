@@ -51,7 +51,7 @@ struct BezierSandboxView: View {
             ],
             snapProvider: CircuitProSnapProvider()
         ) {
-            GridRL()
+            GridView()
             NodeDebugRL()
             BezierConnectionDebugRL(engine: bezierEngine)
             CrosshairsView()
