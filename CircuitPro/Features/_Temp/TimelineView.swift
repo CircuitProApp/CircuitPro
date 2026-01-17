@@ -35,9 +35,9 @@ private struct TimelineFieldGroup: Identifiable {
 struct TimelineView: View {
     @Environment(\.projectManager) private var projectManager
     @Environment(\.dismiss) private var dismiss
-    
+
     @Query private var allFootprints: [FootprintDefinition]
-    
+
     // Selection holds ChangeRecord IDs. Field toggles add/remove all IDs in that field.
     @State private var selection: Set<ChangeRecord.ID> = []
     @State private var expandedComponents: [UUID: Bool] = [:]
@@ -130,7 +130,7 @@ struct TimelineView: View {
         VStack(spacing: 0) {
             header
             Divider()
-            
+
             // Always show a List (even when empty) – no ContentUnavailableView
             List {
                 ForEach(timelineGroups) { comp in
@@ -156,7 +156,7 @@ struct TimelineView: View {
                 }
             }
             .listStyle(.sidebar)
-            
+
             Divider()
             footer
         }
@@ -168,14 +168,14 @@ struct TimelineView: View {
             }
         }
     }
-    
+
     private func bindingForComponent(id: UUID) -> Binding<Bool> {
         Binding(
             get: { expandedComponents[id, default: false] },
             set: { expandedComponents[id] = $0 }
         )
     }
-    
+
     private var header: some View {
         HStack {
             Text("Pending Changes")
@@ -184,35 +184,34 @@ struct TimelineView: View {
             Spacer()
         }
     }
-    
+
     private var footer: some View {
         HStack {
             Button("Cancel", role: .cancel) { dismiss() }
-            
+
             Spacer()
-            
+
             if selection.isEmpty {
                 Button("Discard All", role: .destructive) {
                     projectManager.discardPendingChanges()
                     dismiss()
                 }
                 .tint(.red)
-                
+
                 Button("Apply All") {
-                    projectManager.applyChanges(
-                        projectManager.syncManager.pendingChanges,
-                        allFootprints: allFootprints
-                    )
+                    let records = projectManager.syncManager.pendingChanges
+                    projectManager.applyChanges(records, allFootprints: allFootprints)
+                    projectManager.discardPendingChanges()
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
-                
+
             } else {
                 Button("Discard \(selection.count) Selected", role: .destructive) {
                     projectManager.discardChanges(withIDs: selection)
                     selection.removeAll()
                 }
-                
+
                 Button("Apply \(selection.count) Selected") {
                     projectManager.applyChanges(withIDs: selection, allFootprints: allFootprints)
                     selection.removeAll()
@@ -235,7 +234,7 @@ private struct GroupSelectionRow: View {
     let changeCount: Int                 // number of fields edited in this component
     let allChangeIDsInGroup: Set<UUID>   // all record IDs belonging to all fields in this component
     @Binding var selection: Set<UUID>
-    
+
     private var isSelected: Binding<Bool> {
         Binding(
             get: { allChangeIDsInGroup.isSubset(of: selection) && !allChangeIDsInGroup.isEmpty },
@@ -248,13 +247,13 @@ private struct GroupSelectionRow: View {
             }
         )
     }
-    
+
     var body: some View {
         HStack {
             Toggle(isOn: isSelected) {}
                 .toggleStyle(.checkbox)
                 .padding(.trailing, 4)
-            
+
             Text(title)
                 .font(.headline)
             Text("(\(changeCount) Changes)")
@@ -353,7 +352,7 @@ private struct ComparisonView: View {
     let label: String
     let oldValue: String
     let newValue: String
-    
+
     var body: some View {
         LabeledContent {
             HStack(spacing: 6) {

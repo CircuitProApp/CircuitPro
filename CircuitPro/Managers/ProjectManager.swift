@@ -65,12 +65,25 @@ final class ProjectManager {
     }
 
     func applyChanges(_ records: [ChangeRecord], allFootprints: [FootprintDefinition]) {
+        guard !records.isEmpty else { return }
+
+        let componentsByID = Dictionary(
+            uniqueKeysWithValues: componentInstances.map { ($0.id, $0) }
+        )
+        let footprintsByID = Dictionary(
+            uniqueKeysWithValues: allFootprints.map { ($0.uuid, $0) }
+        )
+        var didApply = false
+
         for record in records.reversed() {
-            guard let component = componentInstances.first(where: { $0.id == record.payload.componentID }) else { continue }
-            // component.apply(change: record, allFootprints: allFootprints)
+            guard let component = componentsByID[record.payload.componentID] else { continue }
+            applyChange(record.payload, to: component, footprintsByID: footprintsByID)
+            didApply = true
         }
-        syncManager.clearChanges()
-        document.scheduleAutosave()
+
+        if didApply {
+            document.scheduleAutosave()
+        }
     }
 
     func applyChanges(withIDs ids: Set<UUID>, allFootprints: [FootprintDefinition]) {
@@ -87,6 +100,36 @@ final class ProjectManager {
     func discardPendingChanges() {
         syncManager.clearChanges()
         // No rebuild call needed.
+    }
+
+    private func applyChange(
+        _ change: ChangeType,
+        to component: ComponentInstance,
+        footprintsByID: [UUID: FootprintDefinition]
+    ) {
+        switch change {
+        case .updateReferenceDesignator(_, let newIndex, _):
+            component.referenceDesignatorIndex = newIndex
+        case .assignFootprint(_, let newFootprintUUID, _, _):
+            guard let newFootprintUUID else {
+                component.footprintInstance = nil
+                return
+            }
+
+            let oldPlacement = component.footprintInstance?.placement ?? .unplaced
+            let oldPosition = component.footprintInstance?.position ?? .zero
+            let oldRotation = component.footprintInstance?.rotation ?? 0
+            let newFootprintInstance = FootprintInstance(
+                definitionUUID: newFootprintUUID,
+                definition: footprintsByID[newFootprintUUID],
+                position: oldPosition,
+                cardinalRotation: .closest(to: oldRotation),
+                placement: oldPlacement
+            )
+            component.footprintInstance = newFootprintInstance
+        case .updateProperty(_, let newProperty, _):
+            component.apply(newProperty)
+        }
     }
 
     func addProperty(_ newProperty: Property.Instance, to component: ComponentInstance) {
