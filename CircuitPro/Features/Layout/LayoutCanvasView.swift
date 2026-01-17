@@ -26,7 +26,7 @@ struct LayoutCanvasView: View {
         ) {
             GridRL()
             DrawingSheetRL()
-            FootprintRL()
+            LayoutView()
             MarqueeView()
             CrosshairsView()
         }

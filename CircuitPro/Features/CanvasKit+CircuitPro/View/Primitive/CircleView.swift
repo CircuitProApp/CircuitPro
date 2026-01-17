@@ -41,7 +41,7 @@ struct CircleView: CKView {
             dragCenter = circle.position
         case .changed(let delta):
             guard let center = dragCenter else { return }
-            context.update(circle.id) { prim in
+            context.update(AnyCanvasPrimitive.circle(circle)) { prim in
                 guard case .circle(var circle) = prim else { return }
                 let world = CGPoint(
                     x: delta.processedLocation.x - center.x,

@@ -50,7 +50,7 @@ struct LineView: CKView {
             dragBaseline = line
         case .changed(let delta):
             guard let baseline = dragBaseline else { return }
-            context.update(line.id) { prim in
+            context.update(AnyCanvasPrimitive.line(line)) { prim in
                 guard case .line = prim else { return }
                 var updated = baseline
                 let dragWorld = delta.processedLocation

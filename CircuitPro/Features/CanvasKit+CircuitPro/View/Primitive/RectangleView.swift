@@ -65,7 +65,7 @@ struct RectangleView: CKView {
             dragBaseline = rectangle
         case .changed(let delta):
             guard let baseline = dragBaseline else { return }
-            context.update(rectangle.id) { prim in
+            context.update(AnyCanvasPrimitive.rectangle(rectangle)) { prim in
                 guard case .rectangle = prim else { return }
                 prim = .rectangle(
                     updatedRectangle(
