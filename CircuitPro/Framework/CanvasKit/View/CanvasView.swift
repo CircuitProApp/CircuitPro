@@ -100,8 +100,11 @@ struct CanvasView: NSViewRepresentable {
             ) { [weak self] _ in
                 guard let self = self else { return }
                 DispatchQueue.main.async {
-                    self.viewportBinding.wrappedValue.visibleRect = clipView.bounds
-                    self.canvasController.viewportDidScroll(to: clipView.bounds)
+                    let newBounds = clipView.bounds
+                    if self.viewportBinding.wrappedValue.visibleRect != newBounds {
+                        self.viewportBinding.wrappedValue.visibleRect = newBounds
+                        self.canvasController.viewportDidScroll(to: newBounds)
+                    }
                 }
             }
         }
@@ -172,9 +175,9 @@ struct CanvasView: NSViewRepresentable {
             .withHoverHandler { [weak controller] id, isInside in
                 guard let controller else { return }
                 if isInside {
-                    controller.setInteractionHighlight(itemIDs: [id])
+                    controller.setInteractionHighlight(itemIDs: [id], needsDisplay: false)
                 } else if controller.highlightedItemIDs == [id] {
-                    controller.setInteractionHighlight(itemIDs: [])
+                    controller.setInteractionHighlight(itemIDs: [], needsDisplay: false)
                 }
             }
             .withTapHandler { [weak controller] id in

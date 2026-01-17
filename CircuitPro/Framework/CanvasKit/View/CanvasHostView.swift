@@ -13,6 +13,7 @@ final class CanvasHostView: NSView {
     private let controller: CanvasController
     private let inputHandler: CanvasInputHandler
     private let dragDropHandler: CanvasDragDropHandler
+    private var isLayerUpdatePending = false
 
     // MARK: - Init & Setup
     init(controller: CanvasController, registeredDraggedTypes: [NSPasteboard.PasteboardType]) {
@@ -40,6 +41,16 @@ final class CanvasHostView: NSView {
 
     override func updateLayer() {
         performLayerUpdate()
+    }
+
+    func requestLayerUpdate() {
+        guard !isLayerUpdatePending else { return }
+        isLayerUpdatePending = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.isLayerUpdatePending = false
+            self.performLayerUpdate()
+        }
     }
 
     func performLayerUpdate() {

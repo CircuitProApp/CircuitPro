@@ -37,7 +37,7 @@ final class CanvasController {
         set {
             guard environment.mouseLocation != newValue else { return }
             environment.mouseLocation = newValue
-            view?.performLayerUpdate() // Redraw for layers like Crosshairs.
+            view?.requestLayerUpdate() // Redraw for layers like Crosshairs.
         }
     }
 
@@ -133,32 +133,36 @@ final class CanvasController {
 
     func viewportDidScroll(to newVisibleRect: CGRect) {
         environment.visibleRect = newVisibleRect
-        view?.performLayerUpdate() // Redraw for layers like Grid.
+        view?.requestLayerUpdate() // Redraw for layers like Grid.
     }
 
     func viewportDidMagnify(to newMagnification: CGFloat) {
         self.magnification = newMagnification
-        view?.performLayerUpdate() // Redraw for magnification-dependent layers.
+        view?.requestLayerUpdate() // Redraw for magnification-dependent layers.
     }
 
     // MARK: - Interaction API
 
-    func setInteractionHighlight(itemIDs: Set<UUID>) {
+    func setInteractionHighlight(itemIDs: Set<UUID>, needsDisplay: Bool = true) {
         guard interactionHighlightedItemIDs != itemIDs else { return }
         interactionHighlightedItemIDs = itemIDs
-        view?.performLayerUpdate() // Redraw for transient highlights.
+        if needsDisplay {
+            view?.requestLayerUpdate() // Redraw for transient highlights.
+        }
     }
 
-    func setInteractionLinkHighlight(linkIDs: Set<UUID>) {
+    func setInteractionLinkHighlight(linkIDs: Set<UUID>, needsDisplay: Bool = true) {
         guard interactionHighlightedLinkIDs != linkIDs else { return }
         interactionHighlightedLinkIDs = linkIDs
-        view?.performLayerUpdate()
+        if needsDisplay {
+            view?.requestLayerUpdate()
+        }
     }
 
     func updateSelection(_ ids: Set<UUID>, notify: Bool = true) {
         guard selectedItemIDs != ids else { return }
         selectedItemIDs = ids
-        view?.performLayerUpdate()
+        view?.requestLayerUpdate()
         if notify {
             onSelectionChange?(ids)
         }
@@ -166,6 +170,6 @@ final class CanvasController {
 
     func updateEnvironment(_ block: (inout CanvasEnvironmentValues) -> Void) {
         block(&environment)
-        view?.performLayerUpdate() // Redraw for transient state like Marquee.
+        view?.requestLayerUpdate() // Redraw for transient state like Marquee.
     }
 }
