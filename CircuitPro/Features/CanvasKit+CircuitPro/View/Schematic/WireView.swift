@@ -19,7 +19,7 @@ struct WireView: CKView {
         CKColor(environment.schematicTheme.wireColor)
     }
 
-    @CKViewBuilder var body: some CKView {
+    var body: some CKView {
         if let engine {
             let routingContext = ConnectionRoutingContext { point in
                 context.snapProvider.snap(point: point, context: context, environment: environment)
@@ -31,12 +31,19 @@ struct WireView: CKView {
             )
             let activeLinkIDs = context.selectedItemIDs
                 .union(context.highlightedItemIDs)
+            let activePath = unifiedHaloPath(
+                activeLinkIDs: activeLinkIDs,
+                routes: routes
+            )
             CKGroup {
+                if let activePath, !activePath.isEmpty {
+                    CKPath(path: activePath)
+                        .halo(wireColor.haloOpacity(), width: 5)
+                        .stroke(CGColor.clear, width: 0.01)
+                }
                 for linkID in routes.keys {
                     if let path = routePath(for: linkID, routes: routes) {
-                        let isHighlighted = activeLinkIDs.contains(linkID)
                         CKPath(path: path)
-                            .halo(isHighlighted ? wireColor.haloOpacity() : .clear, width: 5)
                             .stroke(wireColor, width: 1)
                             .hoverable(linkID)
                             .selectable(linkID)
@@ -75,6 +82,20 @@ struct WireView: CKView {
         path.move(to: points[0])
         for point in points.dropFirst() {
             path.addLine(to: point)
+        }
+        return path.isEmpty ? nil : path
+    }
+
+    private func unifiedHaloPath(
+        activeLinkIDs: Set<UUID>,
+        routes: [UUID: any ConnectionRoute]
+    ) -> CGPath? {
+        guard !activeLinkIDs.isEmpty else { return nil }
+        let path = CGMutablePath()
+        for linkID in activeLinkIDs {
+            if let routePath = routePath(for: linkID, routes: routes) {
+                path.addPath(routePath)
+            }
         }
         return path.isEmpty ? nil : path
     }
@@ -123,8 +144,8 @@ struct WireView: CKView {
 
         let links = connectionLinks
         guard let link = links.first(where: { $0.id == linkID }),
-              let start = pointsByID[link.startID],
-              let end = pointsByID[link.endID]
+            let start = pointsByID[link.startID],
+            let end = pointsByID[link.endID]
         else { return }
 
         let linkAxis = linkAxisMap(for: links, positions: pointsByID, tolerance: tolerance)
@@ -149,7 +170,7 @@ struct WireView: CKView {
 
     private func updateDrag(delta: CanvasDragDelta) {
         guard var state = dragState,
-              let itemsBinding = context.itemsBinding
+            let itemsBinding = context.itemsBinding
         else { return }
 
         let pointer = delta.processedLocation
@@ -230,8 +251,9 @@ struct WireView: CKView {
                 items[index] = vertex
             }
             if let vertex = items[index] as? WireVertex,
-               let updated = newPositions[vertex.id],
-               vertex.position != updated {
+                let updated = newPositions[vertex.id],
+                vertex.position != updated
+            {
                 var copy = vertex
                 copy.position = updated
                 items[index] = copy
@@ -243,15 +265,16 @@ struct WireView: CKView {
 
     private func endDrag() {
         guard dragState != nil,
-              let itemsBinding = context.itemsBinding,
-              let engine
+            let itemsBinding = context.itemsBinding,
+            let engine
         else {
             dragState = nil
             return
         }
 
         var items = itemsBinding.wrappedValue
-        applyNormalization(to: &items, engine: engine, points: connectionPoints, links: connectionLinks)
+        applyNormalization(
+            to: &items, engine: engine, points: connectionPoints, links: connectionLinks)
         itemsBinding.wrappedValue = items
         dragState = nil
     }
@@ -284,7 +307,8 @@ struct WireView: CKView {
         if !delta.updatedPoints.isEmpty
             || !delta.addedPoints.isEmpty
             || !delta.updatedLinks.isEmpty
-            || !delta.addedLinks.isEmpty {
+            || !delta.addedLinks.isEmpty
+        {
             var indexByID: [UUID: Int] = [:]
             indexByID.reserveCapacity(items.count)
             for (index, item) in items.enumerated() {
@@ -321,7 +345,7 @@ struct WireView: CKView {
         controller: CanvasController
     ) {
         guard let itemsBinding = context.itemsBinding,
-              let engine
+            let engine
         else { return }
 
         switch phase {
@@ -434,7 +458,7 @@ struct WireView: CKView {
         replacingStart: Bool
     ) -> Bool {
         guard state.fixedPointIDs.contains(endpointID),
-              let axis
+            let axis
         else { return false }
 
         let isOffAxis: Bool
@@ -462,7 +486,8 @@ struct WireView: CKView {
         }
 
         if let index = items.firstIndex(where: { $0.id == state.edgeID }),
-           var segment = items[index] as? WireSegment {
+            var segment = items[index] as? WireSegment
+        {
             if segment.startID == endpointID {
                 segment.startID = newVertex.id
             } else if segment.endID == endpointID {
@@ -474,7 +499,8 @@ struct WireView: CKView {
         if !hasLink(between: endpointID, and: newVertex.id, items: items) {
             let link = WireSegment(startID: endpointID, endID: newVertex.id)
             items.append(link)
-            let newAxis: Axis = (axis == .horizontal) ? .vertical : (axis == .vertical ? .horizontal : .diagonal)
+            let newAxis: Axis =
+                (axis == .horizontal) ? .vertical : (axis == .vertical ? .horizontal : .diagonal)
             state.linkAxis[link.id] = newAxis
         }
 
@@ -494,7 +520,8 @@ struct WireView: CKView {
         let links = items.compactMap { $0 as? any ConnectionLink }
         for link in links {
             if (link.startID == a && link.endID == b)
-                || (link.startID == b && link.endID == a) {
+                || (link.startID == b && link.endID == a)
+            {
                 return true
             }
         }
@@ -519,7 +546,7 @@ struct WireView: CKView {
             }
 
             guard let start = positions[link.startID],
-                  let end = positions[link.endID]
+                let end = positions[link.endID]
             else { continue }
             let dx = abs(start.x - end.x)
             let dy = abs(start.y - end.y)
@@ -588,12 +615,12 @@ struct WireView: CKView {
             queued.remove(currentID)
 
             guard let currentPos = positions[currentID],
-                  let currentOrig = originalPositions[currentID]
+                let currentOrig = originalPositions[currentID]
             else { continue }
 
             for linkID in adjacency[currentID] ?? [] {
                 guard let axis = linkAxis[linkID],
-                      let endpoints = linkEndpoints[linkID]
+                    let endpoints = linkEndpoints[linkID]
                 else { continue }
 
                 let (aID, bID) = endpoints
@@ -614,7 +641,8 @@ struct WireView: CKView {
 
                 if isFixed(otherID) {
                     if !anchoredIDs.contains(currentID) {
-                        positions[currentID] = align(current: currentPos, fixed: otherOrig, axis: axis)
+                        positions[currentID] = align(
+                            current: currentPos, fixed: otherOrig, axis: axis)
                     }
                 } else if positions[otherID] != otherPos {
                     positions[otherID] = otherPos
@@ -651,7 +679,7 @@ struct WireView: CKView {
 
         for link in links {
             guard let start = positions[link.startID],
-                  let end = positions[link.endID]
+                let end = positions[link.endID]
             else { continue }
             let dx = abs(start.x - end.x)
             let dy = abs(start.y - end.y)
@@ -688,7 +716,7 @@ struct WireView: CKView {
 
         let movedSymbolIDs = items.compactMap { item -> UUID? in
             guard let component = item as? ComponentInstance,
-                  movedItemIDs.contains(component.id)
+                movedItemIDs.contains(component.id)
             else { return nil }
             return component.symbolInstance.id
         }
@@ -718,8 +746,8 @@ struct WireView: CKView {
 
         for index in items.indices {
             guard let vertex = items[index] as? WireVertex,
-                  let updated = positions[vertex.id],
-                  vertex.position != updated
+                let updated = positions[vertex.id],
+                vertex.position != updated
             else { continue }
             var copy = vertex
             copy.position = updated
@@ -786,7 +814,8 @@ struct WireView: CKView {
             && removedLinkIDs.isEmpty
             && updatedLinks.isEmpty
             && addedLinksOut.isEmpty
-            && addedPointsOut.isEmpty {
+            && addedPointsOut.isEmpty
+        {
             return
         }
 
@@ -799,7 +828,8 @@ struct WireView: CKView {
 
         if !updatedLinks.isEmpty
             || !addedLinksOut.isEmpty
-            || !addedPointsOut.isEmpty {
+            || !addedPointsOut.isEmpty
+        {
             var indexByID: [UUID: Int] = [:]
             indexByID.reserveCapacity(items.count)
             for (index, item) in items.enumerated() {
