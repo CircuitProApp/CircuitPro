@@ -14,18 +14,69 @@ extension CKNodeView {
     }
 }
 
-struct CKInteractionView<Content: CKView>: CKView {
+struct CKStyleModifier<Content: CKView>: CKView {
+    typealias Body = CKGroup
+
+    let content: Content
+    let apply: (inout CKStyleState) -> Void
+    let applyNode: ((inout CKRenderNode) -> Void)?
+
+    var body: CKGroup {
+        .empty
+    }
+
+    init(
+        content: Content,
+        apply: @escaping (inout CKStyleState) -> Void,
+        applyNode: ((inout CKRenderNode) -> Void)? = nil
+    ) {
+        self.content = content
+        self.apply = apply
+        self.applyNode = applyNode
+    }
+
+    func makeNode(in context: RenderContext) -> CKRenderNode? {
+        guard var node = content.makeNode(in: context) else {
+            return nil
+        }
+        apply(&node.style)
+        applyNode?(&node)
+        return node
+    }
+
+    func update(_ extra: @escaping (inout CKStyleState) -> Void) -> CKStyleModifier<Content> {
+        let currentApply = apply
+        let currentNodeApply = applyNode
+        return CKStyleModifier(
+            content: content,
+            apply: { style in
+                currentApply(&style)
+                extra(&style)
+            },
+            applyNode: currentNodeApply
+        )
+    }
+
+    func updateNode(_ extra: @escaping (inout CKRenderNode) -> Void) -> CKStyleModifier<Content> {
+        let currentApply = apply
+        let currentNodeApply = applyNode
+        return CKStyleModifier(
+            content: content,
+            apply: currentApply,
+            applyNode: { node in
+                currentNodeApply?(&node)
+                extra(&node)
+            }
+        )
+    }
+}
+
+struct CKInteractionModifier<Content: CKView>: CKView {
     typealias Body = CKGroup
 
     let content: Content
     let targetID: UUID
-    var isHoverable: Bool
-    var isSelectable: Bool
-    var isDraggable: Bool
-    var contentShape: CGPath?
-    var hitTestPriority: Int
-    var dragPhaseHandler: ((CanvasDragPhase, CanvasDragSession) -> Void)?
-    var dragDeltaHandler: ((CanvasDragDelta, CanvasDragSession) -> Void)?
+    let apply: (inout CKInteractionState) -> Void
 
     var body: CKGroup {
         .empty
@@ -34,48 +85,52 @@ struct CKInteractionView<Content: CKView>: CKView {
     init(
         content: Content,
         targetID: UUID,
-        isHoverable: Bool,
-        isSelectable: Bool,
-        isDraggable: Bool,
-        contentShape: CGPath?,
-        hitTestPriority: Int = 0,
-        dragPhaseHandler: ((CanvasDragPhase, CanvasDragSession) -> Void)?,
-        dragDeltaHandler: ((CanvasDragDelta, CanvasDragSession) -> Void)?
+        apply: @escaping (inout CKInteractionState) -> Void
     ) {
         self.content = content
         self.targetID = targetID
-        self.isHoverable = isHoverable
-        self.isSelectable = isSelectable
-        self.isDraggable = isDraggable
-        self.contentShape = contentShape
-        self.hitTestPriority = hitTestPriority
-        self.dragPhaseHandler = dragPhaseHandler
-        self.dragDeltaHandler = dragDeltaHandler
+        self.apply = apply
     }
 
-}
-
-extension CKInteractionView: CKNodeView {
     func makeNode(in context: RenderContext) -> CKRenderNode? {
-        guard let child = content.makeNode(in: context) else {
+        guard var node = content.makeNode(in: context) else {
             return nil
         }
-        let interaction = CKInteractionState(
+        var interaction = node.interaction ?? CKInteractionState(
             id: targetID,
-            hoverable: isHoverable,
-            selectable: isSelectable,
-            draggable: isDraggable,
-            contentShape: contentShape,
-            hitTestPriority: hitTestPriority,
-            onDragPhase: dragPhaseHandler,
-            onDragDelta: dragDeltaHandler,
+            hoverable: false,
+            selectable: false,
+            draggable: false,
+            contentShape: nil,
+            hitTestPriority: 0,
+            onDragPhase: nil,
+            onDragDelta: nil,
             onHover: nil,
             onTap: nil,
             onDrag: nil
         )
-        var node = child
+        if interaction.id != targetID {
+            interaction.id = targetID
+        }
+        apply(&interaction)
         node.interaction = interaction
         return node
+    }
+
+    func update(_ extra: @escaping (inout CKInteractionState) -> Void) -> CKInteractionModifier<Content> {
+        let currentApply = apply
+        return CKInteractionModifier(content: content, targetID: targetID) { state in
+            currentApply(&state)
+            extra(&state)
+        }
+    }
+
+    func update(id: UUID, _ extra: @escaping (inout CKInteractionState) -> Void) -> CKInteractionModifier<Content> {
+        let currentApply = apply
+        return CKInteractionModifier(content: content, targetID: id) { state in
+            currentApply(&state)
+            extra(&state)
+        }
     }
 }
 
@@ -183,113 +238,6 @@ extension CKTransformView: CKCompositeRuleProvider where Content: CKCompositeRul
     }
 }
 
-struct CKStrokeView<Content: CKView>: CKView {
-    typealias Body = CKGroup
-
-    let content: Content
-    var color: CGColor
-    var width: CGFloat
-    var lineCap: CAShapeLayerLineCap = .round
-    var lineJoin: CAShapeLayerLineJoin = .miter
-    var miterLimit: CGFloat = 10
-    var lineDash: [NSNumber]?
-    var clipPath: CGPath?
-
-    var body: CKGroup {
-        .empty
-    }
-}
-
-extension CKStrokeView: CKNodeView {
-    func makeNode(in context: RenderContext) -> CKRenderNode? {
-        guard let child = content.makeNode(in: context) else {
-            return nil
-        }
-        let stroke = CKStrokeStyle(
-            color: color,
-            width: width,
-            lineCap: lineCap,
-            lineJoin: lineJoin,
-            miterLimit: miterLimit,
-            lineDash: lineDash
-        )
-        var node = child
-        node.style.stroke = stroke
-        return node
-    }
-}
-
-struct CKFillView<Content: CKView>: CKView {
-    typealias Body = CKGroup
-
-    let content: Content
-    var color: CGColor
-    var rule: CAShapeLayerFillRule = .nonZero
-    var clipPath: CGPath?
-
-    var body: CKGroup {
-        .empty
-    }
-}
-
-extension CKFillView: CKNodeView {
-    func makeNode(in context: RenderContext) -> CKRenderNode? {
-        guard let child = content.makeNode(in: context) else {
-            return nil
-        }
-        let fill = CKFillStyle(color: color, rule: rule)
-        var node = child
-        node.style.fill = fill
-        node.renderChildren = false
-        return node
-    }
-}
-
-struct CKHaloView<Content: CKView>: CKView {
-    typealias Body = CKGroup
-
-    let content: Content
-    var color: CGColor
-    var width: CGFloat
-
-    var body: CKGroup {
-        .empty
-    }
-}
-
-extension CKHaloView: CKNodeView {
-    func makeNode(in context: RenderContext) -> CKRenderNode? {
-        guard let child = content.makeNode(in: context) else {
-            return nil
-        }
-        var node = child
-        node.style.halos.append(CKHalo(color: color, width: width))
-        return node
-    }
-}
-
-struct CKClipView<Content: CKView>: CKView {
-    typealias Body = CKGroup
-
-    let content: Content
-    var clipPath: CGPath
-
-    var body: CKGroup {
-        .empty
-    }
-}
-
-extension CKClipView: CKNodeView {
-    func makeNode(in context: RenderContext) -> CKRenderNode? {
-        guard let child = content.makeNode(in: context) else {
-            return nil
-        }
-        var node = child
-        node.style.clipPath = clipPath
-        return node
-    }
-}
-
 struct CKNoPathView<Content: CKView>: CKView {
     typealias Body = CKGroup
 
@@ -307,28 +255,6 @@ extension CKNoPathView: CKNodeView {
         }
         var node = child
         node.excludesFromHitPath = true
-        return node
-    }
-}
-
-struct CKColorOverrideView<Content: CKView>: CKView {
-    typealias Body = CKGroup
-
-    let content: Content
-    let color: CKColor
-
-    var body: CKGroup {
-        .empty
-    }
-}
-
-extension CKColorOverrideView: CKNodeView {
-    func makeNode(in context: RenderContext) -> CKRenderNode? {
-        guard let child = content.makeNode(in: context) else {
-            return nil
-        }
-        var node = child
-        node.style.colorOverride = color.cgColor
         return node
     }
 }
@@ -366,65 +292,6 @@ extension CKCompositeView: CKCompositeRuleProvider {
     }
 }
 
-struct CKHitTargetView<Content: CKView>: CKView {
-    typealias Body = CKGroup
-
-    let content: Content
-    let contentShape: CGPath?
-    let onHover: ((Bool) -> Void)?
-    let onTap: (() -> Void)?
-    let onDrag: ((CanvasDragPhase, CanvasDragSession) -> Void)?
-    let targetID: UUID
-    let hitTestPriority: Int
-
-    var body: CKGroup {
-        .empty
-    }
-
-    init(
-        content: Content,
-        contentShape: CGPath?,
-        onHover: ((Bool) -> Void)?,
-        onTap: (() -> Void)?,
-        onDrag: ((CanvasDragPhase, CanvasDragSession) -> Void)?,
-        targetID: UUID,
-        hitTestPriority: Int = 0
-    ) {
-        self.content = content
-        self.contentShape = contentShape
-        self.onHover = onHover
-        self.onTap = onTap
-        self.onDrag = onDrag
-        self.targetID = targetID
-        self.hitTestPriority = hitTestPriority
-    }
-
-}
-
-extension CKHitTargetView: CKNodeView {
-    func makeNode(in context: RenderContext) -> CKRenderNode? {
-        guard let child = content.makeNode(in: context) else {
-            return nil
-        }
-        let interaction = CKInteractionState(
-            id: targetID,
-            hoverable: onHover != nil,
-            selectable: onTap != nil,
-            draggable: onDrag != nil,
-            contentShape: contentShape,
-            hitTestPriority: hitTestPriority,
-            onDragPhase: nil,
-            onDragDelta: nil,
-            onHover: onHover,
-            onTap: onTap,
-            onDrag: onDrag
-        )
-        var node = child
-        node.interaction = interaction
-        return node
-    }
-}
-
 extension CKView {
     func position(_ point: CGPoint) -> CKTransformView<Self> {
         CKTransformView(content: self, position: point, rotation: 0)
@@ -438,36 +305,69 @@ extension CKView {
         CKTransformView(content: self, position: nil, rotation: angle)
     }
 
-    func stroke(_ color: CGColor, width: CGFloat = 1.0) -> CKStrokeView<Self> {
-        CKStrokeView(content: self, color: color, width: width)
+    func style(_ apply: @escaping (inout CKStyleState) -> Void) -> CKStyleModifier<Self> {
+        CKStyleModifier(content: self, apply: apply)
     }
 
-    func stroke(_ color: CKColor, width: CGFloat = 1.0) -> CKStrokeView<Self> {
+    func interaction(_ apply: @escaping (inout CKInteractionState) -> Void) -> CKInteractionModifier<Self> {
+        CKInteractionModifier(content: self, targetID: UUID(), apply: apply)
+    }
+
+    func interaction(id: UUID, _ apply: @escaping (inout CKInteractionState) -> Void) -> CKInteractionModifier<Self> {
+        CKInteractionModifier(content: self, targetID: id, apply: apply)
+    }
+
+    func stroke(_ color: CGColor, width: CGFloat = 1.0) -> CKStyleModifier<Self> {
+        style { style in
+            style.stroke = CKStrokeStyle(
+                color: color,
+                width: width,
+                lineCap: .round,
+                lineJoin: .miter,
+                miterLimit: 10,
+                lineDash: nil
+            )
+        }
+    }
+
+    func stroke(_ color: CKColor, width: CGFloat = 1.0) -> CKStyleModifier<Self> {
         stroke(color.cgColor, width: width)
     }
 
-    func fill(_ color: CGColor) -> CKFillView<Self> {
+    func fill(_ color: CGColor) -> CKStyleModifier<Self> {
         let rule = (self as? CKCompositeRuleProvider)?.compositeRule ?? .nonZero
-        return CKFillView(content: self, color: color, rule: rule)
+        return style { style in
+            style.fill = CKFillStyle(color: color, rule: rule)
+        }
+        .updateNode { node in
+            node.renderChildren = false
+        }
     }
 
-    func fill(_ color: CKColor) -> CKFillView<Self> {
+    func fill(_ color: CKColor) -> CKStyleModifier<Self> {
         fill(color.cgColor)
     }
 
-    func fill(_ color: CGColor, rule: CAShapeLayerFillRule) -> CKFillView<Self> {
-        CKFillView(content: self, color: color, rule: rule)
+    func fill(_ color: CGColor, rule: CAShapeLayerFillRule) -> CKStyleModifier<Self> {
+        style { style in
+            style.fill = CKFillStyle(color: color, rule: rule)
+        }
+        .updateNode { node in
+            node.renderChildren = false
+        }
     }
 
-    func fill(_ color: CKColor, rule: CAShapeLayerFillRule) -> CKFillView<Self> {
+    func fill(_ color: CKColor, rule: CAShapeLayerFillRule) -> CKStyleModifier<Self> {
         fill(color.cgColor, rule: rule)
     }
 
-    func halo(_ color: CGColor, width: CGFloat) -> CKHaloView<Self> {
-        CKHaloView(content: self, color: color, width: width)
+    func halo(_ color: CGColor, width: CGFloat) -> CKStyleModifier<Self> {
+        style { style in
+            style.halos.append(CKHalo(color: color, width: width))
+        }
     }
 
-    func halo(_ color: CKColor, width: CGFloat) -> CKHaloView<Self> {
+    func halo(_ color: CKColor, width: CGFloat) -> CKStyleModifier<Self> {
         halo(color.cgColor, width: width)
     }
 
@@ -475,16 +375,20 @@ extension CKView {
         CKNoPathView(content: self)
     }
 
-    func color(_ color: CKColor) -> CKColorOverrideView<Self> {
-        CKColorOverrideView(content: self, color: color)
+    func color(_ color: CKColor) -> CKStyleModifier<Self> {
+        style { style in
+            style.colorOverride = color.cgColor
+        }
     }
 
-    func clip(_ path: CGPath) -> CKClipView<Self> {
-        CKClipView(content: self, clipPath: path)
+    func clip(_ path: CGPath) -> CKStyleModifier<Self> {
+        style { style in
+            style.clipPath = path
+        }
     }
 
-    func clip(to rect: CGRect) -> CKClipView<Self> {
-        CKClipView(content: self, clipPath: CGPath(rect: rect, transform: nil))
+    func clip(to rect: CGRect) -> CKStyleModifier<Self> {
+        clip(CGPath(rect: rect, transform: nil))
     }
 
     func composite(
@@ -494,68 +398,40 @@ extension CKView {
         CKCompositeView(content: self, composite: content(), rule: rule)
     }
 
-    func hoverable(_ id: UUID) -> CKInteractionView<Self> {
-        CKInteractionView(
-            content: self,
-            targetID: id,
-            isHoverable: true,
-            isSelectable: false,
-            isDraggable: false,
-            contentShape: nil,
-            dragPhaseHandler: nil,
-            dragDeltaHandler: nil
-        )
+    func hoverable(_ id: UUID) -> CKInteractionModifier<Self> {
+        interaction(id: id) { state in
+            state.hoverable = true
+        }
     }
 
-    func selectable(_ id: UUID) -> CKInteractionView<Self> {
-        CKInteractionView(
-            content: self,
-            targetID: id,
-            isHoverable: false,
-            isSelectable: true,
-            isDraggable: false,
-            contentShape: nil,
-            dragPhaseHandler: nil,
-            dragDeltaHandler: nil
-        )
+    func selectable(_ id: UUID) -> CKInteractionModifier<Self> {
+        interaction(id: id) { state in
+            state.selectable = true
+        }
     }
 
-    func onDragGesture(_ action: @escaping (CanvasDragPhase) -> Void) -> CKInteractionView<Self> {
+    func onDragGesture(_ action: @escaping (CanvasDragPhase) -> Void) -> CKInteractionModifier<Self> {
         onDragGesture { phase, _ in
             action(phase)
         }
     }
 
-    func onDragGesture(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKInteractionView<Self> {
-        CKInteractionView(
-            content: self,
-            targetID: UUID(),
-            isHoverable: false,
-            isSelectable: false,
-            isDraggable: false,
-            contentShape: nil,
-            dragPhaseHandler: action,
-            dragDeltaHandler: nil
-        )
+    func onDragGesture(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKInteractionModifier<Self> {
+        interaction { state in
+            state.onDragPhase = action
+        }
     }
 
-    func onDragGesture(_ action: @escaping (CanvasDragDelta) -> Void) -> CKInteractionView<Self> {
+    func onDragGesture(_ action: @escaping (CanvasDragDelta) -> Void) -> CKInteractionModifier<Self> {
         onDragGesture { delta, _ in
             action(delta)
         }
     }
 
-    func onDragGesture(_ action: @escaping (CanvasDragDelta, CanvasDragSession) -> Void) -> CKInteractionView<Self> {
-        CKInteractionView(
-            content: self,
-            targetID: UUID(),
-            isHoverable: false,
-            isSelectable: false,
-            isDraggable: false,
-            contentShape: nil,
-            dragPhaseHandler: nil,
-            dragDeltaHandler: action
-        )
+    func onDragGesture(_ action: @escaping (CanvasDragDelta, CanvasDragSession) -> Void) -> CKInteractionModifier<Self> {
+        interaction { state in
+            state.onDragDelta = action
+        }
     }
 
     func onCanvasDrag(
@@ -567,268 +443,248 @@ extension CKView {
         )
     }
 
-    func contentShape(_ path: CGPath) -> CKHitTargetView<Self> {
-        CKHitTargetView(
-            content: self,
-            contentShape: path,
-            onHover: nil,
-            onTap: nil,
-            onDrag: nil,
-            targetID: UUID()
-        )
+    func contentShape(_ path: CGPath) -> CKInteractionModifier<Self> {
+        interaction { state in
+            state.contentShape = path
+        }
     }
 
-    func contentShape(_ path: CGPath, id: UUID) -> CKHitTargetView<Self> {
-        CKHitTargetView(
-            content: self,
-            contentShape: path,
-            onHover: nil,
-            onTap: nil,
-            onDrag: nil,
-            targetID: id
-        )
+    func contentShape(_ path: CGPath, id: UUID) -> CKInteractionModifier<Self> {
+        interaction(id: id) { state in
+            state.contentShape = path
+        }
     }
 
-    func onHover(_ action: @escaping (Bool) -> Void) -> CKHitTargetView<Self> {
-        CKHitTargetView(
-            content: self,
-            contentShape: nil,
-            onHover: action,
-            onTap: nil,
-            onDrag: nil,
-            targetID: UUID()
-        )
+    func onHover(_ action: @escaping (Bool) -> Void) -> CKInteractionModifier<Self> {
+        interaction { state in
+            state.onHover = action
+            state.hoverable = true
+        }
     }
 
-    func onHover(id: UUID, _ action: @escaping (Bool) -> Void) -> CKHitTargetView<Self> {
-        CKHitTargetView(
-            content: self,
-            contentShape: nil,
-            onHover: action,
-            onTap: nil,
-            onDrag: nil,
-            targetID: id
-        )
+    func onHover(id: UUID, _ action: @escaping (Bool) -> Void) -> CKInteractionModifier<Self> {
+        interaction(id: id) { state in
+            state.onHover = action
+            state.hoverable = true
+        }
     }
 
-    func onTap(_ action: @escaping () -> Void) -> CKHitTargetView<Self> {
-        CKHitTargetView(
-            content: self,
-            contentShape: nil,
-            onHover: nil,
-            onTap: action,
-            onDrag: nil,
-            targetID: UUID()
-        )
+    func onTap(_ action: @escaping () -> Void) -> CKInteractionModifier<Self> {
+        interaction { state in
+            state.onTap = action
+            state.selectable = true
+        }
     }
 
-    func onTap(id: UUID, _ action: @escaping () -> Void) -> CKHitTargetView<Self> {
-        CKHitTargetView(
-            content: self,
-            contentShape: nil,
-            onHover: nil,
-            onTap: action,
-            onDrag: nil,
-            targetID: id
-        )
+    func onTap(id: UUID, _ action: @escaping () -> Void) -> CKInteractionModifier<Self> {
+        interaction(id: id) { state in
+            state.onTap = action
+            state.selectable = true
+        }
     }
 
-    func onDrag(_ action: @escaping (CanvasDragPhase) -> Void) -> CKHitTargetView<Self> {
+    func onDrag(_ action: @escaping (CanvasDragPhase) -> Void) -> CKInteractionModifier<Self> {
         onDrag { phase, _ in
             action(phase)
         }
     }
 
-    func onDrag(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKHitTargetView<Self> {
-        CKHitTargetView(
-            content: self,
-            contentShape: nil,
-            onHover: nil,
-            onTap: nil,
-            onDrag: action,
-            targetID: UUID()
-        )
+    func onDrag(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKInteractionModifier<Self> {
+        interaction { state in
+            state.onDrag = action
+            state.draggable = true
+        }
     }
 
-    func onDrag(id: UUID, _ action: @escaping (CanvasDragPhase) -> Void) -> CKHitTargetView<Self> {
+    func onDrag(id: UUID, _ action: @escaping (CanvasDragPhase) -> Void) -> CKInteractionModifier<Self> {
         onDrag(id: id) { phase, _ in
             action(phase)
         }
     }
 
-    func onDrag(id: UUID, _ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKHitTargetView<Self> {
-        CKHitTargetView(
-            content: self,
-            contentShape: nil,
-            onHover: nil,
-            onTap: nil,
-            onDrag: action,
-            targetID: id
-        )
+    func onDrag(id: UUID, _ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKInteractionModifier<Self> {
+        interaction(id: id) { state in
+            state.onDrag = action
+            state.draggable = true
+        }
     }
 }
 
-extension CKHitTargetView {
-    func contentShape(_ path: CGPath) -> CKHitTargetView<Content> {
-        CKHitTargetView(
-            content: content,
-            contentShape: path,
-            onHover: onHover,
-            onTap: onTap,
-            onDrag: onDrag,
-            targetID: targetID,
-            hitTestPriority: hitTestPriority
-        )
-    }
-
-    func onHover(_ action: @escaping (Bool) -> Void) -> CKHitTargetView<Content> {
-        CKHitTargetView(
-            content: content,
-            contentShape: contentShape,
-            onHover: action,
-            onTap: onTap,
-            onDrag: onDrag,
-            targetID: targetID,
-            hitTestPriority: hitTestPriority
-        )
-    }
-
-    func onTap(_ action: @escaping () -> Void) -> CKHitTargetView<Content> {
-        CKHitTargetView(
-            content: content,
-            contentShape: contentShape,
-            onHover: onHover,
-            onTap: action,
-            onDrag: onDrag,
-            targetID: targetID,
-            hitTestPriority: hitTestPriority
-        )
-    }
-
-    func onDrag(_ action: @escaping (CanvasDragPhase) -> Void) -> CKHitTargetView<Content> {
-        onDrag { phase, _ in
-            action(phase)
-        }
-    }
-
-    func onDrag(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKHitTargetView<Content> {
-        CKHitTargetView(
-            content: content,
-            contentShape: contentShape,
-            onHover: onHover,
-            onTap: onTap,
-            onDrag: action,
-            targetID: targetID,
-            hitTestPriority: hitTestPriority
-        )
-    }
-}
-
-extension CKInteractionView {
-    func hoverable(_ id: UUID) -> CKInteractionView<Content> {
+extension CKInteractionModifier {
+    func hoverable(_ id: UUID) -> CKInteractionModifier<Content> {
         if targetID == id {
-            var copy = self
-            copy.isHoverable = true
-            return copy
+            return update { state in
+                state.hoverable = true
+            }
         }
-        return CKInteractionView(
-            content: content,
-            targetID: id,
-            isHoverable: true,
-            isSelectable: isSelectable,
-            isDraggable: isDraggable,
-            contentShape: contentShape,
-            hitTestPriority: hitTestPriority,
-            dragPhaseHandler: dragPhaseHandler,
-            dragDeltaHandler: dragDeltaHandler
-        )
+        return update(id: id) { state in
+            state.hoverable = true
+        }
     }
 
-    func selectable(_ id: UUID) -> CKInteractionView<Content> {
+    func selectable(_ id: UUID) -> CKInteractionModifier<Content> {
         if targetID == id {
-            var copy = self
-            copy.isSelectable = true
-            return copy
+            return update { state in
+                state.selectable = true
+            }
         }
-        return CKInteractionView(
-            content: content,
-            targetID: id,
-            isHoverable: isHoverable,
-            isSelectable: true,
-            isDraggable: isDraggable,
-            contentShape: contentShape,
-            hitTestPriority: hitTestPriority,
-            dragPhaseHandler: dragPhaseHandler,
-            dragDeltaHandler: dragDeltaHandler
-        )
+        return update(id: id) { state in
+            state.selectable = true
+        }
     }
 
-    func onDragGesture(_ action: @escaping (CanvasDragPhase) -> Void) -> CKInteractionView<Content> {
+    func onDragGesture(_ action: @escaping (CanvasDragPhase) -> Void) -> CKInteractionModifier<Content> {
         onDragGesture { phase, _ in
             action(phase)
         }
     }
 
-    func onDragGesture(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKInteractionView<Content> {
-        var copy = self
-        if let existing = copy.dragPhaseHandler {
-            copy.dragPhaseHandler = { phase, session in
-                existing(phase, session)
-                action(phase, session)
+    func onDragGesture(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKInteractionModifier<Content> {
+        update { state in
+            if let existing = state.onDragPhase {
+                state.onDragPhase = { phase, session in
+                    existing(phase, session)
+                    action(phase, session)
+                }
+            } else {
+                state.onDragPhase = action
             }
-        } else {
-            copy.dragPhaseHandler = action
         }
-        return copy
     }
 
-    func onDragGesture(_ action: @escaping (CanvasDragDelta) -> Void) -> CKInteractionView<Content> {
+    func onDragGesture(_ action: @escaping (CanvasDragDelta) -> Void) -> CKInteractionModifier<Content> {
         onDragGesture { delta, _ in
             action(delta)
         }
     }
 
-    func onDragGesture(_ action: @escaping (CanvasDragDelta, CanvasDragSession) -> Void) -> CKInteractionView<Content> {
-        var copy = self
-        if let existing = copy.dragDeltaHandler {
-            copy.dragDeltaHandler = { delta, session in
-                existing(delta, session)
-                action(delta, session)
+    func onDragGesture(_ action: @escaping (CanvasDragDelta, CanvasDragSession) -> Void) -> CKInteractionModifier<Content> {
+        update { state in
+            if let existing = state.onDragDelta {
+                state.onDragDelta = { delta, session in
+                    existing(delta, session)
+                    action(delta, session)
+                }
+            } else {
+                state.onDragDelta = action
             }
-        } else {
-            copy.dragDeltaHandler = action
         }
-        return copy
     }
 
-    func hoverable() -> CKInteractionView<Content> {
-        var copy = self
-        copy.isHoverable = true
-        return copy
+    func hoverable() -> CKInteractionModifier<Content> {
+        update { state in
+            state.hoverable = true
+        }
     }
 
-    func selectable() -> CKInteractionView<Content> {
-        var copy = self
-        copy.isSelectable = true
-        return copy
+    func selectable() -> CKInteractionModifier<Content> {
+        update { state in
+            state.selectable = true
+        }
     }
 
-    func draggable() -> CKInteractionView<Content> {
-        var copy = self
-        copy.isDraggable = true
-        return copy
+    func draggable() -> CKInteractionModifier<Content> {
+        update { state in
+            state.draggable = true
+        }
     }
 
-    func contentShape(_ path: CGPath) -> CKInteractionView<Content> {
-        var copy = self
-        copy.contentShape = path
-        return copy
+    func contentShape(_ path: CGPath) -> CKInteractionModifier<Content> {
+        update { state in
+            state.contentShape = path
+        }
     }
 
-    func hitTestPriority(_ priority: Int) -> CKInteractionView<Content> {
-        var copy = self
-        copy.hitTestPriority = priority
-        return copy
+    func contentShape(_ path: CGPath, id: UUID) -> CKInteractionModifier<Content> {
+        update(id: id) { state in
+            state.contentShape = path
+        }
+    }
+
+    func hitTestPriority(_ priority: Int) -> CKInteractionModifier<Content> {
+        update { state in
+            state.hitTestPriority = priority
+        }
+    }
+
+    func onHover(_ action: @escaping (Bool) -> Void) -> CKInteractionModifier<Content> {
+        update { state in
+            state.onHover = action
+            state.hoverable = true
+        }
+    }
+
+    func onHover(id: UUID, _ action: @escaping (Bool) -> Void) -> CKInteractionModifier<Content> {
+        update(id: id) { state in
+            state.onHover = action
+            state.hoverable = true
+        }
+    }
+
+    func onTap(_ action: @escaping () -> Void) -> CKInteractionModifier<Content> {
+        update { state in
+            state.onTap = action
+            state.selectable = true
+        }
+    }
+
+    func onTap(id: UUID, _ action: @escaping () -> Void) -> CKInteractionModifier<Content> {
+        update(id: id) { state in
+            state.onTap = action
+            state.selectable = true
+        }
+    }
+
+    func onDrag(_ action: @escaping (CanvasDragPhase) -> Void) -> CKInteractionModifier<Content> {
+        onDrag { phase, _ in
+            action(phase)
+        }
+    }
+
+    func onDrag(_ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKInteractionModifier<Content> {
+        update { state in
+            state.onDrag = action
+            state.draggable = true
+        }
+    }
+
+    func onDrag(id: UUID, _ action: @escaping (CanvasDragPhase) -> Void) -> CKInteractionModifier<Content> {
+        onDrag(id: id) { phase, _ in
+            action(phase)
+        }
+    }
+
+    func onDrag(id: UUID, _ action: @escaping (CanvasDragPhase, CanvasDragSession) -> Void) -> CKInteractionModifier<Content> {
+        update(id: id) { state in
+            state.onDrag = action
+            state.draggable = true
+        }
+    }
+}
+
+extension CKStyleModifier {
+    func lineCap(_ lineCap: CAShapeLayerLineCap) -> CKStyleModifier<Content> {
+        update { style in
+            style.stroke?.lineCap = lineCap
+        }
+    }
+
+    func lineJoin(_ lineJoin: CAShapeLayerLineJoin) -> CKStyleModifier<Content> {
+        update { style in
+            style.stroke?.lineJoin = lineJoin
+        }
+    }
+
+    func miterLimit(_ limit: CGFloat) -> CKStyleModifier<Content> {
+        update { style in
+            style.stroke?.miterLimit = limit
+        }
+    }
+
+    func lineDash(_ pattern: [CGFloat]) -> CKStyleModifier<Content> {
+        update { style in
+            style.stroke?.lineDash = pattern.map { NSNumber(value: Double($0)) }
+        }
     }
 }
 
@@ -847,54 +703,6 @@ extension CKTransformView {
         var copy = self
         copy.rotation = angle
         return copy
-    }
-}
-
-extension CKStrokeView {
-    func lineCap(_ lineCap: CAShapeLayerLineCap) -> CKStrokeView<Content> {
-        var copy = self
-        copy.lineCap = lineCap
-        return copy
-    }
-
-    func lineJoin(_ lineJoin: CAShapeLayerLineJoin) -> CKStrokeView<Content> {
-        var copy = self
-        copy.lineJoin = lineJoin
-        return copy
-    }
-
-    func miterLimit(_ limit: CGFloat) -> CKStrokeView<Content> {
-        var copy = self
-        copy.miterLimit = limit
-        return copy
-    }
-
-    func lineDash(_ pattern: [CGFloat]) -> CKStrokeView<Content> {
-        var copy = self
-        copy.lineDash = pattern.map { NSNumber(value: Double($0)) }
-        return copy
-    }
-
-    func clip(_ path: CGPath) -> CKStrokeView<Content> {
-        var copy = self
-        copy.clipPath = path
-        return copy
-    }
-
-    func clip(to rect: CGRect) -> CKStrokeView<Content> {
-        clip(CGPath(rect: rect, transform: nil))
-    }
-}
-
-extension CKFillView {
-    func clip(_ path: CGPath) -> CKFillView<Content> {
-        var copy = self
-        copy.clipPath = path
-        return copy
-    }
-
-    func clip(to rect: CGRect) -> CKFillView<Content> {
-        clip(CGPath(rect: rect, transform: nil))
     }
 }
 
@@ -938,29 +746,10 @@ private extension DrawingPrimitive {
 }
 
 
-private struct CKOpacityView: CKView {
-    typealias Body = CKGroup
-    let content: AnyCKView
-    let opacity: CGFloat
-
-    var body: CKGroup {
-        .empty
-    }
-}
-
-extension CKOpacityView: CKNodeView {
-    func makeNode(in context: RenderContext) -> CKRenderNode? {
-        guard let child = content.makeNode(in: context) else {
-            return nil
-        }
-        var node = child
-        node.style.opacity *= opacity
-        return node
-    }
-}
-
 extension CKView {
-    func opacity(_ value: CGFloat) -> some CKView {
-        CKOpacityView(content: AnyCKView(self), opacity: value)
+    func opacity(_ value: CGFloat) -> CKStyleModifier<Self> {
+        style { style in
+            style.opacity *= value
+        }
     }
 }
