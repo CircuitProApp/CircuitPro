@@ -31,6 +31,78 @@ struct TraceEngine: ConnectionEngine {
         return output
     }
 
+    func normalize(
+        points: [any ConnectionPoint],
+        links: [any ConnectionLink],
+        context: ConnectionNormalizationContext
+    ) -> ConnectionDelta {
+        let tracePoints = points.compactMap { $0 as? TraceVertex }
+        let traceLinks = links.compactMap { $0 as? TraceSegment }
+        guard !tracePoints.isEmpty, !traceLinks.isEmpty else {
+            return ConnectionDelta()
+        }
+
+        let epsilon = max(0.5 / max(context.magnification, 0.0001), 0.0001)
+        let pointsByID = Dictionary(
+            uniqueKeysWithValues: tracePoints.map { ($0.id, context.snapPoint($0.position)) }
+        )
+        let pointsByObject = Dictionary(
+            uniqueKeysWithValues: tracePoints.map { ($0.id, $0 as any ConnectionPoint) }
+        )
+        let originalLinksByID = Dictionary(uniqueKeysWithValues: traceLinks.map { ($0.id, $0) })
+        let preferredIDs = Set(originalLinksByID.keys)
+
+        var state = TraceNormalizationState(
+            pointsByID: pointsByID,
+            pointsByObject: pointsByObject,
+            links: traceLinks,
+            removedPointIDs: [],
+            removedLinkIDs: [],
+            epsilon: epsilon,
+            preferredIDs: preferredIDs
+        )
+        TraceMergeCoincidentRule().apply(to: &state)
+        TraceSplitEdgesAtPassingVerticesRule().apply(to: &state)
+        TraceCollapseLinearRunsRule().apply(to: &state)
+        TraceRemoveIsolatedFreeVerticesRule().apply(to: &state)
+
+        let finalIDs = Set(state.links.map { $0.id })
+        var removedLinkIDs = state.removedLinkIDs
+        removedLinkIDs.formUnion(Set(originalLinksByID.keys).subtracting(finalIDs))
+
+        var updatedLinks: [TraceSegment] = []
+        var addedLinks: [TraceSegment] = []
+        for link in state.links {
+            if let original = originalLinksByID[link.id] {
+                if original.startID != link.startID
+                    || original.endID != link.endID
+                    || original.width != link.width
+                    || original.layerId != link.layerId {
+                    updatedLinks.append(link)
+                }
+            } else {
+                addedLinks.append(link)
+            }
+        }
+
+        let removedPointIDs = state.removedPointIDs
+        if removedPointIDs.isEmpty
+            && removedLinkIDs.isEmpty
+            && updatedLinks.isEmpty
+            && addedLinks.isEmpty {
+            return ConnectionDelta()
+        }
+
+        return ConnectionDelta(
+            removedPointIDs: removedPointIDs,
+            updatedPoints: [],
+            addedPoints: [],
+            removedLinkIDs: removedLinkIDs,
+            updatedLinks: updatedLinks,
+            addedLinks: addedLinks
+        )
+    }
+
     func route(from start: CGPoint, to end: CGPoint) -> [CGPoint] {
         let delta = CGPoint(x: end.x - start.x, y: end.y - start.y)
         let dx = abs(delta.x)
@@ -40,20 +112,19 @@ struct TraceEngine: ConnectionEngine {
             return [start, end]
         }
 
-        let diagonalLength = min(dx, dy)
-        let corner = CGPoint(
-            x: start.x + diagonalLength * delta.x.sign(),
-            y: start.y + diagonalLength * delta.y.sign()
-        )
+        let sx = delta.x.sign()
+        let sy = delta.y.sign()
 
-        if hypot(corner.x - end.x, corner.y - end.y) < 1e-6 {
-            return [start, end]
+        let horizontalFirst = preferHorizontalFirst ? (dx >= dy) : (dy < dx)
+        if horizontalFirst {
+            let leg = dx - dy
+            let mid = CGPoint(x: start.x + leg * sx, y: start.y)
+            return [start, mid, end]
         }
 
-        if preferHorizontalFirst {
-            return [start, CGPoint(x: end.x, y: start.y), end]
-        }
-        return [start, CGPoint(x: start.x, y: end.y), end]
+        let leg = dy - dx
+        let mid = CGPoint(x: start.x, y: start.y + leg * sy)
+        return [start, mid, end]
     }
 
 }

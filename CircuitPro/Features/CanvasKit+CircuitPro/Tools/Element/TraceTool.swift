@@ -68,6 +68,12 @@ final class TraceTool: CanvasTool {
                 items: &items
             )
 
+            applyNormalization(
+                to: &items,
+                context: context.renderContext,
+                environment: context.environment
+            )
+
             if context.clickCount >= 2 {
                 self.state = nil
             } else if let lastID = ids.last,
@@ -220,5 +226,56 @@ final class TraceTool: CanvasTool {
 
     private func position(for id: UUID, items: [any CanvasItem]) -> CGPoint? {
         items.compactMap { $0 as? TraceVertex }.first(where: { $0.id == id })?.position
+    }
+
+    private func applyNormalization(
+        to items: inout [any CanvasItem],
+        context: RenderContext,
+        environment: CanvasEnvironmentValues
+    ) {
+        let points = items.compactMap { $0 as? TraceVertex }
+        let links = items.compactMap { $0 as? TraceSegment }
+        guard !points.isEmpty, !links.isEmpty else { return }
+
+        let normalizationContext = ConnectionNormalizationContext(
+            magnification: context.magnification,
+            snapPoint: { point in
+                context.snapProvider.snap(point: point, context: context, environment: environment)
+            }
+        )
+        let delta = traceEngine.normalize(points: points, links: links, context: normalizationContext)
+        if delta.isEmpty { return }
+
+        if !delta.removedLinkIDs.isEmpty || !delta.removedPointIDs.isEmpty {
+            items.removeAll { item in
+                delta.removedLinkIDs.contains(item.id)
+                    || delta.removedPointIDs.contains(item.id)
+            }
+        }
+
+        if !delta.updatedPoints.isEmpty
+            || !delta.addedPoints.isEmpty
+            || !delta.updatedLinks.isEmpty
+            || !delta.addedLinks.isEmpty {
+            var indexByID: [UUID: Int] = [:]
+            indexByID.reserveCapacity(items.count)
+            for (index, item) in items.enumerated() {
+                indexByID[item.id] = index
+            }
+
+            func upsert(_ item: any CanvasItem) {
+                if let index = indexByID[item.id] {
+                    items[index] = item
+                } else {
+                    items.append(item)
+                    indexByID[item.id] = items.count - 1
+                }
+            }
+
+            for point in delta.updatedPoints { upsert(point) }
+            for point in delta.addedPoints { upsert(point) }
+            for link in delta.updatedLinks { upsert(link) }
+            for link in delta.addedLinks { upsert(link) }
+        }
     }
 }
