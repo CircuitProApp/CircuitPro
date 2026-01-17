@@ -9,9 +9,9 @@ struct WireView: CKView {
     @CKState private var globalDragTargetID: UUID?
 
     private let baseTolerance: CGFloat = 6
-    private let engine: (any ConnectionEngine)?
+    private let engine: any ConnectionEngine
 
-    init(engine: (any ConnectionEngine)?) {
+    init(engine: any ConnectionEngine) {
         self.engine = engine
     }
 
@@ -20,54 +20,49 @@ struct WireView: CKView {
     }
 
     var body: some CKView {
-        if let engine {
-            let routingContext = ConnectionRoutingContext { point in
-                context.snapProvider.snap(point: point, context: context, environment: environment)
+        let routingContext = ConnectionRoutingContext { point in
+            context.snapProvider.snap(point: point, context: context, environment: environment)
+        }
+        let routes = engine.routes(
+            points: connectionPoints,
+            links: connectionLinks,
+            context: routingContext
+        )
+        let activeLinkIDs = context.selectedItemIDs
+            .union(context.highlightedItemIDs)
+        let activePath = unifiedHaloPath(
+            activeLinkIDs: activeLinkIDs,
+            routes: routes
+        )
+        CKGroup {
+            if let activePath, !activePath.isEmpty {
+                CKPath(path: activePath)
+                    .halo(wireColor.haloOpacity(), width: 5)
             }
-            let routes = engine.routes(
-                points: connectionPoints,
-                links: connectionLinks,
-                context: routingContext
-            )
-            let activeLinkIDs = context.selectedItemIDs
-                .union(context.highlightedItemIDs)
-            let activePath = unifiedHaloPath(
-                activeLinkIDs: activeLinkIDs,
-                routes: routes
-            )
-            CKGroup {
-                if let activePath, !activePath.isEmpty {
-                    CKPath(path: activePath)
-                        .halo(wireColor.haloOpacity(), width: 5)
-                        .stroke(CGColor.clear, width: 0.01)
+            for linkID in routes.keys {
+                if let path = routePath(for: linkID, routes: routes) {
+                    CKPath(path: path)
+                        .stroke(wireColor, width: 1)
+                        .hoverable(linkID)
+                        .selectable(linkID)
+                        .onDragGesture { phase in
+                            handleDrag(linkID: linkID, phase: phase)
+                        }
                 }
-                for linkID in routes.keys {
-                    if let path = routePath(for: linkID, routes: routes) {
-                        CKPath(path: path)
-                            .stroke(wireColor, width: 1)
-                            .hoverable(linkID)
-                            .selectable(linkID)
-                            .onDragGesture { phase in
-                                handleDrag(linkID: linkID, phase: phase)
-                            }
-                    }
-                }
+            }
 
-                let dotPath = junctionDotsPath(
-                    pointsByID: connectionPointPositionsByID,
-                    links: connectionLinks,
-                    dotRadius: 3.0
-                )
-                if !dotPath.isEmpty {
-                    CKPath(path: dotPath)
-                        .fill(wireColor)
-                }
+            let dotPath = junctionDotsPath(
+                pointsByID: connectionPointPositionsByID,
+                links: connectionLinks,
+                dotRadius: 3.0
+            )
+            if !dotPath.isEmpty {
+                CKPath(path: dotPath)
+                    .fill(wireColor)
             }
-            .onCanvasDrag { phase, renderContext, controller in
-                handleGlobalDrag(phase, context: renderContext, controller: controller)
-            }
-        } else {
-            CKEmpty()
+        }
+        .onCanvasDrag { phase, renderContext, controller in
+            handleGlobalDrag(phase, context: renderContext, controller: controller)
         }
     }
 
@@ -265,8 +260,7 @@ struct WireView: CKView {
 
     private func endDrag() {
         guard dragState != nil,
-            let itemsBinding = context.itemsBinding,
-            let engine
+              let itemsBinding = context.itemsBinding
         else {
             dragState = nil
             return
@@ -344,9 +338,7 @@ struct WireView: CKView {
         context: RenderContext,
         controller: CanvasController
     ) {
-        guard let itemsBinding = context.itemsBinding,
-            let engine
-        else { return }
+        guard let itemsBinding = context.itemsBinding else { return }
 
         switch phase {
         case .began(let event):

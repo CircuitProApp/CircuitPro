@@ -208,7 +208,6 @@ struct CanvasView: NSViewRepresentable {
             }
         }
 
-        scrollView.documentView?.needsDisplay = true
     }
 }
 
