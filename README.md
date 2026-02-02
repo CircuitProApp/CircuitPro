@@ -1,19 +1,10 @@
 <p align="center">
-<img width="128" alt="Circuit Pro App Icon" src="https://github.com/user-attachments/assets/7e9c9975-4ed7-4842-b3a1-0bae2e034c37" />
+<img width="128" alt="Circuit Pro App Icon" src="https://github.com/user-attachments/assets/cb152d93-9f8a-43b0-ba2a-49c60a6bd931" />
 <h1 align="center">Circuit Pro for macOS</h1>
 </p>
 
 <p align="center">
-<a aria-label="Follow Circuit Pro on X" href="https://x.com/CircuitProApp" target="_blank">
-<img alt="" src="https://img.shields.io/badge/Follow_@CircuitProApp-black.svg?style=for-the-badge&logo=X">
-</a>
-<a aria-label="Join the community on Discord" href="https://discord.gg/DS89GgqA8G" target="_blank">
-<img alt="" src="https://img.shields.io/badge/Join%20the%20community-black.svg?style=for-the-badge&logo=Discord">
-</a>
-<a aria-label="Support on Patreon" href="https://www.patreon.com/c/CircuitPro" target="_blank">
-<img alt="Support on Patreon" src="https://img.shields.io/badge/Support%20on%20Patreon-black.svg?style=for-the-badge&logo=patreon">
-</a>
-
+<a aria-label="Follow Circuit Pro on X" href="https://x.com/CircuitProApp" target="_blank"><img alt="" src="https://img.shields.io/badge/Follow_@CircuitProApp-black.svg?style=for-the-badge&logo=X"></a>&nbsp;&nbsp;<a aria-label="Join the community on Discord" href="https://discord.gg/DS89GgqA8G" target="_blank"><img alt="" src="https://img.shields.io/badge/Join%20the%20community-black.svg?style=for-the-badge&logo=Discord"></a>&nbsp;&nbsp;<a aria-label="Support on Patreon" href="https://www.patreon.com/c/CircuitPro" target="_blank"><img alt="Support on Patreon" src="https://img.shields.io/badge/Support%20on%20Patreon-black.svg?style=for-the-badge&logo=patreon"></a>
 </p>
 
 <p><b>Introducing Circuit Pro</b> <i>the Mac-native PCB design tool</i>. Built from the ground up for macOS, Circuit Pro delivers a seamless, intuitive circuit design experience — with schematic and layout editor, component builder and native performance. Beautiful, powerful, and made for hardware designers who think different.</p>
