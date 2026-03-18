@@ -7,9 +7,50 @@
 
 import SwiftUI
 
+private struct LayoutNavigatorDisclosureGroupStyle: DisclosureGroupStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Button {
+                withAnimation(.smooth(duration: 0.2)) {
+                    configuration.isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    configuration.label
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .imageScale(.small)
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(configuration.isExpanded ? 90 : 0))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule()
+                        .fill(.quaternary.opacity(0.45))
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if configuration.isExpanded {
+                configuration.content
+                    .padding(.leading, 0)
+            }
+        }
+    }
+}
+
 struct FootprintNavigatorView: View {
+    private enum PlacementBucket: Hashable {
+        case unplaced
+        case front
+        case back
+    }
+
     @BindableEnvironment(\.projectManager) private var projectManager
     @BindableEnvironment(\.editorSession) private var editorSession
+    @State private var expandedBuckets: Set<PlacementBucket> = [.unplaced, .front, .back]
 
     private var unplacedComponents: [ComponentInstance] {
         projectManager.componentInstances.filter {
@@ -41,109 +82,133 @@ struct FootprintNavigatorView: View {
         }
 
         projectManager.selectedDesign.componentInstances.removeAll { idsToRemove.contains($0.id) }
-        selected.subtract(idsToRemove) // Clear selection for deleted items
+        selected.subtract(idsToRemove)  // Clear selection for deleted items
         projectManager.document.scheduleAutosave()
     }
 
     var body: some View {
-        VStack(spacing: 0) { // Added VStack for similar structure to SymbolNavigatorView
-            if projectManager.componentInstances.isEmpty { // Checking all component instances
+        VStack(spacing: 0) {  // Added VStack for similar structure to SymbolNavigatorView
+            if projectManager.componentInstances.isEmpty {  // Checking all component instances
                 Spacer()
-                Text("No Footprints") // Adjusted text
+                Text("No Footprints")  // Adjusted text
                     .font(.callout)
                     .foregroundColor(.secondary)
                 Spacer()
             } else {
-                List(selection: $editorSession.selectedItemIDs) { // Apply selection to the entire List
-                    Section("Unplaced") {
-                        if unplacedComponents.isEmpty {
-                            Text("All components placed.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            // Make sure ForEach iterates over the ComponentInstance itself
-                            ForEach(unplacedComponents) { component in
-                                componentRow(for: component)
-                                    .listRowSeparator(.hidden) // Added row separator style
-                                    // --- ADDED: Make this row draggable ---
-                                    .draggable(TransferablePlacement(componentInstanceID: component.id))
-                                    // Add context menu for deletion
-                                    .contextMenu {
-                                        let multi = editorSession.selectedItemIDs.contains(component.id) && editorSession.selectedItemIDs.count > 1
-                                        Button(role: .destructive) {
-                                            performDelete(on: component, selected: &editorSession.selectedItemIDs)
-                                        } label: {
-                                            Text(multi
-                                                 ? "Delete Selected (\(editorSession.selectedItemIDs.count))"
-                                                 : "Delete")
-                                        }
-                                    }
-                            }
-                        }
-                    }
+                List(selection: $editorSession.selectedItemIDs) {  // Apply selection to the entire List
+                    disclosureGroup(
+                        title: "Unplaced",
+                        bucket: .unplaced,
+                        components: unplacedComponents,
+                        emptyMessage: "All components placed.",
+                        allowsDrag: true
+                    )
 
-                    Section("Placed on Front") {
-                        let frontComponents = placedComponents(on: .front)
-                        if frontComponents.isEmpty {
-                            Text("No components on front.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(frontComponents) { component in
-                                componentRow(for: component)
-                                    .listRowSeparator(.hidden) // Added row separator style
-                                    // Add context menu for deletion
-                                    .contextMenu {
-                                        let multi = editorSession.selectedItemIDs.contains(component.id) && editorSession.selectedItemIDs.count > 1
-                                        Button(role: .destructive) {
-                                            performDelete(on: component, selected: &editorSession.selectedItemIDs)
-                                        } label: {
-                                            Text(multi
-                                                 ? "Delete Selected (\(editorSession.selectedItemIDs.count))"
-                                                 : "Delete")
-                                        }
-                                    }
-                            }
-                        }
-                    }
+                    disclosureGroup(
+                        title: "Placed on Front",
+                        bucket: .front,
+                        components: placedComponents(on: .front),
+                        emptyMessage: "No components on front."
+                    )
 
-                    Section("Placed on Back") {
-                        let backComponents = placedComponents(on: .back)
-                        if backComponents.isEmpty {
-                            Text("No components on back.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(backComponents) { component in
-                                componentRow(for: component)
-                                    .listRowSeparator(.hidden) // Added row separator style
-                                    // Add context menu for deletion
-                                    .contextMenu {
-                                        let multi = editorSession.selectedItemIDs.contains(component.id) && editorSession.selectedItemIDs.count > 1
-                                        Button(role: .destructive) {
-                                            performDelete(on: component, selected: &editorSession.selectedItemIDs)
-                                        } label: {
-                                            Text(multi
-                                                 ? "Delete Selected (\(editorSession.selectedItemIDs.count))"
-                                                 : "Delete")
-                                        }
-                                    }
-                            }
-                        }
-                    }
+                    disclosureGroup(
+                        title: "Placed on Back",
+                        bucket: .back,
+                        components: placedComponents(on: .back),
+                        emptyMessage: "No components on back."
+                    )
                 }
-                .listStyle(.inset) // Applied .inset list style
-                .scrollContentBackground(.hidden) // Applied .hidden scroll content background
-                .environment(\.defaultMinListRowHeight, 14) // Applied defaultMinListRowHeight
+                .listStyle(.inset)  // Applied .inset list style
+                .scrollContentBackground(.hidden)  // Applied .hidden scroll content background
+                .environment(\.defaultMinListRowHeight, 14)  // Applied defaultMinListRowHeight
             }
         }
     }
 
     @ViewBuilder
-    private func componentRow(for component: ComponentInstance) -> some View {
-        HStack {
+    private func disclosureGroup(
+        title: String,
+        bucket: PlacementBucket,
+        components: [ComponentInstance],
+        emptyMessage: String,
+        allowsDrag: Bool = false
+    ) -> some View {
+        DisclosureGroup(isExpanded: binding(for: bucket)) {
+            if components.isEmpty {
+                Text(emptyMessage)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 3)
+            } else {
+                ForEach(components) { component in
+                    componentRow(for: component, allowsDrag: allowsDrag)
+                }
+            }
+        } label: {
+            Text(title)
+                .fontWeight(.semibold)
+        }
+        .disclosureGroupStyle(LayoutNavigatorDisclosureGroupStyle())
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(top: 2, leading: 4, bottom: 2, trailing: 4))
+    }
+
+    @ViewBuilder
+    private func componentRow(for component: ComponentInstance, allowsDrag: Bool = false)
+        -> some View
+    {
+        let row = HStack {
             Text(component.referenceDesignator)
             Spacer()
             Text(component.footprintInstance?.definition?.name ?? "Default")
                 .foregroundStyle(.secondary)
         }
-        .frame(height: 14) // Applied frame height for the row
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(.quaternary.opacity(0.18))
+        )
+        .frame(minHeight: 22)
+        .tag(component.id)
+        .listRowSeparator(.hidden)
+        .contextMenu {
+            contextMenu(for: component)
+        }
+
+        if allowsDrag {
+            row.draggable(TransferablePlacement(componentInstanceID: component.id))
+        } else {
+            row
+        }
+    }
+
+    @ViewBuilder
+    private func contextMenu(for component: ComponentInstance) -> some View {
+        let multi =
+            editorSession.selectedItemIDs.contains(component.id)
+            && editorSession.selectedItemIDs.count > 1
+
+        Button(role: .destructive) {
+            performDelete(on: component, selected: &editorSession.selectedItemIDs)
+        } label: {
+            Text(
+                multi
+                    ? "Delete Selected (\(editorSession.selectedItemIDs.count))"
+                    : "Delete")
+        }
+    }
+
+    private func binding(for bucket: PlacementBucket) -> Binding<Bool> {
+        Binding(
+            get: { expandedBuckets.contains(bucket) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedBuckets.insert(bucket)
+                } else {
+                    expandedBuckets.remove(bucket)
+                }
+            }
+        )
     }
 }

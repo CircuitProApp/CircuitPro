@@ -13,7 +13,7 @@ struct LayoutNavigatorView: View {
     enum LayoutNavigatorTab: String, Displayable {
         case footprints
         case layers
-        
+
         var label: String {
             return self.rawValue.capitalized
         }
@@ -24,8 +24,7 @@ struct LayoutNavigatorView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab selection bar (unchanged)
-            HStack(spacing: 2.5) {
+            HStack(spacing: 4) {
                 ForEach(LayoutNavigatorTab.allCases, id: \.self) { tab in
                     Button {
                         withAnimation(.smooth(duration: 0.3)) {
@@ -33,34 +32,45 @@ struct LayoutNavigatorView: View {
                         }
                     } label: {
                         Text(tab.label)
-                            .padding(.vertical, 2.5)
-                            .padding(.horizontal, 7.5)
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(selectedTab == tab ? .white : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 10)
                             .background {
                                 if selectedTab == tab {
-                                    RoundedRectangle(cornerRadius: 5)
+                                    Capsule()
                                         .fill(.blue)
-                                        .matchedGeometryEffect(id: "selection-background", in: namespace)
+                                        .matchedGeometryEffect(
+                                            id: "selection-background", in: namespace)
                                 }
                             }
-                            .foregroundStyle(selectedTab == tab ? .white : .secondary)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .frame(height: 28)
-            .font(.callout)
-
-            Divider().foregroundStyle(.quinary)
+            .padding(4)
+            .background(
+                Capsule()
+                    .fill(.quaternary.opacity(0.6))
+            )
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
 
             // --- MODIFIED: Switch now uses the new, dedicated views ---
             switch selectedTab {
             case .footprints:
                 FootprintNavigatorView()
-                    .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .leading)))
-       
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: .leading), removal: .move(edge: .leading)))
+
             case .layers:
                 LayerNavigatorListView()
-                    .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .trailing)))
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: .trailing), removal: .move(edge: .trailing)))
             }
         }
     }

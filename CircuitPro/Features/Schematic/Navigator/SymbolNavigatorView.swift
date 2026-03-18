@@ -49,25 +49,36 @@ struct SymbolNavigatorView: View {
                         Spacer()
                         // Show schematic-resolved RefDes (pending schematic edits become “truth” here)
                         let prefix = instance.definition?.referenceDesignatorPrefix ?? "?"
-                        let idx = projectManager.syncManager.resolvedReferenceDesignator(for: instance, onlyFrom: .schematic)
+                        let idx = projectManager.syncManager.resolvedReferenceDesignator(
+                            for: instance, onlyFrom: .schematic)
                         Text(prefix + String(idx))
                             .foregroundStyle(.secondary)
                             .monospaced()
                     }
-                    .frame(height: 14)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(.quaternary.opacity(0.18))
+                    )
+                    .frame(minHeight: 28)
                     .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 8, bottom: 6, trailing: 8))
                     .contextMenu {
-                        let multi = editorSession.selectedItemIDs.contains(instance.id) && editorSession.selectedItemIDs.count > 1
+                        let multi =
+                            editorSession.selectedItemIDs.contains(instance.id)
+                            && editorSession.selectedItemIDs.count > 1
                         Button(role: .destructive) {
                             performDelete(on: instance, selected: &editorSession.selectedItemIDs)
                         } label: {
-                            Text(multi
-                                 ? "Delete Selected (\(editorSession.selectedItemIDs.count))"
-                                 : "Delete")
+                            Text(
+                                multi
+                                    ? "Delete Selected (\(editorSession.selectedItemIDs.count))"
+                                    : "Delete")
                         }
                     }
                 }
-                .id(pendingStamp) // refresh when pending changes are updated
+                .id(pendingStamp)  // refresh when pending changes are updated
                 .listStyle(.inset)
                 .scrollContentBackground(.hidden)
                 .environment(\.defaultMinListRowHeight, 14)
