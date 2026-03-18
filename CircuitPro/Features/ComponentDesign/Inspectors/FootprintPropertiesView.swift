@@ -16,18 +16,22 @@ struct FootprintPropertiesView: View {
 
         ScrollView {
             if let selection = footprintEditor.singleSelectedPad,
-               let binding = footprintEditor.padBinding(for: selection.id) {
+                let binding = footprintEditor.padBinding(for: selection.id)
+            {
                 PadPropertiesView(pad: binding)
             } else if let selection = footprintEditor.singleSelectedText,
-                      let binding = footprintEditor.textBinding(for: selection.id) {
+                let binding = footprintEditor.textBinding(for: selection.id)
+            {
                 TextPropertiesView(textID: selection.id, text: binding)
             } else if let selection = footprintEditor.singleSelectedPrimitive,
-                      let binding = footprintEditor.primitiveBinding(for: selection.id) {
+                let binding = footprintEditor.primitiveBinding(for: selection.id)
+            {
                 PrimitivePropertiesView(primitive: binding)
-            }  else {
-                Text(footprintEditor.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
-                    .foregroundColor(.secondary)
-                    .padding()
+            } else {
+                SidebarContentUnavailableView(
+                    footprintEditor.selectedElementIDs.isEmpty
+                        ? "No Selection" : "Multiple Selection"
+                )
             }
         }
     }

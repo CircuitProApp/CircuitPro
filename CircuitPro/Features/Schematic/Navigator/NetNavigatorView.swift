@@ -10,22 +10,17 @@ struct NetNavigatorView: View {
     var body: some View {
         let nets = buildNets()
 
-        if nets.isEmpty {
-            VStack {
-                Text("No Nets")
-                    .font(.callout)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            List(nets, id: \.id, selection: $editorSession.selectedNetIDs) { net in
-                Text(net.name)
-                    .frame(height: 14)
-                    .listRowSeparator(.hidden)
-            }
-            .listStyle(.inset)
-            .scrollContentBackground(.hidden)
-            .environment(\.defaultMinListRowHeight, 14)
+        SidebarListView(
+            items: nets,
+            id: \.id,
+            selection: $editorSession.selectedNetIDs
+        ) { net in
+            Text(net.name)
+                .frame(height: 14)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 6, leading: 8, bottom: 6, trailing: 8))
+        } emptyContent: {
+            SidebarContentUnavailableView("No Nets")
         }
     }
 
@@ -81,14 +76,17 @@ struct NetNavigatorView: View {
         let unsortedNets = components.map { ids -> NetSummary in
             let nameSeed = ids.map { $0.uuidString }.sorted().joined(separator: "|")
             let id = UUID(name: nameSeed, namespace: NetSummary.namespace)
-            let pinNames = Set(ids.compactMap { id -> String? in
-                guard let pinPoint = pinPointsByID[id],
-                      let component = componentsBySymbolID[pinPoint.symbolID],
-                      let pin = component.symbolInstance.definition?.pins.first(where: { $0.id == pinPoint.pinID })
-                else { return nil }
-                let trimmed = pin.name.trimmingCharacters(in: .whitespacesAndNewlines)
-                return trimmed.isEmpty ? nil : trimmed
-            })
+            let pinNames = Set(
+                ids.compactMap { id -> String? in
+                    guard let pinPoint = pinPointsByID[id],
+                        let component = componentsBySymbolID[pinPoint.symbolID],
+                        let pin = component.symbolInstance.definition?.pins.first(where: {
+                            $0.id == pinPoint.pinID
+                        })
+                    else { return nil }
+                    let trimmed = pin.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return trimmed.isEmpty ? nil : trimmed
+                })
             return NetSummary(id: id, pinNames: pinNames)
         }
 

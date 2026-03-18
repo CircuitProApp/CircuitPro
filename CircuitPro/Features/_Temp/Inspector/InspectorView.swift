@@ -31,7 +31,7 @@ struct InspectorView: View {
 
     private var selectedSchematicTextBinding: Binding<CircuitText.Resolved>? {
         guard editorSession.selectedEditor == .schematic,
-              let selectedID = selectedSchematicID
+            let selectedID = selectedSchematicID
         else { return nil }
         return componentTextBinding(
             for: selectedID,
@@ -41,7 +41,7 @@ struct InspectorView: View {
 
     private var selectedLayoutTextBinding: Binding<CircuitText.Resolved>? {
         guard editorSession.selectedEditor == .layout,
-              let selectedID = selectedLayoutID
+            let selectedID = selectedLayoutID
         else { return nil }
         return componentTextBinding(
             for: selectedID,
@@ -127,15 +127,9 @@ struct InspectorView: View {
     /// A shared view for displaying the current selection status (none, or multiple).
     @ViewBuilder
     private var selectionStatusView: some View {
-        VStack {
-            Spacer()
-            Text(
-                editorSession.selectedItemIDs.isEmpty ? "No Selection" : "Multiple Items Selected"
-            )
-            .foregroundColor(.secondary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
+        SidebarContentUnavailableView(
+            editorSession.selectedItemIDs.isEmpty ? "No Selection" : "Multiple Items Selected"
+        )
     }
 
     private func componentTextBinding(

@@ -16,18 +16,22 @@ struct SymbolPropertiesView: View {
         VStack {
             ScrollView {
                 if let selection = symbolEditor.singleSelectedPin,
-                   let binding = symbolEditor.pinBinding(for: selection.id) {
+                    let binding = symbolEditor.pinBinding(for: selection.id)
+                {
                     PinPropertiesView(pin: binding)
                 } else if let selection = symbolEditor.singleSelectedText,
-                          let binding = symbolEditor.textBinding(for: selection.id) {
+                    let binding = symbolEditor.textBinding(for: selection.id)
+                {
                     TextPropertiesView(textID: selection.id, text: binding)
                 } else if let selection = symbolEditor.singleSelectedPrimitive,
-                          let binding = symbolEditor.primitiveBinding(for: selection.id) {
+                    let binding = symbolEditor.primitiveBinding(for: selection.id)
+                {
                     PrimitivePropertiesView(primitive: binding)
                 } else {
-                    Text(symbolEditor.selectedElementIDs.isEmpty ? "No Selection" : "Multiple Selection")
-                        .foregroundColor(.secondary)
-                        .padding()
+                    SidebarContentUnavailableView(
+                        symbolEditor.selectedElementIDs.isEmpty
+                            ? "No Selection" : "Multiple Selection"
+                    )
                 }
             }
         }

@@ -25,43 +25,14 @@ struct SchematicNavigatorView: View {
 
     @State private var selectedTab: SchematicNavigatorTab = .symbols
 
-    @Namespace private var namespace
-
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 4) {
-                ForEach(SchematicNavigatorTab.allCases, id: \.self) { tab in
-                    Button {
-                        withAnimation(.smooth(duration: 0.3)) {
-                            selectedTab = tab
-                        }
-                    } label: {
-                        Text(tab.label)
-                            .font(.callout.weight(.medium))
-                            .foregroundStyle(selectedTab == tab ? .white : .secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 10)
-                            .background {
-                                if selectedTab == tab {
-                                    Capsule()
-                                        .fill(.blue)
-                                        .matchedGeometryEffect(
-                                            id: "selection-background", in: namespace)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
+            SegmentedPicker(
+                options: SchematicNavigatorTab.allCases,
+                selection: $selectedTab
+            ) { tab in
+                tab.label
             }
-            .padding(4)
-            .background(
-                Capsule()
-                    .fill(.quaternary.opacity(0.6))
-            )
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
 
             switch selectedTab {
             case .symbols:

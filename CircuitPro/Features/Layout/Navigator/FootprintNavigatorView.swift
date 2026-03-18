@@ -89,11 +89,7 @@ struct FootprintNavigatorView: View {
     var body: some View {
         VStack(spacing: 0) {  // Added VStack for similar structure to SymbolNavigatorView
             if projectManager.componentInstances.isEmpty {  // Checking all component instances
-                Spacer()
-                Text("No Footprints")  // Adjusted text
-                    .font(.callout)
-                    .foregroundColor(.secondary)
-                Spacer()
+                SidebarContentUnavailableView("No Footprints")
             } else {
                 List(selection: $editorSession.selectedItemIDs) {  // Apply selection to the entire List
                     disclosureGroup(
