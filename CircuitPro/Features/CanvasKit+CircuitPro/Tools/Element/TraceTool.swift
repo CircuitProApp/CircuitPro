@@ -14,7 +14,8 @@ final class TraceTool: CanvasTool {
 
     // This property would be updated by a UI control (e.g., a text field in a toolbar).
     // It is initialized with the application's default value.
-    var currentTraceWidthInPoints: CGFloat = CircuitPro.Constants.defaultTraceWidthMM * CircuitPro.Constants.pointsPerMillimeter
+    var currentTraceWidthInPoints: CGFloat =
+        CircuitPro.Constants.defaultTraceWidthMM * CircuitPro.Constants.pointsPerMillimeter
 
     private struct DrawingState {
         let startID: UUID
@@ -28,7 +29,9 @@ final class TraceTool: CanvasTool {
         super.init()
     }
 
-    override func handleTap(at location: CGPoint, context: ToolInteractionContext) -> CanvasToolResult {
+    override func handleTap(at location: CGPoint, context: ToolInteractionContext)
+        -> CanvasToolResult
+    {
         guard let itemsBinding = context.renderContext.itemsBinding else {
             return .noResult
         }
@@ -51,7 +54,8 @@ final class TraceTool: CanvasTool {
             near: location,
             snapped: snapped,
             items: &items,
-            tolerance: tolerance
+            tolerance: tolerance,
+            layerId: activeLayerId
         )
 
         if let state {
@@ -59,7 +63,8 @@ final class TraceTool: CanvasTool {
             let ids = ensurePointsExist(
                 for: pathPoints,
                 items: &items,
-                tolerance: tolerance
+                tolerance: tolerance,
+                layerId: activeLayerId
             )
             appendLinks(
                 for: ids,
@@ -77,7 +82,8 @@ final class TraceTool: CanvasTool {
             if context.clickCount >= 2 {
                 self.state = nil
             } else if let lastID = ids.last,
-                      let lastPoint = position(for: lastID, items: items) {
+                let lastPoint = position(for: lastID, items: items)
+            {
                 self.state = DrawingState(startID: lastID, startPoint: lastPoint)
             } else {
                 self.state = DrawingState(startID: endID, startPoint: endPoint)
@@ -97,7 +103,9 @@ final class TraceTool: CanvasTool {
     ) -> CKGroup {
         guard let state else { return CKGroup() }
 
-        let color = context.layers.first(where: { $0.id == context.activeLayerId })?.color ?? NSColor.systemBlue.cgColor
+        let color =
+            context.layers.first(where: { $0.id == context.activeLayerId })?.color
+            ?? NSColor.systemBlue.cgColor
 
         let snapped = context.snapProvider.snap(
             point: mouse,
@@ -131,14 +139,20 @@ final class TraceTool: CanvasTool {
         near location: CGPoint,
         snapped: CGPoint,
         items: inout [any CanvasItem],
-        tolerance: CGFloat
+        tolerance: CGFloat,
+        layerId: UUID
     ) -> (UUID, CGPoint) {
         let points = items.compactMap { $0 as? TraceVertex }
-        if let existing = nearestPoint(to: location, in: points, tolerance: tolerance) {
+        if let existing = nearestPoint(
+            to: location,
+            in: points,
+            tolerance: tolerance,
+            layerId: layerId
+        ) {
             return (existing.id, existing.position)
         }
 
-        let vertex = TraceVertex(position: snapped)
+        let vertex = TraceVertex(position: snapped, layerId: layerId)
         items.append(vertex)
         return (vertex.id, vertex.position)
     }
@@ -146,10 +160,14 @@ final class TraceTool: CanvasTool {
     private func nearestPoint(
         to location: CGPoint,
         in points: [TraceVertex],
-        tolerance: CGFloat
+        tolerance: CGFloat,
+        layerId: UUID
     ) -> TraceVertex? {
         var best: (point: TraceVertex, distance: CGFloat)?
         for point in points {
+            guard point.layerId == layerId else {
+                continue
+            }
             let distance = hypot(point.position.x - location.x, point.position.y - location.y)
             if distance <= tolerance {
                 if let current = best {
@@ -165,17 +183,23 @@ final class TraceTool: CanvasTool {
     private func ensurePointsExist(
         for pathPoints: [CGPoint],
         items: inout [any CanvasItem],
-        tolerance: CGFloat
+        tolerance: CGFloat,
+        layerId: UUID
     ) -> [UUID] {
         var ids: [UUID] = []
         ids.reserveCapacity(pathPoints.count)
 
         for point in pathPoints {
-            if let existing = nearestPoint(to: point, in: items.compactMap { $0 as? TraceVertex }, tolerance: tolerance) {
+            if let existing = nearestPoint(
+                to: point,
+                in: items.compactMap { $0 as? TraceVertex },
+                tolerance: tolerance,
+                layerId: layerId
+            ) {
                 ids.append(existing.id)
                 continue
             }
-            let vertex = TraceVertex(position: point)
+            let vertex = TraceVertex(position: point, layerId: layerId)
             items.append(vertex)
             ids.append(vertex.id)
         }
@@ -215,7 +239,8 @@ final class TraceTool: CanvasTool {
     ) -> Bool {
         let links = items.compactMap { $0 as? TraceSegment }
         for link in links {
-            let matchesDirection = (link.startID == a && link.endID == b)
+            let matchesDirection =
+                (link.startID == a && link.endID == b)
                 || (link.startID == b && link.endID == a)
             if matchesDirection && link.width == width && link.layerId == layerId {
                 return true
@@ -243,7 +268,8 @@ final class TraceTool: CanvasTool {
                 context.snapProvider.snap(point: point, context: context, environment: environment)
             }
         )
-        let delta = traceEngine.normalize(points: points, links: links, context: normalizationContext)
+        let delta = traceEngine.normalize(
+            points: points, links: links, context: normalizationContext)
         if delta.isEmpty { return }
 
         if !delta.removedLinkIDs.isEmpty || !delta.removedPointIDs.isEmpty {
@@ -256,7 +282,8 @@ final class TraceTool: CanvasTool {
         if !delta.updatedPoints.isEmpty
             || !delta.addedPoints.isEmpty
             || !delta.updatedLinks.isEmpty
-            || !delta.addedLinks.isEmpty {
+            || !delta.addedLinks.isEmpty
+        {
             var indexByID: [UUID: Int] = [:]
             indexByID.reserveCapacity(items.count)
             for (index, item) in items.enumerated() {

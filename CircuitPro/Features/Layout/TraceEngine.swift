@@ -19,7 +19,7 @@ struct TraceEngine: ConnectionEngine {
 
         for link in links {
             guard let a = pointsByID[link.startID],
-                  let b = pointsByID[link.endID]
+                let b = pointsByID[link.endID]
             else { continue }
 
             let start = context.snapPoint(a)
@@ -49,18 +49,25 @@ struct TraceEngine: ConnectionEngine {
         let pointsByObject = Dictionary(
             uniqueKeysWithValues: tracePoints.map { ($0.id, $0 as any ConnectionPoint) }
         )
+        let traceVerticesByID = Dictionary(
+            uniqueKeysWithValues: tracePoints.map { ($0.id, $0) }
+        )
         let originalLinksByID = Dictionary(uniqueKeysWithValues: traceLinks.map { ($0.id, $0) })
+        let originalPointsByID = traceVerticesByID
         let preferredIDs = Set(originalLinksByID.keys)
 
         var state = TraceNormalizationState(
             pointsByID: pointsByID,
             pointsByObject: pointsByObject,
+            traceVerticesByID: traceVerticesByID,
             links: traceLinks,
+            addedPoints: [],
             removedPointIDs: [],
             removedLinkIDs: [],
             epsilon: epsilon,
             preferredIDs: preferredIDs
         )
+        TraceAssignVertexLayersRule().apply(to: &state)
         TraceMergeCoincidentRule().apply(to: &state)
         TraceSplitEdgesAtPassingVerticesRule().apply(to: &state)
         TraceCollapseLinearRunsRule().apply(to: &state)
@@ -77,7 +84,8 @@ struct TraceEngine: ConnectionEngine {
                 if original.startID != link.startID
                     || original.endID != link.endID
                     || original.width != link.width
-                    || original.layerId != link.layerId {
+                    || original.layerId != link.layerId
+                {
                     updatedLinks.append(link)
                 }
             } else {
@@ -85,18 +93,32 @@ struct TraceEngine: ConnectionEngine {
             }
         }
 
+        var updatedPoints: [TraceVertex] = []
+        var addedPoints = state.addedPoints.filter { !state.removedPointIDs.contains($0.id) }
+        for (id, point) in state.traceVerticesByID {
+            guard !state.removedPointIDs.contains(id),
+                let original = originalPointsByID[id]
+            else { continue }
+            if original.position != point.position || original.layerId != point.layerId {
+                updatedPoints.append(point)
+            }
+        }
+
         let removedPointIDs = state.removedPointIDs
         if removedPointIDs.isEmpty
             && removedLinkIDs.isEmpty
+            && updatedPoints.isEmpty
+            && addedPoints.isEmpty
             && updatedLinks.isEmpty
-            && addedLinks.isEmpty {
+            && addedLinks.isEmpty
+        {
             return ConnectionDelta()
         }
 
         return ConnectionDelta(
             removedPointIDs: removedPointIDs,
-            updatedPoints: [],
-            addedPoints: [],
+            updatedPoints: updatedPoints,
+            addedPoints: addedPoints,
             removedLinkIDs: removedLinkIDs,
             updatedLinks: updatedLinks,
             addedLinks: addedLinks
@@ -129,8 +151,8 @@ struct TraceEngine: ConnectionEngine {
 
 }
 
-private extension CGFloat {
-    func sign() -> CGFloat {
+extension CGFloat {
+    fileprivate func sign() -> CGFloat {
         (self > 0) ? 1 : ((self < 0) ? -1 : 0)
     }
 }

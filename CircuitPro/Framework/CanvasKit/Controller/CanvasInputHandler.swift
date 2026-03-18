@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Carbon.HIToolbox
 
 /// A lean input router that receives raw AppKit events, processes them, and dispatches
 /// to hit targets and global handlers. It delegates redraw decisions to those handlers.
@@ -75,13 +76,14 @@ final class CanvasInputHandler {
         globalDragLastRawPoint = rawPoint
         globalDragLastProcessedPoint = processedPoint
         controller.canvasDragHandlers.handle(
-            .began(CanvasGlobalDragEvent(
-                event: event,
-                rawLocation: rawPoint,
-                processedLocation: processedPoint,
-                rawDelta: .zero,
-                processedDelta: .zero
-            )),
+            .began(
+                CanvasGlobalDragEvent(
+                    event: event,
+                    rawLocation: rawPoint,
+                    processedLocation: processedPoint,
+                    rawDelta: .zero,
+                    processedDelta: .zero
+                )),
             context: context,
             controller: controller
         )
@@ -107,23 +109,28 @@ final class CanvasInputHandler {
         var didInvokeDragHandler = false
 
         if let target = dragTarget, let onDrag = target.onDrag {
-            let session = dragSessions[target.id] ?? {
-                let session = CanvasDragSession()
-                dragSessions[target.id] = session
-                return session
-            }()
+            let session =
+                dragSessions[target.id]
+                ?? {
+                    let session = CanvasDragSession()
+                    dragSessions[target.id] = session
+                    return session
+                }()
             let lastRaw = dragLastRawPoint ?? rawPoint
             let lastProcessed = dragLastProcessedPoint ?? processedPoint
             let rawDelta = CGPoint(x: rawPoint.x - lastRaw.x, y: rawPoint.y - lastRaw.y)
-            let processedDelta = CGPoint(x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
+            let processedDelta = CGPoint(
+                x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
             dragLastRawPoint = rawPoint
             dragLastProcessedPoint = processedPoint
-                onDrag(.changed(delta: CanvasDragDelta(
-                    raw: rawDelta,
-                    processed: processedDelta,
-                    rawLocation: rawPoint,
-                    processedLocation: processedPoint
-                )), session)
+            onDrag(
+                .changed(
+                    delta: CanvasDragDelta(
+                        raw: rawDelta,
+                        processed: processedDelta,
+                        rawLocation: rawPoint,
+                        processedLocation: processedPoint
+                    )), session)
             didInvokeDragHandler = true
         }
 
@@ -135,22 +142,27 @@ final class CanvasInputHandler {
             if hypot(dx, dy) >= dragThreshold {
                 pendingHitTarget = nil
                 dragTarget = target
-                let session = dragSessions[target.id] ?? {
-                    let session = CanvasDragSession()
-                    dragSessions[target.id] = session
-                    return session
-                }()
+                let session =
+                    dragSessions[target.id]
+                    ?? {
+                        let session = CanvasDragSession()
+                        dragSessions[target.id] = session
+                        return session
+                    }()
                 dragLastRawPoint = rawPoint
                 dragLastProcessedPoint = processedPoint
                 onDrag(.began, session)
                 let rawDelta = CGPoint(x: rawPoint.x - startRaw.x, y: rawPoint.y - startRaw.y)
-                let processedDelta = CGPoint(x: processedPoint.x - startProcessed.x, y: processedPoint.y - startProcessed.y)
-                onDrag(.changed(delta: CanvasDragDelta(
-                    raw: rawDelta,
-                    processed: processedDelta,
-                    rawLocation: rawPoint,
-                    processedLocation: processedPoint
-                )), session)
+                let processedDelta = CGPoint(
+                    x: processedPoint.x - startProcessed.x, y: processedPoint.y - startProcessed.y)
+                onDrag(
+                    .changed(
+                        delta: CanvasDragDelta(
+                            raw: rawDelta,
+                            processed: processedDelta,
+                            rawLocation: rawPoint,
+                            processedLocation: processedPoint
+                        )), session)
                 didInvokeDragHandler = true
             }
         }
@@ -159,20 +171,23 @@ final class CanvasInputHandler {
             let lastRaw = globalDragLastRawPoint ?? rawPoint
             let lastProcessed = globalDragLastProcessedPoint ?? processedPoint
             let rawDelta = CGPoint(x: rawPoint.x - lastRaw.x, y: rawPoint.y - lastRaw.y)
-            let processedDelta = CGPoint(x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
+            let processedDelta = CGPoint(
+                x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
             globalDragLastRawPoint = rawPoint
             globalDragLastProcessedPoint = processedPoint
-            let contextForGlobal = didInvokeDragHandler
+            let contextForGlobal =
+                didInvokeDragHandler
                 ? controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
                 : context
             controller.canvasDragHandlers.handle(
-                .changed(CanvasGlobalDragEvent(
-                    event: event,
-                    rawLocation: rawPoint,
-                    processedLocation: processedPoint,
-                    rawDelta: rawDelta,
-                    processedDelta: processedDelta
-                )),
+                .changed(
+                    CanvasGlobalDragEvent(
+                        event: event,
+                        rawLocation: rawPoint,
+                        processedLocation: processedPoint,
+                        rawDelta: rawDelta,
+                        processedDelta: processedDelta
+                    )),
                 context: contextForGlobal,
                 controller: controller
             )
@@ -217,18 +232,21 @@ final class CanvasInputHandler {
             let lastRaw = globalDragLastRawPoint ?? rawPoint
             let lastProcessed = globalDragLastProcessedPoint ?? processedPoint
             let rawDelta = CGPoint(x: rawPoint.x - lastRaw.x, y: rawPoint.y - lastRaw.y)
-            let processedDelta = CGPoint(x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
-            let contextForGlobal = didInvokeHandler
+            let processedDelta = CGPoint(
+                x: processedPoint.x - lastProcessed.x, y: processedPoint.y - lastProcessed.y)
+            let contextForGlobal =
+                didInvokeHandler
                 ? controller.currentContext(for: host.bounds, visibleRect: host.visibleRect)
                 : context
             controller.canvasDragHandlers.handle(
-                .ended(CanvasGlobalDragEvent(
-                    event: event,
-                    rawLocation: rawPoint,
-                    processedLocation: processedPoint,
-                    rawDelta: rawDelta,
-                    processedDelta: processedDelta
-                )),
+                .ended(
+                    CanvasGlobalDragEvent(
+                        event: event,
+                        rawLocation: rawPoint,
+                        processedLocation: processedPoint,
+                        rawDelta: rawDelta,
+                        processedDelta: processedDelta
+                    )),
                 context: contextForGlobal,
                 controller: controller
             )
@@ -253,7 +271,8 @@ final class CanvasInputHandler {
         let hitID = hitTarget?.id
         if hitID != hoveredTargetID {
             if let prevID = hoveredTargetID,
-               let previous = context.hitTargets.targets.first(where: { $0.id == prevID }) {
+                let previous = context.hitTargets.targets.first(where: { $0.id == prevID })
+            {
                 previous.onHover?(false)
             }
             hoveredTargetID = hitID
@@ -272,7 +291,10 @@ final class CanvasInputHandler {
         globalDragLastRawPoint = nil
         globalDragLastProcessedPoint = nil
         if let prevID = hoveredTargetID,
-           let previous = controller.environment.hitTargets.targets.first(where: { $0.id == prevID }) {
+            let previous = controller.environment.hitTargets.targets.first(where: {
+                $0.id == prevID
+            })
+        {
             previous.onHover?(false)
         }
         hoveredTargetID = nil
@@ -287,6 +309,89 @@ final class CanvasInputHandler {
     }
 
     func keyDown(_ event: NSEvent, in host: CanvasHostView) -> Bool {
-        return false // Event was not handled.
+        switch Int(event.keyCode) {
+        case kVK_Escape:
+            if controller.selectedTool?.handleEscape() == true {
+                host.requestLayerUpdate()
+                return true
+            }
+            if !controller.highlightedItemIDs.isEmpty || !currentSelection.isEmpty {
+                controller.setInteractionHighlight(itemIDs: [])
+                controller.updateSelection([])
+                host.requestLayerUpdate()
+                return true
+            }
+            return false
+
+        case kVK_Delete, kVK_ForwardDelete:
+            guard deleteSelection() else { return false }
+            host.requestLayerUpdate()
+            return true
+
+        default:
+            return false
+        }
+    }
+
+    private var currentSelection: Set<UUID> {
+        controller.currentContext(for: .zero, visibleRect: .zero).selectedItemIDs
+    }
+
+    private func deleteSelection() -> Bool {
+        guard let itemsBinding = controller.itemsBinding else { return false }
+
+        let selectedIDs = currentSelection
+        guard !selectedIDs.isEmpty else { return false }
+
+        var items = itemsBinding.wrappedValue
+        let selectedPointIDs = Set(
+            items.compactMap { item -> UUID? in
+                guard selectedIDs.contains(item.id),
+                    item is any ConnectionPoint
+                else { return nil }
+                return item.id
+            }
+        )
+
+        let incidentLinkIDs = Set(
+            items.compactMap { item -> UUID? in
+                guard let link = item as? any ConnectionLink else { return nil }
+                guard
+                    selectedPointIDs.contains(link.startID) || selectedPointIDs.contains(link.endID)
+                else {
+                    return nil
+                }
+                return link.id
+            }
+        )
+
+        let removeIDs = selectedIDs.union(incidentLinkIDs)
+        items.removeAll { removeIDs.contains($0.id) }
+        pruneOrphanConnectionVertices(in: &items)
+
+        itemsBinding.wrappedValue = items
+        controller.updateSelection([])
+        controller.setInteractionHighlight(itemIDs: [])
+        controller.setInteractionLinkHighlight(linkIDs: [])
+        return true
+    }
+
+    private func pruneOrphanConnectionVertices(in items: inout [any CanvasItem]) {
+        var linkedPointIDs: Set<UUID> = []
+        for item in items {
+            guard let link = item as? any ConnectionLink else { continue }
+            linkedPointIDs.insert(link.startID)
+            linkedPointIDs.insert(link.endID)
+        }
+
+        items.removeAll { item in
+            if let point = item as? TraceVertex {
+                return !linkedPointIDs.contains(point.id)
+            }
+            if let point = item as? WireVertex {
+                return !linkedPointIDs.contains(point.id)
+            }
+            return false
+        }
     }
 }

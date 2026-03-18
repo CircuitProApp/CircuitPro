@@ -50,7 +50,7 @@ struct TraceSplitEdgesAtPassingVerticesRule {
         let originalLinks = state.links
         for link in originalLinks {
             guard let start = state.pointsByID[link.startID],
-                  let end = state.pointsByID[link.endID]
+                let end = state.pointsByID[link.endID]
             else { continue }
 
             let mids = splitPoints(
@@ -98,7 +98,10 @@ struct TraceSplitEdgesAtPassingVerticesRule {
         mids.reserveCapacity(pointsByID.count)
 
         for (id, point) in pointsByID where id != link.startID && id != link.endID {
-            guard pointsByObject[id] != nil else { continue }
+            guard let pointObject = pointsByObject[id] else { continue }
+            if let traceVertex = pointObject as? TraceVertex, traceVertex.layerId != link.layerId {
+                continue
+            }
             if isPoint(point, onSegmentBetween: start, p2: end, tol: epsilon) {
                 let t = ((point.x - start.x) * dx + (point.y - start.y) * dy) / len2
                 mids.append((id: id, t: t))

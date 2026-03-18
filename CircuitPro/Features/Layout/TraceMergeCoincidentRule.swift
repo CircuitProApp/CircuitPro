@@ -8,6 +8,7 @@ struct TraceMergeCoincidentRule {
         for (id, point) in state.pointsByID {
             buckets[PositionKey(position: point, epsilon: state.epsilon), default: []].append(id)
         }
+        let layerMembership = buildLayerMembership(from: state.links)
 
         var removedPoints = Set<UUID>()
         var processed = Set<UUID>()
@@ -26,7 +27,14 @@ struct TraceMergeCoincidentRule {
                         index += 1
                         continue
                     }
-                    if hypot(currentPoint.x - otherPoint.x, currentPoint.y - otherPoint.y) < state.epsilon {
+                    if hypot(currentPoint.x - otherPoint.x, currentPoint.y - otherPoint.y)
+                        < state.epsilon,
+                        canMerge(
+                            currentID,
+                            otherID,
+                            layerMembership: layerMembership
+                        )
+                    {
                         cluster.append(otherID)
                         remaining.remove(at: index)
                     } else {
@@ -88,6 +96,28 @@ struct TraceMergeCoincidentRule {
             }
         }
         return ids.sorted { $0.uuidString < $1.uuidString }.first ?? ids.first ?? UUID()
+    }
+
+    private func buildLayerMembership(from links: [TraceSegment]) -> [UUID: Set<UUID>] {
+        var membership: [UUID: Set<UUID>] = [:]
+        for link in links {
+            membership[link.startID, default: []].insert(link.layerId)
+            membership[link.endID, default: []].insert(link.layerId)
+        }
+        return membership
+    }
+
+    private func canMerge(
+        _ lhs: UUID,
+        _ rhs: UUID,
+        layerMembership: [UUID: Set<UUID>]
+    ) -> Bool {
+        let left = layerMembership[lhs] ?? []
+        let right = layerMembership[rhs] ?? []
+        if left.isEmpty || right.isEmpty {
+            return true
+        }
+        return left == right
     }
 
     private struct PositionKey: Hashable {
