@@ -142,6 +142,7 @@ final class CanvasInputHandler {
             if hypot(dx, dy) >= dragThreshold {
                 pendingHitTarget = nil
                 dragTarget = target
+                controller.updateSelection([target.id])
                 let session =
                     dragSessions[target.id]
                     ?? {
