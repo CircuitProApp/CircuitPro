@@ -59,7 +59,7 @@ final class TraceTool: CanvasTool {
         )
 
         if let state {
-            let pathPoints = traceEngine.route(from: state.startPoint, to: endPoint)
+            let pathPoints = traceEngine.routePoints(from: state.startPoint, to: endPoint)
             let ids = ensurePointsExist(
                 for: pathPoints,
                 items: &items,
@@ -112,7 +112,7 @@ final class TraceTool: CanvasTool {
             context: context,
             environment: environment
         )
-        let pathPoints = traceEngine.route(from: state.startPoint, to: snapped)
+        let pathPoints = traceEngine.routePoints(from: state.startPoint, to: snapped)
 
         let path = CGMutablePath()
         guard let firstPoint = pathPoints.first else { return CKGroup() }

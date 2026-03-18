@@ -4,8 +4,8 @@ struct TraceAssignVertexLayersRule {
     func apply(to state: inout TraceNormalizationState) {
         let adjacency = buildAdjacency(from: state.links)
 
-        for pointID in Array(state.traceVerticesByID.keys) {
-            guard let vertex = state.traceVerticesByID[pointID] else { continue }
+        for pointID in Array(state.typedPointsByID.keys) {
+            guard let vertex = state.typedPointsByID[pointID] else { continue }
             let incidentLinks = (adjacency[pointID] ?? []).compactMap { linkID in
                 state.links.first(where: { $0.id == linkID })
             }
@@ -28,7 +28,7 @@ struct TraceAssignVertexLayersRule {
             for layerId in sortedLayers where layerId != primaryLayer {
                 let clone = TraceVertex(position: vertex.position, layerId: layerId)
                 state.addedPoints.append(clone)
-                state.traceVerticesByID[clone.id] = clone
+                state.typedPointsByID[clone.id] = clone
                 state.pointsByID[clone.id] = clone.position
                 state.pointsByObject[clone.id] = clone
 
@@ -69,9 +69,9 @@ struct TraceAssignVertexLayersRule {
         layerId: UUID,
         state: inout TraceNormalizationState
     ) {
-        guard var vertex = state.traceVerticesByID[pointID] else { return }
+        guard var vertex = state.typedPointsByID[pointID] else { return }
         vertex.layerId = layerId
-        state.traceVerticesByID[pointID] = vertex
+        state.typedPointsByID[pointID] = vertex
         state.pointsByObject[pointID] = vertex
     }
 }

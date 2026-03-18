@@ -1,69 +1,66 @@
 import CoreGraphics
 import Foundation
 
-struct TraceSplitEdgesAtPassingVerticesRule {
-    func apply(to state: inout TraceNormalizationState) {
-        guard !state.links.isEmpty else { return }
+struct SplitEdgesAtPassingVerticesRule<Link: SharedNormalizationLink> {
+    let shouldSplitThroughPoint: (any ConnectionPoint, Link.Metadata) -> Bool
 
-        struct LinkKey: Hashable {
-            let a: UUID
-            let b: UUID
-            let width: CGFloat
-            let layerId: UUID
+    func apply(
+        pointsByID: [UUID: CGPoint],
+        pointsByObject: [UUID: any ConnectionPoint],
+        links: inout [Link],
+        removedLinkIDs: inout Set<UUID>,
+        epsilon: CGFloat
+    ) {
+        guard !links.isEmpty else { return }
 
-            init(start: UUID, end: UUID, width: CGFloat, layerId: UUID) {
-                if start.uuidString <= end.uuidString {
-                    a = start
-                    b = end
-                } else {
-                    a = end
-                    b = start
-                }
-                self.width = width
-                self.layerId = layerId
-            }
-        }
+        var newLinks: [Link] = []
+        newLinks.reserveCapacity(links.count)
+        var seen = Set<LinkKey<Link.Metadata>>()
 
-        var newLinks: [TraceSegment] = []
-        newLinks.reserveCapacity(state.links.count)
-        var seen = Set<LinkKey>()
-
-        func appendLink(startID: UUID, endID: UUID, link: TraceSegment, id: UUID?) -> Bool {
-            let key = LinkKey(start: startID, end: endID, width: link.width, layerId: link.layerId)
+        func appendLink(
+            startID: UUID,
+            endID: UUID,
+            link: Link,
+            id: UUID?
+        ) -> Bool {
+            let key = LinkKey(
+                start: startID,
+                end: endID,
+                metadata: link.normalizationMetadata
+            )
             if seen.contains(key) {
                 return false
             }
             seen.insert(key)
             let newID = id ?? UUID()
             newLinks.append(
-                TraceSegment(
+                Link(
                     id: newID,
                     startID: startID,
                     endID: endID,
-                    width: link.width,
-                    layerId: link.layerId
+                    normalizationMetadata: link.normalizationMetadata
                 )
             )
             return true
         }
 
-        let originalLinks = state.links
+        let originalLinks = links
         for link in originalLinks {
-            guard let start = state.pointsByID[link.startID],
-                let end = state.pointsByID[link.endID]
+            guard let start = pointsByID[link.startID],
+                let end = pointsByID[link.endID]
             else { continue }
 
             let mids = splitPoints(
                 on: link,
                 start: start,
                 end: end,
-                pointsByID: state.pointsByID,
-                pointsByObject: state.pointsByObject,
-                epsilon: state.epsilon
+                pointsByID: pointsByID,
+                pointsByObject: pointsByObject,
+                epsilon: epsilon
             )
             if mids.isEmpty {
                 if !appendLink(startID: link.startID, endID: link.endID, link: link, id: link.id) {
-                    state.removedLinkIDs.insert(link.id)
+                    removedLinkIDs.insert(link.id)
                 }
                 continue
             }
@@ -72,18 +69,18 @@ struct TraceSplitEdgesAtPassingVerticesRule {
             guard chain.count >= 3 else { continue }
 
             if !appendLink(startID: chain[0], endID: chain[1], link: link, id: link.id) {
-                state.removedLinkIDs.insert(link.id)
+                removedLinkIDs.insert(link.id)
             }
             for i in 1..<(chain.count - 1) {
                 _ = appendLink(startID: chain[i], endID: chain[i + 1], link: link, id: nil)
             }
         }
 
-        state.links = newLinks
+        links = newLinks
     }
 
     private func splitPoints(
-        on link: TraceSegment,
+        on link: Link,
         start: CGPoint,
         end: CGPoint,
         pointsByID: [UUID: CGPoint],
@@ -99,9 +96,7 @@ struct TraceSplitEdgesAtPassingVerticesRule {
 
         for (id, point) in pointsByID where id != link.startID && id != link.endID {
             guard let pointObject = pointsByObject[id] else { continue }
-            if let traceVertex = pointObject as? TraceVertex, traceVertex.layerId != link.layerId {
-                continue
-            }
+            guard shouldSplitThroughPoint(pointObject, link.normalizationMetadata) else { continue }
             if isPoint(point, onSegmentBetween: start, p2: end, tol: epsilon) {
                 let t = ((point.x - start.x) * dx + (point.y - start.y) * dy) / len2
                 mids.append((id: id, t: t))
@@ -125,5 +120,22 @@ struct TraceSplitEdgesAtPassingVerticesRule {
         }
 
         return ordered
+    }
+
+    private struct LinkKey<Metadata: Hashable>: Hashable {
+        let a: UUID
+        let b: UUID
+        let metadata: Metadata
+
+        init(start: UUID, end: UUID, metadata: Metadata) {
+            if start.uuidString <= end.uuidString {
+                a = start
+                b = end
+            } else {
+                a = end
+                b = start
+            }
+            self.metadata = metadata
+        }
     }
 }

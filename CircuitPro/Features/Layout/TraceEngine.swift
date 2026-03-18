@@ -1,12 +1,61 @@
 import CoreGraphics
 import Foundation
 
-struct TraceRoute: ConnectionRoute {
+struct OctilinearRoute: ConnectionRoute {
     let points: [CGPoint]
 }
 
 struct TraceEngine: ConnectionEngine {
     var preferHorizontalFirst: Bool = true
+
+    private var normalizationRules: [(inout TraceNormalizationState) -> Void] {
+        [
+            { TraceAssignVertexLayersRule().apply(to: &$0) },
+            {
+                MergeCoincidentRule<TraceSegment, TraceVertex>().apply(
+                    pointsByID: &$0.pointsByID,
+                    pointsByObject: $0.pointsByObject,
+                    links: &$0.links,
+                    removedPointIDs: &$0.removedPointIDs,
+                    removedLinkIDs: &$0.removedLinkIDs,
+                    epsilon: $0.epsilon
+                )
+            },
+            {
+                SplitEdgesAtPassingVerticesRule<TraceSegment>(
+                    shouldSplitThroughPoint: { point, metadata in
+                        guard let traceVertex = point as? TraceVertex else { return true }
+                        return traceVertex.layerId == metadata.layerId
+                    }
+                ).apply(
+                    pointsByID: $0.pointsByID,
+                    pointsByObject: $0.pointsByObject,
+                    links: &$0.links,
+                    removedLinkIDs: &$0.removedLinkIDs,
+                    epsilon: $0.epsilon
+                )
+            },
+            {
+                CollapseLinearRunsRule<TraceSegment, TraceVertex>().apply(
+                    pointsByID: &$0.pointsByID,
+                    pointsByObject: $0.pointsByObject,
+                    links: &$0.links,
+                    removedPointIDs: &$0.removedPointIDs,
+                    removedLinkIDs: &$0.removedLinkIDs,
+                    epsilon: $0.epsilon,
+                    preferredIDs: $0.preferredIDs
+                )
+            },
+            {
+                RemoveIsolatedFreeVerticesRule<TraceVertex, TraceSegment>().apply(
+                    pointsByID: &$0.pointsByID,
+                    pointsByObject: $0.pointsByObject,
+                    links: $0.links,
+                    removedPointIDs: &$0.removedPointIDs
+                )
+            },
+        ]
+    }
 
     func routes(
         points: [any ConnectionPoint],
@@ -24,8 +73,8 @@ struct TraceEngine: ConnectionEngine {
 
             let start = context.snapPoint(a)
             let end = context.snapPoint(b)
-            let pathPoints = route(from: start, to: end)
-            output[link.id] = TraceRoute(points: pathPoints)
+            let pathPoints = routePoints(from: start, to: end)
+            output[link.id] = OctilinearRoute(points: pathPoints)
         }
 
         return output
@@ -49,17 +98,17 @@ struct TraceEngine: ConnectionEngine {
         let pointsByObject = Dictionary(
             uniqueKeysWithValues: tracePoints.map { ($0.id, $0 as any ConnectionPoint) }
         )
-        let traceVerticesByID = Dictionary(
+        let typedPointsByID = Dictionary(
             uniqueKeysWithValues: tracePoints.map { ($0.id, $0) }
         )
         let originalLinksByID = Dictionary(uniqueKeysWithValues: traceLinks.map { ($0.id, $0) })
-        let originalPointsByID = traceVerticesByID
+        let originalPointsByID = typedPointsByID
         let preferredIDs = Set(originalLinksByID.keys)
 
         var state = TraceNormalizationState(
             pointsByID: pointsByID,
             pointsByObject: pointsByObject,
-            traceVerticesByID: traceVerticesByID,
+            typedPointsByID: typedPointsByID,
             links: traceLinks,
             addedPoints: [],
             removedPointIDs: [],
@@ -67,11 +116,9 @@ struct TraceEngine: ConnectionEngine {
             epsilon: epsilon,
             preferredIDs: preferredIDs
         )
-        TraceAssignVertexLayersRule().apply(to: &state)
-        TraceMergeCoincidentRule().apply(to: &state)
-        TraceSplitEdgesAtPassingVerticesRule().apply(to: &state)
-        TraceCollapseLinearRunsRule().apply(to: &state)
-        TraceRemoveIsolatedFreeVerticesRule().apply(to: &state)
+        for rule in normalizationRules {
+            rule(&state)
+        }
 
         let finalIDs = Set(state.links.map { $0.id })
         var removedLinkIDs = state.removedLinkIDs
@@ -94,8 +141,8 @@ struct TraceEngine: ConnectionEngine {
         }
 
         var updatedPoints: [TraceVertex] = []
-        var addedPoints = state.addedPoints.filter { !state.removedPointIDs.contains($0.id) }
-        for (id, point) in state.traceVerticesByID {
+        let addedPoints = state.addedPoints.filter { !state.removedPointIDs.contains($0.id) }
+        for (id, point) in state.typedPointsByID {
             guard !state.removedPointIDs.contains(id),
                 let original = originalPointsByID[id]
             else { continue }
@@ -125,7 +172,7 @@ struct TraceEngine: ConnectionEngine {
         )
     }
 
-    func route(from start: CGPoint, to end: CGPoint) -> [CGPoint] {
+    func routePoints(from start: CGPoint, to end: CGPoint) -> [CGPoint] {
         let delta = CGPoint(x: end.x - start.x, y: end.y - start.y)
         let dx = abs(delta.x)
         let dy = abs(delta.y)

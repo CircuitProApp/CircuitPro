@@ -46,7 +46,7 @@ struct TraceView: CKView {
         for linkID: UUID,
         routes: [UUID: any ConnectionRoute]
     ) -> CGPath? {
-        guard let route = routes[linkID] as? TraceRoute else { return nil }
+        guard let route = routes[linkID] as? OctilinearRoute else { return nil }
         guard route.points.count >= 2 else { return nil }
 
         let path = CGMutablePath()

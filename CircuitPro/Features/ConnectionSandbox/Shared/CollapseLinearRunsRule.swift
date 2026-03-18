@@ -1,9 +1,23 @@
 import CoreGraphics
 import Foundation
 
-struct TraceCollapseLinearRunsRule {
-    func apply(to state: inout TraceNormalizationState) {
-        var linksByID = Dictionary(uniqueKeysWithValues: state.links.map { ($0.id, $0) })
+struct CollapseLinearRunsRule<Link: SharedNormalizationLink, FreePoint> {
+    private struct SpanEdge {
+        let id: UUID
+        let tMin: CGFloat
+        let tMax: CGFloat
+    }
+
+    func apply(
+        pointsByID: inout [UUID: CGPoint],
+        pointsByObject: [UUID: any ConnectionPoint],
+        links: inout [Link],
+        removedPointIDs: inout Set<UUID>,
+        removedLinkIDs: inout Set<UUID>,
+        epsilon: CGFloat,
+        preferredIDs: Set<UUID>
+    ) {
+        var linksByID = Dictionary(uniqueKeysWithValues: links.map { ($0.id, $0) })
         var removedPoints = Set<UUID>()
         var removedLinks = Set<UUID>()
         var changed = true
@@ -11,32 +25,39 @@ struct TraceCollapseLinearRunsRule {
         while changed {
             changed = false
             let adjacency = buildAdjacency(from: linksByID)
-            let pointIDs = Array(state.pointsByID.keys)
+            let pointIDs = Array(pointsByID.keys)
 
             runLoop: for pointID in pointIDs {
-                guard let startPoint = state.pointsByID[pointID] else { continue }
-                guard isProtected(pointID, state: state, adjacency: adjacency, linksByID: linksByID) == false
+                guard let startPoint = pointsByID[pointID] else { continue }
+                guard
+                    isProtected(
+                        pointID,
+                        pointsByObject: pointsByObject,
+                        adjacency: adjacency,
+                        linksByID: linksByID
+                    ) == false
                 else { continue }
                 let seeds = uniqueIncidentSeeds(
                     from: pointID,
-                    pointsByID: state.pointsByID,
+                    pointsByID: pointsByID,
                     linksByID: linksByID,
                     adjacency: adjacency,
-                    epsilon: state.epsilon
+                    epsilon: epsilon
                 )
 
                 for seed in seeds {
                     if processRun(
                         from: pointID,
                         startPoint: startPoint,
-                        baseDir: seed.dir,
-                        width: seed.width,
-                        layerId: seed.layerId,
-                        state: &state,
+                        seed: seed,
+                        pointsByID: &pointsByID,
+                        pointsByObject: pointsByObject,
                         linksByID: &linksByID,
                         adjacency: adjacency,
                         removedPoints: &removedPoints,
-                        removedLinks: &removedLinks
+                        removedLinks: &removedLinks,
+                        epsilon: epsilon,
+                        preferredIDs: preferredIDs
                     ) {
                         changed = true
                         break runLoop
@@ -45,32 +66,40 @@ struct TraceCollapseLinearRunsRule {
             }
 
             if removeOverlappingOrphans(
-                state: &state,
+                pointsByID: &pointsByID,
+                pointsByObject: pointsByObject,
                 linksByID: &linksByID,
                 removedPoints: &removedPoints,
-                removedLinks: &removedLinks
+                removedLinks: &removedLinks,
+                epsilon: epsilon
             ) {
                 changed = true
             }
         }
 
-        state.links = Array(linksByID.values)
-        state.removedPointIDs.formUnion(removedPoints)
-        state.removedLinkIDs.formUnion(removedLinks)
+        links = Array(linksByID.values)
+        removedPointIDs.formUnion(removedPoints)
+        removedLinkIDs.formUnion(removedLinks)
     }
 
-    private struct RunSeed {
+    private struct RunSeed: Hashable {
         let dir: CGVector
-        let width: CGFloat
-        let layerId: UUID
+        let metadata: Link.Metadata
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(dir.dx)
+            hasher.combine(dir.dy)
+            hasher.combine(metadata)
+        }
+
+        static func == (lhs: RunSeed, rhs: RunSeed) -> Bool {
+            lhs.dir.dx == rhs.dir.dx
+                && lhs.dir.dy == rhs.dir.dy
+                && lhs.metadata == rhs.metadata
+        }
     }
 
-    private struct TraceMetadataKey: Hashable {
-        let width: CGFloat
-        let layerId: UUID
-    }
-
-    private func buildAdjacency(from linksByID: [UUID: TraceSegment]) -> [UUID: [UUID]] {
+    private func buildAdjacency(from linksByID: [UUID: Link]) -> [UUID: [UUID]] {
         var adjacency: [UUID: [UUID]] = [:]
         for link in linksByID.values {
             adjacency[link.startID, default: []].append(link.id)
@@ -81,24 +110,24 @@ struct TraceCollapseLinearRunsRule {
 
     private func isProtected(
         _ pointID: UUID,
-        state: TraceNormalizationState,
+        pointsByObject: [UUID: any ConnectionPoint],
         adjacency: [UUID: [UUID]],
-        linksByID: [UUID: TraceSegment]
+        linksByID: [UUID: Link]
     ) -> Bool {
-        if let point = state.pointsByObject[pointID], !(point is TraceVertex) {
+        if let point = pointsByObject[pointID], !(point is FreePoint) {
             return true
         }
         guard let edgeIDs = adjacency[pointID], !edgeIDs.isEmpty else { return false }
-        var seen: TraceMetadataKey?
+        var seen: Link.Metadata?
         for edgeID in edgeIDs {
             guard let edge = linksByID[edgeID] else { continue }
-            let key = TraceMetadataKey(width: edge.width, layerId: edge.layerId)
+            let metadata = edge.normalizationMetadata
             if let existing = seen {
-                if existing != key {
+                if existing != metadata {
                     return true
                 }
             } else {
-                seen = key
+                seen = metadata
             }
         }
         return false
@@ -107,12 +136,12 @@ struct TraceCollapseLinearRunsRule {
     private func uniqueIncidentSeeds(
         from pointID: UUID,
         pointsByID: [UUID: CGPoint],
-        linksByID: [UUID: TraceSegment],
+        linksByID: [UUID: Link],
         adjacency: [UUID: [UUID]],
         epsilon: CGFloat
     ) -> [RunSeed] {
         guard let origin = pointsByID[pointID],
-              let edgeIDs = adjacency[pointID]
+            let edgeIDs = adjacency[pointID]
         else { return [] }
 
         var out: [RunSeed] = []
@@ -129,10 +158,9 @@ struct TraceCollapseLinearRunsRule {
             let dir = CGVector(dx: dx / len, dy: dy / len)
             if !out.contains(where: {
                 approxSameDir($0.dir, dir, tol: epsilon)
-                    && $0.width == edge.width
-                    && $0.layerId == edge.layerId
+                    && $0.metadata == edge.normalizationMetadata
             }) {
-                out.append(RunSeed(dir: dir, width: edge.width, layerId: edge.layerId))
+                out.append(RunSeed(dir: dir, metadata: edge.normalizationMetadata))
             }
         }
         return out
@@ -146,28 +174,30 @@ struct TraceCollapseLinearRunsRule {
     private func processRun(
         from startID: UUID,
         startPoint: CGPoint,
-        baseDir: CGVector,
-        width: CGFloat,
-        layerId: UUID,
-        state: inout TraceNormalizationState,
-        linksByID: inout [UUID: TraceSegment],
+        seed: RunSeed,
+        pointsByID: inout [UUID: CGPoint],
+        pointsByObject: [UUID: any ConnectionPoint],
+        linksByID: inout [UUID: Link],
         adjacency: [UUID: [UUID]],
         removedPoints: inout Set<UUID>,
-        removedLinks: inout Set<UUID>
+        removedLinks: inout Set<UUID>,
+        epsilon: CGFloat,
+        preferredIDs: Set<UUID>
     ) -> Bool {
         var run: [UUID] = []
         var stack = [startID]
         var seen: Set<UUID> = [startID]
 
         while let vid = stack.popLast() {
-            guard let vPoint = state.pointsByID[vid] else { continue }
             run.append(vid)
             for edgeID in adjacency[vid] ?? [] {
                 guard let edge = linksByID[edgeID] else { continue }
-                guard edge.width == width, edge.layerId == layerId else { continue }
+                guard edge.normalizationMetadata == seed.metadata else { continue }
                 let neighborID = edge.startID == vid ? edge.endID : edge.startID
-                guard let neighborPoint = state.pointsByID[neighborID] else { continue }
-                guard isOnLine(a: startPoint, dir: baseDir, p: neighborPoint, tol: state.epsilon) else { continue }
+                guard let neighborPoint = pointsByID[neighborID] else { continue }
+                guard isOnLine(a: startPoint, dir: seed.dir, p: neighborPoint, tol: epsilon) else {
+                    continue
+                }
                 if seen.contains(neighborID) { continue }
                 seen.insert(neighborID)
                 stack.append(neighborID)
@@ -176,46 +206,41 @@ struct TraceCollapseLinearRunsRule {
 
         if run.count < 3 { return false }
 
-        let denom = max(baseDir.dx * baseDir.dx + baseDir.dy * baseDir.dy, state.epsilon * state.epsilon)
+        let denom = max(seed.dir.dx * seed.dir.dx + seed.dir.dy * seed.dir.dy, epsilon * epsilon)
         func t(_ p: CGPoint) -> CGFloat {
-            ((p.x - startPoint.x) * baseDir.dx + (p.y - startPoint.y) * baseDir.dy) / denom
+            ((p.x - startPoint.x) * seed.dir.dx + (p.y - startPoint.y) * seed.dir.dy) / denom
         }
 
         run.sort {
-            guard let p0 = state.pointsByID[$0], let p1 = state.pointsByID[$1] else { return false }
+            guard let p0 = pointsByID[$0], let p1 = pointsByID[$1] else { return false }
             return t(p0) < t(p1)
         }
 
         let runIDs = Set(run)
-        struct SpanEdge {
-            let id: UUID
-            let tMin: CGFloat
-            let tMax: CGFloat
-            let startID: UUID
-            let endID: UUID
-        }
-
         var edgesOnRun: [SpanEdge] = []
         edgesOnRun.reserveCapacity(run.count)
         for (edgeID, edge) in linksByID {
-            guard edge.width == width, edge.layerId == layerId else { continue }
+            guard edge.normalizationMetadata == seed.metadata else { continue }
             guard runIDs.contains(edge.startID), runIDs.contains(edge.endID) else { continue }
-            guard let p1 = state.pointsByID[edge.startID],
-                  let p2 = state.pointsByID[edge.endID],
-                  isOnLine(a: startPoint, dir: baseDir, p: p1, tol: state.epsilon),
-                  isOnLine(a: startPoint, dir: baseDir, p: p2, tol: state.epsilon)
+            guard let p1 = pointsByID[edge.startID],
+                let p2 = pointsByID[edge.endID],
+                isOnLine(a: startPoint, dir: seed.dir, p: p1, tol: epsilon),
+                isOnLine(a: startPoint, dir: seed.dir, p: p2, tol: epsilon)
             else { continue }
             let t1 = t(p1)
             let t2 = t(p2)
-            edgesOnRun.append(
-                SpanEdge(id: edgeID, tMin: min(t1, t2), tMax: max(t1, t2), startID: edge.startID, endID: edge.endID)
-            )
+            edgesOnRun.append(SpanEdge(id: edgeID, tMin: min(t1, t2), tMax: max(t1, t2)))
         }
         if edgesOnRun.isEmpty { return false }
 
         var keep: Set<UUID> = []
         for vid in run {
-            if isProtected(vid, state: state, adjacency: adjacency, linksByID: linksByID) {
+            if isProtected(
+                vid,
+                pointsByObject: pointsByObject,
+                adjacency: adjacency,
+                linksByID: linksByID
+            ) {
                 keep.insert(vid)
                 continue
             }
@@ -225,12 +250,12 @@ struct TraceCollapseLinearRunsRule {
             var collinearDeg = 0
             for edgeID in incidentEdges {
                 guard let edge = linksByID[edgeID] else { continue }
-                guard edge.width == width, edge.layerId == layerId else { continue }
+                guard edge.normalizationMetadata == seed.metadata else { continue }
                 let neighborID = edge.startID == vid ? edge.endID : edge.startID
-                guard let neighborPoint = state.pointsByID[neighborID],
-                      let vPoint = state.pointsByID[vid]
+                guard let neighborPoint = pointsByID[neighborID],
+                    let vPoint = pointsByID[vid]
                 else { continue }
-                if isOnLine(a: vPoint, dir: baseDir, p: neighborPoint, tol: state.epsilon) {
+                if isOnLine(a: vPoint, dir: seed.dir, p: neighborPoint, tol: epsilon) {
                     collinearDeg += 1
                 }
             }
@@ -243,11 +268,11 @@ struct TraceCollapseLinearRunsRule {
         if let last = run.last { keep.insert(last) }
         if keep.count >= run.count { return false }
 
-        var runEdgeIDs = Set(edgesOnRun.map { $0.id })
+        var runEdgeIDs = Set(edgesOnRun.map(\.id))
         for vid in run where !keep.contains(vid) {
             let remaining = (adjacency[vid] ?? []).filter { !runEdgeIDs.contains($0) }
             if remaining.isEmpty {
-                state.pointsByID.removeValue(forKey: vid)
+                pointsByID.removeValue(forKey: vid)
                 removedPoints.insert(vid)
             }
         }
@@ -257,37 +282,37 @@ struct TraceCollapseLinearRunsRule {
             for i in 0..<(keptVerts.count - 1) {
                 let vA = keptVerts[i]
                 let vB = keptVerts[i + 1]
-                guard let pointA = state.pointsByID[vA],
-                      let pointB = state.pointsByID[vB]
+                guard let pointA = pointsByID[vA],
+                    let pointB = pointsByID[vB]
                 else { continue }
                 let tA = t(pointA)
                 let tB = t(pointB)
-                let lo = min(tA, tB) - 10 * state.epsilon
-                let hi = max(tA, tB) + 10 * state.epsilon
+                let lo = min(tA, tB) - 10 * epsilon
+                let hi = max(tA, tB) + 10 * epsilon
 
                 let candidates = edgesOnRun.filter { $0.tMin >= lo && $0.tMax <= hi }
-                let fallback = candidates.isEmpty
+                let fallback =
+                    candidates.isEmpty
                     ? edgesOnRun.filter { $0.tMax >= lo && $0.tMin <= hi }
                     : candidates
-                let candidateIDs = fallback.map { $0.id }.filter { runEdgeIDs.contains($0) }
-                let keepID = candidateIDs.isEmpty
+                let candidateIDs = fallback.map(\.id).filter { runEdgeIDs.contains($0) }
+                let keepID =
+                    candidateIDs.isEmpty
                     ? UUID()
-                    : selectKeepID(from: candidateIDs, preferred: state.preferredIDs)
+                    : selectKeepID(from: candidateIDs, preferred: preferredIDs)
 
                 if !hasLink(
                     between: vA,
                     and: vB,
-                    width: width,
-                    layerId: layerId,
+                    metadata: seed.metadata,
                     linksByID: linksByID,
                     excluding: runEdgeIDs
                 ) {
-                    linksByID[keepID] = TraceSegment(
+                    linksByID[keepID] = Link(
                         id: keepID,
                         startID: vA,
                         endID: vB,
-                        width: width,
-                        layerId: layerId
+                        normalizationMetadata: seed.metadata
                     )
                     runEdgeIDs.remove(keepID)
                 }
@@ -303,26 +328,29 @@ struct TraceCollapseLinearRunsRule {
     }
 
     private func removeOverlappingOrphans(
-        state: inout TraceNormalizationState,
-        linksByID: inout [UUID: TraceSegment],
+        pointsByID: inout [UUID: CGPoint],
+        pointsByObject: [UUID: any ConnectionPoint],
+        linksByID: inout [UUID: Link],
         removedPoints: inout Set<UUID>,
-        removedLinks: inout Set<UUID>
+        removedLinks: inout Set<UUID>,
+        epsilon: CGFloat
     ) -> Bool {
         let adjacency = buildAdjacency(from: linksByID)
         var changed = false
 
-        for (pointID, _) in state.pointsByObject {
-            guard let point = state.pointsByID[pointID] else { continue }
+        for (pointID, pointObj) in pointsByObject {
+            guard pointObj is FreePoint else { continue }
+            guard let point = pointsByID[pointID] else { continue }
             let incident = adjacency[pointID] ?? []
 
             if incident.isEmpty {
                 if pointIsCoveredByAnyLink(
                     point: point,
                     linksByID: linksByID,
-                    pointsByID: state.pointsByID,
-                    epsilon: state.epsilon
+                    pointsByID: pointsByID,
+                    epsilon: epsilon
                 ) {
-                    state.pointsByID.removeValue(forKey: pointID)
+                    pointsByID.removeValue(forKey: pointID)
                     removedPoints.insert(pointID)
                     changed = true
                 }
@@ -335,15 +363,14 @@ struct TraceCollapseLinearRunsRule {
                     pointID: pointID,
                     point: point,
                     excluding: link.id,
-                    width: link.width,
-                    layerId: link.layerId,
+                    metadata: link.normalizationMetadata,
                     linksByID: linksByID,
-                    pointsByID: state.pointsByID,
-                    epsilon: state.epsilon
+                    pointsByID: pointsByID,
+                    epsilon: epsilon
                 ) {
                     linksByID.removeValue(forKey: link.id)
                     removedLinks.insert(link.id)
-                    state.pointsByID.removeValue(forKey: pointID)
+                    pointsByID.removeValue(forKey: pointID)
                     removedPoints.insert(pointID)
                     changed = true
                 }
@@ -356,13 +383,12 @@ struct TraceCollapseLinearRunsRule {
     private func hasLink(
         between a: UUID,
         and b: UUID,
-        width: CGFloat,
-        layerId: UUID,
-        linksByID: [UUID: TraceSegment],
+        metadata: Link.Metadata,
+        linksByID: [UUID: Link],
         excluding excludedIDs: Set<UUID>
     ) -> Bool {
         for (id, link) in linksByID where !excludedIDs.contains(id) {
-            guard link.width == width, link.layerId == layerId else { continue }
+            guard link.normalizationMetadata == metadata else { continue }
             if (link.startID == a && link.endID == b) || (link.startID == b && link.endID == a) {
                 return true
             }
@@ -374,17 +400,16 @@ struct TraceCollapseLinearRunsRule {
         pointID: UUID,
         point: CGPoint,
         excluding excludedID: UUID,
-        width: CGFloat,
-        layerId: UUID,
-        linksByID: [UUID: TraceSegment],
+        metadata: Link.Metadata,
+        linksByID: [UUID: Link],
         pointsByID: [UUID: CGPoint],
         epsilon: CGFloat
     ) -> Bool {
         for (id, link) in linksByID where id != excludedID {
-            guard link.width == width, link.layerId == layerId else { continue }
+            guard link.normalizationMetadata == metadata else { continue }
             guard link.startID != pointID && link.endID != pointID else { continue }
             guard let start = pointsByID[link.startID],
-                  let end = pointsByID[link.endID]
+                let end = pointsByID[link.endID]
             else { continue }
             if isPoint(point, onSegmentBetween: start, p2: end, tol: epsilon) {
                 return true
@@ -395,13 +420,13 @@ struct TraceCollapseLinearRunsRule {
 
     private func pointIsCoveredByAnyLink(
         point: CGPoint,
-        linksByID: [UUID: TraceSegment],
+        linksByID: [UUID: Link],
         pointsByID: [UUID: CGPoint],
         epsilon: CGFloat
     ) -> Bool {
         for link in linksByID.values {
             guard let start = pointsByID[link.startID],
-                  let end = pointsByID[link.endID]
+                let end = pointsByID[link.endID]
             else { continue }
             if isPoint(point, onSegmentBetween: start, p2: end, tol: epsilon) {
                 return true

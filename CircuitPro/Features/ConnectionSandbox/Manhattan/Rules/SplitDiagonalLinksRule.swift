@@ -4,14 +4,14 @@ import Foundation
 struct SplitDiagonalLinksRule: NormalizationRule {
     let preferHorizontalFirst: Bool
 
-    func apply(to state: inout NormalizationState) {
+    func apply(to state: inout WireNormalizationState) {
         var newLinks: [WireSegment] = []
         newLinks.reserveCapacity(state.links.count * 2)
         var seen = Set<LinkKey>()
 
         for link in state.links {
             guard let start = state.pointsByID[link.startID],
-                  let end = state.pointsByID[link.endID]
+                let end = state.pointsByID[link.endID]
             else {
                 append(link: link, to: &newLinks, seen: &seen, state: &state)
                 continue
@@ -24,7 +24,8 @@ struct SplitDiagonalLinksRule: NormalizationRule {
                 continue
             }
 
-            let corner = preferHorizontalFirst
+            let corner =
+                preferHorizontalFirst
                 ? CGPoint(x: end.x, y: start.y)
                 : CGPoint(x: start.x, y: end.y)
             let cornerID = resolveCornerID(at: corner, state: &state)
@@ -50,7 +51,8 @@ struct SplitDiagonalLinksRule: NormalizationRule {
         state.links = newLinks
     }
 
-    private func resolveCornerID(at position: CGPoint, state: inout NormalizationState) -> UUID {
+    private func resolveCornerID(at position: CGPoint, state: inout WireNormalizationState) -> UUID
+    {
         if let existing = findPointID(at: position, in: state) {
             return existing
         }
@@ -61,7 +63,7 @@ struct SplitDiagonalLinksRule: NormalizationRule {
         return vertex.id
     }
 
-    private func findPointID(at position: CGPoint, in state: NormalizationState) -> UUID? {
+    private func findPointID(at position: CGPoint, in state: WireNormalizationState) -> UUID? {
         for (id, point) in state.pointsByID {
             if hypot(point.x - position.x, point.y - position.y) <= state.epsilon {
                 return id
@@ -89,7 +91,7 @@ struct SplitDiagonalLinksRule: NormalizationRule {
         link: WireSegment,
         to links: inout [WireSegment],
         seen: inout Set<LinkKey>,
-        state: inout NormalizationState
+        state: inout WireNormalizationState
     ) {
         if appendIfMissing(
             startID: link.startID,

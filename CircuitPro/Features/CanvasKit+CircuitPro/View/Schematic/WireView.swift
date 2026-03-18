@@ -565,12 +565,19 @@ struct WireView: CKView {
         let epsilon = max(0.5 / max(context.magnification, 0.0001), 0.0001)
         var pointsByID = Dictionary(uniqueKeysWithValues: points.map { ($0.id, $0.position) })
         let pointsByObject = Dictionary(uniqueKeysWithValues: points.map { ($0.id, $0) })
+        let typedPointsByID: [UUID: WireVertex] = Dictionary(
+            uniqueKeysWithValues: points.compactMap { point in
+                guard let wirePoint = point as? WireVertex else { return nil }
+                return (wirePoint.id, wirePoint)
+            }
+        )
         let originalLinksByID = Dictionary(uniqueKeysWithValues: links.map { ($0.id, $0) })
         let preferredIDs = Set(originalLinksByID.keys)
 
-        var state = NormalizationState(
+        var state = WireNormalizationState(
             pointsByID: pointsByID,
             pointsByObject: pointsByObject,
+            typedPointsByID: typedPointsByID,
             links: links.map { WireSegment(id: $0.id, startID: $0.startID, endID: $0.endID) },
             addedPoints: [],
             removedPointIDs: [],

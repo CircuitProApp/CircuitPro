@@ -1,3 +1,3 @@
 protocol NormalizationRule {
-    func apply(to state: inout NormalizationState)
+    func apply(to state: inout WireNormalizationState)
 }

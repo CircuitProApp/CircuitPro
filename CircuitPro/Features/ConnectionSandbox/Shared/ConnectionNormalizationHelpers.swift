@@ -18,12 +18,13 @@ func isPoint(
     return true
 }
 
-func selectSurvivor(
+func selectSurvivor<FreePoint>(
     from ids: [UUID],
-    pointsByObject: [UUID: any ConnectionPoint]
+    pointsByObject: [UUID: any ConnectionPoint],
+    freePointType: FreePoint.Type
 ) -> UUID {
     for id in ids {
-        if let point = pointsByObject[id], !(point is WireVertex) {
+        if let point = pointsByObject[id], !(point is FreePoint) {
             return id
         }
     }

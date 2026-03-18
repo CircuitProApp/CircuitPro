@@ -8,14 +8,50 @@ struct ManhattanRoute: ConnectionRoute {
 struct WireEngine: ConnectionEngine {
     var preferHorizontalFirst: Bool = true
 
-    private var normalizationRules: [NormalizationRule] {
+    private var normalizationRules: [(inout WireNormalizationState) -> Void] {
         [
-            SplitDiagonalLinksRule(preferHorizontalFirst: preferHorizontalFirst),
-            MergeCoincidentRule(),
-            SplitEdgesAtPassingVerticesRule(),
-            CollapseLinearRunsRule(),
-            RemoveIsolatedFreeVerticesRule(),
-            AssignClusterIDsRule(),
+            { SplitDiagonalLinksRule(preferHorizontalFirst: preferHorizontalFirst).apply(to: &$0) },
+            {
+                MergeCoincidentRule<WireSegment, WireVertex>().apply(
+                    pointsByID: &$0.pointsByID,
+                    pointsByObject: $0.pointsByObject,
+                    links: &$0.links,
+                    removedPointIDs: &$0.removedPointIDs,
+                    removedLinkIDs: &$0.removedLinkIDs,
+                    epsilon: $0.epsilon
+                )
+            },
+            {
+                SplitEdgesAtPassingVerticesRule<WireSegment>(
+                    shouldSplitThroughPoint: { _, _ in true }
+                ).apply(
+                    pointsByID: $0.pointsByID,
+                    pointsByObject: $0.pointsByObject,
+                    links: &$0.links,
+                    removedLinkIDs: &$0.removedLinkIDs,
+                    epsilon: $0.epsilon
+                )
+            },
+            {
+                CollapseLinearRunsRule<WireSegment, WireVertex>().apply(
+                    pointsByID: &$0.pointsByID,
+                    pointsByObject: $0.pointsByObject,
+                    links: &$0.links,
+                    removedPointIDs: &$0.removedPointIDs,
+                    removedLinkIDs: &$0.removedLinkIDs,
+                    epsilon: $0.epsilon,
+                    preferredIDs: $0.preferredIDs
+                )
+            },
+            {
+                RemoveIsolatedFreeVerticesRule<WireVertex, WireSegment>().apply(
+                    pointsByID: &$0.pointsByID,
+                    pointsByObject: $0.pointsByObject,
+                    links: $0.links,
+                    removedPointIDs: &$0.removedPointIDs
+                )
+            },
+            { AssignClusterIDsRule().apply(to: &$0) },
         ]
     }
 
@@ -30,7 +66,7 @@ struct WireEngine: ConnectionEngine {
 
         for link in links {
             guard let a = pointsByID[link.startID],
-                  let b = pointsByID[link.endID]
+                let b = pointsByID[link.endID]
             else { continue }
 
             let start = context.snapPoint(a)
@@ -53,12 +89,19 @@ struct WireEngine: ConnectionEngine {
         let pointsByObject = Dictionary(
             uniqueKeysWithValues: points.map { ($0.id, $0) }
         )
+        let typedPointsByID: [UUID: WireVertex] = Dictionary(
+            uniqueKeysWithValues: points.compactMap { point in
+                guard let wirePoint = point as? WireVertex else { return nil }
+                return (wirePoint.id, wirePoint)
+            }
+        )
         let originalLinksByID = Dictionary(uniqueKeysWithValues: links.map { ($0.id, $0) })
         let preferredIDs = Set(originalLinksByID.keys)
 
-        var state = NormalizationState(
+        var state = WireNormalizationState(
             pointsByID: pointsByID,
             pointsByObject: pointsByObject,
+            typedPointsByID: typedPointsByID,
             links: links.map { WireSegment(id: $0.id, startID: $0.startID, endID: $0.endID) },
             addedPoints: [],
             removedPointIDs: [],
@@ -68,7 +111,7 @@ struct WireEngine: ConnectionEngine {
         )
 
         for rule in normalizationRules {
-            rule.apply(to: &state)
+            rule(&state)
         }
 
         pointsByID = state.pointsByID
@@ -94,7 +137,8 @@ struct WireEngine: ConnectionEngine {
             && removedLinkIDs.isEmpty
             && updatedLinks.isEmpty
             && addedLinksOut.isEmpty
-            && addedPointsOut.isEmpty {
+            && addedPointsOut.isEmpty
+        {
             return ConnectionDelta()
         }
 
