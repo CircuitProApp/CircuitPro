@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct CanvasView: NSViewRepresentable {
 
@@ -37,7 +37,8 @@ struct CanvasView: NSViewRepresentable {
         onPasteboardDropped: ((NSPasteboard, CGPoint) -> Bool)? = nil,
         @CKViewBuilder content: @escaping () -> CKGroup
     ) {
-        self._viewport = .constant(CanvasViewport(size: .zero, magnification: 1.0, visibleRect: CanvasViewport.autoCenter))
+        self._viewport = .constant(
+            CanvasViewport(size: .zero, magnification: 1.0, visibleRect: CanvasViewport.autoCenter))
         self._tool = tool
         self._layers = layers
         self._activeLayerId = activeLayerId
@@ -80,10 +81,13 @@ struct CanvasView: NSViewRepresentable {
         }
 
         func observeScrollView(_ scrollView: NSScrollView) {
-            magnificationObservation = scrollView.observe(\.magnification, options: .new) { [weak self] _, change in
+            magnificationObservation = scrollView.observe(\.magnification, options: .new) {
+                [weak self] _, change in
                 guard let self = self, let newValue = change.newValue else { return }
                 DispatchQueue.main.async {
-                    if !self.viewportBinding.wrappedValue.magnification.isApproximatelyEqual(to: newValue) {
+                    if !self.viewportBinding.wrappedValue.magnification.isApproximatelyEqual(
+                        to: newValue)
+                    {
                         self.viewportBinding.wrappedValue.magnification = newValue
                     }
                     self.canvasController.viewportDidMagnify(to: newValue)
@@ -134,7 +138,9 @@ struct CanvasView: NSViewRepresentable {
     @MainActor
     func makeNSView(context: Context) -> NSScrollView {
         let coordinator = context.coordinator
-        let canvasHostView = CanvasHostView(controller: coordinator.canvasController, registeredDraggedTypes: self.registeredDraggedTypes)
+        let canvasHostView = CanvasHostView(
+            controller: coordinator.canvasController,
+            registeredDraggedTypes: self.registeredDraggedTypes)
         let scrollView = CenteringNSScrollView()
 
         coordinator.canvasController.view = canvasHostView
@@ -171,7 +177,8 @@ struct CanvasView: NSViewRepresentable {
             controller.onSelectionChange = nil
         }
 
-        environment = environment
+        environment =
+            environment
             .withHoverHandler { [weak controller] id, isInside in
                 guard let controller else { return }
                 if isInside {
@@ -183,7 +190,7 @@ struct CanvasView: NSViewRepresentable {
             .withTapHandler { [weak controller] id in
                 controller?.updateSelection([id])
             }
-            .withDragHandler { _ , _ in }
+            .withDragHandler { _, _ in }
 
         controller.sync(
             tool: self.tool,
@@ -206,14 +213,16 @@ struct CanvasView: NSViewRepresentable {
 
         do {
             let clipView: NSClipView = scrollView.contentView
-            if self.viewport.visibleRect != CanvasViewport.autoCenter && clipView.bounds.origin != self.viewport.visibleRect.origin {
+            if self.viewport.visibleRect != CanvasViewport.autoCenter
+                && clipView.bounds.origin != self.viewport.visibleRect.origin
+            {
                 clipView.bounds.origin = self.viewport.visibleRect.origin
             }
         }
 
+        controller.view?.requestLayerUpdate()
     }
 }
-
 
 extension CGFloat {
     func isApproximatelyEqual(to other: CGFloat, tolerance: CGFloat = 1e-9) -> Bool {
