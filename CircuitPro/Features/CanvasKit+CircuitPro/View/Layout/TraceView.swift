@@ -103,6 +103,7 @@ struct TraceView: CKView {
 
         dragState = DragState(
             edgeID: linkID,
+            layerId: link.layerId,
             startID: link.startID,
             endID: link.endID,
             origin: environment.processedMouseLocation ?? context.mouseLocation ?? .zero,
@@ -162,34 +163,22 @@ struct TraceView: CKView {
             dragState = state
         }
 
-        let newStart = CGPoint(
-            x: state.startPosition.x + snapped.dx,
-            y: state.startPosition.y + snapped.dy
-        )
-        let newEnd = CGPoint(
-            x: state.endPosition.x + snapped.dx,
-            y: state.endPosition.y + snapped.dy
-        )
-        let isStartFixed = state.fixedPointIDs.contains(state.startID)
-        let isEndFixed = state.fixedPointIDs.contains(state.endID)
-
-        var newPositions = state.originalPositions
-        if !isStartFixed {
-            newPositions[state.startID] = newStart
-        }
-        if !isEndFixed {
-            newPositions[state.endID] = newEnd
-        }
-
-        ConnectionInteractionSupport.applyConstraints(
-            movedIDs: [state.startID, state.endID].filter { !state.fixedPointIDs.contains($0) },
-            positions: &newPositions,
+        let layerSegments = connectionLinks(in: items, on: state.layerId)
+        let solverDeltas = TraceSegmentDragSolver.solve(
+            draggedID: state.edgeID,
+            startID: state.startID,
+            endID: state.endID,
+            delta: snapped,
             originalPositions: state.originalPositions,
-            adjacency: state.adjacency,
+            layerSegments: layerSegments,
             orientations: state.linkOrientation,
-            linkEndpoints: state.linkEndpoints,
             fixedPointIDs: state.fixedPointIDs
         )
+
+        var newPositions = state.originalPositions
+        for (id, pos) in solverDeltas {
+            newPositions[id] = pos
+        }
 
         for index in items.indices {
             guard var vertex = items[index] as? TraceVertex,
@@ -393,6 +382,7 @@ struct TraceView: CKView {
 
     private struct DragState {
         let edgeID: UUID
+        let layerId: UUID
         var startID: UUID
         var endID: UUID
         let origin: CGPoint

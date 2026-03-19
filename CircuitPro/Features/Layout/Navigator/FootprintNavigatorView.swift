@@ -5,6 +5,7 @@
 //  Created by Giorgi Tchelidze on 9/14/25.
 //
 
+import AppKit
 import SwiftUI
 
 private struct LayoutNavigatorDisclosureGroupStyle: DisclosureGroupStyle {
@@ -86,37 +87,75 @@ struct FootprintNavigatorView: View {
         projectManager.document.scheduleAutosave()
     }
 
+    private func rowBackgroundColor(isSelected: Bool) -> Color {
+        isSelected
+            ? Color(nsColor: .selectedContentBackgroundColor)
+            : .clear
+    }
+
+    private func rowStrokeColor(isSelected: Bool) -> Color {
+        isSelected
+            ? Color(nsColor: .selectedControlColor).opacity(0.35)
+            : .clear
+    }
+
+    private func primaryTextColor(isSelected: Bool) -> Color {
+        isSelected
+            ? Color(nsColor: .alternateSelectedControlTextColor)
+            : .primary
+    }
+
+    private func secondaryTextColor(isSelected: Bool) -> Color {
+        isSelected
+            ? Color(nsColor: .alternateSelectedControlTextColor).opacity(0.8)
+            : .secondary
+    }
+
+    private func selectComponent(_ componentID: UUID) {
+        if NSEvent.modifierFlags.contains(.command) {
+            if editorSession.selectedItemIDs.contains(componentID) {
+                editorSession.selectedItemIDs.remove(componentID)
+            } else {
+                editorSession.selectedItemIDs.insert(componentID)
+            }
+        } else {
+            editorSession.selectedItemIDs = [componentID]
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {  // Added VStack for similar structure to SymbolNavigatorView
             if projectManager.componentInstances.isEmpty {  // Checking all component instances
                 SidebarContentUnavailableView("No Footprints")
             } else {
-                List(selection: $editorSession.selectedItemIDs) {  // Apply selection to the entire List
-                    disclosureGroup(
-                        title: "Unplaced",
-                        bucket: .unplaced,
-                        components: unplacedComponents,
-                        emptyMessage: "All components placed.",
-                        allowsDrag: true
-                    )
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        disclosureGroup(
+                            title: "Unplaced",
+                            bucket: .unplaced,
+                            components: unplacedComponents,
+                            emptyMessage: "All components placed.",
+                            allowsDrag: true
+                        )
 
-                    disclosureGroup(
-                        title: "Placed on Front",
-                        bucket: .front,
-                        components: placedComponents(on: .front),
-                        emptyMessage: "No components on front."
-                    )
+                        disclosureGroup(
+                            title: "Placed on Front",
+                            bucket: .front,
+                            components: placedComponents(on: .front),
+                            emptyMessage: "No components on front."
+                        )
 
-                    disclosureGroup(
-                        title: "Placed on Back",
-                        bucket: .back,
-                        components: placedComponents(on: .back),
-                        emptyMessage: "No components on back."
-                    )
+                        disclosureGroup(
+                            title: "Placed on Back",
+                            bucket: .back,
+                            components: placedComponents(on: .back),
+                            emptyMessage: "No components on back."
+                        )
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
                 }
-                .listStyle(.inset)  // Applied .inset list style
-                .scrollContentBackground(.hidden)  // Applied .hidden scroll content background
-                .environment(\.defaultMinListRowHeight, 14)  // Applied defaultMinListRowHeight
+                .scrollContentBackground(.hidden)
             }
         }
     }
@@ -136,8 +175,10 @@ struct FootprintNavigatorView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 3)
             } else {
-                ForEach(components) { component in
-                    componentRow(for: component, allowsDrag: allowsDrag)
+                LazyVStack(spacing: 2) {
+                    ForEach(components) { component in
+                        componentRow(for: component, allowsDrag: allowsDrag)
+                    }
                 }
             }
         } label: {
@@ -145,29 +186,36 @@ struct FootprintNavigatorView: View {
                 .fontWeight(.semibold)
         }
         .disclosureGroupStyle(LayoutNavigatorDisclosureGroupStyle())
-        .listRowSeparator(.hidden)
-        .listRowInsets(EdgeInsets(top: 2, leading: 4, bottom: 2, trailing: 4))
     }
 
     @ViewBuilder
     private func componentRow(for component: ComponentInstance, allowsDrag: Bool = false)
         -> some View
     {
+        let isSelected = editorSession.selectedItemIDs.contains(component.id)
+
         let row = HStack {
             Text(component.referenceDesignator)
+                .foregroundStyle(primaryTextColor(isSelected: isSelected))
             Spacer()
             Text(component.footprintInstance?.definition?.name ?? "Default")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(secondaryTextColor(isSelected: isSelected))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(.quaternary.opacity(0.18))
+                .fill(rowBackgroundColor(isSelected: isSelected))
         )
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(rowStrokeColor(isSelected: isSelected), lineWidth: 1)
+        }
         .frame(minHeight: 22)
-        .tag(component.id)
-        .listRowSeparator(.hidden)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            selectComponent(component.id)
+        }
         .contextMenu {
             contextMenu(for: component)
         }

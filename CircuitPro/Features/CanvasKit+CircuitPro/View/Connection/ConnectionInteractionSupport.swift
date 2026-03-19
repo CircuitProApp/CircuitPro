@@ -126,11 +126,6 @@ enum ConnectionInteractionSupport {
 
         for link in links {
             currentIDs.insert(link.id)
-            if let orientation = cache[link.id] {
-                map[link.id] = orientation
-                continue
-            }
-
             guard let start = positions[link.startID],
                 let end = positions[link.endID]
             else { continue }
@@ -141,6 +136,10 @@ enum ConnectionInteractionSupport {
                 tolerance: tolerance,
                 mode: mode
             )
+
+            // Geometry can legitimately flip during a drag sequence or after
+            // normalization, so the cached orientation has to track the latest
+            // endpoint positions instead of being treated as immutable.
             cache[link.id] = orientation
             map[link.id] = orientation
         }
