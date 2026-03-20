@@ -7,14 +7,15 @@ import Foundation
 /// Resolution strategy depends on the **incident segment's orientation**:
 ///
 /// **Orthogonal incident (vertical/horizontal):**
-/// For dragged diagonals, try both diagonal families through the dragged far end,
-/// apply the anchor reflection rule, then keep the junction closest to its original
-/// position. This preserves bounce behavior while still allowing the dragged segment
-/// to flip between ascending and descending when that is the nearest valid result.
+/// For dragged diagonals, try both diagonal families through the dragged far end and
+/// allow the incident segment to resolve on either orthogonal axis through its anchor.
+/// Apply the anchor reflection rule, then keep the junction nearest the translated
+/// drag position. This preserves bounce behavior while still allowing both segments
+/// to rotate into the nearest valid local solution.
 ///
 ///   Drag E2 (ascending diagonal) downward by 50 → junction slides from (0,100) to (0,50)
 ///   Drag E2 downward by 100 → junction reaches anchor (0,0), E1 dissolves
-///   Drag E2 downward by 150 → junction crosses anchor, reflected to (0,50) — E1 reappears
+///   Drag E2 downward by 150 → junction crosses anchor, incident flips horizontal to (50,0)
 ///   Drag E2 left by 200 → junction stays at (0,100), E2 flips descending
 ///
 /// **Diagonal incident (ascending/descending):**
@@ -125,6 +126,7 @@ enum TraceSegmentDragSolver {
                 // candidate that crosses past the anchor, then keep the closest junction.
                 guard
                     let best = closestOrthogonalCandidate(
+                        translatedPos: translatedPos,
                         draggedLineP1: draggedLineP1,
                         draggedLineP2: draggedLineP2,
                         draggedOtherEnd: draggedOtherEnd,
@@ -161,9 +163,11 @@ enum TraceSegmentDragSolver {
 
     // MARK: Orthogonal-incident helpers
 
-    /// For orthogonal incidents, evaluates the valid dragged-line options and returns
-    /// the bounced candidate nearest the original junction.
+    /// For orthogonal incidents, evaluates the valid dragged-line options against both
+    /// orthogonal axes through the anchor and returns the bounced candidate nearest the
+    /// translated drag position.
     private static func closestOrthogonalCandidate(
+        translatedPos: CGPoint,
         draggedLineP1: CGPoint,
         draggedLineP2: CGPoint,
         draggedOtherEnd farEnd: CGPoint,
@@ -178,34 +182,33 @@ enum TraceSegmentDragSolver {
             farEnd: farEnd,
             orientation: draggedOrientation
         )
+        let allIncidentOrientations = incidentOrientationOptions(incOrientation)
+        let primaryIncidentOrientations = [incOrientation]
 
-        var best: CGPoint?
-        var bestDist = CGFloat.infinity
+        let primaryBest = bestCandidate(
+            draggedLines: draggedLines,
+            incidentOrientations: primaryIncidentOrientations,
+            translatedPos: translatedPos,
+            originalJunction: originalJunction,
+            anchor: anchor,
+            preferredDraggedOrientation: draggedOrientation
+        )
 
-        for (lp1, lp2) in draggedLines {
-            guard
-                let raw = intersect(
-                    lineP1: lp1,
-                    lineP2: lp2,
-                    anchor: anchor,
-                    orientation: incOrientation
-                )
-            else { continue }
-
-            let candidate = reflectedIfPast(
-                raw,
-                originalJunction: originalJunction,
-                anchor: anchor,
-                orientation: incOrientation
-            )
-            let distance = squaredDistance(candidate, originalJunction)
-            if distance < bestDist {
-                best = candidate
-                bestDist = distance
-            }
+        // Preserve the current orthogonal axis whenever it still yields a direct
+        // local solution. Only broaden to the alternate axis after the current-axis
+        // solution has crossed its symmetry line and bounced.
+        if let primaryBest, primaryBest.wasReflected == false {
+            return primaryBest.point
         }
 
-        return best
+        return bestCandidate(
+            draggedLines: draggedLines,
+            incidentOrientations: allIncidentOrientations,
+            translatedPos: translatedPos,
+            originalJunction: originalJunction,
+            anchor: anchor,
+            preferredDraggedOrientation: draggedOrientation
+        )?.point
     }
 
     /// Returns `junction` unchanged if it is on the same side of `anchor` as
@@ -249,11 +252,11 @@ enum TraceSegmentDragSolver {
         var best: CGPoint?
         var bestDist = CGFloat.infinity
 
-        for (lp1, lp2) in draggedLines {
+        for draggedLine in draggedLines {
             for inc in incOrientations {
                 guard
                     let candidate = intersect(
-                        lineP1: lp1, lineP2: lp2,
+                        lineP1: draggedLine.p1, lineP2: draggedLine.p2,
                         anchor: anchor, orientation: inc)
                 else { continue }
                 let d = squaredDistance(candidate, originalJunction)
@@ -270,22 +273,72 @@ enum TraceSegmentDragSolver {
         p1: CGPoint, p2: CGPoint,
         farEnd: CGPoint,
         orientation: ConnectionSegmentOrientation?
-    ) -> [(CGPoint, CGPoint)] {
+    ) -> [(orientation: ConnectionSegmentOrientation, p1: CGPoint, p2: CGPoint)] {
         switch orientation {
-        case .diagonalAscending, .diagonalDescending:
+        case .diagonalAscending:
             return [
-                (farEnd, CGPoint(x: farEnd.x + 1, y: farEnd.y + 1)),
-                (farEnd, CGPoint(x: farEnd.x + 1, y: farEnd.y - 1)),
+                (
+                    .diagonalAscending,
+                    farEnd,
+                    CGPoint(x: farEnd.x + 1, y: farEnd.y + 1)
+                ),
+                (
+                    .diagonalDescending,
+                    farEnd,
+                    CGPoint(x: farEnd.x + 1, y: farEnd.y - 1)
+                ),
+            ]
+        case .diagonalDescending:
+            return [
+                (
+                    .diagonalAscending,
+                    farEnd,
+                    CGPoint(x: farEnd.x + 1, y: farEnd.y + 1)
+                ),
+                (
+                    .diagonalDescending,
+                    farEnd,
+                    CGPoint(x: farEnd.x + 1, y: farEnd.y - 1)
+                ),
+            ]
+        case .horizontal:
+            return [
+                (.horizontal, farEnd, CGPoint(x: farEnd.x + 1, y: farEnd.y)),
+                (.vertical, farEnd, CGPoint(x: farEnd.x, y: farEnd.y + 1)),
+            ]
+        case .vertical:
+            return [
+                (.horizontal, farEnd, CGPoint(x: farEnd.x + 1, y: farEnd.y)),
+                (.vertical, farEnd, CGPoint(x: farEnd.x, y: farEnd.y + 1)),
             ]
         default:
-            return [(p1, p2)]
+            let fallbackOrientation =
+                classifyFallbackOrientation(p1: p1, p2: p2) ?? .arbitrary
+            return [(fallbackOrientation, p1, p2)]
         }
+    }
+
+    private static func classifyFallbackOrientation(
+        p1: CGPoint,
+        p2: CGPoint
+    ) -> ConnectionSegmentOrientation? {
+        let dx = p2.x - p1.x
+        let dy = p2.y - p1.y
+        if abs(dx) <= 1e-9 { return .vertical }
+        if abs(dy) <= 1e-9 { return .horizontal }
+        if abs(abs(dx) - abs(dy)) <= 1e-9 {
+            let sameSign = (dx >= 0 && dy >= 0) || (dx <= 0 && dy <= 0)
+            return sameSign ? .diagonalAscending : .diagonalDescending
+        }
+        return nil
     }
 
     private static func incidentOrientationOptions(
         _ orientation: ConnectionSegmentOrientation
     ) -> [ConnectionSegmentOrientation] {
         switch orientation {
+        case .horizontal, .vertical:
+            return [.horizontal, .vertical]
         case .diagonalAscending, .diagonalDescending:
             return [.diagonalAscending, .diagonalDescending]
         default:
@@ -316,6 +369,68 @@ enum TraceSegmentDragSolver {
         let dx = a.x - b.x
         let dy = a.y - b.y
         return dx * dx + dy * dy
+    }
+
+    private static func bestCandidate(
+        draggedLines: [(orientation: ConnectionSegmentOrientation, p1: CGPoint, p2: CGPoint)],
+        incidentOrientations: [ConnectionSegmentOrientation],
+        translatedPos: CGPoint,
+        originalJunction: CGPoint,
+        anchor: CGPoint,
+        preferredDraggedOrientation: ConnectionSegmentOrientation?
+    ) -> Candidate? {
+        var best: Candidate?
+        var bestTranslatedDist = CGFloat.infinity
+        var bestDraggedChanged = true
+        var bestOriginalDist = CGFloat.infinity
+
+        for draggedLine in draggedLines {
+            for incidentOrientation in incidentOrientations {
+                guard
+                    let raw = intersect(
+                        lineP1: draggedLine.p1,
+                        lineP2: draggedLine.p2,
+                        anchor: anchor,
+                        orientation: incidentOrientation
+                    )
+                else { continue }
+
+                let candidatePoint = reflectedIfPast(
+                    raw,
+                    originalJunction: originalJunction,
+                    anchor: anchor,
+                    orientation: incidentOrientation
+                )
+                let candidate = Candidate(
+                    point: candidatePoint,
+                    wasReflected: candidatePoint != raw
+                )
+                let translatedDistance = squaredDistance(candidate.point, translatedPos)
+                let originalDistance = squaredDistance(candidate.point, originalJunction)
+                let draggedChanged = draggedLine.orientation != preferredDraggedOrientation
+
+                if translatedDistance < bestTranslatedDist
+                    || (abs(translatedDistance - bestTranslatedDist) <= 1e-9
+                        && draggedChanged == false
+                        && bestDraggedChanged == true)
+                    || (abs(translatedDistance - bestTranslatedDist) <= 1e-9
+                        && draggedChanged == bestDraggedChanged
+                        && originalDistance < bestOriginalDist)
+                {
+                    best = candidate
+                    bestTranslatedDist = translatedDistance
+                    bestDraggedChanged = draggedChanged
+                    bestOriginalDist = originalDistance
+                }
+            }
+        }
+
+        return best
+    }
+
+    private struct Candidate {
+        let point: CGPoint
+        let wasReflected: Bool
     }
 
     /// Intersects line A (through `lineP1`/`lineP2`) with line B (through `anchor`
