@@ -4,7 +4,7 @@ import SwiftUI
 struct WireView: CKView {
     @CKContext var context
     @CKEnvironment var environment
-    @CKState private var dragState: DragState?
+    @CKState private var edgeDragController = WireEdgeDragController()
     @CKState private var liveLinkOrientation: [UUID: ConnectionSegmentOrientation] = [:]
     @CKState private var globalDragTargetID: UUID?
 
@@ -112,155 +112,34 @@ struct WireView: CKView {
     private func handleDrag(linkID: UUID, phase: CanvasDragPhase) {
         switch phase {
         case .began:
-            beginDrag(linkID: linkID)
+            edgeDragController.beginDrag(
+                linkID: linkID,
+                context: context,
+                environment: environment,
+                connectionPoints: connectionPoints,
+                connectionLinks: connectionLinks,
+                connectionPointPositionsByID: connectionPointPositionsByID,
+                baseTolerance: baseTolerance,
+                liveLinkOrientation: &liveLinkOrientation
+            )
         case .changed(let delta):
-            updateDrag(delta: delta)
+            guard let itemsBinding = context.itemsBinding else { return }
+            edgeDragController.updateDrag(
+                delta: delta,
+                itemsBinding: itemsBinding,
+                context: context,
+                environment: environment,
+                baseTolerance: baseTolerance
+            )
         case .ended:
             endDrag()
         }
     }
 
-    private func beginDrag(linkID: UUID) {
-        dragState = nil
-
-        let pointsByID = connectionPointPositionsByID
-        let tolerance = baseTolerance / max(context.magnification, 0.001)
-
-        let links = connectionLinks
-        guard let link = links.first(where: { $0.id == linkID }),
-            let start = pointsByID[link.startID],
-            let end = pointsByID[link.endID]
-        else { return }
-
-        let linkOrientation = ConnectionInteractionSupport.buildOrientationMap(
-            for: links,
-            positions: pointsByID,
-            tolerance: tolerance,
-            mode: .orthogonal,
-            cache: &liveLinkOrientation
-        )
-        let adjacency = ConnectionInteractionSupport.linkAdjacency(for: links)
-        let linkEndpoints = ConnectionInteractionSupport.linkEndpointMap(for: links)
-        let fixedPointIDs = ConnectionInteractionSupport.fixedPointIDs(
-            in: connectionPoints,
-            movablePoint: WireVertex.self
-        )
-
-        dragState = DragState(
-            edgeID: linkID,
-            startID: link.startID,
-            endID: link.endID,
-            origin: environment.processedMouseLocation ?? context.mouseLocation ?? .zero,
-            startPosition: start,
-            endPosition: end,
-            originalPositions: pointsByID,
-            linkOrientation: linkOrientation,
-            adjacency: adjacency,
-            linkEndpoints: linkEndpoints,
-            fixedPointIDs: fixedPointIDs
-        )
-    }
-
-    private func updateDrag(delta: CanvasDragDelta) {
-        guard var state = dragState,
-            let itemsBinding = context.itemsBinding
-        else { return }
-
-        let pointer = delta.processedLocation
-        let rawDelta = CGVector(
-            dx: pointer.x - state.origin.x,
-            dy: pointer.y - state.origin.y
-        )
-        let snapped = context.snapProvider.snap(
-            delta: rawDelta,
-            context: context,
-            environment: environment
-        )
-        let tolerance = baseTolerance / max(context.magnification, 0.001)
-
-        var items = itemsBinding.wrappedValue
-
-        if detachIfNeeded(
-            endpointID: state.startID,
-            otherID: state.endID,
-            orientation: state.linkOrientation[state.edgeID],
-            snapped: snapped,
-            tolerance: tolerance,
-            state: &state,
-            items: &items,
-            replacingStart: true
-        ) {
-            dragState = state
-        }
-
-        if detachIfNeeded(
-            endpointID: state.endID,
-            otherID: state.startID,
-            orientation: state.linkOrientation[state.edgeID],
-            snapped: snapped,
-            tolerance: tolerance,
-            state: &state,
-            items: &items,
-            replacingStart: false
-        ) {
-            dragState = state
-        }
-
-        let newStart = CGPoint(
-            x: state.startPosition.x + snapped.dx,
-            y: state.startPosition.y + snapped.dy
-        )
-        let newEnd = CGPoint(
-            x: state.endPosition.x + snapped.dx,
-            y: state.endPosition.y + snapped.dy
-        )
-        let isStartFixed = state.fixedPointIDs.contains(state.startID)
-        let isEndFixed = state.fixedPointIDs.contains(state.endID)
-
-        var newPositions = state.originalPositions
-        if !isStartFixed {
-            newPositions[state.startID] = newStart
-        }
-        if !isEndFixed {
-            newPositions[state.endID] = newEnd
-        }
-        ConnectionInteractionSupport.applyConstraints(
-            movedIDs: [state.startID, state.endID].filter { !state.fixedPointIDs.contains($0) },
-            positions: &newPositions,
-            originalPositions: state.originalPositions,
-            adjacency: state.adjacency,
-            orientations: state.linkOrientation,
-            linkEndpoints: state.linkEndpoints,
-            fixedPointIDs: state.fixedPointIDs
-        )
-
-        for index in items.indices {
-            if items[index].id == state.startID, var vertex = items[index] as? WireVertex {
-                vertex.position = newPositions[state.startID] ?? newStart
-                items[index] = vertex
-            }
-            if items[index].id == state.endID, var vertex = items[index] as? WireVertex {
-                vertex.position = newPositions[state.endID] ?? newEnd
-                items[index] = vertex
-            }
-            if let vertex = items[index] as? WireVertex,
-                let updated = newPositions[vertex.id],
-                vertex.position != updated
-            {
-                var copy = vertex
-                copy.position = updated
-                items[index] = copy
-            }
-        }
-        itemsBinding.wrappedValue = items
-        dragState = state
-    }
-
     private func endDrag() {
-        guard dragState != nil,
+        guard edgeDragController.endDrag(),
             let itemsBinding = context.itemsBinding
         else {
-            dragState = nil
             return
         }
 
@@ -291,7 +170,7 @@ struct WireView: CKView {
             seedLiveLinkOrientation(points: connectionPoints, links: connectionLinks)
             globalDragTargetID = context.hitTargets.hitTest(event.rawLocation)?.id
         case .changed, .ended:
-            if dragState != nil {
+            if edgeDragController.isDragging {
                 return
             }
             if case .changed = phase {
@@ -365,85 +244,6 @@ struct WireView: CKView {
         return points
     }
 
-    private struct DragState {
-        let edgeID: UUID
-        var startID: UUID
-        var endID: UUID
-        let origin: CGPoint
-        var startPosition: CGPoint
-        var endPosition: CGPoint
-        var originalPositions: [UUID: CGPoint]
-        var linkOrientation: [UUID: ConnectionSegmentOrientation]
-        var adjacency: [UUID: [UUID]]
-        var linkEndpoints: [UUID: (UUID, UUID)]
-        var fixedPointIDs: Set<UUID>
-    }
-
-    private func detachIfNeeded(
-        endpointID: UUID,
-        otherID: UUID,
-        orientation: ConnectionSegmentOrientation?,
-        snapped: CGVector,
-        tolerance: CGFloat,
-        state: inout DragState,
-        items: inout [any CanvasItem],
-        replacingStart: Bool
-    ) -> Bool {
-        guard state.fixedPointIDs.contains(endpointID),
-            let orientation
-        else { return false }
-
-        let isOffAxis = ConnectionInteractionSupport.shouldDetachFixedEndpoint(
-            for: snapped,
-            orientation: orientation,
-            tolerance: tolerance
-        )
-        guard isOffAxis else { return false }
-
-        guard let endpointPosition = state.originalPositions[endpointID] else { return false }
-        let newVertex = WireVertex(position: endpointPosition)
-        items.append(newVertex)
-        state.originalPositions[newVertex.id] = endpointPosition
-
-        if replacingStart {
-            state.startID = newVertex.id
-            state.startPosition = endpointPosition
-        } else {
-            state.endID = newVertex.id
-            state.endPosition = endpointPosition
-        }
-
-        if let index = items.firstIndex(where: { $0.id == state.edgeID }),
-            var segment = items[index] as? WireSegment
-        {
-            if segment.startID == endpointID {
-                segment.startID = newVertex.id
-            } else if segment.endID == endpointID {
-                segment.endID = newVertex.id
-            }
-            items[index] = segment
-        }
-
-        let links = items.compactMap { $0 as? any ConnectionLink }
-        if !ConnectionInteractionSupport.hasLink(
-            between: endpointID, and: newVertex.id, links: links)
-        {
-            let link = WireSegment(startID: endpointID, endID: newVertex.id)
-            items.append(link)
-            let newOrientation: ConnectionSegmentOrientation =
-                (orientation == .horizontal)
-                ? .vertical
-                : (orientation == .vertical ? .horizontal : .arbitrary)
-            state.linkOrientation[link.id] = newOrientation
-        }
-
-        let updatedLinks = items.compactMap { $0 as? any ConnectionLink }
-        state.adjacency = ConnectionInteractionSupport.linkAdjacency(for: updatedLinks)
-        state.linkEndpoints = ConnectionInteractionSupport.linkEndpointMap(for: updatedLinks)
-        state.linkOrientation[state.edgeID] = orientation
-
-        return true
-    }
     private func seedLiveLinkOrientation(points: [any ConnectionPoint], links: [any ConnectionLink])
     {
         guard !points.isEmpty, !links.isEmpty else {
