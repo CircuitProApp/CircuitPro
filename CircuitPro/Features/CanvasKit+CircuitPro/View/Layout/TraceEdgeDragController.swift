@@ -244,10 +244,12 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         let translatedStart = CGPoint(x: startPos.x + delta.dx, y: startPos.y + delta.dy)
         let translatedEnd = CGPoint(x: endPos.x + delta.dx, y: endPos.y + delta.dy)
 
-        let startIncidents = incidents(at: startID, excluding: draggedID, in: layerSegments)
-        let endIncidents = incidents(at: endID, excluding: draggedID, in: layerSegments)
-
         let links = layerSegments.map { $0 as any ConnectionLink }
+        let startIncidents = ConnectionInteractionSupport.incidents(
+            at: startID, excluding: draggedID, in: links)
+        let endIncidents = ConnectionInteractionSupport.incidents(
+            at: endID, excluding: draggedID, in: links)
+
         let adjacency = ConnectionInteractionSupport.linkAdjacency(for: links)
         let linkEndpoints = ConnectionInteractionSupport.linkEndpointMap(for: links)
 
@@ -276,7 +278,7 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
             hasEndpointCrossedSupport(
                 endpointID: startID,
                 junctionIncidents: startIncidents,
-                allSegments: layerSegments,
+                allLinks: links,
                 positions: positions,
                 originalPositions: originalPositions,
                 orientations: orientations,
@@ -285,13 +287,13 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
             || hasEndpointCrossedSupport(
                 endpointID: endID,
                 junctionIncidents: endIncidents,
-                allSegments: layerSegments,
+                allLinks: links,
                 positions: positions,
                 originalPositions: originalPositions,
                 orientations: orientations,
                 fixedPointIDs: fixedPointIDs
             )
-            || draggedSpanHasInverted(
+            || ConnectionInteractionSupport.draggedSpanHasInverted(
                 startID: startID,
                 endID: endID,
                 positions: positions,
@@ -320,7 +322,7 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         if hasEndpointCrossedSupport(
             endpointID: startID,
             junctionIncidents: startIncidents,
-            allSegments: layerSegments,
+            allLinks: links,
             positions: positions,
             originalPositions: originalPositions,
             orientations: orientations,
@@ -331,7 +333,7 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
                 currentPos: positions[startID] ?? translatedStart,
                 currentOtherEnd: positions[endID] ?? translatedEnd,
                 junctionIncidents: startIncidents,
-                allSegments: layerSegments,
+                allLinks: links,
                 originalPositions: originalPositions,
                 orientations: orientations,
                 draggedOrientation: orientations[draggedID],
@@ -342,7 +344,7 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         if hasEndpointCrossedSupport(
             endpointID: endID,
             junctionIncidents: endIncidents,
-            allSegments: layerSegments,
+            allLinks: links,
             positions: positions,
             originalPositions: originalPositions,
             orientations: orientations,
@@ -353,7 +355,7 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
                 currentPos: positions[endID] ?? translatedEnd,
                 currentOtherEnd: positions[startID] ?? translatedStart,
                 junctionIncidents: endIncidents,
-                allSegments: layerSegments,
+                allLinks: links,
                 originalPositions: originalPositions,
                 orientations: orientations,
                 draggedOrientation: orientations[draggedID],
@@ -378,19 +380,19 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         endPos: CGPoint,
         translatedStart: CGPoint,
         translatedEnd: CGPoint,
-        startIncidents: [TraceSegment],
-        endIncidents: [TraceSegment],
+        startIncidents: [any ConnectionLink],
+        endIncidents: [any ConnectionLink],
         originalPositions: [UUID: CGPoint],
         fixedPointIDs: Set<UUID>
     ) -> [UUID: CGPoint]? {
         guard !fixedPointIDs.contains(startID),
             !fixedPointIDs.contains(endID),
-            let startIncident = prioritizedIncident(
+            let startIncident = ConnectionInteractionSupport.prioritizedIncident(
                 for: startID,
                 in: startIncidents,
                 fixedPointIDs: fixedPointIDs
             ),
-            let endIncident = prioritizedIncident(
+            let endIncident = ConnectionInteractionSupport.prioritizedIncident(
                 for: endID,
                 in: endIncidents,
                 fixedPointIDs: fixedPointIDs
@@ -405,8 +407,10 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         else { return nil }
 
         let originalDirection = CGVector(dx: endPos.x - startPos.x, dy: endPos.y - startPos.y)
-        let startOriginalOrientation = classifyOrientation(from: startAnchor, to: startPos)
-        let endOriginalOrientation = classifyOrientation(from: endAnchor, to: endPos)
+        let startOriginalOrientation = ConnectionInteractionSupport.classifyOrientation(
+            from: startAnchor, to: startPos)
+        let endOriginalOrientation = ConnectionInteractionSupport.classifyOrientation(
+            from: endAnchor, to: endPos)
 
         var bestPositive: JointCandidate?
         var bestPositiveSpan = CGFloat.infinity
@@ -415,8 +419,9 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         var bestCollapseAxisChanges = Int.max
 
         for startOrientation in octilinearOrientations {
-            guard let startLine = lineThrough(point: startAnchor, orientation: startOrientation),
-                let resolvedStart = intersect(
+            guard let startLine = ConnectionInteractionSupport.lineThrough(
+                point: startAnchor, orientation: startOrientation),
+                let resolvedStart = ConnectionInteractionSupport.intersect(
                     lineP1: translatedStart,
                     lineP2: translatedEnd,
                     lineQ1: startLine.p1,
@@ -425,8 +430,9 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
             else { continue }
 
             for endOrientation in octilinearOrientations {
-                guard let endLine = lineThrough(point: endAnchor, orientation: endOrientation),
-                    let resolvedEnd = intersect(
+                guard let endLine = ConnectionInteractionSupport.lineThrough(
+                    point: endAnchor, orientation: endOrientation),
+                    let resolvedEnd = ConnectionInteractionSupport.intersect(
                         lineP1: translatedStart,
                         lineP2: translatedEnd,
                         lineQ1: endLine.p1,
@@ -442,12 +448,14 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
                     resolvedDirection.dx * originalDirection.dx
                     + resolvedDirection.dy * originalDirection.dy
                 let axisChanges =
-                    orientationChangeCost(from: startOriginalOrientation, to: startOrientation)
-                    + orientationChangeCost(from: endOriginalOrientation, to: endOrientation)
+                    ConnectionInteractionSupport.orientationChangeCost(
+                        from: startOriginalOrientation, to: startOrientation)
+                    + ConnectionInteractionSupport.orientationChangeCost(
+                        from: endOriginalOrientation, to: endOrientation)
 
                 if span <= 0 {
                     guard
-                        let collapse = intersect(
+                        let collapse = ConnectionInteractionSupport.intersect(
                             lineP1: startLine.p1,
                             lineP2: startLine.p2,
                             lineQ1: endLine.p1,
@@ -489,8 +497,8 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         id: UUID,
         currentPos: CGPoint,
         currentOtherEnd: CGPoint,
-        junctionIncidents: [TraceSegment],
-        allSegments: [TraceSegment],
+        junctionIncidents: [any ConnectionLink],
+        allLinks: [any ConnectionLink],
         originalPositions: [UUID: CGPoint],
         orientations: [UUID: ConnectionSegmentOrientation],
         draggedOrientation: ConnectionSegmentOrientation?,
@@ -505,8 +513,10 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
 
         let originalJunction = originalPositions[id] ?? currentPos
         let sortedIncidents = junctionIncidents.sorted { a, b in
-            fixedFarEndpoint(of: a, junction: id, fixedPointIDs: fixedPointIDs)
-                && !fixedFarEndpoint(of: b, junction: id, fixedPointIDs: fixedPointIDs)
+            ConnectionInteractionSupport.fixedFarEndpoint(
+                of: a, junction: id, fixedPointIDs: fixedPointIDs)
+                && !ConnectionInteractionSupport.fixedFarEndpoint(
+                    of: b, junction: id, fixedPointIDs: fixedPointIDs)
         }
 
         for incident in sortedIncidents {
@@ -515,13 +525,11 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
                 continue
             }
 
-            let candidates = routeJunctionCandidates(
-                from: currentOtherEnd,
-                to: anchor
-            )
+            let candidates = routeJunctionCandidates(from: currentOtherEnd, to: anchor)
             let incidentOrientation =
                 orientations[incident.id]
-                ?? classifyOrientation(from: originalJunction, to: anchor)
+                ?? ConnectionInteractionSupport.classifyOrientation(
+                    from: originalJunction, to: anchor)
             if let best = candidates.min(by: {
                 compareCandidates(
                     $0,
@@ -541,27 +549,41 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         return currentPos
     }
 
-    private static func incidents(
-        at id: UUID,
-        excluding excludedID: UUID,
-        in segments: [TraceSegment]
-    ) -> [TraceSegment] {
-        segments.filter { $0.id != excludedID && ($0.startID == id || $0.endID == id) }
-    }
-
-    private static func fixedFarEndpoint(
-        of segment: TraceSegment,
-        junction: UUID,
+    private static func hasEndpointCrossedSupport(
+        endpointID: UUID,
+        junctionIncidents: [any ConnectionLink],
+        allLinks: [any ConnectionLink],
+        positions: [UUID: CGPoint],
+        originalPositions: [UUID: CGPoint],
+        orientations: [UUID: ConnectionSegmentOrientation],
         fixedPointIDs: Set<UUID>
     ) -> Bool {
-        let farID = segment.startID == junction ? segment.endID : segment.startID
-        return fixedPointIDs.contains(farID)
-    }
+        guard
+            let incident = ConnectionInteractionSupport.prioritizedIncident(
+                for: endpointID,
+                in: junctionIncidents,
+                fixedPointIDs: fixedPointIDs
+            ),
+            let current = positions[endpointID],
+            let original = originalPositions[endpointID],
+            let anchor = ConnectionInteractionSupport.remoteAnchor(
+                for: endpointID,
+                firstIncident: incident,
+                allLinks: allLinks,
+                originalPositions: originalPositions
+            )
+        else { return false }
 
-    private static func squaredDistance(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
-        let dx = a.x - b.x
-        let dy = a.y - b.y
-        return dx * dx + dy * dy
+        let orientation =
+            orientations[incident.id]
+            ?? ConnectionInteractionSupport.classifyOrientation(from: original, to: anchor)
+        guard let direction = orientation.direction else { return false }
+
+        let originalScalar =
+            (original.x - anchor.x) * direction.dx + (original.y - anchor.y) * direction.dy
+        let currentScalar =
+            (current.x - anchor.x) * direction.dx + (current.y - anchor.y) * direction.dy
+        return originalScalar > 1e-9 && currentScalar < -1e-9
     }
 
     private static let octilinearOrientations: [ConnectionSegmentOrientation] = [
@@ -570,34 +592,6 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         .diagonalAscending,
         .diagonalDescending,
     ]
-
-    private static func remoteAnchor(
-        for junctionID: UUID,
-        firstIncident: TraceSegment,
-        allSegments: [TraceSegment],
-        originalPositions: [UUID: CGPoint]
-    ) -> CGPoint? {
-        var currentPointID =
-            firstIncident.startID == junctionID ? firstIncident.endID : firstIncident.startID
-        var previousSegmentID = firstIncident.id
-
-        while true {
-            let nextSegments = incidents(
-                at: currentPointID,
-                excluding: previousSegmentID,
-                in: allSegments
-            )
-
-            if nextSegments.count != 1 {
-                return originalPositions[currentPointID]
-            }
-
-            let next = nextSegments[0]
-            currentPointID =
-                next.startID == currentPointID ? next.endID : next.startID
-            previousSegmentID = next.id
-        }
-    }
 
     private static func routeJunctionCandidates(
         from start: CGPoint,
@@ -641,65 +635,6 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         return unique
     }
 
-    private static func hasEndpointCrossedSupport(
-        endpointID: UUID,
-        junctionIncidents: [TraceSegment],
-        allSegments: [TraceSegment],
-        positions: [UUID: CGPoint],
-        originalPositions: [UUID: CGPoint],
-        orientations: [UUID: ConnectionSegmentOrientation],
-        fixedPointIDs: Set<UUID>
-    ) -> Bool {
-        guard
-            let incident = prioritizedIncident(
-                for: endpointID,
-                in: junctionIncidents,
-                fixedPointIDs: fixedPointIDs
-            ),
-            let current = positions[endpointID],
-            let original = originalPositions[endpointID],
-            let anchor = remoteAnchor(
-                for: endpointID,
-                firstIncident: incident,
-                allSegments: allSegments,
-                originalPositions: originalPositions
-            )
-        else { return false }
-
-        let orientation =
-            orientations[incident.id] ?? classifyOrientation(from: original, to: anchor)
-        guard let direction = orientation.direction else { return false }
-
-        let originalScalar =
-            (original.x - anchor.x) * direction.dx + (original.y - anchor.y) * direction.dy
-        let currentScalar =
-            (current.x - anchor.x) * direction.dx + (current.y - anchor.y) * direction.dy
-        return originalScalar > 1e-9 && currentScalar < -1e-9
-    }
-
-    private static func draggedSpanHasInverted(
-        startID: UUID,
-        endID: UUID,
-        positions: [UUID: CGPoint],
-        originalPositions: [UUID: CGPoint],
-        orientations: [UUID: ConnectionSegmentOrientation],
-        draggedID: UUID
-    ) -> Bool {
-        guard let start = positions[startID],
-            let end = positions[endID],
-            let originalStart = originalPositions[startID],
-            let originalEnd = originalPositions[endID]
-        else { return false }
-
-        let direction =
-            orientations[draggedID]?.direction
-            ?? classifyOrientation(from: originalStart, to: originalEnd).direction
-        guard let direction else { return false }
-
-        let span = (end.x - start.x) * direction.dx + (end.y - start.y) * direction.dy
-        return span < -1e-9
-    }
-
     private static func compareCandidates(
         _ lhs: CGPoint,
         _ rhs: CGPoint,
@@ -710,100 +645,37 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         draggedOrientation: ConnectionSegmentOrientation?,
         incidentOrientation: ConnectionSegmentOrientation
     ) -> Bool {
-        let lhsDragged = classifyOrientation(from: lhs, to: currentOtherEnd)
-        let rhsDragged = classifyOrientation(from: rhs, to: currentOtherEnd)
-        let lhsSupport = classifyOrientation(from: lhs, to: anchor)
-        let rhsSupport = classifyOrientation(from: rhs, to: anchor)
+        let lhsDragged = ConnectionInteractionSupport.classifyOrientation(
+            from: lhs, to: currentOtherEnd)
+        let rhsDragged = ConnectionInteractionSupport.classifyOrientation(
+            from: rhs, to: currentOtherEnd)
+        let lhsSupport = ConnectionInteractionSupport.classifyOrientation(from: lhs, to: anchor)
+        let rhsSupport = ConnectionInteractionSupport.classifyOrientation(from: rhs, to: anchor)
 
-        let lhsDraggedCost = orientationChangeCost(
-            from: draggedOrientation ?? lhsDragged,
-            to: lhsDragged
-        )
-        let rhsDraggedCost = orientationChangeCost(
-            from: draggedOrientation ?? rhsDragged,
-            to: rhsDragged
-        )
+        let lhsDraggedCost = ConnectionInteractionSupport.orientationChangeCost(
+            from: draggedOrientation ?? lhsDragged, to: lhsDragged)
+        let rhsDraggedCost = ConnectionInteractionSupport.orientationChangeCost(
+            from: draggedOrientation ?? rhsDragged, to: rhsDragged)
         if lhsDraggedCost != rhsDraggedCost {
             return lhsDraggedCost < rhsDraggedCost
         }
 
-        let lhsSupportCost = orientationChangeCost(from: incidentOrientation, to: lhsSupport)
-        let rhsSupportCost = orientationChangeCost(from: incidentOrientation, to: rhsSupport)
+        let lhsSupportCost = ConnectionInteractionSupport.orientationChangeCost(
+            from: incidentOrientation, to: lhsSupport)
+        let rhsSupportCost = ConnectionInteractionSupport.orientationChangeCost(
+            from: incidentOrientation, to: rhsSupport)
         if lhsSupportCost != rhsSupportCost {
             return lhsSupportCost < rhsSupportCost
         }
 
-        let lhsCurrentDistance = squaredDistance(lhs, currentPos)
-        let rhsCurrentDistance = squaredDistance(rhs, currentPos)
+        let lhsCurrentDistance = ConnectionInteractionSupport.squaredDistance(lhs, currentPos)
+        let rhsCurrentDistance = ConnectionInteractionSupport.squaredDistance(rhs, currentPos)
         if abs(lhsCurrentDistance - rhsCurrentDistance) > 1e-9 {
             return lhsCurrentDistance < rhsCurrentDistance
         }
 
-        return squaredDistance(lhs, originalJunction) < squaredDistance(rhs, originalJunction)
-    }
-
-    private static func prioritizedIncident(
-        for junction: UUID,
-        in segments: [TraceSegment],
-        fixedPointIDs: Set<UUID>
-    ) -> TraceSegment? {
-        segments.sorted { a, b in
-            fixedFarEndpoint(of: a, junction: junction, fixedPointIDs: fixedPointIDs)
-                && !fixedFarEndpoint(of: b, junction: junction, fixedPointIDs: fixedPointIDs)
-        }.first
-    }
-
-    private static func intersect(
-        lineP1 p1: CGPoint,
-        lineP2 p2: CGPoint,
-        lineQ1 q1: CGPoint,
-        lineQ2 q2: CGPoint
-    ) -> CGPoint? {
-        let d1 = CGVector(dx: p2.x - p1.x, dy: p2.y - p1.y)
-        let d2 = CGVector(dx: q2.x - q1.x, dy: q2.y - q1.y)
-        let det = d1.dx * (-d2.dy) + d2.dx * d1.dy
-        guard abs(det) > 1e-9 else { return nil }
-        let rx = q1.x - p1.x
-        let ry = q1.y - p1.y
-        let t = (rx * (-d2.dy) + d2.dx * ry) / det
-        return CGPoint(x: p1.x + t * d1.dx, y: p1.y + t * d1.dy)
-    }
-
-    private static func lineThrough(
-        point: CGPoint,
-        orientation: ConnectionSegmentOrientation
-    ) -> (p1: CGPoint, p2: CGPoint)? {
-        switch orientation {
-        case .horizontal:
-            return (point, CGPoint(x: point.x + 1, y: point.y))
-        case .vertical:
-            return (point, CGPoint(x: point.x, y: point.y + 1))
-        case .diagonalAscending:
-            return (point, CGPoint(x: point.x + 1, y: point.y + 1))
-        case .diagonalDescending:
-            return (point, CGPoint(x: point.x + 1, y: point.y - 1))
-        default:
-            return nil
-        }
-    }
-
-    private static func classifyOrientation(
-        from start: CGPoint,
-        to end: CGPoint
-    ) -> ConnectionSegmentOrientation {
-        let dx = end.x - start.x
-        let dy = end.y - start.y
-        if abs(dx) <= 1e-9 { return .vertical }
-        if abs(dy) <= 1e-9 { return .horizontal }
-        let sameSign = (dx >= 0 && dy >= 0) || (dx <= 0 && dy <= 0)
-        return sameSign ? .diagonalAscending : .diagonalDescending
-    }
-
-    private static func orientationChangeCost(
-        from original: ConnectionSegmentOrientation,
-        to candidate: ConnectionSegmentOrientation
-    ) -> Int {
-        original == candidate ? 0 : 1
+        return ConnectionInteractionSupport.squaredDistance(lhs, originalJunction)
+            < ConnectionInteractionSupport.squaredDistance(rhs, originalJunction)
     }
 
     private struct DragState {

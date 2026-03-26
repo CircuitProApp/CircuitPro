@@ -295,4 +295,146 @@ enum ConnectionInteractionSupport {
             y: anchor.y + direction.dy * dot
         )
     }
+
+    // MARK: - Geometry primitives
+
+    /// Exact orientation classification with no tolerance — always returns one of the four
+    /// named orientations, never `.arbitrary`. Use this inside solvers where a direction is
+    /// always required. Use `classify` when snapping/tolerance matters.
+    static func classifyOrientation(
+        from start: CGPoint,
+        to end: CGPoint
+    ) -> ConnectionSegmentOrientation {
+        let dx = end.x - start.x
+        let dy = end.y - start.y
+        if abs(dx) <= 1e-9 { return .vertical }
+        if abs(dy) <= 1e-9 { return .horizontal }
+        let sameSign = (dx >= 0 && dy >= 0) || (dx <= 0 && dy <= 0)
+        return sameSign ? .diagonalAscending : .diagonalDescending
+    }
+
+    static func orientationChangeCost(
+        from original: ConnectionSegmentOrientation,
+        to candidate: ConnectionSegmentOrientation
+    ) -> Int {
+        original == candidate ? 0 : 1
+    }
+
+    static func intersect(
+        lineP1 p1: CGPoint,
+        lineP2 p2: CGPoint,
+        lineQ1 q1: CGPoint,
+        lineQ2 q2: CGPoint
+    ) -> CGPoint? {
+        let d1 = CGVector(dx: p2.x - p1.x, dy: p2.y - p1.y)
+        let d2 = CGVector(dx: q2.x - q1.x, dy: q2.y - q1.y)
+        let det = d1.dx * (-d2.dy) + d2.dx * d1.dy
+        guard abs(det) > 1e-9 else { return nil }
+        let rx = q1.x - p1.x
+        let ry = q1.y - p1.y
+        let t = (rx * (-d2.dy) + d2.dx * ry) / det
+        return CGPoint(x: p1.x + t * d1.dx, y: p1.y + t * d1.dy)
+    }
+
+    static func lineThrough(
+        point: CGPoint,
+        orientation: ConnectionSegmentOrientation
+    ) -> (p1: CGPoint, p2: CGPoint)? {
+        switch orientation {
+        case .horizontal:
+            return (point, CGPoint(x: point.x + 1, y: point.y))
+        case .vertical:
+            return (point, CGPoint(x: point.x, y: point.y + 1))
+        case .diagonalAscending:
+            return (point, CGPoint(x: point.x + 1, y: point.y + 1))
+        case .diagonalDescending:
+            return (point, CGPoint(x: point.x + 1, y: point.y - 1))
+        default:
+            return nil
+        }
+    }
+
+    static func squaredDistance(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
+        let dx = a.x - b.x
+        let dy = a.y - b.y
+        return dx * dx + dy * dy
+    }
+
+    // MARK: - Link traversal
+
+    static func incidents(
+        at id: UUID,
+        excluding excludedID: UUID,
+        in links: [any ConnectionLink]
+    ) -> [any ConnectionLink] {
+        links.filter { $0.id != excludedID && ($0.startID == id || $0.endID == id) }
+    }
+
+    static func fixedFarEndpoint(
+        of link: any ConnectionLink,
+        junction: UUID,
+        fixedPointIDs: Set<UUID>
+    ) -> Bool {
+        let farID = link.startID == junction ? link.endID : link.startID
+        return fixedPointIDs.contains(farID)
+    }
+
+    static func prioritizedIncident(
+        for junction: UUID,
+        in links: [any ConnectionLink],
+        fixedPointIDs: Set<UUID>
+    ) -> (any ConnectionLink)? {
+        links.sorted { a, b in
+            fixedFarEndpoint(of: a, junction: junction, fixedPointIDs: fixedPointIDs)
+                && !fixedFarEndpoint(of: b, junction: junction, fixedPointIDs: fixedPointIDs)
+        }.first
+    }
+
+    static func remoteAnchor(
+        for junctionID: UUID,
+        firstIncident: any ConnectionLink,
+        allLinks: [any ConnectionLink],
+        originalPositions: [UUID: CGPoint]
+    ) -> CGPoint? {
+        var currentPointID =
+            firstIncident.startID == junctionID ? firstIncident.endID : firstIncident.startID
+        var previousLinkID = firstIncident.id
+
+        while true {
+            let nextLinks = incidents(
+                at: currentPointID,
+                excluding: previousLinkID,
+                in: allLinks
+            )
+            if nextLinks.count != 1 {
+                return originalPositions[currentPointID]
+            }
+            let next = nextLinks[0]
+            currentPointID = next.startID == currentPointID ? next.endID : next.startID
+            previousLinkID = next.id
+        }
+    }
+
+    static func draggedSpanHasInverted(
+        startID: UUID,
+        endID: UUID,
+        positions: [UUID: CGPoint],
+        originalPositions: [UUID: CGPoint],
+        orientations: [UUID: ConnectionSegmentOrientation],
+        draggedID: UUID
+    ) -> Bool {
+        guard let start = positions[startID],
+            let end = positions[endID],
+            let originalStart = originalPositions[startID],
+            let originalEnd = originalPositions[endID]
+        else { return false }
+
+        let direction =
+            orientations[draggedID]?.direction
+            ?? classifyOrientation(from: originalStart, to: originalEnd).direction
+        guard let direction else { return false }
+
+        let span = (end.x - start.x) * direction.dx + (end.y - start.y) * direction.dy
+        return span < -1e-9
+    }
 }
