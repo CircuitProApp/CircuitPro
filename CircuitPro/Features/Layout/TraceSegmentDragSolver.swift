@@ -19,9 +19,6 @@ enum TraceSegmentDragSolver {
         orientations: [UUID: ConnectionSegmentOrientation],
         fixedPointIDs: Set<UUID>
     ) -> [UUID: CGPoint] {
-        _ = draggedID
-        _ = orientations
-
         guard let startPos = originalPositions[startID],
             let endPos = originalPositions[endID]
         else { return [:] }
@@ -32,49 +29,127 @@ enum TraceSegmentDragSolver {
         let startIncidents = incidents(at: startID, excluding: draggedID, in: layerSegments)
         let endIncidents = incidents(at: endID, excluding: draggedID, in: layerSegments)
 
-        if let joint = solveJointChain(
-            startID: startID,
-            endID: endID,
-            startPos: startPos,
-            endPos: endPos,
-            translatedStart: translatedStart,
-            translatedEnd: translatedEnd,
-            startIncidents: startIncidents,
-            endIncidents: endIncidents,
+        let links = layerSegments.map { $0 as any ConnectionLink }
+        let adjacency = ConnectionInteractionSupport.linkAdjacency(for: links)
+        let linkEndpoints = ConnectionInteractionSupport.linkEndpointMap(for: links)
+
+        var positions = originalPositions
+        var movedIDs: [UUID] = []
+        if !fixedPointIDs.contains(startID) {
+            positions[startID] = translatedStart
+            movedIDs.append(startID)
+        }
+        if !fixedPointIDs.contains(endID) {
+            positions[endID] = translatedEnd
+            movedIDs.append(endID)
+        }
+
+        ConnectionInteractionSupport.applyConstraints(
+            movedIDs: movedIDs,
+            positions: &positions,
             originalPositions: originalPositions,
+            adjacency: adjacency,
+            orientations: orientations,
+            linkEndpoints: linkEndpoints,
             fixedPointIDs: fixedPointIDs
-        ) {
+        )
+
+        let jointEventTriggered =
+            hasEndpointCrossedSupport(
+                endpointID: startID,
+                junctionIncidents: startIncidents,
+                allSegments: layerSegments,
+                positions: positions,
+                originalPositions: originalPositions,
+                orientations: orientations,
+                fixedPointIDs: fixedPointIDs
+            )
+            || hasEndpointCrossedSupport(
+                endpointID: endID,
+                junctionIncidents: endIncidents,
+                allSegments: layerSegments,
+                positions: positions,
+                originalPositions: originalPositions,
+                orientations: orientations,
+                fixedPointIDs: fixedPointIDs
+            )
+            || draggedSpanHasInverted(
+                startID: startID,
+                endID: endID,
+                positions: positions,
+                originalPositions: originalPositions,
+                orientations: orientations,
+                draggedID: draggedID
+            )
+
+        if jointEventTriggered,
+            let joint = solveJointChain(
+                startID: startID,
+                endID: endID,
+                startPos: startPos,
+                endPos: endPos,
+                translatedStart: positions[startID] ?? translatedStart,
+                translatedEnd: positions[endID] ?? translatedEnd,
+                startIncidents: startIncidents,
+                endIncidents: endIncidents,
+                originalPositions: originalPositions,
+                fixedPointIDs: fixedPointIDs
+            )
+        {
             return joint
         }
 
-        var result: [UUID: CGPoint] = [:]
-
-        let resolvedStart = resolveEndpoint(
-            id: startID,
-            translatedPos: translatedStart,
-            translatedOtherEnd: translatedEnd,
-            originalOtherEnd: endPos,
+        if hasEndpointCrossedSupport(
+            endpointID: startID,
             junctionIncidents: startIncidents,
+            allSegments: layerSegments,
+            positions: positions,
             originalPositions: originalPositions,
+            orientations: orientations,
             fixedPointIDs: fixedPointIDs
-        )
-        if resolvedStart != startPos {
+        ) {
+            positions[startID] = resolveEndpoint(
+                id: startID,
+                currentPos: positions[startID] ?? translatedStart,
+                currentOtherEnd: positions[endID] ?? translatedEnd,
+                junctionIncidents: startIncidents,
+                allSegments: layerSegments,
+                originalPositions: originalPositions,
+                orientations: orientations,
+                draggedOrientation: orientations[draggedID],
+                fixedPointIDs: fixedPointIDs
+            )
+        }
+
+        if hasEndpointCrossedSupport(
+            endpointID: endID,
+            junctionIncidents: endIncidents,
+            allSegments: layerSegments,
+            positions: positions,
+            originalPositions: originalPositions,
+            orientations: orientations,
+            fixedPointIDs: fixedPointIDs
+        ) {
+            positions[endID] = resolveEndpoint(
+                id: endID,
+                currentPos: positions[endID] ?? translatedEnd,
+                currentOtherEnd: positions[startID] ?? translatedStart,
+                junctionIncidents: endIncidents,
+                allSegments: layerSegments,
+                originalPositions: originalPositions,
+                orientations: orientations,
+                draggedOrientation: orientations[draggedID],
+                fixedPointIDs: fixedPointIDs
+            )
+        }
+
+        var result: [UUID: CGPoint] = [:]
+        if let resolvedStart = positions[startID], resolvedStart != startPos {
             result[startID] = resolvedStart
         }
-
-        let resolvedEnd = resolveEndpoint(
-            id: endID,
-            translatedPos: translatedEnd,
-            translatedOtherEnd: translatedStart,
-            originalOtherEnd: startPos,
-            junctionIncidents: endIncidents,
-            originalPositions: originalPositions,
-            fixedPointIDs: fixedPointIDs
-        )
-        if resolvedEnd != endPos {
+        if let resolvedEnd = positions[endID], resolvedEnd != endPos {
             result[endID] = resolvedEnd
         }
-
         return result
     }
 
@@ -194,106 +269,60 @@ enum TraceSegmentDragSolver {
 
     private static func resolveEndpoint(
         id: UUID,
-        translatedPos: CGPoint,
-        translatedOtherEnd: CGPoint,
-        originalOtherEnd: CGPoint,
+        currentPos: CGPoint,
+        currentOtherEnd: CGPoint,
         junctionIncidents: [TraceSegment],
+        allSegments: [TraceSegment],
         originalPositions: [UUID: CGPoint],
+        orientations: [UUID: ConnectionSegmentOrientation],
+        draggedOrientation: ConnectionSegmentOrientation?,
         fixedPointIDs: Set<UUID>
     ) -> CGPoint {
         if fixedPointIDs.contains(id) {
-            return originalPositions[id] ?? translatedPos
+            return originalPositions[id] ?? currentPos
         }
         guard !junctionIncidents.isEmpty else {
-            return translatedPos
+            return currentPos
         }
 
-        let originalJunction = originalPositions[id] ?? translatedPos
+        let originalJunction = originalPositions[id] ?? currentPos
         let sortedIncidents = junctionIncidents.sorted { a, b in
             fixedFarEndpoint(of: a, junction: id, fixedPointIDs: fixedPointIDs)
                 && !fixedFarEndpoint(of: b, junction: id, fixedPointIDs: fixedPointIDs)
         }
 
         for incident in sortedIncidents {
-            let anchorID = incident.startID == id ? incident.endID : incident.startID
-            guard let anchor = originalPositions[anchorID] else {
+            guard
+                let anchorID = incident.startID == id ? incident.endID : incident.startID,
+                let anchor = originalPositions[anchorID]
+            else {
                 continue
             }
 
-            let draggedFirst = draggedSegmentIsFirstLeg(
-                anchor: anchor,
-                originalDraggedOtherEnd: originalOtherEnd,
-                originalJunction: originalJunction
+            let candidates = routeJunctionCandidates(
+                from: currentOtherEnd,
+                to: anchor
             )
-
-            let path =
-                draggedFirst
-                ? routePoints(from: translatedOtherEnd, to: anchor)
-                : routePoints(from: anchor, to: translatedOtherEnd)
-
-            return resolvedJunction(from: path, draggedSegmentIsFirst: draggedFirst)
+            let incidentOrientation =
+                orientations[incident.id]
+                ?? classifyOrientation(from: originalJunction, to: anchor)
+            if let best = candidates.min(by: {
+                compareCandidates(
+                    $0,
+                    $1,
+                    currentPos: currentPos,
+                    currentOtherEnd: currentOtherEnd,
+                    anchor: anchor,
+                    originalJunction: originalJunction,
+                    draggedOrientation: draggedOrientation,
+                    incidentOrientation: incidentOrientation
+                )
+            }) {
+                return best
+            }
         }
 
-        return translatedPos
-    }
-
-    private static func draggedSegmentIsFirstLeg(
-        anchor: CGPoint,
-        originalDraggedOtherEnd: CGPoint,
-        originalJunction: CGPoint
-    ) -> Bool {
-        let incidentFirstPath = routePoints(from: anchor, to: originalDraggedOtherEnd)
-        let incidentFirstJunction = resolvedJunction(
-            from: incidentFirstPath,
-            draggedSegmentIsFirst: false
-        )
-
-        let draggedFirstPath = routePoints(from: originalDraggedOtherEnd, to: anchor)
-        let draggedFirstJunction = resolvedJunction(
-            from: draggedFirstPath,
-            draggedSegmentIsFirst: true
-        )
-
-        let incidentFirstDistance = squaredDistance(incidentFirstJunction, originalJunction)
-        let draggedFirstDistance = squaredDistance(draggedFirstJunction, originalJunction)
-
-        return draggedFirstDistance < incidentFirstDistance
-    }
-
-    private static func resolvedJunction(
-        from path: [CGPoint],
-        draggedSegmentIsFirst: Bool
-    ) -> CGPoint {
-        guard let first = path.first, let last = path.last else {
-            return .zero
-        }
-        if path.count <= 2 {
-            return draggedSegmentIsFirst ? last : first
-        }
-        return draggedSegmentIsFirst ? path[1] : path[path.count - 2]
-    }
-
-    private static func routePoints(from start: CGPoint, to end: CGPoint) -> [CGPoint] {
-        let delta = CGPoint(x: end.x - start.x, y: end.y - start.y)
-        let dx = abs(delta.x)
-        let dy = abs(delta.y)
-
-        if dx < 1e-6 || dy < 1e-6 || abs(dx - dy) < 1e-6 {
-            return [start, end]
-        }
-
-        let sx = delta.x.sign()
-        let sy = delta.y.sign()
-
-        if dx >= dy {
-            let leg = dx - dy
-            let mid = CGPoint(x: start.x + leg * sx, y: start.y)
-            return [start, mid, end]
-        }
-
-        let leg = dy - dx
-        let mid = CGPoint(x: start.x, y: start.y + leg * sy)
-        return [start, mid, end]
+        return currentPos
     }
 
     private static func incidents(
@@ -325,6 +354,177 @@ enum TraceSegmentDragSolver {
         .diagonalAscending,
         .diagonalDescending,
     ]
+
+    private static func remoteAnchor(
+        for junctionID: UUID,
+        firstIncident: TraceSegment,
+        allSegments: [TraceSegment],
+        originalPositions: [UUID: CGPoint]
+    ) -> CGPoint? {
+        var currentPointID =
+            firstIncident.startID == junctionID ? firstIncident.endID : firstIncident.startID
+        var previousSegmentID = firstIncident.id
+
+        while true {
+            let nextSegments = incidents(
+                at: currentPointID,
+                excluding: previousSegmentID,
+                in: allSegments
+            )
+
+            if nextSegments.count != 1 {
+                return originalPositions[currentPointID]
+            }
+
+            let next = nextSegments[0]
+            currentPointID =
+                next.startID == currentPointID ? next.endID : next.startID
+            previousSegmentID = next.id
+        }
+    }
+
+    private static func routeJunctionCandidates(
+        from start: CGPoint,
+        to end: CGPoint
+    ) -> [CGPoint] {
+        let dx = end.x - start.x
+        let dy = end.y - start.y
+        let absDX = abs(dx)
+        let absDY = abs(dy)
+
+        if absDX < 1e-6 || absDY < 1e-6 || abs(absDX - absDY) < 1e-6 {
+            return [end]
+        }
+
+        let sx = dx.sign()
+        let sy = dy.sign()
+
+        if absDX >= absDY {
+            let leg = absDX - absDY
+            let horizontalFirst = CGPoint(x: start.x + leg * sx, y: start.y)
+            let diagonalFirst = CGPoint(x: end.x - leg * sx, y: end.y)
+            return uniquePoints([horizontalFirst, diagonalFirst])
+        }
+
+        let leg = absDY - absDX
+        let verticalFirst = CGPoint(x: start.x, y: start.y + leg * sy)
+        let diagonalFirst = CGPoint(x: end.x, y: end.y - leg * sy)
+        return uniquePoints([verticalFirst, diagonalFirst])
+    }
+
+    private static func uniquePoints(_ points: [CGPoint]) -> [CGPoint] {
+        var unique: [CGPoint] = []
+        for point in points {
+            if unique.contains(where: {
+                abs($0.x - point.x) <= 1e-9 && abs($0.y - point.y) <= 1e-9
+            }) {
+                continue
+            }
+            unique.append(point)
+        }
+        return unique
+    }
+
+    private static func hasEndpointCrossedSupport(
+        endpointID: UUID,
+        junctionIncidents: [TraceSegment],
+        allSegments: [TraceSegment],
+        positions: [UUID: CGPoint],
+        originalPositions: [UUID: CGPoint],
+        orientations: [UUID: ConnectionSegmentOrientation],
+        fixedPointIDs: Set<UUID>
+    ) -> Bool {
+        guard
+            let incident = prioritizedIncident(
+                for: endpointID,
+                in: junctionIncidents,
+                fixedPointIDs: fixedPointIDs
+            ),
+            let current = positions[endpointID],
+            let original = originalPositions[endpointID],
+            let anchor = remoteAnchor(
+                for: endpointID,
+                firstIncident: incident,
+                allSegments: allSegments,
+                originalPositions: originalPositions
+            )
+        else { return false }
+
+        let orientation =
+            orientations[incident.id] ?? classifyOrientation(from: original, to: anchor)
+        guard let direction = orientation.direction else { return false }
+
+        let originalScalar =
+            (original.x - anchor.x) * direction.dx + (original.y - anchor.y) * direction.dy
+        let currentScalar =
+            (current.x - anchor.x) * direction.dx + (current.y - anchor.y) * direction.dy
+        return originalScalar > 1e-9 && currentScalar < -1e-9
+    }
+
+    private static func draggedSpanHasInverted(
+        startID: UUID,
+        endID: UUID,
+        positions: [UUID: CGPoint],
+        originalPositions: [UUID: CGPoint],
+        orientations: [UUID: ConnectionSegmentOrientation],
+        draggedID: UUID
+    ) -> Bool {
+        guard let start = positions[startID],
+            let end = positions[endID],
+            let originalStart = originalPositions[startID],
+            let originalEnd = originalPositions[endID]
+        else { return false }
+
+        let direction =
+            orientations[draggedID]?.direction
+            ?? classifyOrientation(from: originalStart, to: originalEnd).direction
+        guard let direction else { return false }
+
+        let span = (end.x - start.x) * direction.dx + (end.y - start.y) * direction.dy
+        return span < -1e-9
+    }
+
+    private static func compareCandidates(
+        _ lhs: CGPoint,
+        _ rhs: CGPoint,
+        currentPos: CGPoint,
+        currentOtherEnd: CGPoint,
+        anchor: CGPoint,
+        originalJunction: CGPoint,
+        draggedOrientation: ConnectionSegmentOrientation?,
+        incidentOrientation: ConnectionSegmentOrientation
+    ) -> Bool {
+        let lhsDragged = classifyOrientation(from: lhs, to: currentOtherEnd)
+        let rhsDragged = classifyOrientation(from: rhs, to: currentOtherEnd)
+        let lhsSupport = classifyOrientation(from: lhs, to: anchor)
+        let rhsSupport = classifyOrientation(from: rhs, to: anchor)
+
+        let lhsDraggedCost = orientationChangeCost(
+            from: draggedOrientation ?? lhsDragged,
+            to: lhsDragged
+        )
+        let rhsDraggedCost = orientationChangeCost(
+            from: draggedOrientation ?? rhsDragged,
+            to: rhsDragged
+        )
+        if lhsDraggedCost != rhsDraggedCost {
+            return lhsDraggedCost < rhsDraggedCost
+        }
+
+        let lhsSupportCost = orientationChangeCost(from: incidentOrientation, to: lhsSupport)
+        let rhsSupportCost = orientationChangeCost(from: incidentOrientation, to: rhsSupport)
+        if lhsSupportCost != rhsSupportCost {
+            return lhsSupportCost < rhsSupportCost
+        }
+
+        let lhsCurrentDistance = squaredDistance(lhs, currentPos)
+        let rhsCurrentDistance = squaredDistance(rhs, currentPos)
+        if abs(lhsCurrentDistance - rhsCurrentDistance) > 1e-9 {
+            return lhsCurrentDistance < rhsCurrentDistance
+        }
+
+        return squaredDistance(lhs, originalJunction) < squaredDistance(rhs, originalJunction)
+    }
 
     private static func prioritizedIncident(
         for junction: UUID,
