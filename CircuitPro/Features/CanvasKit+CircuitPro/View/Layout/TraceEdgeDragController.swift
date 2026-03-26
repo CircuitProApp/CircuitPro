@@ -264,6 +264,60 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
             movedIDs.append(endID)
         }
 
+        if !startIncidents.isEmpty,
+            endIncidents.isEmpty
+        {
+            positions[startID] = resolveEndpoint(
+                id: startID,
+                currentPos: positions[startID] ?? translatedStart,
+                currentOtherEnd: positions[endID] ?? translatedEnd,
+                junctionIncidents: startIncidents,
+                allLinks: links,
+                originalPositions: originalPositions,
+                orientations: orientations,
+                draggedOrientation: orientations[draggedID],
+                fixedPointIDs: fixedPointIDs
+            )
+            collapseImmediateRunIfDirect(
+                from: startID,
+                junctionIncidents: startIncidents,
+                allLinks: links,
+                positions: &positions,
+                originalPositions: originalPositions
+            )
+            return resolvedPositions(
+                positions: positions,
+                originalPositions: originalPositions
+            )
+        }
+
+        if !endIncidents.isEmpty,
+            startIncidents.isEmpty
+        {
+            positions[endID] = resolveEndpoint(
+                id: endID,
+                currentPos: positions[endID] ?? translatedEnd,
+                currentOtherEnd: positions[startID] ?? translatedStart,
+                junctionIncidents: endIncidents,
+                allLinks: links,
+                originalPositions: originalPositions,
+                orientations: orientations,
+                draggedOrientation: orientations[draggedID],
+                fixedPointIDs: fixedPointIDs
+            )
+            collapseImmediateRunIfDirect(
+                from: endID,
+                junctionIncidents: endIncidents,
+                allLinks: links,
+                positions: &positions,
+                originalPositions: originalPositions
+            )
+            return resolvedPositions(
+                positions: positions,
+                originalPositions: originalPositions
+            )
+        }
+
         ConnectionInteractionSupport.applyConstraints(
             movedIDs: movedIDs,
             positions: &positions,
@@ -363,12 +417,20 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
             )
         }
 
+        return resolvedPositions(
+            positions: positions,
+            originalPositions: originalPositions
+        )
+    }
+
+    private static func resolvedPositions(
+        positions: [UUID: CGPoint],
+        originalPositions: [UUID: CGPoint]
+    ) -> [UUID: CGPoint] {
         var result: [UUID: CGPoint] = [:]
-        if let resolvedStart = positions[startID], resolvedStart != startPos {
-            result[startID] = resolvedStart
-        }
-        if let resolvedEnd = positions[endID], resolvedEnd != endPos {
-            result[endID] = resolvedEnd
+        for (id, position) in positions {
+            guard let original = originalPositions[id], original != position else { continue }
+            result[id] = position
         }
         return result
     }
@@ -419,8 +481,9 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         var bestCollapseAxisChanges = Int.max
 
         for startOrientation in octilinearOrientations {
-            guard let startLine = ConnectionInteractionSupport.lineThrough(
-                point: startAnchor, orientation: startOrientation),
+            guard
+                let startLine = ConnectionInteractionSupport.lineThrough(
+                    point: startAnchor, orientation: startOrientation),
                 let resolvedStart = ConnectionInteractionSupport.intersect(
                     lineP1: translatedStart,
                     lineP2: translatedEnd,
@@ -430,8 +493,9 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
             else { continue }
 
             for endOrientation in octilinearOrientations {
-                guard let endLine = ConnectionInteractionSupport.lineThrough(
-                    point: endAnchor, orientation: endOrientation),
+                guard
+                    let endLine = ConnectionInteractionSupport.lineThrough(
+                        point: endAnchor, orientation: endOrientation),
                     let resolvedEnd = ConnectionInteractionSupport.intersect(
                         lineP1: translatedStart,
                         lineP2: translatedEnd,
@@ -586,6 +650,65 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         return originalScalar > 1e-9 && currentScalar < -1e-9
     }
 
+    private static func collapseImmediateRunIfDirect(
+        from junctionID: UUID,
+        junctionIncidents: [any ConnectionLink],
+        allLinks: [any ConnectionLink],
+        positions: inout [UUID: CGPoint],
+        originalPositions: [UUID: CGPoint]
+    ) {
+        guard
+            let incident = junctionIncidents.first,
+            let junctionPos = positions[junctionID]
+        else { return }
+
+        let runPointIDs = linearRunPointIDs(
+            from: junctionID,
+            firstIncident: incident,
+            allLinks: allLinks
+        )
+        guard runPointIDs.count >= 2,
+            let remoteAnchorID = runPointIDs.last,
+            let remoteAnchor = originalPositions[remoteAnchorID]
+        else { return }
+
+        guard isDirectOctilinear(from: junctionPos, to: remoteAnchor) else { return }
+
+        let immediatePointID = runPointIDs[0]
+        positions[immediatePointID] = junctionPos
+    }
+
+    private static func linearRunPointIDs(
+        from junctionID: UUID,
+        firstIncident: any ConnectionLink,
+        allLinks: [any ConnectionLink]
+    ) -> [UUID] {
+        var result: [UUID] = []
+        var currentPointID =
+            firstIncident.startID == junctionID ? firstIncident.endID : firstIncident.startID
+        var previousLinkID = firstIncident.id
+        result.append(currentPointID)
+
+        while true {
+            let nextLinks = ConnectionInteractionSupport.incidents(
+                at: currentPointID,
+                excluding: previousLinkID,
+                in: allLinks
+            )
+            guard nextLinks.count == 1 else { return result }
+            let next = nextLinks[0]
+            currentPointID = next.startID == currentPointID ? next.endID : next.startID
+            previousLinkID = next.id
+            result.append(currentPointID)
+        }
+    }
+
+    private static func isDirectOctilinear(from start: CGPoint, to end: CGPoint) -> Bool {
+        let dx = abs(end.x - start.x)
+        let dy = abs(end.y - start.y)
+        return dx <= 1e-9 || dy <= 1e-9 || abs(dx - dy) <= 1e-9
+    }
+
     private static let octilinearOrientations: [ConnectionSegmentOrientation] = [
         .horizontal,
         .vertical,
@@ -660,6 +783,18 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
             return lhsDraggedCost < rhsDraggedCost
         }
 
+        let lhsDraggedFamilyPenalty = draggedFamilyPenalty(
+            preferred: draggedOrientation,
+            candidate: lhsDragged
+        )
+        let rhsDraggedFamilyPenalty = draggedFamilyPenalty(
+            preferred: draggedOrientation,
+            candidate: rhsDragged
+        )
+        if lhsDraggedFamilyPenalty != rhsDraggedFamilyPenalty {
+            return lhsDraggedFamilyPenalty < rhsDraggedFamilyPenalty
+        }
+
         let lhsSupportCost = ConnectionInteractionSupport.orientationChangeCost(
             from: incidentOrientation, to: lhsSupport)
         let rhsSupportCost = ConnectionInteractionSupport.orientationChangeCost(
@@ -676,6 +811,28 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
 
         return ConnectionInteractionSupport.squaredDistance(lhs, originalJunction)
             < ConnectionInteractionSupport.squaredDistance(rhs, originalJunction)
+    }
+
+    private static func draggedFamilyPenalty(
+        preferred: ConnectionSegmentOrientation?,
+        candidate: ConnectionSegmentOrientation
+    ) -> Int {
+        guard let preferred else { return 0 }
+
+        let preferredIsDiagonal =
+            preferred == .diagonalAscending || preferred == .diagonalDescending
+        let preferredIsAxis = preferred == .horizontal || preferred == .vertical
+        let candidateIsDiagonal =
+            candidate == .diagonalAscending || candidate == .diagonalDescending
+        let candidateIsAxis = candidate == .horizontal || candidate == .vertical
+
+        if preferredIsDiagonal {
+            return candidateIsDiagonal ? 0 : 1
+        }
+        if preferredIsAxis {
+            return candidateIsAxis ? 0 : 1
+        }
+        return 0
     }
 
     private struct DragState {

@@ -437,4 +437,5 @@ enum ConnectionInteractionSupport {
         let span = (end.x - start.x) * direction.dx + (end.y - start.y) * direction.dy
         return span < -1e-9
     }
+
 }
