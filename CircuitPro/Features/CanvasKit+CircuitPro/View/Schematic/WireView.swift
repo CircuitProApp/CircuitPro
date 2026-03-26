@@ -155,7 +155,6 @@ struct WireView: CKView {
             links: links
         )
         itemsBinding.wrappedValue = items
-        dragState = nil
     }
 
     private func handleGlobalDrag(

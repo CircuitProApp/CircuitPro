@@ -292,10 +292,8 @@ enum TraceSegmentDragSolver {
         }
 
         for incident in sortedIncidents {
-            guard
-                let anchorID = incident.startID == id ? incident.endID : incident.startID,
-                let anchor = originalPositions[anchorID]
-            else {
+            let anchorID = incident.startID == id ? incident.endID : incident.startID
+            guard let anchor = originalPositions[anchorID] else {
                 continue
             }
 
