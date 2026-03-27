@@ -358,6 +358,27 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
             )
         }
 
+        if let resolved = solveTwoSidedAxisSupports(
+            startID: startID,
+            endID: endID,
+            translatedStart: translatedStart,
+            translatedEnd: translatedEnd,
+            startIncidents: startIncidents,
+            endIncidents: endIncidents,
+            allLinks: links,
+            originalPositions: originalPositions,
+            orientations: orientations,
+            fixedPointIDs: fixedPointIDs
+        ) {
+            for (id, point) in resolved {
+                positions[id] = point
+            }
+            return resolvedPositions(
+                positions: positions,
+                originalPositions: originalPositions
+            )
+        }
+
         ConnectionInteractionSupport.applyConstraints(
             movedIDs: movedIDs,
             positions: &positions,
@@ -691,6 +712,116 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
         return originalScalar > 1e-9 && currentScalar < -1e-9
     }
 
+    private static func solveTwoSidedAxisSupports(
+        startID: UUID,
+        endID: UUID,
+        translatedStart: CGPoint,
+        translatedEnd: CGPoint,
+        startIncidents: [any ConnectionLink],
+        endIncidents: [any ConnectionLink],
+        allLinks: [any ConnectionLink],
+        originalPositions: [UUID: CGPoint],
+        orientations: [UUID: ConnectionSegmentOrientation],
+        fixedPointIDs: Set<UUID>
+    ) -> [UUID: CGPoint]? {
+        guard
+            let startIncident = ConnectionInteractionSupport.prioritizedIncident(
+                for: startID,
+                in: startIncidents,
+                fixedPointIDs: fixedPointIDs
+            ),
+            let endIncident = ConnectionInteractionSupport.prioritizedIncident(
+                for: endID,
+                in: endIncidents,
+                fixedPointIDs: fixedPointIDs
+            ),
+            let startAnchor = ConnectionInteractionSupport.remoteAnchor(
+                for: startID,
+                firstIncident: startIncident,
+                allLinks: allLinks,
+                originalPositions: originalPositions
+            ),
+            let endAnchor = ConnectionInteractionSupport.remoteAnchor(
+                for: endID,
+                firstIncident: endIncident,
+                allLinks: allLinks,
+                originalPositions: originalPositions
+            )
+        else { return nil }
+
+        let startOrientation =
+            orientations[startIncident.id]
+            ?? ConnectionInteractionSupport.classifyOrientation(
+                from: originalPositions[startID] ?? translatedStart,
+                to: startAnchor
+            )
+        let endOrientation =
+            orientations[endIncident.id]
+            ?? ConnectionInteractionSupport.classifyOrientation(
+                from: originalPositions[endID] ?? translatedEnd,
+                to: endAnchor
+            )
+
+        guard
+            startOrientation == .horizontal || startOrientation == .vertical,
+            endOrientation == .horizontal || endOrientation == .vertical,
+            let resolvedStart = ConnectionInteractionSupport.projected(
+                point: translatedStart,
+                ontoLineThrough: startAnchor,
+                orientation: startOrientation
+            ),
+            let resolvedEnd = ConnectionInteractionSupport.projected(
+                point: translatedEnd,
+                ontoLineThrough: endAnchor,
+                orientation: endOrientation
+            )
+        else { return nil }
+
+        guard
+            let originalStart = originalPositions[startID],
+            let originalEnd = originalPositions[endID]
+        else { return nil }
+
+        let originalDirection = CGVector(
+            dx: originalEnd.x - originalStart.x,
+            dy: originalEnd.y - originalStart.y
+        )
+        let resolvedDirection = CGVector(
+            dx: resolvedEnd.x - resolvedStart.x,
+            dy: resolvedEnd.y - resolvedStart.y
+        )
+        let span =
+            resolvedDirection.dx * originalDirection.dx
+            + resolvedDirection.dy * originalDirection.dy
+
+        if span <= 1e-9,
+            let startLine = ConnectionInteractionSupport.lineThrough(
+                point: startAnchor,
+                orientation: startOrientation
+            ),
+            let endLine = ConnectionInteractionSupport.lineThrough(
+                point: endAnchor,
+                orientation: endOrientation
+            ),
+            let collapse = ConnectionInteractionSupport.intersect(
+                lineP1: startLine.p1,
+                lineP2: startLine.p2,
+                lineQ1: endLine.p1,
+                lineQ2: endLine.p2
+            )
+        {
+            return [
+                startID: collapse,
+                endID: collapse,
+            ]
+        }
+
+        return [
+            startID: resolvedStart,
+            endID: resolvedEnd,
+        ]
+    }
+
     private static func solveOneSidedAxisDiagonalAxisChain(
         junctionID: UUID,
         freeID: UUID,
@@ -744,9 +875,33 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
             let delta = currentFreePoint.x - middlePoint.x
             guard delta >= -1e-9 else { return nil }
 
+            let collapseDelta = (remotePoint.x - middlePoint.x) / 2
+            if delta > collapseDelta + 1e-9 {
+                let candidates = routeJunctionCandidates(from: currentFreePoint, to: remotePoint)
+                guard
+                    let resolved = candidates.min(by: {
+                        compareCandidates(
+                            $0,
+                            $1,
+                            currentPos: currentJunction,
+                            currentOtherEnd: currentFreePoint,
+                            anchor: remotePoint,
+                            originalJunction: originalPositions[junctionID] ?? currentJunction,
+                            draggedOrientation: draggedOrientation,
+                            incidentOrientation: downstreamOrientation
+                        )
+                    })
+                else { return nil }
+
+                return [
+                    junctionID: resolved,
+                    middleID: remotePoint,
+                ]
+            }
+
             let clamped = min(
                 max(delta, minimumVisibleMiterSpan),
-                (remotePoint.x - middlePoint.x) / 2
+                collapseDelta
             )
             let newJunction = CGPoint(
                 x: currentFreePoint.x,
@@ -765,9 +920,33 @@ struct TraceEdgeDragController: ConnectionEdgeDragHandling {
             let delta = middlePoint.y - currentFreePoint.y
             guard delta >= -1e-9 else { return nil }
 
+            let collapseDelta = (middlePoint.y - remotePoint.y) / 2
+            if delta > collapseDelta + 1e-9 {
+                let candidates = routeJunctionCandidates(from: currentFreePoint, to: remotePoint)
+                guard
+                    let resolved = candidates.min(by: {
+                        compareCandidates(
+                            $0,
+                            $1,
+                            currentPos: currentJunction,
+                            currentOtherEnd: currentFreePoint,
+                            anchor: remotePoint,
+                            originalJunction: originalPositions[junctionID] ?? currentJunction,
+                            draggedOrientation: draggedOrientation,
+                            incidentOrientation: downstreamOrientation
+                        )
+                    })
+                else { return nil }
+
+                return [
+                    junctionID: resolved,
+                    middleID: remotePoint,
+                ]
+            }
+
             let clamped = min(
                 max(delta, minimumVisibleMiterSpan),
-                (middlePoint.y - remotePoint.y) / 2
+                collapseDelta
             )
             let newJunction = CGPoint(
                 x: middlePoint.x + clamped,
