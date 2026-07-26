@@ -165,7 +165,6 @@ struct SymbolNodeAppearanceView: View {
             relativePosition: position,
             anchorPosition: position,
             font: .init(font: .systemFont(ofSize: 12)),
-            color: .init(color: .init(nsColor: .black)),
             anchor: .center,
             alignment: .center,
             cardinalRotation: .east,

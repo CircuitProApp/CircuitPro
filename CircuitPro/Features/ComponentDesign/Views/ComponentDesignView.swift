@@ -231,7 +231,6 @@ struct ComponentDesignView: View {
                 relativePosition: centeredPosition,
                 anchorPosition: centeredAnchorPosition,
                 font: definition.font,
-                color: definition.color,
                 anchor: definition.anchor,
                 alignment: definition.alignment,
                 cardinalRotation: definition.cardinalRotation,

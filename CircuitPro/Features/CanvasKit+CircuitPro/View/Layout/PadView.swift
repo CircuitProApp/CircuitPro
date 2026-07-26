@@ -2,6 +2,7 @@ import AppKit
 
 struct PadView: CKView {
     @CKContext var context
+    @CKEnvironment var environment
     let pad: Pad
 
     var showHalo: Bool {
@@ -11,8 +12,20 @@ struct PadView: CKView {
 
     var placementSide: BoardSide = .front
 
+    /// Pads always sit on the outer copper of whichever side they're placed on, so their
+    /// color follows that copper layer rather than being stored on the pad itself. In
+    /// single-sided design contexts (e.g. footprint authoring) the copper layer has no
+    /// `layerSide`, so a front pad also matches that unsided layer.
     var padColor: CGColor {
-        placementSide == .front ? NSColor.systemRed.cgColor : NSColor.systemBlue.cgColor
+        let copperLayers = context.layers.compactMap { $0 as? PCBLayer }.filter { $0.layerKind == .copper }
+        let matchedLayer: PCBLayer?
+        switch placementSide {
+        case .front:
+            matchedLayer = copperLayers.first { $0.layerSide == .front } ?? copperLayers.first { $0.layerSide == nil }
+        case .back:
+            matchedLayer = copperLayers.first { $0.layerSide == .back }
+        }
+        return matchedLayer?.color ?? environment.canvasTheme.textColor
     }
 
     var body: some CKView {

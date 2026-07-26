@@ -25,10 +25,7 @@ struct CircuitText {
     
     /// The font, stored as a custom Codable `SDFont` struct.
     var font: SDFont = .init(font: .systemFont(ofSize: 12))
-    
-    /// The color, stored using your `SDColor` struct.
-    var color: SDColor = .init(color: .init(nsColor: .black))
-    
+
     /// The text's anchor point.
     var anchor: TextAnchor = .leading
     
