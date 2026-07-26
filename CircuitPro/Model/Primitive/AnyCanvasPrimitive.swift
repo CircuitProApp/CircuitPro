@@ -16,6 +16,7 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
     case rectangle(CanvasRectangle)
     case circle(CanvasCircle)
     case arc(CanvasArc)
+    case polyline(CanvasPolyline)
 
     var id: UUID {
         switch self {
@@ -23,6 +24,7 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
         case .rectangle(let rectangle): return rectangle.id
         case .circle(let circle): return circle.id
         case .arc(let arc): return arc.id
+        case .polyline(let polyline): return polyline.id
         }
     }
 
@@ -33,6 +35,7 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
             case .rectangle(let primitive): return primitive.layerId
             case .circle(let primitive): return primitive.layerId
             case .arc(let primitive): return primitive.layerId
+            case .polyline(let primitive): return primitive.layerId
             }
         }
         set {
@@ -49,6 +52,9 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
             case .arc(var primitive):
                 primitive.layerId = newValue
                 self = .arc(primitive)
+            case .polyline(var primitive):
+                primitive.layerId = newValue
+                self = .polyline(primitive)
             }
         }
     }
@@ -61,6 +67,7 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
             case .rectangle(let rectangle): return rectangle.position
             case .circle(let circle): return circle.position
             case .arc(let arc): return arc.position
+            case .polyline(let polyline): return polyline.position
             }
         }
         set {
@@ -77,6 +84,9 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
             case .arc(var arc):
                 arc.position = newValue
                 self = .arc(arc)
+            case .polyline(var polyline):
+                polyline.position = newValue
+                self = .polyline(polyline)
             }
         }
     }
@@ -88,6 +98,7 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
             case .rectangle(let rectangle): return rectangle.rotation
             case .circle(let circle): return circle.rotation
             case .arc(let arc): return arc.rotation
+            case .polyline(let polyline): return polyline.rotation
             }
         }
         set {
@@ -104,6 +115,9 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
             case .arc(var arc):
                 arc.rotation = newValue
                 self = .arc(arc)
+            case .polyline(var polyline):
+                polyline.rotation = newValue
+                self = .polyline(polyline)
             }
         }
     }
@@ -115,6 +129,7 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
             case .rectangle(let rectangle): return rectangle.strokeWidth
             case .circle(let circle): return circle.strokeWidth
             case .arc(let arc): return arc.strokeWidth
+            case .polyline(let polyline): return polyline.strokeWidth
             }
         }
         set {
@@ -131,6 +146,9 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
             case .arc(var arc):
                 arc.strokeWidth = newValue
                 self = .arc(arc)
+            case .polyline(var polyline):
+                polyline.strokeWidth = newValue
+                self = .polyline(polyline)
             }
         }
     }
@@ -142,6 +160,7 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
             case .rectangle(let rectangle): return rectangle.filled
             case .circle(let circle): return circle.filled
             case .arc(let arc): return arc.filled
+            case .polyline(let polyline): return polyline.filled
             }
         }
         set {
@@ -158,6 +177,9 @@ enum AnyCanvasPrimitive: CanvasPrimitive, Identifiable, Hashable {
             case .arc(var arc):
                 arc.filled = newValue
                 self = .arc(arc)
+            case .polyline(var polyline):
+                polyline.filled = newValue
+                self = .polyline(polyline)
             }
         }
     }
@@ -184,6 +206,8 @@ extension AnyCanvasPrimitive {
             "Line"
         case .arc:
             "Arc"
+        case .polyline:
+            "Polyline"
         }
     }
 }
@@ -199,6 +223,8 @@ extension AnyCanvasPrimitive {
             CircuitProSymbols.Graphic.line
         case .arc:
             CircuitProSymbols.Graphic.arc
+        case .polyline:
+            CircuitProSymbols.Graphic.polyline
         }
     }
 }
@@ -258,6 +284,20 @@ extension Binding where Value == AnyCanvasPrimitive {
                 }
             },
             set: { self.wrappedValue = .arc($0) }
+        )
+    }
+
+    var polyline: Binding<CanvasPolyline>? {
+        guard case .polyline = self.wrappedValue else { return nil }
+        return Binding<CanvasPolyline>(
+            get: {
+                if case .polyline(let value) = self.wrappedValue {
+                    return value
+                } else {
+                    fatalError("The primitive is no longer a polyline.")
+                }
+            },
+            set: { self.wrappedValue = .polyline($0) }
         )
     }
 }

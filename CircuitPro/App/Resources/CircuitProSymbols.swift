@@ -85,6 +85,7 @@ extension CircuitProSymbols {
         static let rectangle = "rectangle"
         static let circle = "circle"
         static let arc = "circle.bottomhalf.filled"
+        static let polyline = "scribble"
 
         static let cursor = "cursorarrow"
         static let ruler = "ruler"

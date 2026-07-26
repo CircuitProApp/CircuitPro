@@ -52,6 +52,17 @@ enum PrimitiveGeometry {
                 path.closeSubpath()
             }
             return path
+        case .polyline(let polyline):
+            let path = CGMutablePath()
+            guard let first = polyline.points.first else { return path }
+            path.move(to: first)
+            for point in polyline.points.dropFirst() {
+                path.addLine(to: point)
+            }
+            if polyline.isClosed {
+                path.closeSubpath()
+            }
+            return path
         }
     }
 

@@ -33,6 +33,10 @@ struct PrimitivePropertiesView: View {
                 if let arcBinding = $primitive.arc {
                     ArcPropertiesView(arc: arcBinding)
                 }
+            case .polyline:
+                if let polylineBinding = $primitive.polyline {
+                    PolylinePropertiesView(polyline: polylineBinding)
+                }
             }
         }
         .padding(10)
@@ -172,6 +176,40 @@ struct ArcPropertiesView: View {
 
         Divider()
         PrimitiveStyleControlView(object: $arc)
+
+    }
+}
+
+struct PolylinePropertiesView: View {
+    @Binding var polyline: CanvasPolyline
+
+    var body: some View {
+
+        InspectorSection("Transform") {
+
+            PointControlView(
+                title: "Position",
+                point: $polyline.position,
+                displayOffset: PaperSize.component.centerOffset()
+            )
+
+            RotationControlView(object: $polyline)
+
+            InspectorRow("Points") {
+                Text("\(polyline.points.count)")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+
+            InspectorRow("Closed") {
+                Toggle("Closed", isOn: $polyline.isClosed)
+                    .labelsHidden()
+            }
+
+        }
+
+        Divider()
+        PrimitiveStyleControlView(object: $polyline)
 
     }
 }
