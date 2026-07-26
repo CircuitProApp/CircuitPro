@@ -29,6 +29,10 @@ struct PrimitivePropertiesView: View {
                 if let lineBinding = $primitive.line {
                     LinePropertiesView(line: lineBinding)
                 }
+            case .arc:
+                if let arcBinding = $primitive.arc {
+                    ArcPropertiesView(arc: arcBinding)
+                }
             }
         }
         .padding(10)
@@ -122,6 +126,52 @@ struct LinePropertiesView: View {
             Divider()
             PrimitiveStyleControlView(object: $line)
 
+
+    }
+}
+
+struct ArcPropertiesView: View {
+    @Binding var arc: CanvasArc
+
+    private var startAngleDegrees: Binding<CGFloat> {
+        Binding(
+            get: { arc.startAngle * 180 / .pi },
+            set: { arc.startAngle = $0 * .pi / 180 }
+        )
+    }
+
+    private var endAngleDegrees: Binding<CGFloat> {
+        Binding(
+            get: { arc.endAngle * 180 / .pi },
+            set: { arc.endAngle = $0 * .pi / 180 }
+        )
+    }
+
+    var body: some View {
+
+        InspectorSection("Transform") {
+
+            PointControlView(
+                title: "Center",
+                point: $arc.position,
+                displayOffset: PaperSize.component.centerOffset()
+            )
+
+            InspectorRow("Radius", style: .leading) {
+                InspectorNumericField(value: $arc.radius, unit: "mm")
+            }
+
+            InspectorRow("Angles", style: .leading) {
+                InspectorNumericField(label: "Start", value: startAngleDegrees, maxDecimalPlaces: 1, unit: "°")
+                InspectorNumericField(label: "End", value: endAngleDegrees, maxDecimalPlaces: 1, unit: "°")
+            }
+
+            RotationControlView(object: $arc)
+
+        }
+
+        Divider()
+        PrimitiveStyleControlView(object: $arc)
 
     }
 }

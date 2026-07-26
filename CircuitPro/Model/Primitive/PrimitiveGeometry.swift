@@ -39,6 +39,19 @@ enum PrimitiveGeometry {
                 clockwise: false
             )
             return path
+        case .arc(let arc):
+            let path = CGMutablePath()
+            path.addArc(
+                center: .zero,
+                radius: arc.radius,
+                startAngle: arc.startAngle,
+                endAngle: arc.endAngle,
+                clockwise: false
+            )
+            if arc.filled {
+                path.closeSubpath()
+            }
+            return path
         }
     }
 
