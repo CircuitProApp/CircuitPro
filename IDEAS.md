@@ -1,0 +1,1 @@
+- Add explicit connection drag modes so wires can use segment drag while traces can use vertex drag for easier octilinear corner collapse and reshaping.
